@@ -8,7 +8,16 @@ const props = defineProps<{
   showFlavour?: boolean;
 }>();
 
+const emit = defineEmits<{
+  click: [card: Card];
+}>();
+
 const cardRef = ref<HTMLElement | null>(null);
+
+// Handle card click
+const handleClick = () => {
+  emit('click', props.card);
+};
 
 // Card tilt effect
 const {
@@ -70,11 +79,17 @@ const cardStyles = computed(() => ({
   <div class="game-card-container">
     <article
       ref="cardRef"
+      role="button"
+      tabindex="0"
+      :aria-label="`Carte ${card.name}`"
       class="game-card"
       :class="[tierClass, { 'game-card--hovering': isHovering }]"
       :style="cardStyles"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
+      @click="handleClick"
+      @keydown.enter="handleClick"
+      @keydown.space="handleClick"
     >
       <!-- Card frame with ornate borders -->
       <div class="game-card__frame">
