@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  html {
+    @apply bg-poe-bg text-poe-text antialiased;
+  }
+
+  body {
+    @apply min-h-screen font-body;
+    background: 
+      radial-gradient(ellipse at top, rgba(40, 40, 50, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(20, 20, 30, 0.6) 0%, transparent 50%),
+      #0c0c0e;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-poe-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-poe-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-poe-text-dim;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+  }
+
+  .page-title {
+    @apply font-display text-3xl md:text-4xl text-center mb-8;
+    background: linear-gradient(135deg, #c8c8c8 0%, #af6025 50%, #c8c8c8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .btn-primary {
+    @apply px-6 py-2 rounded font-display text-sm tracking-wider uppercase;
+    @apply bg-gradient-to-r from-tier-t1 to-purple-500;
+    @apply text-white shadow-lg;
+    @apply transition-all duration-300;
+    @apply hover:shadow-glow-t1 hover:scale-105;
+  }
+
+  .btn-twitch {
+    @apply px-6 py-3 rounded-lg font-display text-sm tracking-wider;
+    @apply bg-[#9146FF] text-white;
+    @apply flex items-center gap-3;
+    @apply transition-all duration-300;
+    @apply hover:bg-[#7c3aed] hover:shadow-lg hover:shadow-purple-500/30;
+  }
+}
+

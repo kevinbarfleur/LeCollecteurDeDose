@@ -1,0 +1,160 @@
+<script setup lang="ts">
+const route = useRoute()
+
+const navItems = [
+  { path: '/', label: 'Catalogue', icon: 'cards' },
+  { path: '/collection', label: 'Ma Collection', icon: 'user' }
+]
+</script>
+
+<template>
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-header__container">
+        <!-- Logo -->
+        <NuxtLink to="/" class="app-header__logo">
+          <span class="app-header__logo-text">Le Collecteur</span>
+          <span class="app-header__logo-accent">de Dose</span>
+        </NuxtLink>
+
+        <!-- Navigation -->
+        <nav class="app-header__nav">
+          <NuxtLink
+            v-for="item in navItems"
+            :key="item.path"
+            :to="item.path"
+            class="app-header__nav-item"
+            :class="{ 'app-header__nav-item--active': route.path === item.path }"
+          >
+            {{ item.label }}
+          </NuxtLink>
+        </nav>
+
+        <!-- Auth -->
+        <div class="app-header__auth">
+          <TwitchLoginBtn />
+        </div>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="app-main">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Créé avec 💜 pour la communauté Twitch</p>
+    </footer>
+  </div>
+</template>
+
+<style scoped>
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  background: rgba(12, 12, 14, 0.85);
+  border-bottom: 1px solid rgba(42, 42, 48, 0.5);
+}
+
+.app-header__container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.app-header__logo {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  line-height: 1.1;
+}
+
+.app-header__logo-text {
+  font-family: 'Cinzel', serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #c8c8c8;
+}
+
+.app-header__logo-accent {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: #af6025;
+}
+
+.app-header__nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.app-header__nav-item {
+  padding: 0.5rem 1rem;
+  font-family: 'Cinzel', serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #7f7f7f;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.app-header__nav-item:hover {
+  color: #c8c8c8;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-header__nav-item--active {
+  color: #af6025;
+  background: rgba(175, 96, 37, 0.1);
+}
+
+.app-header__auth {
+  display: flex;
+  align-items: center;
+}
+
+.app-main {
+  flex: 1;
+}
+
+.app-footer {
+  padding: 2rem;
+  text-align: center;
+  border-top: 1px solid rgba(42, 42, 48, 0.3);
+}
+
+.app-footer p {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.875rem;
+  color: #4a4a55;
+}
+
+@media (max-width: 640px) {
+  .app-header__container {
+    flex-wrap: wrap;
+  }
+  
+  .app-header__nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+}
+</style>
+

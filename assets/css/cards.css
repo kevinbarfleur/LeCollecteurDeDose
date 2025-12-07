@@ -1,0 +1,386 @@
+/* ===========================================
+   GAME CARD STYLES - Balatro 2.5D Effect
+   =========================================== */
+
+:root {
+  /* Card dimensions */
+  --card-width: 200px;
+  --card-height: 280px;
+  --card-border-radius: 12px;
+  
+  /* Tilt settings */
+  --tilt-max: 15deg;
+  --tilt-perspective: 1000px;
+  --tilt-scale: 1.05;
+  
+  /* Holographic effect */
+  --holo-opacity: 0.3;
+  --holo-gradient: conic-gradient(
+    from 180deg,
+    #ff0000,
+    #ff8000,
+    #ffff00,
+    #00ff00,
+    #00ffff,
+    #0080ff,
+    #8000ff,
+    #ff0080,
+    #ff0000
+  );
+  
+  /* Glare effect */
+  --glare-opacity: 0.4;
+  --glare-size: 150%;
+  
+  /* Transition */
+  --card-transition: 400ms cubic-bezier(0.03, 0.98, 0.52, 0.99);
+}
+
+/* Card container - handles perspective */
+.game-card-container {
+  perspective: var(--tilt-perspective);
+  width: var(--card-width);
+  height: var(--card-height);
+}
+
+/* Main card element */
+.game-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--card-border-radius);
+  transform-style: preserve-3d;
+  transition: transform var(--card-transition), box-shadow var(--card-transition);
+  cursor: pointer;
+  
+  /* Default shadow */
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.game-card:hover {
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Card background/frame */
+.game-card__frame {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-border-radius);
+  overflow: hidden;
+  background: linear-gradient(145deg, #1a1a1f 0%, #0d0d10 100%);
+  border: 2px solid var(--tier-color, #2a2a30);
+}
+
+/* Ornate corner decorations */
+.game-card__frame::before,
+.game-card__frame::after {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--tier-color, #3a3a40);
+  opacity: 0.6;
+}
+
+.game-card__frame::before {
+  top: 8px;
+  left: 8px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.game-card__frame::after {
+  bottom: 8px;
+  right: 8px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Item image with parallax */
+.game-card__image {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  transition: transform var(--card-transition);
+  z-index: 2;
+}
+
+/* Placeholder for missing images */
+.game-card__image-placeholder {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #252530 0%, #15151a 100%);
+  border-radius: 8px;
+  border: 1px dashed #3a3a45;
+  z-index: 2;
+}
+
+.game-card__image-placeholder svg {
+  width: 48px;
+  height: 48px;
+  color: #4a4a55;
+}
+
+/* Card info section */
+.game-card__info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+  border-radius: 0 0 var(--card-border-radius) var(--card-border-radius);
+  z-index: 3;
+}
+
+.game-card__name {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tier-color, #c8c8c8);
+  text-align: center;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.game-card__class {
+  font-family: 'Crimson Text', serif;
+  font-size: 11px;
+  color: #7f7f7f;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.game-card__tier {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--tier-color, #94a3b8);
+  border: 1px solid var(--tier-color, #3a3a45);
+  z-index: 4;
+}
+
+/* ===========================================
+   HOLOGRAPHIC OVERLAY
+   =========================================== */
+
+.game-card__holo {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-border-radius);
+  background: var(--holo-gradient);
+  background-size: 200% 200%;
+  mix-blend-mode: color-dodge;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--card-transition);
+  z-index: 10;
+}
+
+.game-card:hover .game-card__holo {
+  opacity: var(--holo-opacity);
+}
+
+/* Animate holo based on mouse position - controlled via JS */
+.game-card__holo.active {
+  opacity: var(--holo-opacity);
+}
+
+/* ===========================================
+   GLARE/SHINE EFFECT
+   =========================================== */
+
+.game-card__glare {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-border-radius);
+  background: radial-gradient(
+    circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgba(255, 255, 255, var(--glare-opacity)) 0%,
+    transparent 50%
+  );
+  background-size: var(--glare-size) var(--glare-size);
+  mix-blend-mode: overlay;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--card-transition);
+  z-index: 11;
+}
+
+.game-card:hover .game-card__glare {
+  opacity: 1;
+}
+
+/* ===========================================
+   TIER-SPECIFIC STYLES
+   =========================================== */
+
+/* T0 - Legendary */
+.game-card--t0 {
+  --tier-color: #b8860b;
+  --holo-opacity: 0.45;
+}
+
+.game-card--t0 .game-card__frame {
+  border-color: #b8860b;
+  box-shadow: 
+    0 0 20px rgba(184, 134, 11, 0.3),
+    inset 0 0 30px rgba(184, 134, 11, 0.1);
+}
+
+.game-card--t0:hover .game-card__frame {
+  box-shadow: 
+    0 0 40px rgba(255, 215, 0, 0.5),
+    inset 0 0 40px rgba(184, 134, 11, 0.2);
+}
+
+/* T0 particle effect - gold sparkles */
+.game-card--t0::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  background-image: 
+    radial-gradient(2px 2px at 20% 30%, #ffd700 50%, transparent 50%),
+    radial-gradient(2px 2px at 40% 70%, #b8860b 50%, transparent 50%),
+    radial-gradient(1px 1px at 70% 40%, #ffd700 50%, transparent 50%),
+    radial-gradient(2px 2px at 90% 80%, #b8860b 50%, transparent 50%);
+  background-size: 100% 100%;
+  animation: sparkle 4s ease-in-out infinite;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-card--t0:hover::before {
+  opacity: 1;
+}
+
+@keyframes sparkle {
+  0%, 100% { 
+    opacity: 0;
+    transform: translateY(0) scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: translateY(-10px) scale(1.1);
+  }
+}
+
+/* T1 - Rare */
+.game-card--t1 {
+  --tier-color: #8b5cf6;
+  --holo-opacity: 0.35;
+}
+
+.game-card--t1 .game-card__frame {
+  border-color: #8b5cf6;
+  box-shadow: 
+    0 0 15px rgba(139, 92, 246, 0.2),
+    inset 0 0 20px rgba(139, 92, 246, 0.05);
+}
+
+.game-card--t1:hover .game-card__frame {
+  box-shadow: 
+    0 0 30px rgba(167, 139, 250, 0.4),
+    inset 0 0 30px rgba(139, 92, 246, 0.1);
+}
+
+/* T2 - Uncommon */
+.game-card--t2 {
+  --tier-color: #38bdf8;
+  --holo-opacity: 0.25;
+}
+
+.game-card--t2 .game-card__frame {
+  border-color: #38bdf8;
+  box-shadow: 
+    0 0 10px rgba(56, 189, 248, 0.15),
+    inset 0 0 15px rgba(56, 189, 248, 0.03);
+}
+
+.game-card--t2:hover .game-card__frame {
+  box-shadow: 
+    0 0 20px rgba(125, 211, 252, 0.3),
+    inset 0 0 20px rgba(56, 189, 248, 0.08);
+}
+
+/* T3 - Common (no holo) */
+.game-card--t3 {
+  --tier-color: #94a3b8;
+  --holo-opacity: 0;
+}
+
+.game-card--t3 .game-card__frame {
+  border-color: #3a3a45;
+}
+
+.game-card--t3 .game-card__holo {
+  display: none;
+}
+
+/* ===========================================
+   FLAVOUR TEXT TOOLTIP
+   =========================================== */
+
+.game-card__flavour {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  width: max-content;
+  max-width: 250px;
+  padding: 12px 16px;
+  background: rgba(10, 10, 12, 0.95);
+  border: 1px solid #3a3a45;
+  border-radius: 8px;
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #af6025;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.game-card__flavour::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #3a3a45;
+}
+
+.game-card:hover .game-card__flavour {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-8px);
+}
+
