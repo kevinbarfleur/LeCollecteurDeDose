@@ -23,71 +23,40 @@ const cardStyle = ref<Record<string, string>>({});
 
 // Calculate animation styles
 const calculateStyles = () => {
-  if (!props.originRect) return {};
+  if (!props.originRect) return { scale: 0.8 };
   
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   
-  // Target size - compact card
-  const maxWidth = 360;
-  const maxHeight = 480;
+  // Target width
+  const targetWidth = Math.min(360, viewportWidth - 40);
   
-  // Ensure it fits in viewport
-  let targetWidth = maxWidth;
-  let targetHeight = maxHeight;
+  // Center of viewport
+  const centerX = viewportWidth / 2;
+  const centerY = viewportHeight / 2;
   
-  if (targetHeight > viewportHeight - 80) {
-    targetHeight = viewportHeight - 80;
-    targetWidth = targetHeight * 0.716;
-  }
+  // Origin card center
+  const originCenterX = props.originRect.left + props.originRect.width / 2;
+  const originCenterY = props.originRect.top + props.originRect.height / 2;
   
-  if (targetWidth > viewportWidth - 40) {
-    targetWidth = viewportWidth - 40;
-    targetHeight = targetWidth / 0.716;
-  }
+  // Calculate translation from center to origin
+  const translateX = originCenterX - centerX;
+  const translateY = originCenterY - centerY;
   
-  // Center position
-  const targetX = (viewportWidth - targetWidth) / 2;
-  const targetY = (viewportHeight - targetHeight) / 2;
+  // Scale factor based on width
+  const scale = props.originRect.width / targetWidth;
   
-  // Origin position (card position)
-  const originX = props.originRect.left;
-  const originY = props.originRect.top;
-  const originWidth = props.originRect.width;
-  const originHeight = props.originRect.height;
-  
-  // Scale factor
-  const scaleX = originWidth / targetWidth;
-  const scaleY = originHeight / targetHeight;
-  
-  // Translation from target to origin
-  const translateX = originX - targetX + (originWidth - targetWidth) / 2;
-  const translateY = originY - targetY + (originHeight - targetHeight) / 2;
-  
-  return {
-    targetWidth,
-    targetHeight,
-    targetX,
-    targetY,
-    scaleX,
-    scaleY,
-    translateX,
-    translateY,
-  };
+  return { translateX, translateY, scale };
 };
 
 // Watch for open state changes
 watch(() => props.isOpen, async (isOpen) => {
-  if (isOpen && props.originRect) {
+  if (isOpen) {
     const styles = calculateStyles();
     
-    // Start from origin position
+    // Start from origin position (or slightly scaled down if no origin)
     cardStyle.value = {
-      width: `${styles.targetWidth}px`,
-      height: `${styles.targetHeight}px`,
-      left: `${styles.targetX}px`,
-      top: `${styles.targetY}px`,
-      transform: `translate(${styles.translateX}px, ${styles.translateY}px) scale(${styles.scaleX}, ${styles.scaleY})`,
+      transform: `translate(${styles.translateX}px, ${styles.translateY}px) scale(${styles.scale})`,
       opacity: '0',
     };
     
@@ -96,7 +65,6 @@ watch(() => props.isOpen, async (isOpen) => {
     await nextTick();
     requestAnimationFrame(() => {
       cardStyle.value = {
-        ...cardStyle.value,
         transform: 'translate(0, 0) scale(1)',
         opacity: '1',
       };
@@ -110,8 +78,7 @@ watch(() => props.isOpen, async (isOpen) => {
     animationPhase.value = 'closing';
     
     cardStyle.value = {
-      ...cardStyle.value,
-      transform: `translate(${styles.translateX}px, ${styles.translateY}px) scale(${styles.scaleX}, ${styles.scaleY})`,
+      transform: `translate(${styles.translateX}px, ${styles.translateY}px) scale(${styles.scale})`,
       opacity: '0',
     };
     
@@ -208,39 +175,52 @@ watch(() => props.isOpen, (isOpen) => {
             </div>
           </div>
 
-          <!-- Type line -->
-          <div class="mtg-card__type-line">
-            <span class="mtg-card__type">{{ card.itemClass }}</span>
-            <span class="mtg-card__rarity">{{ card.rarity }}</span>
-          </div>
+          <!-- Card content (no individual backgrounds) -->
+          <div class="mtg-card__content">
+            <!-- Type line -->
+            <div class="mtg-card__type-line">
+              <span class="mtg-card__type">{{ card.itemClass }}</span>
+              <span class="mtg-card__divider-dot">◆</span>
+              <span class="mtg-card__rarity">{{ card.rarity }}</span>
+            </div>
 
-          <!-- Text box -->
-          <div class="mtg-card__text-box">
+            <!-- Runic separator -->
+            <div class="mtg-card__separator">
+              <span class="mtg-card__separator-line"></span>
+              <span class="mtg-card__separator-rune">✧</span>
+              <span class="mtg-card__separator-line"></span>
+            </div>
+
             <!-- Flavour text -->
-            <div v-if="card.flavourText" class="mtg-card__flavour">
-              <p>"{{ card.flavourText }}"</p>
+            <div class="mtg-card__flavour">
+              <p v-if="card.flavourText">"{{ card.flavourText }}"</p>
+              <p v-else class="mtg-card__no-flavour">Aucune description disponible</p>
             </div>
-            <div v-else class="mtg-card__no-flavour">
-              <p>Aucune description disponible</p>
-            </div>
-          </div>
 
-          <!-- Bottom bar -->
-          <div class="mtg-card__bottom-bar">
-            <span class="mtg-card__collector-number">#{{ card.uid }}</span>
-            <a 
-              v-if="card.wikiUrl" 
-              :href="card.wikiUrl" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              class="mtg-card__wiki-link"
-              @click.stop
-            >
-              Wiki ↗
-            </a>
-            <span class="mtg-card__weight" v-if="card.gameData.weight">
-              ◆ {{ card.gameData.weight }}
-            </span>
+            <!-- Runic separator -->
+            <div class="mtg-card__separator">
+              <span class="mtg-card__separator-line"></span>
+              <span class="mtg-card__separator-rune">◇</span>
+              <span class="mtg-card__separator-line"></span>
+            </div>
+
+            <!-- Bottom info -->
+            <div class="mtg-card__bottom-info">
+              <span class="mtg-card__collector-number">#{{ card.uid }}</span>
+              <a 
+                v-if="card.wikiUrl" 
+                :href="card.wikiUrl" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="mtg-card__wiki-link"
+                @click.stop
+              >
+                Wiki ↗
+              </a>
+              <span class="mtg-card__weight" v-if="card.gameData.weight">
+                ◆ {{ card.gameData.weight }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -256,6 +236,10 @@ watch(() => props.isOpen, (isOpen) => {
   z-index: 1000;
   background: rgba(0, 0, 0, 0);
   transition: background 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
 .card-modal-overlay--opening,
@@ -309,7 +293,9 @@ watch(() => props.isOpen, (isOpen) => {
    =========================================== */
 
 .mtg-card {
-  position: fixed;
+  position: relative;
+  width: 360px;
+  max-width: calc(100vw - 40px);
   border-radius: 14px;
   overflow: hidden;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
@@ -350,7 +336,6 @@ watch(() => props.isOpen, (isOpen) => {
 
 /* Card frame */
 .mtg-card__frame {
-  height: 100%;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #18181c 0%, #0e0e12 100%);
@@ -370,7 +355,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .mtg-card__name {
   font-family: 'Cinzel', serif;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #f0f0f0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
@@ -382,7 +367,7 @@ watch(() => props.isOpen, (isOpen) => {
 .mtg-card__tier-badge {
   flex-shrink: 0;
   font-family: 'Cinzel', serif;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 4px;
@@ -427,93 +412,104 @@ watch(() => props.isOpen, (isOpen) => {
   opacity: 0.35;
 }
 
+/* Card content area (below artwork) */
+.mtg-card__content {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 8px 4px;
+}
+
 /* Type line */
 .mtg-card__type-line {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  padding: 8px 14px;
-  background: linear-gradient(180deg, rgba(40, 40, 48, 0.5) 0%, rgba(25, 25, 30, 0.7) 100%);
-  border-radius: 6px;
+  gap: 10px;
+  padding: 4px 0;
 }
 
 .mtg-card__type {
   font-family: 'Cinzel', serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #b0b0b0;
+  color: #9a9a9a;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+}
+
+.mtg-card__divider-dot {
+  font-size: 10px;
+  color: var(--tier-color, #4a4a4a);
 }
 
 .mtg-card__rarity {
   font-family: 'Crimson Text', serif;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--tier-glow, #7f7f7f);
   font-style: italic;
 }
 
-/* Text box - DARK THEME */
-.mtg-card__text-box {
-  flex: 1;
+/* Runic separators */
+.mtg-card__separator {
   display: flex;
-  flex-direction: column;
-  padding: 14px 16px;
-  background: linear-gradient(180deg, rgba(30, 30, 38, 0.8) 0%, rgba(20, 20, 26, 0.9) 100%);
-  border-radius: 8px;
-  min-height: 60px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 0;
 }
 
+.mtg-card__separator-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--tier-color, #3a3a40) 50%, transparent 100%);
+}
+
+.mtg-card__separator-rune {
+  font-size: 12px;
+  color: var(--tier-color, #4a4a4a);
+  opacity: 0.7;
+}
+
+/* Flavour text */
 .mtg-card__flavour {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-}
-
-.mtg-card__no-flavour {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.mtg-card__no-flavour p {
-  font-family: 'Crimson Text', serif;
-  font-style: italic;
-  font-size: 13px;
-  color: #5a5a5a;
-  margin: 0;
+  text-align: center;
+  padding: 8px 8px;
+  min-height: 40px;
 }
 
 .mtg-card__flavour p {
   font-family: 'Crimson Text', serif;
   font-style: italic;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
-  color: #8a8a8a;
+  color: #9a9a9a;
   margin: 0;
 }
 
-/* Bottom bar */
-.mtg-card__bottom-bar {
+.mtg-card__flavour .mtg-card__no-flavour {
+  color: #5a5a5a;
+}
+
+/* Bottom info */
+.mtg-card__bottom-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  background: linear-gradient(180deg, rgba(25, 25, 30, 0.6) 0%, rgba(15, 15, 18, 0.8) 100%);
-  border-radius: 6px;
+  padding: 2px 8px 0;
 }
 
 .mtg-card__collector-number {
   font-family: 'Crimson Text', serif;
-  font-size: 11px;
-  color: #5a5a5a;
+  font-size: 13px;
+  color: #6a6a6a;
 }
 
 .mtg-card__wiki-link {
   font-family: 'Cinzel', serif;
-  font-size: 10px;
+  font-size: 11px;
   color: #af6025;
   text-decoration: none;
   padding: 4px 10px;
@@ -529,7 +525,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .mtg-card__weight {
   font-family: 'Cinzel', serif;
-  font-size: 11px;
-  color: var(--tier-glow, #5a5a5a);
+  font-size: 13px;
+  color: var(--tier-glow, #6a6a6a);
 }
 </style>
