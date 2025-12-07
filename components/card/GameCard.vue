@@ -250,7 +250,7 @@ watch(animationState, (state) => {
 });
 
 // ===========================================
-// CARD TILT EFFECT
+// CARD TILT EFFECT (for grid card)
 // ===========================================
 const {
   isHovering,
@@ -260,9 +260,54 @@ const {
   onMouseEnter,
   onMouseLeave,
 } = useCardTilt(cardRef, {
-  maxTilt: animationState.value === 'expanded' ? 8 : 15,
-  scale: animationState.value === 'expanded' ? 1.01 : 1.02,
+  maxTilt: 15,
+  scale: 1.02,
 });
+
+// ===========================================
+// CARD TILT EFFECT (for floating/detail card using GSAP)
+// ===========================================
+const isFloatingHovering = ref(false);
+
+const onFloatingMouseMove = (e: MouseEvent) => {
+  if (animationState.value !== 'expanded' || !floatingCardRef.value) return;
+  
+  const card = floatingCardRef.value;
+  const rect = card.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  
+  const rotateY = ((x - centerX) / centerX) * 8; // max 8 degrees
+  const rotateX = ((centerY - y) / centerY) * 8;
+  
+  gsap.to(card, {
+    rotateX,
+    rotateY,
+    scale: 1.02,
+    duration: 0.3,
+    ease: 'power2.out',
+    overwrite: 'auto',
+  });
+};
+
+const onFloatingMouseEnter = () => {
+  isFloatingHovering.value = true;
+};
+
+const onFloatingMouseLeave = () => {
+  isFloatingHovering.value = false;
+  if (floatingCardRef.value && animationState.value === 'expanded') {
+    gsap.to(floatingCardRef.value, {
+      rotateX: 0,
+      rotateY: 0,
+      scale: 1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  }
+};
 
 // ===========================================
 // COMPUTED STYLES
@@ -320,29 +365,34 @@ const showOverlay = computed(() => animationState.value !== 'idle');
           @click="handleClose"
         />
         
-        <!-- Floating card (GSAP animated) -->
+        <!-- Floating card (GSAP animated position + tilt) -->
         <article
           ref="floatingCardRef"
           class="game-card game-card--floating"
-          :class="[tierClass]"
+          :class="[tierClass, { 'game-card--hovering': isFloatingHovering }]"
           :style="tierStyles"
+          @mousemove="onFloatingMouseMove"
+          @mouseenter="onFloatingMouseEnter"
+          @mouseleave="onFloatingMouseLeave"
         >
-          <!-- Close button (only when expanded) -->
-          <button 
-            v-if="animationState === 'expanded'"
-            class="game-card__close" 
-            @click.stop="handleClose"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <!-- Card content wrapper -->
+          <div class="game-card__tilt-wrapper">
+            <!-- Close button (only when expanded) -->
+            <button 
+              v-if="animationState === 'expanded'"
+              class="game-card__close" 
+              @click.stop="handleClose"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-          <!-- PREVIEW VIEW (GSAP fades this out) -->
-          <div 
-            ref="previewViewRef"
-            class="card-view card-view--preview"
-          >
+            <!-- PREVIEW VIEW (GSAP fades this out) -->
+            <div 
+              ref="previewViewRef"
+              class="card-view card-view--preview"
+            >
             <div class="game-card__frame">
               <div class="game-card__bg"></div>
             </div>
@@ -419,6 +469,7 @@ const showOverlay = computed(() => animationState.value !== 'idle');
               </span>
             </div>
           </div>
+          </div><!-- End tilt wrapper -->
         </article>
       </div>
     </Teleport>
@@ -541,6 +592,12 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 
 .floating-card-wrapper .game-card {
   pointer-events: auto;
+  transform-style: preserve-3d;
+}
+
+/* Perspective container for 3D tilt effect */
+.floating-card-wrapper {
+  perspective: 1000px;
 }
 
 /* ===========================================
@@ -560,6 +617,14 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   cursor: default;
   z-index: 1001; /* Above overlay */
   aspect-ratio: unset; /* Use explicit width/height when floating */
+}
+
+/* Tilt wrapper for hover effect */
+.game-card__tilt-wrapper {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 /* ===========================================
