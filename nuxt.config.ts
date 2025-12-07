@@ -6,6 +6,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@vueuse/nuxt',
+    '@vueuse/motion/nuxt',
     'nuxt-auth-utils',
   ],
 

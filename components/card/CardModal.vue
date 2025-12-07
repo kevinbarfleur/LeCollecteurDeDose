@@ -19,72 +19,19 @@ const tierConfig = computed(() =>
 
 // Animation state
 const animationPhase = ref<'closed' | 'opening' | 'open' | 'closing'>('closed');
-const cardStyle = ref<Record<string, string>>({});
 
-// Calculate animation styles
-const calculateStyles = () => {
-  if (!props.originRect) return { scale: 0.8 };
-  
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  
-  // Target width
-  const targetWidth = Math.min(360, viewportWidth - 40);
-  
-  // Center of viewport
-  const centerX = viewportWidth / 2;
-  const centerY = viewportHeight / 2;
-  
-  // Origin card center
-  const originCenterX = props.originRect.left + props.originRect.width / 2;
-  const originCenterY = props.originRect.top + props.originRect.height / 2;
-  
-  // Calculate translation from center to origin
-  const translateX = originCenterX - centerX;
-  const translateY = originCenterY - centerY;
-  
-  // Scale factor based on width
-  const scale = props.originRect.width / targetWidth;
-  
-  return { translateX, translateY, scale };
-};
-
-// Watch for open state changes
+// Watch for open state changes - modal appears instantly (floating card handles animation)
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
-    const styles = calculateStyles();
-    
-    // Start from origin position (or slightly scaled down if no origin)
-    cardStyle.value = {
-      transform: `translate(${styles.translateX}px, ${styles.translateY}px) scale(${styles.scale})`,
-      opacity: '0',
-    };
-    
-    animationPhase.value = 'opening';
-    
-    await nextTick();
-    requestAnimationFrame(() => {
-      cardStyle.value = {
-        transform: 'translate(0, 0) scale(1)',
-        opacity: '1',
-      };
-    });
-    
-    setTimeout(() => {
-      animationPhase.value = 'open';
-    }, 400);
-  } else if (!isOpen && animationPhase.value === 'open') {
-    const styles = calculateStyles();
+    // Open immediately - no delay, no transition (floating card already did the animation)
+    animationPhase.value = 'open';
+  } else if (!isOpen && (animationPhase.value === 'open' || animationPhase.value === 'opening')) {
     animationPhase.value = 'closing';
     
-    cardStyle.value = {
-      transform: `translate(${styles.translateX}px, ${styles.translateY}px) scale(${styles.scale})`,
-      opacity: '0',
-    };
-    
+    // Give time for overlay to fade out
     setTimeout(() => {
       animationPhase.value = 'closed';
-    }, 400);
+    }, 300);
   }
 });
 
@@ -147,7 +94,6 @@ watch(() => props.isOpen, (isOpen) => {
         class="mtg-card"
         :class="`mtg-card--${card.tier.toLowerCase()}`"
         :style="{
-          ...cardStyle,
           '--tier-color': tierConfig?.color,
           '--tier-glow': tierConfig?.glowColor,
         }"
@@ -298,12 +244,12 @@ watch(() => props.isOpen, (isOpen) => {
   max-width: calc(100vw - 40px);
   border-radius: 14px;
   overflow: hidden;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              opacity 0.4s ease;
   border: 2px solid var(--tier-color, #2a2a30);
   box-shadow: 
     0 25px 80px rgba(0, 0, 0, 0.9),
     0 0 50px var(--tier-glow, transparent);
+  /* No transition - appears instantly (floating card handles animation) */
+  opacity: 1;
 }
 
 /* Tier-specific glow */
