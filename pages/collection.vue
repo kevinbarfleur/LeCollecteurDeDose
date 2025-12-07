@@ -345,16 +345,16 @@ const filteredCards = computed(() => {
 }
 
 .collection-stats__tier--t0 .collection-stats__tier-value,
-.collection-stats__tier--t0 .collection-stats__tier-label { color: #b8860b; }
+.collection-stats__tier--t0 .collection-stats__tier-label { color: #c9a227; }
 
 .collection-stats__tier--t1 .collection-stats__tier-value,
-.collection-stats__tier--t1 .collection-stats__tier-label { color: #8b5cf6; }
+.collection-stats__tier--t1 .collection-stats__tier-label { color: #7a6a8a; }
 
 .collection-stats__tier--t2 .collection-stats__tier-value,
-.collection-stats__tier--t2 .collection-stats__tier-label { color: #38bdf8; }
+.collection-stats__tier--t2 .collection-stats__tier-label { color: #5a7080; }
 
 .collection-stats__tier--t3 .collection-stats__tier-value,
-.collection-stats__tier--t3 .collection-stats__tier-label { color: #94a3b8; }
+.collection-stats__tier--t3 .collection-stats__tier-label { color: #4a4a4d; }
 
 /* Filters */
 .collection-filters {
@@ -421,27 +421,27 @@ const filteredCards = computed(() => {
 }
 
 .collection-filters__tier-btn--t0.collection-filters__tier-btn--active {
-  background: rgba(184, 134, 11, 0.2);
-  border-color: #b8860b;
-  color: #b8860b;
+  background: rgba(201, 162, 39, 0.15);
+  border-color: #6d5a2a;
+  color: #c9a227;
 }
 
 .collection-filters__tier-btn--t1.collection-filters__tier-btn--active {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  background: rgba(122, 106, 138, 0.15);
+  border-color: #3a3445;
+  color: #7a6a8a;
 }
 
 .collection-filters__tier-btn--t2.collection-filters__tier-btn--active {
-  background: rgba(56, 189, 248, 0.2);
-  border-color: #38bdf8;
-  color: #38bdf8;
+  background: rgba(90, 112, 128, 0.15);
+  border-color: #3a4550;
+  color: #5a7080;
 }
 
 .collection-filters__tier-btn--t3.collection-filters__tier-btn--active {
-  background: rgba(148, 163, 184, 0.2);
-  border-color: #94a3b8;
-  color: #94a3b8;
+  background: rgba(58, 58, 61, 0.2);
+  border-color: #2a2a2d;
+  color: #4a4a4d;
 }
 
 /* Duplicates */

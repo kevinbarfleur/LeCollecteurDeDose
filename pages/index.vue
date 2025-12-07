@@ -179,10 +179,10 @@ const stats = computed(() => ({
   letter-spacing: 0.5px;
 }
 
-.catalog-stats__item--t0 .catalog-stats__value { color: #b8860b; }
-.catalog-stats__item--t1 .catalog-stats__value { color: #8b5cf6; }
-.catalog-stats__item--t2 .catalog-stats__value { color: #38bdf8; }
-.catalog-stats__item--t3 .catalog-stats__value { color: #94a3b8; }
+.catalog-stats__item--t0 .catalog-stats__value { color: #c9a227; }
+.catalog-stats__item--t1 .catalog-stats__value { color: #7a6a8a; }
+.catalog-stats__item--t2 .catalog-stats__value { color: #5a7080; }
+.catalog-stats__item--t3 .catalog-stats__value { color: #4a4a4d; }
 
 .catalog-filters {
   display: flex;
@@ -268,27 +268,27 @@ const stats = computed(() => ({
 }
 
 .catalog-filters__tier-btn--t0.catalog-filters__tier-btn--active {
-  background: rgba(184, 134, 11, 0.2);
-  border-color: #b8860b;
-  color: #b8860b;
+  background: rgba(201, 162, 39, 0.15);
+  border-color: #6d5a2a;
+  color: #c9a227;
 }
 
 .catalog-filters__tier-btn--t1.catalog-filters__tier-btn--active {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  background: rgba(122, 106, 138, 0.15);
+  border-color: #3a3445;
+  color: #7a6a8a;
 }
 
 .catalog-filters__tier-btn--t2.catalog-filters__tier-btn--active {
-  background: rgba(56, 189, 248, 0.2);
-  border-color: #38bdf8;
-  color: #38bdf8;
+  background: rgba(90, 112, 128, 0.15);
+  border-color: #3a4550;
+  color: #5a7080;
 }
 
 .catalog-filters__tier-btn--t3.catalog-filters__tier-btn--active {
-  background: rgba(148, 163, 184, 0.2);
-  border-color: #94a3b8;
-  color: #94a3b8;
+  background: rgba(58, 58, 61, 0.2);
+  border-color: #2a2a2d;
+  color: #4a4a4d;
 }
 </style>
 

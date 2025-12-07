@@ -19,15 +19,15 @@ export default {
           'text': '#c8c8c8',
           'text-dim': '#7f7f7f',
         },
-        // Tier colors
+        // Tier colors - "Glyphes Éteints" palette
         'tier': {
-          't0': '#b8860b',        // Legendary gold
-          't0-glow': '#ffd700',
-          't1': '#8b5cf6',        // Rare purple
-          't1-glow': '#a78bfa',
-          't2': '#38bdf8',        // Uncommon blue
-          't2-glow': '#7dd3fc',
-          't3': '#94a3b8',        // Common silver
+          't0': '#6d5a2a',        // Ambre sombre
+          't0-glow': '#c9a227',   // Lueur chaude
+          't1': '#3a3445',        // Obsidienne
+          't1-glow': '#7a6a8a',   // Lueur froide
+          't2': '#3a4550',        // Ardoise
+          't2-glow': '#5a7080',   // Éclat subtil
+          't3': '#2a2a2d',        // Basalte
         },
         // Rarity colors (PoE style)
         'unique': '#af6025',
@@ -39,9 +39,9 @@ export default {
       boxShadow: {
         'card': '0 4px 20px rgba(0, 0, 0, 0.5)',
         'card-hover': '0 8px 40px rgba(0, 0, 0, 0.7)',
-        'glow-t0': '0 0 30px rgba(184, 134, 11, 0.5)',
-        'glow-t1': '0 0 20px rgba(139, 92, 246, 0.4)',
-        'glow-t2': '0 0 15px rgba(56, 189, 248, 0.3)',
+        'glow-t0': '0 0 20px rgba(201, 162, 39, 0.3)',
+        'glow-t1': '0 0 15px rgba(122, 106, 138, 0.25)',
+        'glow-t2': '0 0 10px rgba(90, 112, 128, 0.2)',
       },
       animation: {
         'shimmer': 'shimmer 3s ease-in-out infinite',

@@ -31,33 +31,29 @@ export interface UserCollection {
 export interface TierConfig {
   color: string
   glowColor: string
-  holoIntensity: number
   label: string
 }
 
+// "Glyphes Éteints" palette - Dark, runic aesthetic
 export const TIER_CONFIG: Record<CardTier, TierConfig> = {
   T0: {
-    color: '#b8860b',
-    glowColor: '#ffd700',
-    holoIntensity: 0.45,
+    color: '#6d5a2a',      // Ambre sombre
+    glowColor: '#c9a227',  // Lueur chaude
     label: 'Légendaire'
   },
   T1: {
-    color: '#8b5cf6',
-    glowColor: '#a78bfa',
-    holoIntensity: 0.35,
+    color: '#3a3445',      // Obsidienne
+    glowColor: '#7a6a8a',  // Lueur froide
     label: 'Rare'
   },
   T2: {
-    color: '#38bdf8',
-    glowColor: '#7dd3fc',
-    holoIntensity: 0.25,
+    color: '#3a4550',      // Ardoise
+    glowColor: '#5a7080',  // Éclat subtil
     label: 'Peu commun'
   },
   T3: {
-    color: '#94a3b8',
-    glowColor: '#cbd5e1',
-    holoIntensity: 0,
+    color: '#2a2a2d',      // Basalte
+    glowColor: '#4a4a4d',
     label: 'Commun'
   }
 }

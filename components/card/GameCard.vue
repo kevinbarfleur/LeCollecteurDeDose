@@ -2,7 +2,6 @@
 import type { Card, CardTier } from "~/types/card";
 import { TIER_CONFIG } from "~/types/card";
 import { useCardTilt } from "~/composables/useCardTilt";
-import { useHolographic } from "~/composables/useHolographic";
 
 const props = defineProps<{
   card: Card;
@@ -14,8 +13,6 @@ const cardRef = ref<HTMLElement | null>(null);
 // Card tilt effect
 const {
   isHovering,
-  mouseXPercent,
-  mouseYPercent,
   cardTransform,
   imageTransform,
   cardTransition,
@@ -23,25 +20,11 @@ const {
   onMouseLeave,
 } = useCardTilt(cardRef, {
   maxTilt: 15,
-  scale: 1.05,
+  scale: 1.02,
 });
 
 // Get tier config
 const tierConfig = computed(() => TIER_CONFIG[props.card.tier as CardTier]);
-
-// Holographic effect (disabled for T3)
-const holoEnabled = computed(() => props.card.tier !== "T3");
-const holoIntensity = computed(() => tierConfig.value?.holoIntensity ?? 0.35);
-
-const { holoStyles } = useHolographic(
-  mouseXPercent,
-  mouseYPercent,
-  isHovering,
-  {
-    intensity: holoIntensity.value,
-    enabled: holoEnabled.value,
-  }
-);
 
 // Image loading state
 const imageStatus = ref<'loading' | 'loaded' | 'error'>('loading');
@@ -78,8 +61,8 @@ const tierClass = computed(() => `game-card--${props.card.tier.toLowerCase()}`);
 const cardStyles = computed(() => ({
   transform: cardTransform.value,
   transition: cardTransition.value,
-  "--tier-color": tierConfig.value?.color ?? "#94a3b8",
-  ...holoStyles.value,
+  "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
+  "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
 }));
 </script>
 
@@ -88,7 +71,7 @@ const cardStyles = computed(() => ({
     <article
       ref="cardRef"
       class="game-card"
-      :class="tierClass"
+      :class="[tierClass, { 'game-card--hovering': isHovering }]"
       :style="cardStyles"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
@@ -143,26 +126,6 @@ const cardStyles = computed(() => ({
         <h3 class="game-card__name">{{ card.name }}</h3>
         <p class="game-card__class">{{ card.itemClass }}</p>
       </div>
-
-      <!-- Holographic overlay -->
-      <div
-        v-if="holoEnabled"
-        class="game-card__holo"
-        :class="{ active: isHovering }"
-        :style="{
-          background: holoStyles['--holo-bg'],
-          opacity: holoStyles['--holo-opacity'],
-        }"
-      ></div>
-
-      <!-- Glare/shine effect -->
-      <div
-        class="game-card__glare"
-        :style="{
-          background: holoStyles['--glare-bg'],
-          opacity: holoStyles['--glare-opacity'],
-        }"
-      ></div>
 
       <!-- Flavour text tooltip -->
       <div
