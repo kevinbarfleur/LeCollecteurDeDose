@@ -174,8 +174,9 @@ export const allCards: Card[] = [
 
 // Mock user collection (simulating a viewer's cards)
 // Only cards with WORKING images for better visual testing
+// Now includes duplicates to test the stack feature
 export const mockUserCollection: Card[] = [
-  // T0 - Légendaires
+  // T0 - Légendaires (1 unique)
   {
     uid: 20,
     id: 'headhunter',
@@ -190,7 +191,7 @@ export const mockUserCollection: Card[] = [
       img: 'https://web.poecdn.com/image/Art/2DItems/Belts/Headhunter.png'
     }
   },
-  // T2 - Peu communs
+  // T2 - Peu communs (2 Starforge)
   {
     uid: 42,
     id: 'starforge',
@@ -205,7 +206,21 @@ export const mockUserCollection: Card[] = [
       img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Starforge.png'
     }
   },
-  // T3 - Communs
+  {
+    uid: 43,
+    id: 'starforge',
+    name: 'Starforge',
+    itemClass: 'Infernal Sword',
+    rarity: 'Unique',
+    tier: 'T2',
+    flavourText: 'The stars are dying. One by one, their light fades.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Starforge',
+    gameData: {
+      weight: 1.0,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Starforge.png'
+    }
+  },
+  // T3 - Communs (3 Wanderlust, 5 Tabula Rasa)
   {
     uid: 32,
     id: 'wanderlust',
@@ -221,7 +236,91 @@ export const mockUserCollection: Card[] = [
     }
   },
   {
+    uid: 33,
+    id: 'wanderlust',
+    name: 'Wanderlust',
+    itemClass: 'Wool Shoes',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The road never truly ends.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Wanderlust',
+    gameData: {
+      weight: 1,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/Boots/Wanderlust.png'
+    }
+  },
+  {
+    uid: 34,
+    id: 'wanderlust',
+    name: 'Wanderlust',
+    itemClass: 'Wool Shoes',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The road never truly ends.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Wanderlust',
+    gameData: {
+      weight: 1,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/Boots/Wanderlust.png'
+    }
+  },
+  {
     uid: 38,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 39,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 40,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 41,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 44,
     id: 'tabula-rasa',
     name: 'Tabula Rasa',
     itemClass: 'Simple Robe',

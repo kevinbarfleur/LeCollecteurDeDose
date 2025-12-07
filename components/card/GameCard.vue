@@ -8,6 +8,7 @@ const props = defineProps<{
   card: Card;
   showFlavour?: boolean;
   owned?: boolean;
+  previewOnly?: boolean; // When true, disables click to open detail view
 }>();
 
 const emit = defineEmits<{
@@ -216,6 +217,12 @@ const resetToIdle = () => {
 // Handle click on card
 const handleClick = () => {
   if (!isOwned.value) return;
+  
+  // In preview-only mode, don't open detail view (parent handles it)
+  if (props.previewOnly) {
+    emit('click', props.card);
+    return;
+  }
   
   if (animationState.value === 'idle') {
     openCard();

@@ -12,30 +12,31 @@ const { loggedIn, user: authUser } = useUserSession()
 
 // Reactive user data
 const user = computed(() => ({
-  name: authUser.value?.displayName || 'Utilisateur',
+  name: authUser.value?.displayName || 'Test User',
   avatar: authUser.value?.avatar || 'https://static-cdn.jtvnw.net/jtv_user_pictures/default-profile_image-300x300.png'
 }))
 
 // Collection data
 const collection = computed(() => mockUserCollection)
 
-// Group cards by id to count duplicates
+// Group cards by id to count duplicates and collect all instances
 const groupedCards = computed(() => {
-  const groups = new Map<string, { card: Card; count: number }>()
+  const groups = new Map<string, { cards: Card[]; count: number }>()
   
   collection.value.forEach(card => {
     const existing = groups.get(card.id)
     if (existing) {
+      existing.cards.push(card)
       existing.count++
     } else {
-      groups.set(card.id, { card, count: 1 })
+      groups.set(card.id, { cards: [card], count: 1 })
     }
   })
   
   // Convert to array and sort by tier
   const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 }
   return Array.from(groups.values()).sort(
-    (a, b) => tierOrder[a.card.tier] - tierOrder[b.card.tier]
+    (a, b) => tierOrder[a.cards[0].tier] - tierOrder[b.cards[0].tier]
   )
 })
 
@@ -56,10 +57,20 @@ const stats = computed(() => {
 const showDuplicates = ref(false)
 const selectedTier = ref<CardTier | 'all'>('all')
 
-const filteredCards = computed(() => {
-  let cards = showDuplicates.value 
-    ? collection.value 
-    : groupedCards.value.map(g => g.card)
+// Filtered grouped cards (for stack view - default mode)
+const filteredGroupedCards = computed(() => {
+  let groups = groupedCards.value
+  
+  if (selectedTier.value !== 'all') {
+    groups = groups.filter(g => g.cards[0].tier === selectedTier.value)
+  }
+  
+  return groups
+})
+
+// Filtered individual cards (for duplicates view)
+const filteredIndividualCards = computed(() => {
+  let cards = collection.value
   
   if (selectedTier.value !== 'all') {
     cards = cards.filter(card => card.tier === selectedTier.value)
@@ -172,16 +183,24 @@ const filteredCards = computed(() => {
 
         <!-- Duplicates indicator -->
         <div v-if="!showDuplicates" class="collection-duplicates">
-          <template v-for="group in groupedCards" :key="group.card.id">
+          <template v-for="group in groupedCards" :key="group.cards[0].id">
             <span v-if="group.count > 1" class="collection-duplicates__badge">
-              {{ group.card.name }} x{{ group.count }}
+              {{ group.cards[0].name }} x{{ group.count }}
             </span>
           </template>
         </div>
 
-        <!-- Cards grid -->
+        <!-- Cards grid - Stack mode (default) -->
         <CardGrid 
-          :cards="filteredCards"
+          v-if="!showDuplicates"
+          :grouped-cards="filteredGroupedCards"
+          empty-message="Vous n'avez pas encore de cartes. Participez au stream pour en obtenir !"
+        />
+        
+        <!-- Cards grid - Individual mode (duplicates) -->
+        <CardGrid 
+          v-else
+          :cards="filteredIndividualCards"
           empty-message="Vous n'avez pas encore de cartes. Participez au stream pour en obtenir !"
         />
       </div>
