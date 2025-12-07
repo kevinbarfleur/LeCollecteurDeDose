@@ -655,8 +655,8 @@ const _inlineRuntimeConfig = {
   },
   "oauth": {
     "twitch": {
-      "clientId": "placeholder",
-      "clientSecret": "placeholder",
+      "clientId": "5t0dvj9x6dp9bvhpr30gyz6vz2gee1",
+      "clientSecret": "g1fgb5y356cz8jej8tcdf5gkwhu14l",
       "redirectURL": ""
     },
     "gitea": {

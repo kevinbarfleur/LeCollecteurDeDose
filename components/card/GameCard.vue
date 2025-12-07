@@ -43,8 +43,33 @@ const { holoStyles } = useHolographic(
   }
 );
 
-// Has valid image
-const hasImage = computed(() => !!props.card.gameData?.img);
+// Image loading state
+const imageStatus = ref<'loading' | 'loaded' | 'error'>('loading');
+
+// Has valid image URL
+const hasImageUrl = computed(() => !!props.card.gameData?.img);
+
+// Check image validity on client side
+onMounted(() => {
+  if (!hasImageUrl.value) {
+    imageStatus.value = 'error';
+    return;
+  }
+  
+  // Create a new image to test if URL is valid
+  const img = new Image();
+  img.onload = () => {
+    imageStatus.value = 'loaded';
+  };
+  img.onerror = () => {
+    imageStatus.value = 'error';
+  };
+  img.src = props.card.gameData.img;
+});
+
+// Show image only if loaded successfully
+const showImage = computed(() => imageStatus.value === 'loaded');
+const showPlaceholder = computed(() => imageStatus.value === 'error' || !hasImageUrl.value);
 
 // Tier CSS class
 const tierClass = computed(() => `game-card--${props.card.tier.toLowerCase()}`);
@@ -77,35 +102,40 @@ const cardStyles = computed(() => ({
       <!-- Tier badge -->
       <span class="game-card__tier">{{ card.tier }}</span>
 
-      <!-- Item image with parallax -->
-      <img
-        v-if="hasImage"
-        :src="card.gameData.img"
-        :alt="card.name"
-        class="game-card__image"
-        :style="{ transform: imageTransform }"
-        loading="lazy"
-      />
+      <!-- Image container for proper centering -->
+      <div class="game-card__image-wrapper" :style="{ transform: imageTransform }">
+        <!-- Loading spinner while checking image -->
+        <div v-if="imageStatus === 'loading' && hasImageUrl" class="game-card__image-loading">
+          <div class="game-card__spinner"></div>
+        </div>
+        
+        <!-- Item image with parallax -->
+        <img
+          v-show="showImage"
+          :src="card.gameData.img"
+          :alt="card.name"
+          class="game-card__image"
+        />
 
-      <!-- Placeholder for missing images -->
-      <div
-        v-else
-        class="game-card__image-placeholder"
-        :style="{ transform: imageTransform }"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+        <!-- Placeholder for missing/broken images -->
+        <div
+          v-if="showPlaceholder"
+          class="game-card__image-placeholder"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.5"
-            d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
-          />
-        </svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+            />
+          </svg>
+        </div>
       </div>
 
       <!-- Card info -->
