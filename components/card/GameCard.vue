@@ -18,6 +18,7 @@ const emit = defineEmits<{
 
 const cardRef = ref<HTMLElement | null>(null);
 const cardContainerRef = ref<HTMLElement | null>(null);
+const detailCardRef = ref<HTMLElement | null>(null);
 
 // Default to owned if not specified
 const isOwned = computed(() => props.owned !== false);
@@ -161,7 +162,7 @@ watch(() => animationPhase.value, (phase) => {
   }
 });
 
-// Card tilt effect (only in preview mode)
+// Card tilt effect for preview mode
 const {
   isHovering,
   cardTransform,
@@ -172,6 +173,19 @@ const {
 } = useCardTilt(cardRef, {
   maxTilt: 15,
   scale: 1.02,
+});
+
+// Card tilt effect for detail mode (slightly reduced effect)
+const {
+  isHovering: isDetailHovering,
+  cardTransform: detailCardTransform,
+  imageTransform: detailImageTransform,
+  cardTransition: detailCardTransition,
+  onMouseEnter: onDetailMouseEnter,
+  onMouseLeave: onDetailMouseLeave,
+} = useCardTilt(detailCardRef, {
+  maxTilt: 8,
+  scale: 1.01,
 });
 
 // Get tier config
@@ -227,6 +241,27 @@ const expandedCardStyles = computed(() => ({
   "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
   "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
 }));
+
+// Detail card styles with tilt (only apply tilt when fully expanded, not during animation)
+const detailCardStylesWithTilt = computed(() => {
+  const baseStyles = expandedCardStyles.value;
+  
+  // During animation phases, don't apply tilt - use base animation styles
+  if (animationPhase.value === 'expanding' || animationPhase.value === 'collapsing') {
+    return baseStyles;
+  }
+  
+  // When fully expanded, apply tilt effect
+  if (animationPhase.value === 'expanded') {
+    return {
+      ...baseStyles,
+      transform: detailCardTransform.value,
+      transition: detailCardTransition.value,
+    };
+  }
+  
+  return baseStyles;
+});
 
 // Halo intensity based on animation phase
 const haloOpacity = computed(() => {
@@ -323,6 +358,11 @@ const haloOpacity = computed(() => {
       <div 
         v-if="isDetailMode && isOwned" 
         class="expanded-card-wrapper"
+        :class="{
+          'expanded-card-wrapper--expanding': animationPhase === 'expanding',
+          'expanded-card-wrapper--expanded': animationPhase === 'expanded',
+          'expanded-card-wrapper--collapsing': animationPhase === 'collapsing',
+        }"
         @click.self="handleClose"
       >
         <!-- Halo/Glow effect emanating from card -->
@@ -336,9 +376,12 @@ const haloOpacity = computed(() => {
 
         <!-- The actual expanded card -->
         <article
+          ref="detailCardRef"
           class="game-card game-card--detail"
-          :class="tierClass"
-          :style="expandedCardStyles"
+          :class="[tierClass, { 'game-card--hovering': isDetailHovering && animationPhase === 'expanded' }]"
+          :style="detailCardStylesWithTilt"
+          @mouseenter="onDetailMouseEnter"
+          @mouseleave="onDetailMouseLeave"
         >
           <!-- Close button -->
           <button class="game-card__close" @click="handleClose">
@@ -349,8 +392,6 @@ const haloOpacity = computed(() => {
 
           <!-- Card content with crossfade between preview and detail -->
           <div class="game-card__frame game-card__frame--detail">
-            <div class="game-card__bg"></div>
-            
             <!-- Title bar (detail mode) -->
             <div class="detail__title-bar">
               <span class="detail__name">{{ card.name }}</span>
@@ -359,7 +400,13 @@ const haloOpacity = computed(() => {
 
             <!-- Artwork -->
             <div class="detail__artwork">
-              <img v-if="showImage" :src="card.gameData.img" :alt="card.name" class="detail__image" />
+              <img 
+                v-if="showImage" 
+                :src="card.gameData.img" 
+                :alt="card.name" 
+                class="detail__image"
+                :style="{ transform: detailImageTransform }"
+              />
               <div v-else class="detail__image-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -471,26 +518,31 @@ const haloOpacity = computed(() => {
   align-items: center;
   justify-content: center;
   
-  /* Dark semi-transparent overlay */
-  background: rgba(0, 0, 0, 0.85);
+  /* Start transparent */
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
   
-  /* Blur the content behind */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  
-  /* Fade in animation */
-  animation: overlay-fade-in 0.4s ease forwards;
+  /* Synchronized transition - same as card animation (0.5s open, 0.4s close) */
+  transition: background 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              backdrop-filter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes overlay-fade-in {
-  from {
-    background: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(0px);
-  }
-  to {
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
-  }
+/* Opening and opened states */
+.expanded-card-wrapper--expanding,
+.expanded-card-wrapper--expanded {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Closing state - synchronized with card return animation (0.4s) */
+.expanded-card-wrapper--collapsing {
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: background 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              backdrop-filter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ===========================================
@@ -511,6 +563,24 @@ const haloOpacity = computed(() => {
     0 25px 80px rgba(0, 0, 0, 0.9),
     0 0 50px var(--tier-glow, transparent);
   background: linear-gradient(180deg, #18181c 0%, #0e0e12 100%);
+}
+
+/* Detail frame content transition - synchronized with card movement */
+.game-card--detail .game-card__frame--detail {
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* Same timing as card */
+}
+
+/* Show content during opening and when expanded */
+.expanded-card-wrapper--expanding .game-card--detail .game-card__frame--detail,
+.expanded-card-wrapper--expanded .game-card--detail .game-card__frame--detail {
+  opacity: 1;
+}
+
+/* Hide content smoothly when collapsing - synchronized with card return */
+.expanded-card-wrapper--collapsing .game-card--detail .game-card__frame--detail {
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); /* Same timing as card */
 }
 
 .game-card--detail.game-card--t0 {
