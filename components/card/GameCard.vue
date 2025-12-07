@@ -7,18 +7,13 @@ const props = defineProps<{
   card: Card;
   showFlavour?: boolean;
   owned?: boolean;
-  // New: expanded mode control
-  isExpanded?: boolean;
 }>();
 
 const emit = defineEmits<{
   click: [card: Card];
-  close: [];
 }>();
 
 const cardRef = ref<HTMLElement | null>(null);
-const cardContainerRef = ref<HTMLElement | null>(null);
-const detailCardRef = ref<HTMLElement | null>(null);
 
 // Default to owned if not specified
 const isOwned = computed(() => props.owned !== false);
@@ -26,49 +21,40 @@ const isOwned = computed(() => props.owned !== false);
 // Card back logo path
 const cardBackLogoUrl = '/images/card-back-logo.png';
 
-// Expanded state (controlled by parent or internal)
-const internalExpanded = ref(false);
-const isExpanded = computed(() => props.isExpanded ?? internalExpanded.value);
+// ===========================================
+// ANIMATION STATE MACHINE
+// ===========================================
+// idle: in grid, showing preview
+// animating-open: moving to center, showing preview
+// crossfading-open: at center, fading preview → detail
+// expanded: at center, showing detail (interactive)
+// crossfading-close: at center, fading detail → preview
+// animating-close: moving back to grid, showing preview
 
-// Animation state
-const animationPhase = ref<'idle' | 'expanding' | 'expanded' | 'collapsing'>('idle');
+type AnimationState = 'idle' | 'animating-open' | 'crossfading-open' | 'expanded' | 'crossfading-close' | 'animating-close';
+const animationState = ref<AnimationState>('idle');
 
-// Store original position for animation
+// Which view is currently visible (for crossfade)
+const showDetailView = ref(false);
+
+// Store original position for return animation
 const originalRect = ref<DOMRect | null>(null);
-const currentStyle = ref<Record<string, string>>({});
 
-// Handle card click
-const handleClick = () => {
-  if (!isOwned.value) return;
-  
-  // Get current position before expanding
-  if (cardContainerRef.value && !isExpanded.value) {
-    originalRect.value = cardContainerRef.value.getBoundingClientRect();
-    expandCard();
-  }
-  
-  emit('click', props.card);
-};
+// Current inline styles for the card
+const cardPositionStyle = ref<Record<string, string>>({});
 
-// Expand card to center
-const expandCard = async () => {
-  if (!originalRect.value) return;
+// ===========================================
+// OPEN CARD
+// ===========================================
+const openCard = async () => {
+  if (!isOwned.value || !cardRef.value) return;
   
-  animationPhase.value = 'expanding';
+  // Get current position
+  const rect = cardRef.value.getBoundingClientRect();
+  originalRect.value = rect;
   
-  const rect = originalRect.value;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  
-  // Target size for expanded card
-  const targetWidth = Math.min(360, viewportWidth - 40);
-  const targetHeight = targetWidth * 1.5; // Aspect ratio for detail view
-  
-  const centerX = (viewportWidth - targetWidth) / 2;
-  const centerY = (viewportHeight - targetHeight) / 2;
-  
-  // Start position (current position in grid)
-  currentStyle.value = {
+  // Set initial position (exactly where it is)
+  cardPositionStyle.value = {
     position: 'fixed',
     top: `${rect.top}px`,
     left: `${rect.left}px`,
@@ -78,76 +64,109 @@ const expandCard = async () => {
     transition: 'none',
   };
   
+  animationState.value = 'animating-open';
+  
   await nextTick();
   
   // Animate to center
   requestAnimationFrame(() => {
-    currentStyle.value = {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const targetWidth = Math.min(360, viewportWidth - 40);
+    const targetHeight = targetWidth * 1.4;
+    const centerX = (viewportWidth - targetWidth) / 2;
+    const centerY = (viewportHeight - targetHeight) / 2;
+    
+    cardPositionStyle.value = {
       position: 'fixed',
       top: `${centerY}px`,
       left: `${centerX}px`,
       width: `${targetWidth}px`,
       height: `${targetHeight}px`,
       zIndex: '1000',
-      transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
     };
     
-    // Mark as expanded when animation completes
+    // After movement, start crossfade (faster)
     setTimeout(() => {
-      animationPhase.value = 'expanded';
-      internalExpanded.value = true;
-    }, 500);
+      animationState.value = 'crossfading-open';
+      showDetailView.value = true;
+      
+      // After crossfade, set as expanded
+      setTimeout(() => {
+        animationState.value = 'expanded';
+      }, 150);
+    }, 300);
   });
 };
 
-// Collapse card back to grid
-const collapseCard = async () => {
-  if (!originalRect.value) {
-    animationPhase.value = 'idle';
-    internalExpanded.value = false;
-    currentStyle.value = {};
-    emit('close');
-    return;
-  }
+// ===========================================
+// CLOSE CARD
+// ===========================================
+const closeCard = async () => {
+  if (animationState.value !== 'expanded') return;
   
-  animationPhase.value = 'collapsing';
+  // Start crossfade to preview
+  animationState.value = 'crossfading-close';
+  showDetailView.value = false;
   
-  // Re-read position in case grid changed
-  const gridCard = cardContainerRef.value;
-  const rect = gridCard?.getBoundingClientRect() ?? originalRect.value;
-  
-  // Animate back to original position
-  currentStyle.value = {
-    position: 'fixed',
-    top: `${rect.top}px`,
-    left: `${rect.left}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
-    zIndex: '1000',
-    transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  };
-  
-  // Clean up after animation
-  setTimeout(() => {
-    animationPhase.value = 'idle';
-    internalExpanded.value = false;
-    currentStyle.value = {};
-    originalRect.value = null;
-    emit('close');
-  }, 400);
+  // After crossfade, animate back (faster)
+  setTimeout(async () => {
+    animationState.value = 'animating-close';
+    
+    // Get current position of placeholder in grid
+    const rect = originalRect.value;
+    if (!rect) {
+      resetToIdle();
+      return;
+    }
+    
+    // Animate back to original position
+    cardPositionStyle.value = {
+      position: 'fixed',
+      top: `${rect.top}px`,
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      zIndex: '1000',
+      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+    };
+    
+    // After animation, reset to idle
+    setTimeout(() => {
+      resetToIdle();
+    }, 300);
+  }, 150);
 };
 
-// Handle close (escape key or click outside)
+const resetToIdle = () => {
+  animationState.value = 'idle';
+  showDetailView.value = false;
+  cardPositionStyle.value = {};
+  originalRect.value = null;
+};
+
+// Handle click on card
+const handleClick = () => {
+  if (!isOwned.value) return;
+  
+  if (animationState.value === 'idle') {
+    openCard();
+  }
+  emit('click', props.card);
+};
+
+// Handle close (escape or click outside)
 const handleClose = () => {
-  if (animationPhase.value === 'expanded') {
-    collapseCard();
+  if (animationState.value === 'expanded') {
+    closeCard();
   }
 };
 
 // Close on escape key
 onMounted(() => {
   const handleEscape = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && animationPhase.value === 'expanded') {
+    if (e.key === 'Escape' && animationState.value === 'expanded') {
       handleClose();
     }
   };
@@ -156,13 +175,16 @@ onMounted(() => {
 });
 
 // Prevent body scroll when expanded
-watch(() => animationPhase.value, (phase) => {
+watch(animationState, (state) => {
   if (import.meta.client) {
-    document.body.style.overflow = (phase === 'expanding' || phase === 'expanded') ? 'hidden' : '';
+    const isOpen = state !== 'idle';
+    document.body.style.overflow = isOpen ? 'hidden' : '';
   }
 });
 
-// Card tilt effect for preview mode
+// ===========================================
+// CARD TILT EFFECT
+// ===========================================
 const {
   isHovering,
   cardTransform,
@@ -171,25 +193,15 @@ const {
   onMouseEnter,
   onMouseLeave,
 } = useCardTilt(cardRef, {
-  maxTilt: 15,
-  scale: 1.02,
+  maxTilt: animationState.value === 'expanded' ? 8 : 15,
+  scale: animationState.value === 'expanded' ? 1.01 : 1.02,
 });
 
-// Card tilt effect for detail mode (slightly reduced effect)
-const {
-  isHovering: isDetailHovering,
-  cardTransform: detailCardTransform,
-  imageTransform: detailImageTransform,
-  cardTransition: detailCardTransition,
-  onMouseEnter: onDetailMouseEnter,
-  onMouseLeave: onDetailMouseLeave,
-} = useCardTilt(detailCardRef, {
-  maxTilt: 8,
-  scale: 1.01,
-});
-
-// Get tier config
+// ===========================================
+// COMPUTED STYLES
+// ===========================================
 const tierConfig = computed(() => TIER_CONFIG[props.card.tier as CardTier]);
+const tierClass = computed(() => `game-card--${props.card.tier.toLowerCase()}`);
 
 // Image loading state
 const imageStatus = ref<'loading' | 'loaded' | 'error'>('loading');
@@ -200,7 +212,6 @@ onMounted(() => {
     imageStatus.value = 'error';
     return;
   }
-  
   const img = new Image();
   img.onload = () => { imageStatus.value = 'loaded'; };
   img.onerror = () => { imageStatus.value = 'error'; };
@@ -210,72 +221,178 @@ onMounted(() => {
 const showImage = computed(() => imageStatus.value === 'loaded');
 const showPlaceholder = computed(() => imageStatus.value === 'error' || !hasImageUrl.value);
 
-// Computed classes and styles
-const tierClass = computed(() => `game-card--${props.card.tier.toLowerCase()}`);
+// Is the card currently animating or expanded?
+const isFloating = computed(() => animationState.value !== 'idle');
 
-const isAnimating = computed(() => 
-  animationPhase.value === 'expanding' || 
-  animationPhase.value === 'collapsing'
-);
-
-const isDetailMode = computed(() => 
-  animationPhase.value === 'expanding' || 
-  animationPhase.value === 'expanded' ||
-  animationPhase.value === 'collapsing'
-);
-
-// Preview card styles (in grid)
-const previewCardStyles = computed(() => {
-  if (isAnimating.value) return { opacity: 0, visibility: 'hidden' as const };
-  return {
-    transform: cardTransform.value,
-    transition: cardTransition.value,
+// Combined card styles
+const cardStyles = computed(() => {
+  const base = {
     "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
     "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
   };
-});
-
-// Expanded card styles (floating)
-const expandedCardStyles = computed(() => ({
-  ...currentStyle.value,
-  "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
-  "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
-}));
-
-// Detail card styles with tilt (only apply tilt when fully expanded, not during animation)
-const detailCardStylesWithTilt = computed(() => {
-  const baseStyles = expandedCardStyles.value;
   
-  // During animation phases, don't apply tilt - use base animation styles
-  if (animationPhase.value === 'expanding' || animationPhase.value === 'collapsing') {
-    return baseStyles;
-  }
-  
-  // When fully expanded, apply tilt effect
-  if (animationPhase.value === 'expanded') {
+  if (isFloating.value) {
     return {
-      ...baseStyles,
-      transform: detailCardTransform.value,
-      transition: detailCardTransition.value,
+      ...base,
+      ...cardPositionStyle.value,
     };
   }
   
-  return baseStyles;
+  return {
+    ...base,
+    transform: cardTransform.value,
+    transition: cardTransition.value,
+  };
 });
 
-// Halo intensity based on animation phase
-const haloOpacity = computed(() => {
-  switch (animationPhase.value) {
-    case 'expanding': return 1;
-    case 'expanded': return 1;
-    case 'collapsing': return 0;
-    default: return 0;
+// Is overlay visible?
+const showOverlay = computed(() => 
+  ['animating-open', 'crossfading-open', 'expanded', 'crossfading-close', 'animating-close'].includes(animationState.value)
+);
+
+// Overlay opacity based on state
+const overlayOpacity = computed(() => {
+  switch (animationState.value) {
+    case 'animating-open':
+    case 'crossfading-open':
+    case 'expanded':
+      return 1;
+    case 'crossfading-close':
+      return 1;
+    case 'animating-close':
+      return 0;
+    default:
+      return 0;
   }
 });
 </script>
 
 <template>
-  <div ref="cardContainerRef" class="game-card-container">
+  <div class="game-card-container">
+    <!-- Teleport for overlay + floating card -->
+    <Teleport to="body">
+      <div v-if="showOverlay" class="floating-card-wrapper">
+        <!-- Overlay -->
+        <div 
+          class="card-overlay"
+          :class="{
+            'card-overlay--visible': overlayOpacity === 1,
+            'card-overlay--fading': animationState === 'animating-close',
+          }"
+          @click="handleClose"
+        />
+        
+        <!-- Floating card (above overlay) -->
+        <article
+          class="game-card game-card--floating"
+          :class="[
+            tierClass,
+            { 'game-card--detail-mode': showDetailView },
+          ]"
+          :style="cardPositionStyle"
+        >
+          <!-- Close button (only when expanded) -->
+          <button 
+            v-if="animationState === 'expanded'"
+            class="game-card__close" 
+            @click.stop="handleClose"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <!-- PREVIEW VIEW (visible during movement) -->
+          <div 
+            class="card-view card-view--preview"
+            :class="{ 'card-view--hidden': showDetailView }"
+          >
+            <div class="game-card__frame">
+              <div class="game-card__bg"></div>
+            </div>
+            <div class="game-card__image-wrapper">
+              <img v-show="showImage" :src="card.gameData.img" :alt="card.name" class="game-card__image" />
+              <div v-if="showPlaceholder" class="game-card__image-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                </svg>
+              </div>
+            </div>
+            <div class="game-card__info">
+              <h3 class="game-card__name">{{ card.name }}</h3>
+              <p class="game-card__class">{{ card.itemClass }}</p>
+            </div>
+          </div>
+
+          <!-- DETAIL VIEW (visible when centered) -->
+          <div 
+            class="card-view card-view--detail"
+            :class="{ 'card-view--visible': showDetailView }"
+          >
+            <div class="detail__title-bar">
+              <span class="detail__name">{{ card.name }}</span>
+              <span class="detail__tier-badge">{{ card.tier }}</span>
+            </div>
+
+            <div class="detail__artwork">
+              <img v-if="showImage" :src="card.gameData.img" :alt="card.name" class="detail__image" />
+              <div v-else class="detail__image-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+              </div>
+            </div>
+
+            <div class="detail__type-line">
+              <span class="detail__type">{{ card.itemClass }}</span>
+              <span class="detail__divider">◆</span>
+              <span class="detail__rarity">{{ card.rarity }}</span>
+            </div>
+
+            <div class="detail__separator">
+              <span class="detail__separator-line"></span>
+              <span class="detail__separator-rune">✧</span>
+              <span class="detail__separator-line"></span>
+            </div>
+
+            <div class="detail__flavour">
+              <p v-if="card.flavourText">"{{ card.flavourText }}"</p>
+              <p v-else class="detail__no-flavour">Aucune description disponible</p>
+            </div>
+
+            <div class="detail__separator">
+              <span class="detail__separator-line"></span>
+              <span class="detail__separator-rune">◇</span>
+              <span class="detail__separator-line"></span>
+            </div>
+
+            <div class="detail__bottom-info">
+              <span class="detail__collector-number">#{{ card.uid }}</span>
+              <a 
+                v-if="card.wikiUrl" 
+                :href="card.wikiUrl" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="detail__wiki-link"
+                @click.stop
+              >
+                Wiki ↗
+              </a>
+              <span class="detail__weight" v-if="card.gameData.weight">
+                ◆ {{ card.gameData.weight }}
+              </span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </Teleport>
+
+    <!-- Placeholder to keep grid space when card is floating -->
+    <div 
+      v-if="isFloating && isOwned" 
+      class="game-card-placeholder"
+    />
+
     <!-- CARD BACK (not owned) -->
     <article
       v-if="!isOwned"
@@ -307,16 +424,19 @@ const haloOpacity = computed(() => {
       </div>
     </article>
 
-    <!-- CARD FRONT (owned) - PREVIEW MODE (in grid) -->
+    <!-- MAIN CARD in grid (owned, not floating) - PREVIEW ONLY -->
     <article
-      v-else-if="!isDetailMode"
+      v-else-if="!isFloating"
       ref="cardRef"
       role="button"
       tabindex="0"
       :aria-label="`Carte ${card.name}`"
-      class="game-card game-card--preview"
-      :class="[tierClass, { 'game-card--hovering': isHovering }]"
-      :style="previewCardStyles"
+      class="game-card"
+      :class="[
+        tierClass,
+        { 'game-card--hovering': isHovering },
+      ]"
+      :style="cardStyles"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
       @click="handleClick"
@@ -326,7 +446,6 @@ const haloOpacity = computed(() => {
       <div class="game-card__frame">
         <div class="game-card__bg"></div>
       </div>
-      <span class="game-card__tier">{{ card.tier }}</span>
       <div class="game-card__image-wrapper" :style="{ transform: imageTransform }">
         <div v-if="imageStatus === 'loading' && hasImageUrl" class="game-card__image-loading">
           <div class="game-card__spinner"></div>
@@ -343,131 +462,12 @@ const haloOpacity = computed(() => {
         <p class="game-card__class">{{ card.itemClass }}</p>
       </div>
     </article>
-
-    <!-- PLACEHOLDER when card is in detail mode (keeps grid space) -->
-    <div 
-      v-else 
-      class="game-card-placeholder"
-      :style="{ opacity: 0 }"
-    >
-      <!-- Invisible placeholder to maintain grid space -->
-    </div>
-
-    <!-- EXPANDED CARD (floating, with halo) - uses Teleport to body -->
-    <Teleport to="body">
-      <div 
-        v-if="isDetailMode && isOwned" 
-        class="expanded-card-wrapper"
-        :class="{
-          'expanded-card-wrapper--expanding': animationPhase === 'expanding',
-          'expanded-card-wrapper--expanded': animationPhase === 'expanded',
-          'expanded-card-wrapper--collapsing': animationPhase === 'collapsing',
-        }"
-        @click.self="handleClose"
-      >
-        <!-- Halo/Glow effect emanating from card -->
-        <div 
-          class="card-halo"
-          :style="{
-            ...expandedCardStyles,
-            opacity: haloOpacity,
-          }"
-        ></div>
-
-        <!-- The actual expanded card -->
-        <article
-          ref="detailCardRef"
-          class="game-card game-card--detail"
-          :class="[tierClass, { 'game-card--hovering': isDetailHovering && animationPhase === 'expanded' }]"
-          :style="detailCardStylesWithTilt"
-          @mouseenter="onDetailMouseEnter"
-          @mouseleave="onDetailMouseLeave"
-        >
-          <!-- Close button -->
-          <button class="game-card__close" @click="handleClose">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          <!-- Card content with crossfade between preview and detail -->
-          <div class="game-card__frame game-card__frame--detail">
-            <!-- Title bar (detail mode) -->
-            <div class="detail__title-bar">
-              <span class="detail__name">{{ card.name }}</span>
-              <span class="detail__tier-badge">{{ card.tier }}</span>
-            </div>
-
-            <!-- Artwork -->
-            <div class="detail__artwork">
-              <img 
-                v-if="showImage" 
-                :src="card.gameData.img" 
-                :alt="card.name" 
-                class="detail__image"
-                :style="{ transform: detailImageTransform }"
-              />
-              <div v-else class="detail__image-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                </svg>
-              </div>
-            </div>
-
-            <!-- Type line -->
-            <div class="detail__type-line">
-              <span class="detail__type">{{ card.itemClass }}</span>
-              <span class="detail__divider">◆</span>
-              <span class="detail__rarity">{{ card.rarity }}</span>
-            </div>
-
-            <!-- Separator -->
-            <div class="detail__separator">
-              <span class="detail__separator-line"></span>
-              <span class="detail__separator-rune">✧</span>
-              <span class="detail__separator-line"></span>
-            </div>
-
-            <!-- Flavour text -->
-            <div class="detail__flavour">
-              <p v-if="card.flavourText">"{{ card.flavourText }}"</p>
-              <p v-else class="detail__no-flavour">Aucune description disponible</p>
-            </div>
-
-            <!-- Separator -->
-            <div class="detail__separator">
-              <span class="detail__separator-line"></span>
-              <span class="detail__separator-rune">◇</span>
-              <span class="detail__separator-line"></span>
-            </div>
-
-            <!-- Bottom info -->
-            <div class="detail__bottom-info">
-              <span class="detail__collector-number">#{{ card.uid }}</span>
-              <a 
-                v-if="card.wikiUrl" 
-                :href="card.wikiUrl" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                class="detail__wiki-link"
-                @click.stop
-              >
-                Wiki ↗
-              </a>
-              <span class="detail__weight" v-if="card.gameData.weight">
-                ◆ {{ card.gameData.weight }}
-              </span>
-            </div>
-          </div>
-        </article>
-      </div>
-    </Teleport>
   </div>
 </template>
 
 <style scoped>
 /* ===========================================
-   CONTAINER
+   CONTAINER & PLACEHOLDER
    =========================================== */
 .game-card-container {
   position: relative;
@@ -476,140 +476,114 @@ const haloOpacity = computed(() => {
 .game-card-placeholder {
   width: 100%;
   aspect-ratio: 2.5/3.5;
+  background: transparent;
 }
 
 /* ===========================================
-   PREVIEW MODE (in grid)
+   OVERLAY
    =========================================== */
-.game-card--preview {
-  cursor: pointer;
-}
-
-.game-card__bg {
+.card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    145deg,
-    rgba(30, 30, 35, 0.9) 0%,
-    rgba(15, 15, 18, 0.95) 50%,
-    rgba(10, 10, 12, 1) 100%
-  );
-  border-radius: inherit;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  transition: background 0.25s ease, backdrop-filter 0.25s ease;
 }
 
-.game-card__bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.03;
-  mix-blend-mode: overlay;
-  border-radius: inherit;
+.card-overlay--visible {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.card-overlay--fading {
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
 }
 
 /* ===========================================
-   EXPANDED CARD WRAPPER (dark overlay with blur)
+   FLOATING CARD WRAPPER
    =========================================== */
-.expanded-card-wrapper {
+.floating-card-wrapper {
   position: fixed;
   inset: 0;
   z-index: 999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  /* Start transparent */
-  background: rgba(0, 0, 0, 0);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
-  
-  /* Synchronized transition - same as card animation (0.5s open, 0.4s close) */
-  transition: background 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              backdrop-filter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
 }
 
-/* Opening and opened states */
-.expanded-card-wrapper--expanding,
-.expanded-card-wrapper--expanded {
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+.floating-card-wrapper .card-overlay {
+  pointer-events: auto;
 }
 
-/* Closing state - synchronized with card return animation (0.4s) */
-.expanded-card-wrapper--collapsing {
-  background: rgba(0, 0, 0, 0);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
-  transition: background 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              backdrop-filter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+.floating-card-wrapper .game-card {
+  pointer-events: auto;
 }
 
 /* ===========================================
-   HALO EFFECT - Disabled, using box-shadow on card instead
+   MAIN CARD
    =========================================== */
-.card-halo {
-  display: none;
-}
-
-/* ===========================================
-   DETAIL MODE CARD
-   =========================================== */
-.game-card--detail {
-  border-radius: 14px;
+.game-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2.5/3.5;
+  cursor: pointer;
+  border-radius: 12px;
   overflow: hidden;
-  border: 2px solid var(--tier-color, #2a2a30);
-  box-shadow: 
-    0 25px 80px rgba(0, 0, 0, 0.9),
-    0 0 50px var(--tier-glow, transparent);
-  background: linear-gradient(180deg, #18181c 0%, #0e0e12 100%);
+  background: linear-gradient(160deg, #12110f 0%, #0a0908 50%, #0d0c0a 100%);
 }
 
-/* Detail frame content transition - synchronized with card movement */
-.game-card--detail .game-card__frame--detail {
-  opacity: 0;
-  transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* Same timing as card */
+.game-card--floating {
+  cursor: default;
+  z-index: 1001; /* Above overlay */
+  aspect-ratio: unset; /* Use explicit width/height when floating */
 }
 
-/* Show content during opening and when expanded */
-.expanded-card-wrapper--expanding .game-card--detail .game-card__frame--detail,
-.expanded-card-wrapper--expanded .game-card--detail .game-card__frame--detail {
+/* ===========================================
+   CARD VIEWS (Preview & Detail)
+   =========================================== */
+.card-view {
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.15s ease;
+}
+
+.card-view--preview {
+  position: relative;
   opacity: 1;
 }
 
-/* Hide content smoothly when collapsing - synchronized with card return */
-.expanded-card-wrapper--collapsing .game-card--detail .game-card__frame--detail {
+.card-view--preview.card-view--hidden {
+  position: absolute;
+  inset: 0;
   opacity: 0;
-  transition: opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); /* Same timing as card */
+  pointer-events: none;
 }
 
-.game-card--detail.game-card--t0 {
-  border-color: #6d5a2a;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(201, 162, 39, 0.15);
+.card-view--detail {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 8px;
 }
 
-.game-card--detail.game-card--t1 {
-  border-color: #3a3445;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 20px rgba(122, 106, 138, 0.12);
+.card-view--detail.card-view--visible {
+  position: relative;
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.game-card--detail.game-card--t2 {
-  border-color: #3a4550;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 15px rgba(90, 112, 128, 0.1);
-}
-
-.game-card--detail.game-card--t3 {
-  border-color: #2a2a2d;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95);
-}
-
-/* Close button */
+/* ===========================================
+   CLOSE BUTTON
+   =========================================== */
 .game-card__close {
   position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 40px;
-  height: 40px;
+  top: -45px;
+  right: 0;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -625,30 +599,47 @@ const haloOpacity = computed(() => {
 .game-card__close:hover {
   background: rgba(50, 50, 55, 0.95);
   color: #fff;
-  border-color: rgba(100, 100, 105, 0.6);
 }
 
 .game-card__close svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
-/* Detail frame */
-.game-card__frame--detail {
-  display: flex;
-  flex-direction: column;
-  padding: 14px;
-  gap: 10px;
-  height: 100%;
+/* ===========================================
+   PREVIEW VIEW STYLES
+   =========================================== */
+.game-card__frame {
+  position: absolute;
+  inset: 0;
 }
 
-/* Title bar */
+.game-card__bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(18, 17, 15, 0.95) 0%, rgba(10, 9, 8, 0.98) 50%, rgba(13, 12, 10, 1) 100%);
+  border-radius: inherit;
+}
+
+.game-card__bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  border-radius: inherit;
+}
+
+/* ===========================================
+   DETAIL VIEW STYLES
+   =========================================== */
 .detail__title-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  background: linear-gradient(180deg, rgba(40, 40, 48, 0.6) 0%, rgba(25, 25, 30, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.8) 0%, rgba(10, 9, 8, 0.9) 100%);
   border-radius: 8px;
 }
 
@@ -670,11 +661,10 @@ const haloOpacity = computed(() => {
   color: var(--tier-glow, #94a3b8);
 }
 
-/* Artwork */
 .detail__artwork {
-  flex: 0 0 auto;
-  aspect-ratio: 4 / 3;
-  background: linear-gradient(180deg, #0c0c10 0%, #08080a 100%);
+  flex: 1;
+  min-height: 120px;
+  background: linear-gradient(160deg, #050504 0%, #030303 50%, #040403 100%);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -695,8 +685,6 @@ const haloOpacity = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #14141a 0%, #0a0a0e 100%);
-  border-radius: 4px;
 }
 
 .detail__image-placeholder svg {
@@ -706,7 +694,6 @@ const haloOpacity = computed(() => {
   opacity: 0.35;
 }
 
-/* Type line */
 .detail__type-line {
   display: flex;
   justify-content: center;
@@ -736,13 +723,12 @@ const haloOpacity = computed(() => {
   font-style: italic;
 }
 
-/* Separators */
 .detail__separator {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .detail__separator-line {
@@ -757,21 +743,20 @@ const haloOpacity = computed(() => {
   opacity: 0.7;
 }
 
-/* Flavour text */
 .detail__flavour {
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 8px;
-  min-height: 40px;
+  padding: 6px 8px;
+  min-height: 36px;
 }
 
 .detail__flavour p {
   font-family: 'Crimson Text', serif;
   font-style: italic;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.4;
   color: #9a9a9a;
   margin: 0;
 }
@@ -780,13 +765,11 @@ const haloOpacity = computed(() => {
   color: #5a5a5a;
 }
 
-/* Bottom info */
 .detail__bottom-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2px 8px 0;
-  margin-top: auto;
+  padding: 4px 8px 0;
 }
 
 .detail__collector-number {
@@ -815,6 +798,33 @@ const haloOpacity = computed(() => {
   font-family: 'Cinzel', serif;
   font-size: 13px;
   color: var(--tier-glow, #6a6a6a);
+}
+
+/* ===========================================
+   FLOATING STATE ENHANCEMENTS
+   =========================================== */
+.game-card--floating {
+  border: 2px solid var(--tier-color, #2a2a30);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(0, 0, 0, 0.5);
+}
+
+.game-card--floating.game-card--t0 {
+  border-color: #6d5a2a;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(201, 162, 39, 0.15);
+}
+
+.game-card--floating.game-card--t1 {
+  border-color: #3a3445;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 20px rgba(122, 106, 138, 0.12);
+}
+
+.game-card--floating.game-card--t2 {
+  border-color: #3a4550;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 15px rgba(90, 112, 128, 0.1);
+}
+
+.game-card--floating.game-card--t3 {
+  border-color: #2a2a2d;
 }
 
 /* ===========================================
