@@ -2,6 +2,7 @@
 import type { Card, CardTier } from "~/types/card";
 import { TIER_CONFIG } from "~/types/card";
 import { useCardTilt } from "~/composables/useCardTilt";
+import gsap from "gsap";
 
 const props = defineProps<{
   card: Card;
@@ -15,6 +16,12 @@ const emit = defineEmits<{
 
 const cardRef = ref<HTMLElement | null>(null);
 
+// Refs for GSAP animations
+const floatingCardRef = ref<HTMLElement | null>(null);
+const overlayRef = ref<HTMLElement | null>(null);
+const previewViewRef = ref<HTMLElement | null>(null);
+const detailViewRef = ref<HTMLElement | null>(null);
+
 // Default to owned if not specified
 const isOwned = computed(() => props.owned !== false);
 
@@ -22,128 +29,188 @@ const isOwned = computed(() => props.owned !== false);
 const cardBackLogoUrl = '/images/card-back-logo.png';
 
 // ===========================================
-// ANIMATION STATE MACHINE
+// ANIMATION STATE
 // ===========================================
-// idle: in grid, showing preview
-// animating-open: moving to center, showing preview
-// crossfading-open: at center, fading preview → detail
-// expanded: at center, showing detail (interactive)
-// crossfading-close: at center, fading detail → preview
-// animating-close: moving back to grid, showing preview
-
-type AnimationState = 'idle' | 'animating-open' | 'crossfading-open' | 'expanded' | 'crossfading-close' | 'animating-close';
+type AnimationState = 'idle' | 'animating' | 'expanded';
 const animationState = ref<AnimationState>('idle');
-
-// Which view is currently visible (for crossfade)
-const showDetailView = ref(false);
 
 // Store original position for return animation
 const originalRect = ref<DOMRect | null>(null);
 
-// Current inline styles for the card
-const cardPositionStyle = ref<Record<string, string>>({});
+// Current timeline (to kill if needed)
+let currentTimeline: gsap.core.Timeline | null = null;
 
 // ===========================================
-// OPEN CARD
+// OPEN CARD (GSAP Timeline)
 // ===========================================
 const openCard = async () => {
   if (!isOwned.value || !cardRef.value) return;
+  
+  // Kill any existing animation
+  if (currentTimeline) {
+    currentTimeline.kill();
+  }
   
   // Get current position
   const rect = cardRef.value.getBoundingClientRect();
   originalRect.value = rect;
   
-  // Set initial position (exactly where it is)
-  cardPositionStyle.value = {
-    position: 'fixed',
-    top: `${rect.top}px`,
-    left: `${rect.left}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
-    zIndex: '1000',
-    transition: 'none',
-  };
+  // Calculate target position
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const targetWidth = Math.min(360, viewportWidth - 40);
+  const targetHeight = targetWidth * 1.4;
+  const centerX = (viewportWidth - targetWidth) / 2;
+  const centerY = (viewportHeight - targetHeight) / 2;
   
-  animationState.value = 'animating-open';
+  animationState.value = 'animating';
   
   await nextTick();
   
-  // Animate to center
-  requestAnimationFrame(() => {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const targetWidth = Math.min(360, viewportWidth - 40);
-    const targetHeight = targetWidth * 1.4;
-    const centerX = (viewportWidth - targetWidth) / 2;
-    const centerY = (viewportHeight - targetHeight) / 2;
-    
-    cardPositionStyle.value = {
-      position: 'fixed',
-      top: `${centerY}px`,
-      left: `${centerX}px`,
-      width: `${targetWidth}px`,
-      height: `${targetHeight}px`,
-      zIndex: '1000',
-      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-    };
-    
-    // After movement, start crossfade (faster)
-    setTimeout(() => {
-      animationState.value = 'crossfading-open';
-      showDetailView.value = true;
-      
-      // After crossfade, set as expanded
-      setTimeout(() => {
-        animationState.value = 'expanded';
-      }, 150);
-    }, 300);
+  const card = floatingCardRef.value;
+  const overlay = overlayRef.value;
+  const previewView = previewViewRef.value;
+  const detailView = detailViewRef.value;
+  
+  if (!card || !overlay || !previewView || !detailView) return;
+  
+  // Get stagger elements
+  const staggerElements = detailView.querySelectorAll('.detail__stagger');
+  
+  // Set initial states
+  gsap.set(card, {
+    position: 'fixed',
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+    zIndex: 1000,
   });
+  
+  gsap.set(overlay, { opacity: 0, backdropFilter: 'blur(0px)' });
+  gsap.set(previewView, { opacity: 1 });
+  gsap.set(detailView, { opacity: 1 });
+  gsap.set(staggerElements, { opacity: 0, y: 8 });
+  
+  // Create synchronized timeline
+  currentTimeline = gsap.timeline({
+    onComplete: () => {
+      animationState.value = 'expanded';
+    }
+  });
+  
+  // All animations happen together with slight offsets
+  currentTimeline
+    // Overlay fades in
+    .to(overlay, {
+      opacity: 1,
+      backdropFilter: 'blur(12px)',
+      duration: 0.4,
+      ease: 'power2.out',
+    }, 0)
+    // Card moves to center
+    .to(card, {
+      top: centerY,
+      left: centerX,
+      width: targetWidth,
+      height: targetHeight,
+      duration: 0.45,
+      ease: 'power3.out',
+    }, 0)
+    // Preview fades out (starts slightly after)
+    .to(previewView, {
+      opacity: 0,
+      duration: 0.25,
+      ease: 'power2.inOut',
+    }, 0.1)
+    // Detail elements stagger in (starts during movement)
+    .to(staggerElements, {
+      opacity: 1,
+      y: 0,
+      duration: 0.35,
+      ease: 'power2.out',
+      stagger: 0.04,
+    }, 0.15);
 };
 
 // ===========================================
-// CLOSE CARD
+// CLOSE CARD (GSAP Timeline)
 // ===========================================
 const closeCard = async () => {
   if (animationState.value !== 'expanded') return;
   
-  // Start crossfade to preview
-  animationState.value = 'crossfading-close';
-  showDetailView.value = false;
+  // Kill any existing animation
+  if (currentTimeline) {
+    currentTimeline.kill();
+  }
   
-  // After crossfade, animate back (faster)
-  setTimeout(async () => {
-    animationState.value = 'animating-close';
-    
-    // Get current position of placeholder in grid
-    const rect = originalRect.value;
-    if (!rect) {
+  const rect = originalRect.value;
+  if (!rect) {
+    resetToIdle();
+    return;
+  }
+  
+  const card = floatingCardRef.value;
+  const overlay = overlayRef.value;
+  const previewView = previewViewRef.value;
+  const detailView = detailViewRef.value;
+  
+  if (!card || !overlay || !previewView || !detailView) {
+    resetToIdle();
+    return;
+  }
+  
+  const staggerElements = detailView.querySelectorAll('.detail__stagger');
+  
+  animationState.value = 'animating';
+  
+  // Create synchronized close timeline
+  currentTimeline = gsap.timeline({
+    onComplete: () => {
       resetToIdle();
-      return;
     }
-    
-    // Animate back to original position
-    cardPositionStyle.value = {
-      position: 'fixed',
-      top: `${rect.top}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-      zIndex: '1000',
-      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-    };
-    
-    // After animation, reset to idle
-    setTimeout(() => {
-      resetToIdle();
-    }, 300);
-  }, 150);
+  });
+  
+  currentTimeline
+    // Detail elements fade out quickly (all together)
+    .to(staggerElements, {
+      opacity: 0,
+      duration: 0.15,
+      ease: 'power2.in',
+    }, 0)
+    // Preview fades back in
+    .to(previewView, {
+      opacity: 1,
+      duration: 0.2,
+      ease: 'power2.out',
+    }, 0.05)
+    // Card moves back to grid
+    .to(card, {
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+      duration: 0.4,
+      ease: 'power3.out',
+    }, 0.05)
+    // Overlay fades out
+    .to(overlay, {
+      opacity: 0,
+      backdropFilter: 'blur(0px)',
+      duration: 0.35,
+      ease: 'power2.in',
+    }, 0.1);
 };
 
 const resetToIdle = () => {
   animationState.value = 'idle';
-  showDetailView.value = false;
-  cardPositionStyle.value = {};
   originalRect.value = null;
+  currentTimeline = null;
+  
+  // Reset GSAP styles
+  if (floatingCardRef.value) {
+    gsap.set(floatingCardRef.value, { clearProps: 'all' });
+  }
 };
 
 // Handle click on card
@@ -224,47 +291,21 @@ const showPlaceholder = computed(() => imageStatus.value === 'error' || !hasImag
 // Is the card currently animating or expanded?
 const isFloating = computed(() => animationState.value !== 'idle');
 
-// Combined card styles
-const cardStyles = computed(() => {
-  const base = {
-    "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
-    "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
-  };
-  
-  if (isFloating.value) {
-    return {
-      ...base,
-      ...cardPositionStyle.value,
-    };
-  }
-  
-  return {
-    ...base,
-    transform: cardTransform.value,
-    transition: cardTransition.value,
-  };
-});
+// Tier styles
+const tierStyles = computed(() => ({
+  "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
+  "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
+}));
 
-// Is overlay visible?
-const showOverlay = computed(() => 
-  ['animating-open', 'crossfading-open', 'expanded', 'crossfading-close', 'animating-close'].includes(animationState.value)
-);
+// Card styles for grid (non-floating)
+const cardStyles = computed(() => ({
+  ...tierStyles.value,
+  transform: cardTransform.value,
+  transition: cardTransition.value,
+}));
 
-// Overlay opacity based on state
-const overlayOpacity = computed(() => {
-  switch (animationState.value) {
-    case 'animating-open':
-    case 'crossfading-open':
-    case 'expanded':
-      return 1;
-    case 'crossfading-close':
-      return 1;
-    case 'animating-close':
-      return 0;
-    default:
-      return 0;
-  }
-});
+// Is overlay/floating card visible?
+const showOverlay = computed(() => animationState.value !== 'idle');
 </script>
 
 <template>
@@ -272,24 +313,19 @@ const overlayOpacity = computed(() => {
     <!-- Teleport for overlay + floating card -->
     <Teleport to="body">
       <div v-if="showOverlay" class="floating-card-wrapper">
-        <!-- Overlay -->
+        <!-- Overlay (GSAP animated) -->
         <div 
+          ref="overlayRef"
           class="card-overlay"
-          :class="{
-            'card-overlay--visible': overlayOpacity === 1,
-            'card-overlay--fading': animationState === 'animating-close',
-          }"
           @click="handleClose"
         />
         
-        <!-- Floating card (above overlay) -->
+        <!-- Floating card (GSAP animated) -->
         <article
+          ref="floatingCardRef"
           class="game-card game-card--floating"
-          :class="[
-            tierClass,
-            { 'game-card--detail-mode': showDetailView },
-          ]"
-          :style="cardPositionStyle"
+          :class="[tierClass]"
+          :style="tierStyles"
         >
           <!-- Close button (only when expanded) -->
           <button 
@@ -302,10 +338,10 @@ const overlayOpacity = computed(() => {
             </svg>
           </button>
 
-          <!-- PREVIEW VIEW (visible during movement) -->
+          <!-- PREVIEW VIEW (GSAP fades this out) -->
           <div 
+            ref="previewViewRef"
             class="card-view card-view--preview"
-            :class="{ 'card-view--hidden': showDetailView }"
           >
             <div class="game-card__frame">
               <div class="game-card__bg"></div>
@@ -324,17 +360,17 @@ const overlayOpacity = computed(() => {
             </div>
           </div>
 
-          <!-- DETAIL VIEW (visible when centered) -->
+          <!-- DETAIL VIEW (GSAP animates each stagger element) -->
           <div 
+            ref="detailViewRef"
             class="card-view card-view--detail"
-            :class="{ 'card-view--visible': showDetailView }"
           >
-            <div class="detail__title-bar">
+            <div class="detail__title-bar detail__stagger" style="--stagger: 0">
               <span class="detail__name">{{ card.name }}</span>
               <span class="detail__tier-badge">{{ card.tier }}</span>
             </div>
 
-            <div class="detail__artwork">
+            <div class="detail__artwork detail__stagger" style="--stagger: 1">
               <img v-if="showImage" :src="card.gameData.img" :alt="card.name" class="detail__image" />
               <div v-else class="detail__image-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -343,30 +379,30 @@ const overlayOpacity = computed(() => {
               </div>
             </div>
 
-            <div class="detail__type-line">
+            <div class="detail__type-line detail__stagger" style="--stagger: 2">
               <span class="detail__type">{{ card.itemClass }}</span>
               <span class="detail__divider">◆</span>
               <span class="detail__rarity">{{ card.rarity }}</span>
             </div>
 
-            <div class="detail__separator">
+            <div class="detail__separator detail__stagger" style="--stagger: 3">
               <span class="detail__separator-line"></span>
               <span class="detail__separator-rune">✧</span>
               <span class="detail__separator-line"></span>
             </div>
 
-            <div class="detail__flavour">
+            <div class="detail__flavour detail__stagger" style="--stagger: 4">
               <p v-if="card.flavourText">"{{ card.flavourText }}"</p>
               <p v-else class="detail__no-flavour">Aucune description disponible</p>
             </div>
 
-            <div class="detail__separator">
+            <div class="detail__separator detail__stagger" style="--stagger: 5">
               <span class="detail__separator-line"></span>
               <span class="detail__separator-rune">◇</span>
               <span class="detail__separator-line"></span>
             </div>
 
-            <div class="detail__bottom-info">
+            <div class="detail__bottom-info detail__stagger" style="--stagger: 6">
               <span class="detail__collector-number">#{{ card.uid }}</span>
               <a 
                 v-if="card.wikiUrl" 
@@ -480,24 +516,13 @@ const overlayOpacity = computed(() => {
 }
 
 /* ===========================================
-   OVERLAY
+   OVERLAY (GSAP controls opacity/blur)
    =========================================== */
 .card-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0);
-  backdrop-filter: blur(0px);
-  transition: background 0.25s ease, backdrop-filter 0.25s ease;
-}
-
-.card-overlay--visible {
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-}
-
-.card-overlay--fading {
-  background: rgba(0, 0, 0, 0);
-  backdrop-filter: blur(0px);
+  background: rgba(0, 0, 0, 0.88);
+  /* Note: backdrop-filter is set by GSAP */
 }
 
 /* ===========================================
@@ -538,41 +563,35 @@ const overlayOpacity = computed(() => {
 }
 
 /* ===========================================
-   CARD VIEWS (Preview & Detail)
+   CARD VIEWS (GSAP controls animations)
    =========================================== */
 .card-view {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  transition: opacity 0.15s ease;
+  backface-visibility: hidden;
+  will-change: opacity, transform;
 }
 
 .card-view--preview {
-  position: relative;
-  opacity: 1;
-}
-
-.card-view--preview.card-view--hidden {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
+  /* GSAP will animate opacity */
 }
 
 .card-view--detail {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
   display: flex;
   flex-direction: column;
   padding: 14px;
   gap: 8px;
+  /* GSAP will animate opacity of children */
 }
 
-.card-view--detail.card-view--visible {
-  position: relative;
-  opacity: 1;
-  pointer-events: auto;
+/* ===========================================
+   STAGGER ELEMENTS (GSAP animates these)
+   =========================================== */
+.detail__stagger {
+  /* Initial state - GSAP sets opacity:0, y:8 */
+  will-change: opacity, transform;
 }
 
 /* ===========================================
