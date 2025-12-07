@@ -64,10 +64,27 @@ const getImageStatus = (cardId: string) => imageStatuses.value.get(cardId) || 'l
 // The BASE card (visually at bottom of pile) is at position (0,0) - aligned with grid
 // Cards stacked ON TOP are offset towards up-left
 // layerIndex 0 = base (0,0), layerIndex 1 = first card on top (-4px,-4px), etc.
+
+// Generate consistent random rotations for each layer (seeded by card ID)
+const layerRotations = computed(() => {
+  const rotations: number[] = [];
+  const seed = topCard.value.id.charCodeAt(0) + topCard.value.id.length;
+  
+  for (let i = 0; i < visualStackCount.value; i++) {
+    // Seeded pseudo-random: use card ID + layer index for consistency
+    const pseudoRandom = Math.sin(seed * (i + 1) * 9999) * 10000;
+    // Very subtle rotation: between -2.5 and +2.5 degrees
+    const rotation = (pseudoRandom - Math.floor(pseudoRandom) - 0.5) * 5;
+    rotations.push(rotation);
+  }
+  return rotations;
+});
+
 const getLayerOffset = (layerIndex: number) => {
   const offset = layerIndex * 4; // 4px per layer
+  const rotation = layerRotations.value[layerIndex] || 0;
   return {
-    transform: `translate(${-offset}px, ${-offset}px)`,
+    transform: `translate(${-offset}px, ${-offset}px) rotate(${rotation}deg)`,
     zIndex: layerIndex + 1, // Higher layer = higher z-index (base is 1, top is highest)
   };
 };
@@ -432,7 +449,17 @@ const isHovering = ref(false);
         class="card-stack__layer"
         :style="getLayerOffset(i - 1)"
       >
-        <div class="card-stack__layer-bg"></div>
+        <div 
+          class="card-stack__layer-frame"
+          :style="{ borderColor: tierConfig?.color }"
+        >
+          <div class="card-stack__layer-bg"></div>
+          <!-- Corner decorations with same color -->
+          <div class="card-stack__layer-corner card-stack__layer-corner--tl" :style="{ borderColor: tierConfig?.color }"></div>
+          <div class="card-stack__layer-corner card-stack__layer-corner--br" :style="{ borderColor: tierConfig?.color }"></div>
+        </div>
+        <!-- Dark gradient OVER the border to darken the bottom including the border -->
+        <div class="card-stack__layer-bottom-shadow"></div>
       </div>
       
       <!-- Top card (GameCard) - offset to be at the top of the stack -->
@@ -783,22 +810,84 @@ const isHovering = ref(false);
 
 /* ===========================================
    STACK LAYERS (peek out behind, up-left)
+   Identical styling to GameCard frame
    =========================================== */
 .card-stack__layer {
   position: absolute;
   inset: 0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: none;
 }
 
+/* Frame - matches .game-card__frame from cards.css */
+.card-stack__layer-frame {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #1a1a1f 0%, #0d0d10 100%);
+  border: 2px solid var(--tier-color, #2a2a30);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: border-color 400ms cubic-bezier(0.03, 0.98, 0.52, 0.99);
+}
+
+/* Background inside frame - matches .game-card__bg */
 .card-stack__layer-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(145deg, #1a1a1f 0%, #0d0d10 100%);
-  border: 2px solid var(--tier-color, #2a2a2d);
+  background: linear-gradient(160deg, rgba(18, 17, 15, 0.95) 0%, rgba(10, 9, 8, 0.98) 50%, rgba(13, 12, 10, 1) 100%);
   border-radius: inherit;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Noise overlay - matches .game-card__bg::after */
+.card-stack__layer-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  border-radius: inherit;
+}
+
+/* Dark gradient OVER the entire card including border */
+/* This creates the darkened bottom effect seen on GameCard */
+.card-stack__layer-bottom-shadow {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 40%, transparent 100%);
+  border-radius: 0 0 12px 12px;
+  z-index: 20; /* Above the frame and border */
+  pointer-events: none;
+}
+
+/* Corner decorations - using actual elements for dynamic color */
+.card-stack__layer-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2px solid;
+  opacity: 0.5;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.card-stack__layer-corner--tl {
+  top: 8px;
+  left: 8px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.card-stack__layer-corner--br {
+  bottom: 8px;
+  right: 8px;
+  border-left: none;
+  border-top: none;
 }
 
 /* ===========================================
@@ -839,4 +928,5 @@ const isHovering = ref(false);
   /* Badge is inside base-wrapper, so it lifts automatically with parent */
 }
 </style>
+
 
