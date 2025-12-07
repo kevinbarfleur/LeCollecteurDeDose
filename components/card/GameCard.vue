@@ -461,7 +461,7 @@ const haloOpacity = computed(() => {
 }
 
 /* ===========================================
-   EXPANDED CARD WRAPPER
+   EXPANDED CARD WRAPPER (dark overlay with blur)
    =========================================== */
 .expanded-card-wrapper {
   position: fixed;
@@ -470,31 +470,34 @@ const haloOpacity = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  /* Dark semi-transparent overlay */
+  background: rgba(0, 0, 0, 0.85);
+  
+  /* Blur the content behind */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  
+  /* Fade in animation */
+  animation: overlay-fade-in 0.4s ease forwards;
+}
+
+@keyframes overlay-fade-in {
+  from {
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+  }
+  to {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+  }
 }
 
 /* ===========================================
-   HALO EFFECT
+   HALO EFFECT - Disabled, using box-shadow on card instead
    =========================================== */
 .card-halo {
-  position: absolute;
-  border-radius: 20px;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
-  
-  /* Glow effect */
-  background: radial-gradient(
-    ellipse at center,
-    var(--tier-glow, rgba(100, 100, 100, 0.3)) 0%,
-    transparent 70%
-  );
-  
-  /* Extend beyond card */
-  transform: scale(2.5);
-  filter: blur(60px);
-  
-  /* Backdrop blur for content behind */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  display: none;
 }
 
 /* ===========================================
@@ -512,22 +515,22 @@ const haloOpacity = computed(() => {
 
 .game-card--detail.game-card--t0 {
   border-color: #6d5a2a;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 70px rgba(201, 162, 39, 0.35);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(201, 162, 39, 0.15);
 }
 
 .game-card--detail.game-card--t1 {
   border-color: #3a3445;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(122, 106, 138, 0.25);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 20px rgba(122, 106, 138, 0.12);
 }
 
 .game-card--detail.game-card--t2 {
   border-color: #3a4550;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(90, 112, 128, 0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 15px rgba(90, 112, 128, 0.1);
 }
 
 .game-card--detail.game-card--t3 {
   border-color: #2a2a2d;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95);
 }
 
 /* Close button */
