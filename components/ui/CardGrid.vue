@@ -4,7 +4,15 @@ import type { Card } from '~/types/card'
 const props = defineProps<{
   cards: Card[]
   emptyMessage?: string
+  ownedCardIds?: string[] // List of card IDs that the user owns
 }>()
+
+// Check if a card is owned
+const isCardOwned = (cardId: string): boolean => {
+  // If ownedCardIds is not provided, assume all cards are owned (collection page)
+  if (!props.ownedCardIds) return true
+  return props.ownedCardIds.includes(cardId)
+}
 
 // Modal state
 const selectedCard = ref<Card | null>(null)
@@ -90,7 +98,8 @@ const onEnter = (el: Element, done: () => void) => {
         <GameCard
           :card="card"
           :show-flavour="false"
-          @click="openCardModal(card, index)"
+          :owned="isCardOwned(card.id)"
+          @click="isCardOwned(card.id) ? openCardModal(card, index) : null"
         />
       </div>
     </TransitionGroup>

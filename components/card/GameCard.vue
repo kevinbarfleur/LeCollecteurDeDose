@@ -6,6 +6,7 @@ import { useCardTilt } from "~/composables/useCardTilt";
 const props = defineProps<{
   card: Card;
   showFlavour?: boolean;
+  owned?: boolean; // If false, show card back
 }>();
 
 const emit = defineEmits<{
@@ -13,6 +14,12 @@ const emit = defineEmits<{
 }>();
 
 const cardRef = ref<HTMLElement | null>(null);
+
+// Default to owned if not specified
+const isOwned = computed(() => props.owned !== false);
+
+// Card back logo path (from public folder)
+const cardBackLogoUrl = '/images/card-back-logo.png';
 
 // Handle card click
 const handleClick = () => {
@@ -66,18 +73,26 @@ const showPlaceholder = computed(() => imageStatus.value === 'error' || !hasImag
 // Tier CSS class
 const tierClass = computed(() => `game-card--${props.card.tier.toLowerCase()}`);
 
-// Combined styles for the card
+// Combined styles for the card front (with tier colors)
 const cardStyles = computed(() => ({
   transform: cardTransform.value,
   transition: cardTransition.value,
   "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
   "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
 }));
+
+// Styles for card back (no tier colors - all backs are identical)
+const cardBackStyles = computed(() => ({
+  transform: cardTransform.value,
+  transition: cardTransition.value,
+}));
 </script>
 
 <template>
   <div class="game-card-container">
+    <!-- CARD FRONT (owned) -->
     <article
+      v-if="isOwned"
       ref="cardRef"
       role="button"
       tabindex="0"
@@ -150,6 +165,47 @@ const cardStyles = computed(() => ({
         "{{ card.flavourText }}"
       </div>
     </article>
+
+    <!-- CARD BACK (not owned) - all backs are identical, no tier styling -->
+    <article
+      v-else
+      ref="cardRef"
+      tabindex="-1"
+      aria-label="Carte inconnue"
+      class="game-card game-card--back"
+      :style="cardBackStyles"
+      @mouseenter="onMouseEnter"
+      @mouseleave="onMouseLeave"
+    >
+      <!-- Card back frame -->
+      <div class="game-card__frame game-card__frame--back">
+        <div class="game-card__bg game-card__bg--back"></div>
+        
+        <!-- Runic border pattern -->
+        <div class="card-back__border"></div>
+        
+        <!-- Corner runes -->
+        <span class="card-back__rune card-back__rune--tl">✧</span>
+        <span class="card-back__rune card-back__rune--tr">✧</span>
+        <span class="card-back__rune card-back__rune--bl">✧</span>
+        <span class="card-back__rune card-back__rune--br">✧</span>
+      </div>
+
+      <!-- Centered logo (no parallax) -->
+      <div class="card-back__logo-wrapper">
+        <img
+          :src="cardBackLogoUrl"
+          alt="Le Collecteur de Dose"
+          class="card-back__logo"
+        />
+      </div>
+
+      <!-- Decorative lines -->
+      <div class="card-back__decoration">
+        <div class="card-back__line card-back__line--top"></div>
+        <div class="card-back__line card-back__line--bottom"></div>
+      </div>
+    </article>
   </div>
 </template>
 
@@ -176,4 +232,137 @@ const cardStyles = computed(() => ({
   mix-blend-mode: overlay;
   border-radius: inherit;
 }
+
+/* ===========================================
+   CARD BACK STYLES - Ancient/Runic Theme
+   =========================================== */
+
+.game-card--back {
+  cursor: default;
+}
+
+/* Much darker background to highlight the red logo */
+.game-card__bg--back {
+  background: linear-gradient(
+    160deg,
+    #0a0908 0%,
+    #060505 30%,
+    #030303 60%,
+    #080706 100%
+  );
+}
+
+/* Very subtle texture overlay */
+.game-card__bg--back::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 50% 50%, rgba(20, 15, 12, 0.3) 0%, transparent 70%);
+  border-radius: inherit;
+}
+
+/* Worn/damaged edges effect - more subtle */
+.game-card__bg--back::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  border-radius: inherit;
+}
+
+/* Runic border pattern - subtle */
+.card-back__border {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(60, 50, 45, 0.25);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.card-back__border::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(50, 40, 35, 0.2);
+  border-radius: 4px;
+}
+
+.card-back__border::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid rgba(40, 30, 25, 0.15);
+  border-radius: 8px;
+}
+
+/* Corner runes - subtle */
+.card-back__rune {
+  position: absolute;
+  font-size: 12px;
+  color: rgba(80, 65, 55, 0.4);
+  z-index: 2;
+}
+
+.card-back__rune--tl { top: 14px; left: 14px; }
+.card-back__rune--tr { top: 14px; right: 14px; }
+.card-back__rune--bl { bottom: 14px; left: 14px; }
+.card-back__rune--br { bottom: 14px; right: 14px; }
+
+/* Logo wrapper - centered without parallax */
+.card-back__logo-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  padding: 20%;
+}
+
+/* Logo image - keep the red colors vibrant */
+.card-back__logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* Decorative lines - subtle */
+.card-back__decoration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.card-back__line {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(50, 40, 35, 0.3) 20%,
+    rgba(60, 50, 45, 0.4) 50%,
+    rgba(50, 40, 35, 0.3) 80%,
+    transparent 100%
+  );
+}
+
+.card-back__line--top {
+  top: 45px;
+}
+
+.card-back__line--bottom {
+  bottom: 45px;
+}
+
+/* No hover effects on card back */
 </style>

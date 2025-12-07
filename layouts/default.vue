@@ -3,7 +3,8 @@ const route = useRoute()
 
 const navItems = [
   { path: '/', label: 'Catalogue', icon: 'cards' },
-  { path: '/collection', label: 'Ma Collection', icon: 'user' }
+  { path: '/collection', label: 'Ma Collection', icon: 'user' },
+  { path: '/about', label: 'À propos', icon: 'info' }
 ]
 </script>
 
@@ -14,8 +15,15 @@ const navItems = [
       <div class="app-header__container">
         <!-- Logo -->
         <NuxtLink to="/" class="app-header__logo">
-          <span class="app-header__logo-text">Le Collecteur</span>
-          <span class="app-header__logo-accent">de Dose</span>
+          <img 
+            :src="'/images/logo.png'" 
+            alt="Logo Le Collecteur de Dose" 
+            class="app-header__logo-img"
+          />
+          <div class="app-header__logo-text-wrapper">
+            <span class="app-header__logo-text">Le Collecteur</span>
+            <span class="app-header__logo-accent">de Dose</span>
+          </div>
         </NuxtLink>
 
         <!-- Navigation -->
@@ -78,8 +86,22 @@ const navItems = [
 
 .app-header__logo {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
   text-decoration: none;
+}
+
+.app-header__logo-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.app-header__logo-text-wrapper {
+  display: flex;
+  flex-direction: column;
   line-height: 1.1;
 }
 
@@ -88,6 +110,7 @@ const navItems = [
   font-size: 1.25rem;
   font-weight: 600;
   color: #c8c8c8;
+  transition: color 0.2s ease;
 }
 
 .app-header__logo-accent {
@@ -95,6 +118,19 @@ const navItems = [
   font-size: 0.875rem;
   font-style: italic;
   color: #af6025;
+  transition: color 0.2s ease;
+}
+
+.app-header__logo:hover .app-header__logo-img {
+  transform: scale(1.05);
+}
+
+.app-header__logo:hover .app-header__logo-text {
+  color: #e0e0e0;
+}
+
+.app-header__logo:hover .app-header__logo-accent {
+  color: #c97a3a;
 }
 
 .app-header__nav {

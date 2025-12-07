@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { allCards } from '~/data/mockCards'
+import { allCards, mockUserCollection } from '~/data/mockCards'
 import type { Card, CardTier } from '~/types/card'
 import { TIER_CONFIG } from '~/types/card'
 
 // SEO
 useHead({
   title: 'Catalogue - Le Collecteur de Dose'
+})
+
+// Get owned card IDs from user collection
+const ownedCardIds = computed(() => {
+  // Get unique card IDs from the user's collection
+  return [...new Set(mockUserCollection.map(card => card.id))]
 })
 
 // Filters
@@ -125,6 +131,7 @@ const stats = computed(() => ({
       <!-- Cards grid -->
       <CardGrid 
         :cards="filteredCards" 
+        :owned-card-ids="ownedCardIds"
         empty-message="Aucune carte ne correspond à votre recherche"
       />
     </div>

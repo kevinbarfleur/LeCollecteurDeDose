@@ -298,6 +298,22 @@
 }
 
 /* ===========================================
+   CARD BACK - No external border
+   =========================================== */
+
+/* Remove frame border for card back */
+.game-card--back .game-card__frame {
+  border: none;
+  background: transparent;
+}
+
+/* Remove corner decorations on card back */
+.game-card--back .game-card__frame::before,
+.game-card--back .game-card__frame::after {
+  display: none;
+}
+
+/* ===========================================
    FLAVOUR TEXT TOOLTIP
    =========================================== */
 

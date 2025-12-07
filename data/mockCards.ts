@@ -173,63 +173,39 @@ export const allCards: Card[] = [
 ]
 
 // Mock user collection (simulating a viewer's cards)
+// Only cards with WORKING images for better visual testing
 export const mockUserCollection: Card[] = [
+  // T0 - Légendaires
   {
-    uid: 14,
-    id: 'voidforge',
-    name: 'Voidforge',
-    itemClass: 'Infernal Sword',
-    rarity: 'Unique',
-    tier: 'T1',
-    flavourText: 'Infinity waits patiently beyond the edge of steel.',
-    wikiUrl: 'https://www.poewiki.net/wiki/Voidforge',
-    gameData: {
-      weight: 0.8,
-      img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Voidforge.png'
-    }
-  },
-  {
-    uid: 900003,
-    id: 'grizzlab',
-    name: 'Grizzlab',
-    itemClass: 'Golden Mask',
+    uid: 20,
+    id: 'headhunter',
+    name: 'Headhunter',
+    itemClass: 'Leather Belt',
     rarity: 'Unique',
     tier: 'T0',
-    flavourText: 'Revered by all Doseurs, the Grizzlab rules the Temple of the Dose.',
-    wikiUrl: '',
+    flavourText: 'A life for a life.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Headhunter',
     gameData: {
-      weight: 0.7,
-      img: ''
+      weight: 0.5,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Belts/Headhunter.png'
     }
   },
+  // T2 - Peu communs
   {
-    uid: 14,
-    id: 'voidforge',
-    name: 'Voidforge',
+    uid: 42,
+    id: 'starforge',
+    name: 'Starforge',
     itemClass: 'Infernal Sword',
     rarity: 'Unique',
-    tier: 'T1',
-    flavourText: 'Infinity waits patiently beyond the edge of steel.',
-    wikiUrl: 'https://www.poewiki.net/wiki/Voidforge',
+    tier: 'T2',
+    flavourText: 'The stars are dying. One by one, their light fades.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Starforge',
     gameData: {
-      weight: 0.8,
-      img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Voidforge.png'
+      weight: 1.0,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Starforge.png'
     }
   },
-  {
-    uid: 16,
-    id: 'voices',
-    name: 'Voices',
-    itemClass: 'Large Cluster Jewel',
-    rarity: 'Unique',
-    tier: 'T1',
-    flavourText: 'Countless whispers, one terrible chorus.',
-    wikiUrl: 'https://www.poewiki.net/wiki/Voices',
-    gameData: {
-      weight: 0.8,
-      img: 'https://web.poecdn.com/image/Art/2DItems/Jewels/Voices.png'
-    }
-  },
+  // T3 - Communs
   {
     uid: 32,
     id: 'wanderlust',
@@ -242,6 +218,20 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/Boots/Wanderlust.png'
+    }
+  },
+  {
+    uid: 38,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
     }
   }
 ]
