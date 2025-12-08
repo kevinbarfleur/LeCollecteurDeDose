@@ -20,10 +20,10 @@ const selectedTier = ref<CardTier | 'all'>('all')
 
 const tiers: { value: CardTier | 'all'; label: string }[] = [
   { value: 'all', label: 'Tous' },
-  { value: 'T0', label: 'Légendaire' },
-  { value: 'T1', label: 'Rare' },
-  { value: 'T2', label: 'Peu commun' },
-  { value: 'T3', label: 'Commun' }
+  { value: 'T0', label: 'T0' },
+  { value: 'T1', label: 'T1' },
+  { value: 'T2', label: 'T2' },
+  { value: 'T3', label: 'T3' }
 ]
 
 // Filtered cards
@@ -80,19 +80,19 @@ const stats = computed(() => ({
         </div>
         <div class="catalog-stats__item catalog-stats__item--t0">
           <span class="catalog-stats__value">{{ stats.t0 }}</span>
-          <span class="catalog-stats__label">Légendaires</span>
+          <span class="catalog-stats__label">T0</span>
         </div>
         <div class="catalog-stats__item catalog-stats__item--t1">
           <span class="catalog-stats__value">{{ stats.t1 }}</span>
-          <span class="catalog-stats__label">Rares</span>
+          <span class="catalog-stats__label">T1</span>
         </div>
         <div class="catalog-stats__item catalog-stats__item--t2">
           <span class="catalog-stats__value">{{ stats.t2 }}</span>
-          <span class="catalog-stats__label">Peu communs</span>
+          <span class="catalog-stats__label">T2</span>
         </div>
         <div class="catalog-stats__item catalog-stats__item--t3">
           <span class="catalog-stats__value">{{ stats.t3 }}</span>
-          <span class="catalog-stats__label">Communs</span>
+          <span class="catalog-stats__label">T3</span>
         </div>
       </div>
 

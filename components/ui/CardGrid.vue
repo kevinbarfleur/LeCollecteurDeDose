@@ -114,7 +114,6 @@ const [gridRef] = useAutoAnimate({
   padding: 1rem 0;
   /* Allow stack layers to overflow */
   padding-top: 1.5rem;
-  padding-left: 1.5rem;
 }
 
 @media (min-width: 640px) {

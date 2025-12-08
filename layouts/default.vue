@@ -55,7 +55,14 @@ const navItems = [
 
     <!-- Footer -->
     <footer class="app-footer">
-      <p>Vaal or no balls</p>
+      <div class="app-footer__content">
+        <img
+          src="/images/card-back-logo.png"
+          alt="Logo"
+          class="app-footer__logo"
+        />
+        <p>Vaal or no balls</p>
+      </div>
     </footer>
   </div>
 </template>
@@ -172,14 +179,33 @@ const navItems = [
 
 .app-footer {
   padding: 2rem;
-  text-align: center;
   border-top: 1px solid rgba(42, 42, 48, 0.3);
+}
+
+.app-footer__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.app-footer__logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.app-footer__content:hover .app-footer__logo {
+  opacity: 0.8;
 }
 
 .app-footer p {
   font-family: "Crimson Text", serif;
   font-size: 0.875rem;
   color: #4a4a55;
+  margin: 0;
 }
 
 @media (max-width: 640px) {
