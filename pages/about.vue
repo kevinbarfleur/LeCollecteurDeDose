@@ -9,11 +9,9 @@ useHead({
 <template>
   <NuxtLayout>
     <div class="min-h-[80vh] flex flex-col items-center px-4 py-8">
-      <!-- Hero section -->
       <section class="relative flex flex-col items-center text-center py-12">
         <div class="about-hero__glow"></div>
 
-        <!-- Logo -->
         <div class="relative z-10 mb-6">
           <img
             :src="'/images/logo.png'"
@@ -22,7 +20,6 @@ useHead({
           />
         </div>
 
-        <!-- Title -->
         <div class="relative z-10 flex flex-col leading-none mb-4">
           <h1
             class="font-display text-5xl md:text-6xl font-bold text-white/90 tracking-wide m-0 drop-shadow-lg"
@@ -34,13 +31,11 @@ useHead({
           </span>
         </div>
 
-        <!-- Description -->
         <p class="relative z-10 font-body text-xl text-poe-text-dim mt-4">
           {{ t("about.description") }}
         </p>
       </section>
 
-      <!-- Social links -->
       <section class="w-full max-w-lg mt-12">
         <h2
           class="font-display text-xl font-semibold text-poe-text-dim text-center mb-6 uppercase tracking-widest"
@@ -82,7 +77,6 @@ useHead({
 </template>
 
 <style scoped>
-/* Glow effect behind logo */
 .about-hero__glow {
   position: absolute;
   top: 50%;
@@ -99,7 +93,6 @@ useHead({
   z-index: 0;
 }
 
-/* Logo with float animation */
 .about-hero__logo {
   width: 180px;
   height: 180px;
@@ -118,7 +111,6 @@ useHead({
   }
 }
 
-/* Responsive logo size */
 @media (min-width: 768px) {
   .about-hero__logo {
     width: 220px;

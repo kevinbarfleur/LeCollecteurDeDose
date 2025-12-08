@@ -11,7 +11,6 @@ const handleLogout = async () => {
 
 <template>
   <div class="twitch-auth">
-    <!-- Logged in state -->
     <div v-if="loggedIn && user" class="twitch-auth__user">
       <img 
         :src="user.avatar" 
@@ -31,7 +30,6 @@ const handleLogout = async () => {
       </RunicButton>
     </div>
 
-    <!-- Logged out state -->
     <RunicButton
       v-else
       href="/auth/twitch"
@@ -72,7 +70,6 @@ const handleLogout = async () => {
   }
 }
 
-/* Logout button - icon only version */
 .twitch-auth__logout-btn {
   padding: 0.5rem !important;
 }

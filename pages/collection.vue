@@ -4,15 +4,10 @@ import type { Card, CardTier } from "~/types/card";
 
 const { t } = useI18n();
 
-// SEO
-useHead({
-  title: t("meta.collection.title"),
-});
+useHead({ title: t("meta.collection.title") });
 
-// Auth state from nuxt-auth-utils
 const { loggedIn, user: authUser } = useUserSession();
 
-// Reactive user data
 const user = computed(() => ({
   name: authUser.value?.displayName || "Test User",
   avatar:
@@ -20,10 +15,8 @@ const user = computed(() => ({
     "https://static-cdn.jtvnw.net/jtv_user_pictures/default-profile_image-300x300.png",
 }));
 
-// Collection data
 const collection = computed(() => mockUserCollection);
 
-// Group cards by id to count duplicates and collect all instances
 const groupedCards = computed(() => {
   const groups = new Map<string, { cards: Card[]; count: number }>();
 
@@ -37,14 +30,12 @@ const groupedCards = computed(() => {
     }
   });
 
-  // Convert to array and sort by tier
   const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
   return Array.from(groups.values()).sort(
     (a, b) => tierOrder[a.cards[0].tier] - tierOrder[b.cards[0].tier]
   );
 });
 
-// Stats
 const stats = computed(() => {
   const cards = collection.value;
   return {
@@ -57,7 +48,6 @@ const stats = computed(() => {
   };
 });
 
-// Filters
 const showDuplicates = ref(false);
 const selectedTier = ref<CardTier | "all">("all");
 
@@ -69,18 +59,14 @@ const tierOptions = computed(() => [
   { value: "T3", label: t("collection.tiers.t3"), color: "t3" },
 ]);
 
-// Filtered grouped cards (for stack view - default mode)
 const filteredGroupedCards = computed(() => {
   let groups = groupedCards.value;
-
   if (selectedTier.value !== "all") {
     groups = groups.filter((g) => g.cards[0].tier === selectedTier.value);
   }
-
   return groups;
 });
 
-// Filtered individual cards (for duplicates view)
 const filteredIndividualCards = computed(() => {
   let cards = collection.value;
 
@@ -95,7 +81,6 @@ const filteredIndividualCards = computed(() => {
 <template>
   <NuxtLayout>
     <div class="page-container">
-      <!-- Not authenticated -->
       <div
         v-if="!loggedIn"
         class="min-h-[60vh] flex items-center justify-center"
@@ -127,12 +112,9 @@ const filteredIndividualCards = computed(() => {
         </RunicBox>
       </div>
 
-      <!-- Authenticated -->
       <div v-if="loggedIn">
-        <!-- Profile & Stats Hero - Runic tablet style -->
         <RunicBox padding="md" class="mb-8">
           <div class="grid gap-6 md:grid-cols-[auto_1fr_auto] md:items-center">
-            <!-- Left: User Profile -->
             <div class="collection-profile">
               <div class="collection-profile__avatar-wrapper">
                 <div class="collection-profile__avatar-ring"></div>
@@ -158,7 +140,6 @@ const filteredIndividualCards = computed(() => {
               </div>
             </div>
 
-            <!-- Center: Main Stats - Large engraved numbers -->
             <div class="collection-main-stats">
               <div class="collection-main-stats__item">
                 <span class="collection-main-stats__rune">◆</span>
@@ -183,7 +164,6 @@ const filteredIndividualCards = computed(() => {
               </div>
             </div>
 
-            <!-- Right: Tier Breakdown - Compact runic tiles -->
             <div class="collection-tiers">
               <div
                 v-for="tier in ['T0', 'T1', 'T2', 'T3'] as const"
@@ -200,7 +180,6 @@ const filteredIndividualCards = computed(() => {
           </div>
         </RunicBox>
 
-        <!-- Filters Bar -->
         <div
           class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between mb-8 p-4 bg-poe-surface/60 border border-poe-border/40 rounded-xl"
         >
@@ -220,14 +199,12 @@ const filteredIndividualCards = computed(() => {
           <RunicRadio v-model="selectedTier" :options="tierOptions" size="md" />
         </div>
 
-        <!-- Cards grid - Stack mode (default) -->
         <CardGrid
           v-if="!showDuplicates"
           :grouped-cards="filteredGroupedCards"
           :empty-message="t('collection.empty')"
         />
 
-        <!-- Cards grid - Individual mode (duplicates) -->
         <CardGrid
           v-else
           :cards="filteredIndividualCards"
@@ -239,9 +216,6 @@ const filteredIndividualCards = computed(() => {
 </template>
 
 <style scoped>
-/* ===========================================
-   PROFILE SECTION - Avatar with animated ring
-   =========================================== */
 .collection-profile {
   display: flex;
   align-items: center;
@@ -295,9 +269,6 @@ const filteredIndividualCards = computed(() => {
   z-index: 1;
 }
 
-/* ===========================================
-   MAIN STATS - Engraved numbers
-   =========================================== */
 .collection-main-stats {
   display: flex;
   align-items: center;
@@ -335,8 +306,6 @@ const filteredIndividualCards = computed(() => {
   font-size: 2.5rem;
   font-weight: 700;
   line-height: 1;
-
-  /* Engraved text effect */
   color: #d0d0d0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 25px rgba(175, 96, 37, 0.12),
     0 -1px 0 rgba(255, 255, 255, 0.05);
@@ -348,8 +317,6 @@ const filteredIndividualCards = computed(() => {
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-
-  /* Engraved look */
   color: rgba(100, 95, 90, 0.7);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(80, 75, 70, 0.1);
 }
@@ -365,9 +332,6 @@ const filteredIndividualCards = computed(() => {
   );
 }
 
-/* ===========================================
-   TIER BREAKDOWN - Runic carved tiles
-   =========================================== */
 .collection-tiers {
   display: flex;
   gap: 0.5rem;
@@ -389,8 +353,6 @@ const filteredIndividualCards = computed(() => {
   justify-content: center;
   width: 54px;
   height: 54px;
-
-  /* Deep carved stone tile */
   background: linear-gradient(
     180deg,
     rgba(20, 20, 22, 0.95) 0%,
@@ -424,8 +386,6 @@ const filteredIndividualCards = computed(() => {
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1;
-
-  /* Engraved effect */
   text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8), 0 -1px 0 rgba(255, 255, 255, 0.03);
 }
 
@@ -436,14 +396,10 @@ const filteredIndividualCards = computed(() => {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-top: 2px;
-
-  /* Engraved look */
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(80, 75, 70, 0.08);
   opacity: 0.7;
 }
 
-/* Tier colors */
-/* T0 - Gold */
 .collection-tiers__item--t0 {
   --tier-glow: rgba(201, 162, 39, 0.15);
   border-color: rgba(201, 162, 39, 0.2);
@@ -456,7 +412,6 @@ const filteredIndividualCards = computed(() => {
   color: rgba(201, 162, 39, 0.7);
 }
 
-/* T1 - Purple */
 .collection-tiers__item--t1 {
   --tier-glow: rgba(122, 106, 138, 0.15);
   border-color: rgba(122, 106, 138, 0.2);
@@ -469,7 +424,6 @@ const filteredIndividualCards = computed(() => {
   color: rgba(122, 106, 138, 0.7);
 }
 
-/* T2 - Blue/Steel */
 .collection-tiers__item--t2 {
   --tier-glow: rgba(90, 112, 128, 0.15);
   border-color: rgba(90, 112, 128, 0.2);
@@ -482,7 +436,6 @@ const filteredIndividualCards = computed(() => {
   color: rgba(90, 112, 128, 0.7);
 }
 
-/* T3 - Gray/Iron */
 .collection-tiers__item--t3 {
   --tier-glow: rgba(90, 90, 95, 0.1);
   border-color: rgba(70, 70, 75, 0.2);

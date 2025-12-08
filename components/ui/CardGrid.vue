@@ -17,18 +17,15 @@ const props = defineProps<{
   ownedCardIds?: string[];
 }>();
 
-// Default empty message from translations
 const displayEmptyMessage = computed(
   () => props.emptyMessage || t("cards.empty")
 );
 
-// Check if a card is owned
 const isCardOwned = (cardId: string): boolean => {
   if (!props.ownedCardIds) return true;
   return props.ownedCardIds.includes(cardId);
 };
 
-// Determine if we're in grouped mode
 const isGroupedMode = computed(
   () =>
     props.groupedCards !== undefined &&
@@ -36,7 +33,6 @@ const isGroupedMode = computed(
     props.groupedCards.length > 0
 );
 
-// Check if we have any items to display
 const hasItems = computed(() => {
   if (isGroupedMode.value) {
     return props.groupedCards && props.groupedCards.length > 0;
@@ -46,11 +42,9 @@ const hasItems = computed(() => {
   );
 });
 
-// Safe accessors for template
 const safeGroupedCards = computed(() => props.groupedCards || []);
 const safeCards = computed(() => props.cards || []);
 
-// Auto-animate for filtering
 const [gridRef] = useAutoAnimate({
   duration: 400,
   easing: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -59,26 +53,22 @@ const [gridRef] = useAutoAnimate({
 
 <template>
   <div class="relative">
-    <!-- Grouped mode (with stacks) -->
     <div v-if="isGroupedMode && hasItems" ref="gridRef" class="card-grid">
       <div
         v-for="group in safeGroupedCards"
         :key="group.cards[0].id"
         class="card-grid__item"
       >
-        <!-- Single card: use GameCard -->
         <GameCard
           v-if="group.count === 1"
           :card="group.cards[0]"
           :show-flavour="false"
           :owned="isCardOwned(group.cards[0].id)"
         />
-        <!-- Multiple cards: use CardStack -->
         <CardStack v-else :cards="group.cards" :count="group.count" />
       </div>
     </div>
 
-    <!-- Individual cards mode -->
     <div v-else-if="!isGroupedMode && hasItems" ref="gridRef" class="card-grid">
       <div
         v-for="(card, index) in safeCards"
@@ -93,7 +83,6 @@ const [gridRef] = useAutoAnimate({
       </div>
     </div>
 
-    <!-- Empty state -->
     <div
       v-else
       class="flex flex-col items-center justify-center py-16 px-8 text-center"
@@ -122,7 +111,6 @@ const [gridRef] = useAutoAnimate({
 </template>
 
 <style scoped>
-/* Grid layout - Mobile first (2 cards per row on small screens) */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -132,7 +120,6 @@ const [gridRef] = useAutoAnimate({
   padding-top: 1rem;
 }
 
-/* Small tablets - can fit more cards */
 @media (min-width: 480px) {
   .card-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -140,7 +127,6 @@ const [gridRef] = useAutoAnimate({
   }
 }
 
-/* Tablets */
 @media (min-width: 640px) {
   .card-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -149,7 +135,6 @@ const [gridRef] = useAutoAnimate({
   }
 }
 
-/* Desktop */
 @media (min-width: 1024px) {
   .card-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -157,7 +142,6 @@ const [gridRef] = useAutoAnimate({
   }
 }
 
-/* Card item with entrance animation */
 .card-grid__item {
   animation: card-enter 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
   overflow: visible;

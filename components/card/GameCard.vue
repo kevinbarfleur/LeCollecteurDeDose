@@ -16,249 +16,238 @@ const emit = defineEmits<{
 }>();
 
 const cardRef = ref<HTMLElement | null>(null);
-
-// Refs for GSAP animations
 const floatingCardRef = ref<HTMLElement | null>(null);
 const overlayRef = ref<HTMLElement | null>(null);
 const previewViewRef = ref<HTMLElement | null>(null);
 const detailViewRef = ref<HTMLElement | null>(null);
 
-// Default to owned if not specified
 const isOwned = computed(() => props.owned !== false);
+const cardBackLogoUrl = "/images/card-back-logo.png";
 
-// Card back logo path
-const cardBackLogoUrl = '/images/card-back-logo.png';
-
-// ===========================================
-// ANIMATION STATE
-// ===========================================
-type AnimationState = 'idle' | 'animating' | 'expanded';
-const animationState = ref<AnimationState>('idle');
-
-// Store original position for return animation
+type AnimationState = "idle" | "animating" | "expanded";
+const animationState = ref<AnimationState>("idle");
 const originalRect = ref<DOMRect | null>(null);
-
-// Current timeline (to kill if needed)
 let currentTimeline: gsap.core.Timeline | null = null;
 
-// ===========================================
-// OPEN CARD (GSAP Timeline)
-// ===========================================
 const openCard = async () => {
   if (!isOwned.value || !cardRef.value) return;
-  
-  // Kill any existing animation
+
   if (currentTimeline) {
     currentTimeline.kill();
   }
-  
-  // Get current position
+
   const rect = cardRef.value.getBoundingClientRect();
   originalRect.value = rect;
-  
-  // Calculate target position
+
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const targetWidth = Math.min(360, viewportWidth - 40);
   const targetHeight = targetWidth * 1.4;
   const centerX = (viewportWidth - targetWidth) / 2;
   const centerY = (viewportHeight - targetHeight) / 2;
-  
-  animationState.value = 'animating';
-  
+
+  animationState.value = "animating";
+
   await nextTick();
-  
+
   const card = floatingCardRef.value;
   const overlay = overlayRef.value;
   const previewView = previewViewRef.value;
   const detailView = detailViewRef.value;
-  
+
   if (!card || !overlay || !previewView || !detailView) return;
-  
-  // Get stagger elements
-  const staggerElements = detailView.querySelectorAll('.detail__stagger');
-  
-  // Set initial states
+
+  const staggerElements = detailView.querySelectorAll(".detail__stagger");
+
   gsap.set(card, {
-    position: 'fixed',
+    position: "fixed",
     top: rect.top,
     left: rect.left,
     width: rect.width,
     height: rect.height,
     zIndex: 1000,
   });
-  
-  gsap.set(overlay, { opacity: 0, backdropFilter: 'blur(0px)' });
+
+  gsap.set(overlay, { opacity: 0, backdropFilter: "blur(0px)" });
   gsap.set(previewView, { opacity: 1 });
   gsap.set(detailView, { opacity: 1 });
   gsap.set(staggerElements, { opacity: 0, y: 8 });
-  
-  // Create synchronized timeline
+
   currentTimeline = gsap.timeline({
     onComplete: () => {
-      animationState.value = 'expanded';
-    }
+      animationState.value = "expanded";
+    },
   });
-  
-  // All animations happen together with slight offsets
+
   currentTimeline
-    // Overlay fades in
-    .to(overlay, {
-      opacity: 1,
-      backdropFilter: 'blur(12px)',
-      duration: 0.4,
-      ease: 'power2.out',
-    }, 0)
-    // Card moves to center
-    .to(card, {
-      top: centerY,
-      left: centerX,
-      width: targetWidth,
-      height: targetHeight,
-      duration: 0.45,
-      ease: 'power3.out',
-    }, 0)
-    // Preview fades out (starts slightly after)
-    .to(previewView, {
-      opacity: 0,
-      duration: 0.25,
-      ease: 'power2.inOut',
-    }, 0.1)
-    // Detail elements stagger in (starts during movement)
-    .to(staggerElements, {
-      opacity: 1,
-      y: 0,
-      duration: 0.35,
-      ease: 'power2.out',
-      stagger: 0.04,
-    }, 0.15);
+    .to(
+      overlay,
+      {
+        opacity: 1,
+        backdropFilter: "blur(12px)",
+        duration: 0.4,
+        ease: "power2.out",
+      },
+      0
+    )
+    .to(
+      card,
+      {
+        top: centerY,
+        left: centerX,
+        width: targetWidth,
+        height: targetHeight,
+        duration: 0.45,
+        ease: "power3.out",
+      },
+      0
+    )
+    .to(
+      previewView,
+      {
+        opacity: 0,
+        duration: 0.25,
+        ease: "power2.inOut",
+      },
+      0.1
+    )
+    .to(
+      staggerElements,
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.35,
+        ease: "power2.out",
+        stagger: 0.04,
+      },
+      0.15
+    );
 };
 
-// ===========================================
-// CLOSE CARD (GSAP Timeline)
-// ===========================================
 const closeCard = async () => {
-  if (animationState.value !== 'expanded') return;
-  
-  // Kill any existing animation
+  if (animationState.value !== "expanded") return;
+
   if (currentTimeline) {
     currentTimeline.kill();
   }
-  
+
   const rect = originalRect.value;
   if (!rect) {
     resetToIdle();
     return;
   }
-  
+
   const card = floatingCardRef.value;
   const overlay = overlayRef.value;
   const previewView = previewViewRef.value;
   const detailView = detailViewRef.value;
-  
+
   if (!card || !overlay || !previewView || !detailView) {
     resetToIdle();
     return;
   }
-  
-  const staggerElements = detailView.querySelectorAll('.detail__stagger');
-  
-  animationState.value = 'animating';
-  
-  // Create synchronized close timeline
+
+  const staggerElements = detailView.querySelectorAll(".detail__stagger");
+
+  animationState.value = "animating";
+
   currentTimeline = gsap.timeline({
     onComplete: () => {
       resetToIdle();
-    }
+    },
   });
-  
+
   currentTimeline
-    // Detail elements fade out quickly (all together)
-    .to(staggerElements, {
-      opacity: 0,
-      duration: 0.15,
-      ease: 'power2.in',
-    }, 0)
-    // Preview fades back in
-    .to(previewView, {
-      opacity: 1,
-      duration: 0.2,
-      ease: 'power2.out',
-    }, 0.05)
-    // Card moves back to grid
-    .to(card, {
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-      duration: 0.4,
-      ease: 'power3.out',
-    }, 0.05)
-    // Overlay fades out
-    .to(overlay, {
-      opacity: 0,
-      backdropFilter: 'blur(0px)',
-      duration: 0.35,
-      ease: 'power2.in',
-    }, 0.1);
+    .to(
+      staggerElements,
+      {
+        opacity: 0,
+        duration: 0.15,
+        ease: "power2.in",
+      },
+      0
+    )
+    .to(
+      previewView,
+      {
+        opacity: 1,
+        duration: 0.2,
+        ease: "power2.out",
+      },
+      0.05
+    )
+    .to(
+      card,
+      {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        duration: 0.4,
+        ease: "power3.out",
+      },
+      0.05
+    )
+    .to(
+      overlay,
+      {
+        opacity: 0,
+        backdropFilter: "blur(0px)",
+        duration: 0.35,
+        ease: "power2.in",
+      },
+      0.1
+    );
 };
 
 const resetToIdle = () => {
-  animationState.value = 'idle';
+  animationState.value = "idle";
   originalRect.value = null;
   currentTimeline = null;
-  
-  // Reset GSAP styles
+
   if (floatingCardRef.value) {
-    gsap.set(floatingCardRef.value, { clearProps: 'all' });
+    gsap.set(floatingCardRef.value, { clearProps: "all" });
   }
 };
 
-// Handle click on card
 const handleClick = () => {
   if (!isOwned.value) return;
-  
+
   // In preview-only mode, don't open detail view (parent handles it)
   if (props.previewOnly) {
-    emit('click', props.card);
+    emit("click", props.card);
     return;
   }
-  
-  if (animationState.value === 'idle') {
+
+  if (animationState.value === "idle") {
     openCard();
   }
-  emit('click', props.card);
+  emit("click", props.card);
 };
 
-// Handle close (escape or click outside)
 const handleClose = () => {
-  if (animationState.value === 'expanded') {
+  if (animationState.value === "expanded") {
     closeCard();
   }
 };
 
-// Close on escape key
 onMounted(() => {
   const handleEscape = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && animationState.value === 'expanded') {
+    if (e.key === "Escape" && animationState.value === "expanded") {
       handleClose();
     }
   };
-  window.addEventListener('keydown', handleEscape);
-  onUnmounted(() => window.removeEventListener('keydown', handleEscape));
+  window.addEventListener("keydown", handleEscape);
+  onUnmounted(() => window.removeEventListener("keydown", handleEscape));
 });
 
-// Prevent body scroll when expanded
 watch(animationState, (state) => {
   if (import.meta.client) {
-    const isOpen = state !== 'idle';
-    document.body.style.overflow = isOpen ? 'hidden' : '';
+    const isOpen = state !== "idle";
+    document.body.style.overflow = isOpen ? "hidden" : "";
   }
 });
 
-// ===========================================
-// CARD TILT EFFECT (for grid card)
-// ===========================================
 const {
   isHovering,
   cardTransform,
@@ -271,31 +260,28 @@ const {
   scale: 1.02,
 });
 
-// ===========================================
-// CARD TILT EFFECT (for floating/detail card using GSAP)
-// ===========================================
 const isFloatingHovering = ref(false);
 
 const onFloatingMouseMove = (e: MouseEvent) => {
-  if (animationState.value !== 'expanded' || !floatingCardRef.value) return;
-  
+  if (animationState.value !== "expanded" || !floatingCardRef.value) return;
+
   const card = floatingCardRef.value;
   const rect = card.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
   const centerX = rect.width / 2;
   const centerY = rect.height / 2;
-  
+
   const rotateY = ((x - centerX) / centerX) * 8; // max 8 degrees
   const rotateX = ((centerY - y) / centerY) * 8;
-  
+
   gsap.to(card, {
     rotateX,
     rotateY,
     scale: 1.02,
     duration: 0.3,
-    ease: 'power2.out',
-    overwrite: 'auto',
+    ease: "power2.out",
+    overwrite: "auto",
   });
 };
 
@@ -305,74 +291,65 @@ const onFloatingMouseEnter = () => {
 
 const onFloatingMouseLeave = () => {
   isFloatingHovering.value = false;
-  if (floatingCardRef.value && animationState.value === 'expanded') {
+  if (floatingCardRef.value && animationState.value === "expanded") {
     gsap.to(floatingCardRef.value, {
       rotateX: 0,
       rotateY: 0,
       scale: 1,
       duration: 0.5,
-      ease: 'power2.out',
+      ease: "power2.out",
     });
   }
 };
 
-// ===========================================
-// COMPUTED STYLES
-// ===========================================
 const tierConfig = computed(() => TIER_CONFIG[props.card.tier as CardTier]);
 const tierClass = computed(() => `game-card--${props.card.tier.toLowerCase()}`);
 
-// Image loading state
-const imageStatus = ref<'loading' | 'loaded' | 'error'>('loading');
+const imageStatus = ref<"loading" | "loaded" | "error">("loading");
 const hasImageUrl = computed(() => !!props.card.gameData?.img);
 
 onMounted(() => {
   if (!hasImageUrl.value) {
-    imageStatus.value = 'error';
+    imageStatus.value = "error";
     return;
   }
   const img = new Image();
-  img.onload = () => { imageStatus.value = 'loaded'; };
-  img.onerror = () => { imageStatus.value = 'error'; };
+  img.onload = () => {
+    imageStatus.value = "loaded";
+  };
+  img.onerror = () => {
+    imageStatus.value = "error";
+  };
   img.src = props.card.gameData.img;
 });
 
-const showImage = computed(() => imageStatus.value === 'loaded');
-const showPlaceholder = computed(() => imageStatus.value === 'error' || !hasImageUrl.value);
+const showImage = computed(() => imageStatus.value === "loaded");
+const showPlaceholder = computed(
+  () => imageStatus.value === "error" || !hasImageUrl.value
+);
 
-// Is the card currently animating or expanded?
-const isFloating = computed(() => animationState.value !== 'idle');
+const isFloating = computed(() => animationState.value !== "idle");
 
-// Tier styles
 const tierStyles = computed(() => ({
   "--tier-color": tierConfig.value?.color ?? "#2a2a2d",
   "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
 }));
 
-// Card styles for grid (non-floating)
 const cardStyles = computed(() => ({
   ...tierStyles.value,
   transform: cardTransform.value,
   transition: cardTransition.value,
 }));
 
-// Is overlay/floating card visible?
-const showOverlay = computed(() => animationState.value !== 'idle');
+const showOverlay = computed(() => animationState.value !== "idle");
 </script>
 
 <template>
   <div class="game-card-container">
-    <!-- Teleport for overlay + floating card -->
     <Teleport to="body">
       <div v-if="showOverlay" class="floating-card-wrapper">
-        <!-- Overlay (GSAP animated) -->
-        <div 
-          ref="overlayRef"
-          class="card-overlay"
-          @click="handleClose"
-        />
-        
-        <!-- Floating card (GSAP animated position + tilt) -->
+        <div ref="overlayRef" class="card-overlay" @click="handleClose" />
+
         <article
           ref="floatingCardRef"
           class="game-card game-card--floating"
@@ -382,112 +359,157 @@ const showOverlay = computed(() => animationState.value !== 'idle');
           @mouseenter="onFloatingMouseEnter"
           @mouseleave="onFloatingMouseLeave"
         >
-          <!-- Card content wrapper -->
           <div class="game-card__tilt-wrapper">
-            <!-- Close button (only when expanded) -->
-            <button 
+            <button
               v-if="animationState === 'expanded'"
-              class="game-card__close" 
+              class="game-card__close"
               @click.stop="handleClose"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
 
-            <!-- PREVIEW VIEW (GSAP fades this out) -->
-            <div 
-              ref="previewViewRef"
-              class="card-view card-view--preview"
-            >
-            <div class="game-card__frame">
-              <div class="game-card__bg"></div>
-            </div>
-            <div class="game-card__image-wrapper">
-              <img v-show="showImage" :src="card.gameData.img" :alt="card.name" class="game-card__image" />
-              <div v-if="showPlaceholder" class="game-card__image-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-                </svg>
+            <div ref="previewViewRef" class="card-view card-view--preview">
+              <div class="game-card__frame">
+                <div class="game-card__bg"></div>
               </div>
-            </div>
-            <div class="game-card__info">
-              <h3 class="game-card__name">{{ card.name }}</h3>
-              <p class="game-card__class">{{ card.itemClass }}</p>
-            </div>
-          </div>
-
-          <!-- DETAIL VIEW (GSAP animates each stagger element) -->
-          <div 
-            ref="detailViewRef"
-            class="card-view card-view--detail"
-          >
-            <div class="detail__title-bar detail__stagger" style="--stagger: 0">
-              <span class="detail__name">{{ card.name }}</span>
-              <span class="detail__tier-badge">{{ card.tier }}</span>
-            </div>
-
-            <div class="detail__artwork detail__stagger" style="--stagger: 1">
-              <img v-if="showImage" :src="card.gameData.img" :alt="card.name" class="detail__image" />
-              <div v-else class="detail__image-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                </svg>
+              <div class="game-card__image-wrapper">
+                <img
+                  v-show="showImage"
+                  :src="card.gameData.img"
+                  :alt="card.name"
+                  class="game-card__image"
+                />
+                <div
+                  v-if="showPlaceholder"
+                  class="game-card__image-placeholder"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div class="game-card__info">
+                <h3 class="game-card__name">{{ card.name }}</h3>
+                <p class="game-card__class">{{ card.itemClass }}</p>
               </div>
             </div>
 
-            <div class="detail__type-line detail__stagger" style="--stagger: 2">
-              <span class="detail__type">{{ card.itemClass }}</span>
-              <span class="detail__divider">◆</span>
-              <span class="detail__rarity">{{ card.rarity }}</span>
-            </div>
-
-            <div class="detail__separator detail__stagger" style="--stagger: 3">
-              <span class="detail__separator-line"></span>
-              <span class="detail__separator-rune">✧</span>
-              <span class="detail__separator-line"></span>
-            </div>
-
-            <div class="detail__flavour detail__stagger" style="--stagger: 4">
-              <p v-if="card.flavourText">"{{ card.flavourText }}"</p>
-              <p v-else class="detail__no-flavour">Aucune description disponible</p>
-            </div>
-
-            <div class="detail__separator detail__stagger" style="--stagger: 5">
-              <span class="detail__separator-line"></span>
-              <span class="detail__separator-rune">◇</span>
-              <span class="detail__separator-line"></span>
-            </div>
-
-            <div class="detail__bottom-info detail__stagger" style="--stagger: 6">
-              <span class="detail__collector-number">#{{ card.uid }}</span>
-              <a 
-                v-if="card.wikiUrl" 
-                :href="card.wikiUrl" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                class="detail__wiki-link"
-                @click.stop
+            <div ref="detailViewRef" class="card-view card-view--detail">
+              <div
+                class="detail__title-bar detail__stagger"
+                style="--stagger: 0"
               >
-                Wiki ↗
-              </a>
-              <span class="detail__weight" v-if="card.gameData.weight">
-                ◆ {{ card.gameData.weight }}
-              </span>
+                <span class="detail__name">{{ card.name }}</span>
+                <span class="detail__tier-badge">{{ card.tier }}</span>
+              </div>
+
+              <div class="detail__artwork detail__stagger" style="--stagger: 1">
+                <img
+                  v-if="showImage"
+                  :src="card.gameData.img"
+                  :alt="card.name"
+                  class="detail__image"
+                />
+                <div v-else class="detail__image-placeholder">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div
+                class="detail__type-line detail__stagger"
+                style="--stagger: 2"
+              >
+                <span class="detail__type">{{ card.itemClass }}</span>
+                <span class="detail__divider">◆</span>
+                <span class="detail__rarity">{{ card.rarity }}</span>
+              </div>
+
+              <div
+                class="detail__separator detail__stagger"
+                style="--stagger: 3"
+              >
+                <span class="detail__separator-line"></span>
+                <span class="detail__separator-rune">✧</span>
+                <span class="detail__separator-line"></span>
+              </div>
+
+              <div class="detail__flavour detail__stagger" style="--stagger: 4">
+                <p v-if="card.flavourText">"{{ card.flavourText }}"</p>
+                <p v-else class="detail__no-flavour">
+                  Aucune description disponible
+                </p>
+              </div>
+
+              <div
+                class="detail__separator detail__stagger"
+                style="--stagger: 5"
+              >
+                <span class="detail__separator-line"></span>
+                <span class="detail__separator-rune">◇</span>
+                <span class="detail__separator-line"></span>
+              </div>
+
+              <div
+                class="detail__bottom-info detail__stagger"
+                style="--stagger: 6"
+              >
+                <span class="detail__collector-number">#{{ card.uid }}</span>
+                <a
+                  v-if="card.wikiUrl"
+                  :href="card.wikiUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="detail__wiki-link"
+                  @click.stop
+                >
+                  Wiki ↗
+                </a>
+                <span class="detail__weight" v-if="card.gameData.weight">
+                  ◆ {{ card.gameData.weight }}
+                </span>
+              </div>
             </div>
           </div>
-          </div><!-- End tilt wrapper -->
         </article>
       </div>
     </Teleport>
 
-    <!-- Placeholder to keep grid space when card is floating -->
-    <div 
-      v-if="isFloating && isOwned" 
-      class="game-card-placeholder"
-    />
+    <div v-if="isFloating && isOwned" class="game-card-placeholder" />
 
-    <!-- CARD BACK (not owned) -->
     <article
       v-if="!isOwned"
       ref="cardRef"
@@ -510,7 +532,11 @@ const showOverlay = computed(() => animationState.value !== 'idle');
         <span class="card-back__rune card-back__rune--br">✧</span>
       </div>
       <div class="card-back__logo-wrapper">
-        <img :src="cardBackLogoUrl" alt="Le Collecteur de Dose" class="card-back__logo" />
+        <img
+          :src="cardBackLogoUrl"
+          alt="Le Collecteur de Dose"
+          class="card-back__logo"
+        />
       </div>
       <div class="card-back__decoration">
         <div class="card-back__line card-back__line--top"></div>
@@ -518,7 +544,6 @@ const showOverlay = computed(() => animationState.value !== 'idle');
       </div>
     </article>
 
-    <!-- MAIN CARD in grid (owned, not floating) - PREVIEW ONLY -->
     <article
       v-else-if="!isFloating"
       ref="cardRef"
@@ -526,10 +551,7 @@ const showOverlay = computed(() => animationState.value !== 'idle');
       tabindex="0"
       :aria-label="`Carte ${card.name}`"
       class="game-card"
-      :class="[
-        tierClass,
-        { 'game-card--hovering': isHovering },
-      ]"
+      :class="[tierClass, { 'game-card--hovering': isHovering }]"
       :style="cardStyles"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
@@ -540,14 +562,35 @@ const showOverlay = computed(() => animationState.value !== 'idle');
       <div class="game-card__frame">
         <div class="game-card__bg"></div>
       </div>
-      <div class="game-card__image-wrapper" :style="{ transform: imageTransform }">
-        <div v-if="imageStatus === 'loading' && hasImageUrl" class="game-card__image-loading">
+      <div
+        class="game-card__image-wrapper"
+        :style="{ transform: imageTransform }"
+      >
+        <div
+          v-if="imageStatus === 'loading' && hasImageUrl"
+          class="game-card__image-loading"
+        >
           <div class="game-card__spinner"></div>
         </div>
-        <img v-show="showImage" :src="card.gameData.img" :alt="card.name" class="game-card__image" />
+        <img
+          v-show="showImage"
+          :src="card.gameData.img"
+          :alt="card.name"
+          class="game-card__image"
+        />
         <div v-if="showPlaceholder" class="game-card__image-placeholder">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+            />
           </svg>
         </div>
       </div>
@@ -560,9 +603,6 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 </template>
 
 <style scoped>
-/* ===========================================
-   CONTAINER & PLACEHOLDER
-   =========================================== */
 .game-card-container {
   position: relative;
 }
@@ -573,19 +613,12 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   background: transparent;
 }
 
-/* ===========================================
-   OVERLAY (GSAP controls opacity/blur)
-   =========================================== */
 .card-overlay {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.88);
-  /* Note: backdrop-filter is set by GSAP */
 }
 
-/* ===========================================
-   FLOATING CARD WRAPPER
-   =========================================== */
 .floating-card-wrapper {
   position: fixed;
   inset: 0;
@@ -602,14 +635,10 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   transform-style: preserve-3d;
 }
 
-/* Perspective container for 3D tilt effect */
 .floating-card-wrapper {
   perspective: 1000px;
 }
 
-/* ===========================================
-   MAIN CARD
-   =========================================== */
 .game-card {
   position: relative;
   width: 100%;
@@ -623,10 +652,9 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 .game-card--floating {
   cursor: default;
   z-index: 1001; /* Above overlay */
-  aspect-ratio: unset; /* Use explicit width/height when floating */
+  aspect-ratio: unset;
 }
 
-/* Tilt wrapper for hover effect */
 .game-card__tilt-wrapper {
   width: 100%;
   height: 100%;
@@ -634,9 +662,6 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   will-change: transform;
 }
 
-/* ===========================================
-   CARD VIEWS (GSAP controls animations)
-   =========================================== */
 .card-view {
   position: absolute;
   inset: 0;
@@ -646,29 +671,17 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   will-change: opacity, transform;
 }
 
-.card-view--preview {
-  /* GSAP will animate opacity */
-}
-
 .card-view--detail {
   display: flex;
   flex-direction: column;
   padding: 14px;
   gap: 8px;
-  /* GSAP will animate opacity of children */
 }
 
-/* ===========================================
-   STAGGER ELEMENTS (GSAP animates these)
-   =========================================== */
 .detail__stagger {
-  /* Initial state - GSAP sets opacity:0, y:8 */
   will-change: opacity, transform;
 }
 
-/* ===========================================
-   CLOSE BUTTON
-   =========================================== */
 .game-card__close {
   position: absolute;
   top: -45px;
@@ -697,9 +710,6 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   height: 16px;
 }
 
-/* ===========================================
-   PREVIEW VIEW STYLES
-   =========================================== */
 .game-card__frame {
   position: absolute;
   inset: 0;
@@ -708,7 +718,12 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 .game-card__bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, rgba(18, 17, 15, 0.95) 0%, rgba(10, 9, 8, 0.98) 50%, rgba(13, 12, 10, 1) 100%);
+  background: linear-gradient(
+    160deg,
+    rgba(18, 17, 15, 0.95) 0%,
+    rgba(10, 9, 8, 0.98) 50%,
+    rgba(13, 12, 10, 1) 100%
+  );
   border-radius: inherit;
 }
 
@@ -722,20 +737,21 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   border-radius: inherit;
 }
 
-/* ===========================================
-   DETAIL VIEW STYLES
-   =========================================== */
 .detail__title-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  background: linear-gradient(180deg, rgba(18, 16, 14, 0.8) 0%, rgba(10, 9, 8, 0.9) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(18, 16, 14, 0.8) 0%,
+    rgba(10, 9, 8, 0.9) 100%
+  );
   border-radius: 8px;
 }
 
 .detail__name {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 18px;
   font-weight: 700;
   color: #f0f0f0;
@@ -743,7 +759,7 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 }
 
 .detail__tier-badge {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 12px;
   font-weight: 700;
   padding: 4px 10px;
@@ -794,7 +810,7 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 }
 
 .detail__type {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 13px;
   font-weight: 600;
   color: #9a9a9a;
@@ -808,7 +824,7 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 }
 
 .detail__rarity {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 14px;
   color: var(--tier-glow, #7f7f7f);
   font-style: italic;
@@ -825,7 +841,12 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 .detail__separator-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, var(--tier-color, #3a3a40) 50%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--tier-color, #3a3a40) 50%,
+    transparent 100%
+  );
 }
 
 .detail__separator-rune {
@@ -844,7 +865,7 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 }
 
 .detail__flavour p {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-style: italic;
   font-size: 15px;
   line-height: 1.4;
@@ -864,13 +885,13 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 }
 
 .detail__collector-number {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 13px;
   color: #6a6a6a;
 }
 
 .detail__wiki-link {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 11px;
   color: #af6025;
   text-decoration: none;
@@ -886,14 +907,11 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 }
 
 .detail__weight {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 13px;
   color: var(--tier-glow, #6a6a6a);
 }
 
-/* ===========================================
-   FLOATING STATE ENHANCEMENTS
-   =========================================== */
 .game-card--floating {
   border: 2px solid var(--tier-color, #2a2a30);
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(0, 0, 0, 0.5);
@@ -906,7 +924,8 @@ const showOverlay = computed(() => animationState.value !== 'idle');
 
 .game-card--floating.game-card--t1 {
   border-color: #3a3445;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 20px rgba(122, 106, 138, 0.12);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 20px rgba(122, 106, 138, 0.12);
 }
 
 .game-card--floating.game-card--t2 {
@@ -918,22 +937,29 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   border-color: #2a2a2d;
 }
 
-/* ===========================================
-   CARD BACK STYLES
-   =========================================== */
 .game-card--back {
   cursor: default;
 }
 
 .game-card__bg--back {
-  background: linear-gradient(160deg, #0a0908 0%, #060505 30%, #030303 60%, #080706 100%);
+  background: linear-gradient(
+    160deg,
+    #0a0908 0%,
+    #060505 30%,
+    #030303 60%,
+    #080706 100%
+  );
 }
 
 .game-card__bg--back::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 50%, rgba(20, 15, 12, 0.3) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(20, 15, 12, 0.3) 0%,
+    transparent 70%
+  );
   border-radius: inherit;
 }
 
@@ -978,10 +1004,22 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   z-index: 2;
 }
 
-.card-back__rune--tl { top: 14px; left: 14px; }
-.card-back__rune--tr { top: 14px; right: 14px; }
-.card-back__rune--bl { bottom: 14px; left: 14px; }
-.card-back__rune--br { bottom: 14px; right: 14px; }
+.card-back__rune--tl {
+  top: 14px;
+  left: 14px;
+}
+.card-back__rune--tr {
+  top: 14px;
+  right: 14px;
+}
+.card-back__rune--bl {
+  bottom: 14px;
+  left: 14px;
+}
+.card-back__rune--br {
+  bottom: 14px;
+  right: 14px;
+}
 
 .card-back__logo-wrapper {
   position: absolute;
@@ -1015,9 +1053,20 @@ const showOverlay = computed(() => animationState.value !== 'idle');
   left: 20%;
   right: 20%;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(50, 40, 35, 0.3) 20%, rgba(60, 50, 45, 0.4) 50%, rgba(50, 40, 35, 0.3) 80%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(50, 40, 35, 0.3) 20%,
+    rgba(60, 50, 45, 0.4) 50%,
+    rgba(50, 40, 35, 0.3) 80%,
+    transparent 100%
+  );
 }
 
-.card-back__line--top { top: 45px; }
-.card-back__line--bottom { bottom: 45px; }
+.card-back__line--top {
+  top: 45px;
+}
+.card-back__line--bottom {
+  bottom: 45px;
+}
 </style>

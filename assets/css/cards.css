@@ -1,21 +1,11 @@
-/* ===========================================
-   GAME CARD STYLES - 3D Tilt Effect
-   =========================================== */
-
 :root {
-  /* Card dimensions - Mobile first (2 cards per row) */
   --card-width: 140px;
   --card-height: 196px;
   --card-border-radius: 10px;
-  
-  /* Tilt settings */
   --tilt-perspective: 1000px;
-  
-  /* Transition */
   --card-transition: 400ms cubic-bezier(0.03, 0.98, 0.52, 0.99);
 }
 
-/* Tablet and up */
 @media (min-width: 640px) {
   :root {
     --card-width: 180px;
@@ -24,7 +14,6 @@
   }
 }
 
-/* Desktop */
 @media (min-width: 1024px) {
   :root {
     --card-width: 200px;
@@ -32,14 +21,12 @@
   }
 }
 
-/* Card container - handles perspective */
 .game-card-container {
   perspective: var(--tilt-perspective);
   width: var(--card-width);
   height: var(--card-height);
 }
 
-/* Main card element */
 .game-card {
   position: relative;
   width: 100%;
@@ -48,18 +35,13 @@
   transform-style: preserve-3d;
   transition: transform var(--card-transition), box-shadow var(--card-transition);
   cursor: pointer;
-  
-  /* Default shadow */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  
-  /* Prevent selection */
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
 
-/* Prevent image dragging */
 .game-card img {
   -webkit-user-drag: none;
   -khtml-user-drag: none;
@@ -69,7 +51,6 @@
   pointer-events: none;
 }
 
-/* Card background/frame */
 .game-card__frame {
   position: absolute;
   inset: 0;
@@ -80,7 +61,6 @@
   transition: border-color var(--card-transition), box-shadow var(--card-transition);
 }
 
-/* Ornate corner decorations */
 .game-card__frame::before,
 .game-card__frame::after {
   content: '';
@@ -143,14 +123,12 @@
   }
 }
 
-/* Hover: brighten corners */
 .game-card--hovering .game-card__frame::before,
 .game-card--hovering .game-card__frame::after {
   opacity: 0.8;
   border-color: var(--tier-glow, var(--tier-color));
 }
 
-/* Image wrapper for proper centering */
 .game-card__image-wrapper {
   position: absolute;
   top: 20px;
@@ -164,7 +142,6 @@
   transition: transform var(--card-transition);
 }
 
-/* Item image */
 .game-card__image {
   max-width: 85%;
   max-height: 100%;
@@ -174,7 +151,6 @@
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
 }
 
-/* Loading state */
 .game-card__image-loading {
   width: 60px;
   height: 60px;
@@ -196,7 +172,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Placeholder for missing/broken images */
 .game-card__image-placeholder {
   width: 100px;
   height: 100px;
@@ -216,7 +191,6 @@
   opacity: 0.6;
 }
 
-/* Card info section */
 .game-card__info {
   position: absolute;
   bottom: 0;
@@ -249,7 +223,6 @@
   margin-bottom: 2px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
   transition: color var(--card-transition), text-shadow var(--card-transition);
-  /* Truncate long names on mobile */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -330,12 +303,6 @@
   }
 }
 
-/* ===========================================
-   TIER-SPECIFIC STYLES - "Glyphes Éteints"
-   Clean glow on hover
-   =========================================== */
-
-/* T0 - Légendaire (Ambre Sombre) */
 .game-card--t0 {
   --tier-color: #6d5a2a;
   --tier-glow: #c9a227;
@@ -362,7 +329,6 @@
   text-shadow: 0 0 20px rgba(201, 162, 39, 0.6), 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
-/* T1 - Rare (Obsidienne) */
 .game-card--t1 {
   --tier-color: #3a3445;
   --tier-glow: #7a6a8a;
@@ -389,7 +355,6 @@
   text-shadow: 0 0 15px rgba(122, 106, 138, 0.5), 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
-/* T2 - Peu commun (Ardoise) */
 .game-card--t2 {
   --tier-color: #3a4550;
   --tier-glow: #5a7080;
@@ -416,7 +381,6 @@
   text-shadow: 0 0 12px rgba(90, 112, 128, 0.4), 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
-/* T3 - Commun (Basalte) */
 .game-card--t3 {
   --tier-color: #2a2a2d;
   --tier-glow: #5a5a5d;
@@ -433,25 +397,15 @@
     inset 0 0 15px rgba(40, 40, 45, 0.1);
 }
 
-/* ===========================================
-   CARD BACK - No external border
-   =========================================== */
-
-/* Remove frame border for card back */
 .game-card--back .game-card__frame {
   border: none;
   background: transparent;
 }
 
-/* Remove corner decorations on card back */
 .game-card--back .game-card__frame::before,
 .game-card--back .game-card__frame::after {
   display: none;
 }
-
-/* ===========================================
-   FLAVOUR TEXT TOOLTIP
-   =========================================== */
 
 .game-card__flavour {
   position: absolute;

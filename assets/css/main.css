@@ -2,31 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===========================================
-   DESIGN SYSTEM - CSS Custom Properties
-   Used by complex components (Runic*, cards)
-   =========================================== */
+/* Design System - CSS Custom Properties for Runic components and cards */
 :root {
-  /* Accent / Active color (Copper/Bronze) */
   --color-accent: #af6025;
   --color-accent-light: #c97a3a;
   --color-accent-dark: #8a4d1e;
   --color-accent-glow: rgba(175, 96, 37, 0.4);
   --color-accent-glow-subtle: rgba(175, 96, 37, 0.15);
   
-  /* Surface colors */
   --color-bg: #0c0c0e;
   --color-surface: #151518;
   --color-surface-light: #1a1a1f;
   --color-border: #2a2a30;
   --color-border-light: #3a3a40;
   
-  /* Text colors */
   --color-text: #c8c8c8;
   --color-text-dim: #7f7f7f;
   --color-text-muted: #5a5a60;
   
-  /* Tier colors (glow = bright, bg = muted) */
   --color-tier-t0: #c9a227;
   --color-tier-t0-bg: #6d5a2a;
   --color-tier-t1: #7a6a8a;
@@ -36,27 +29,21 @@
   --color-tier-t3: #5a5a5d;
   --color-tier-t3-bg: #2a2a2d;
   
-  /* Transitions - for complex CSS animations */
   --transition-fast: 150ms ease;
   --transition-base: 300ms ease;
   --transition-smooth: 300ms cubic-bezier(0.03, 0.98, 0.52, 0.99);
   --transition-bounce: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
   
-  /* Border radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   
-  /* Shadows */
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.5);
   --shadow-card-hover: 0 8px 40px rgba(0, 0, 0, 0.7);
   --shadow-glow-accent: 0 0 15px var(--color-accent-glow);
 }
 
-/* ===========================================
-   BASE STYLES
-   =========================================== */
 @layer base {
   html {
     @apply bg-poe-bg text-poe-text antialiased;
@@ -70,7 +57,6 @@
       #0c0c0e;
   }
 
-  /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -89,17 +75,11 @@
   }
 }
 
-/* ===========================================
-   COMPONENT CLASSES
-   Reusable patterns that combine Tailwind utilities
-   =========================================== */
 @layer components {
-  /* Page layout container */
   .page-container {
     @apply max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8;
   }
 
-  /* Gradient page title */
   .page-title {
     @apply font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl text-center mb-4 sm:mb-6 md:mb-8;
     background: linear-gradient(135deg, #c8c8c8 0%, #af6025 50%, #c8c8c8 100%);

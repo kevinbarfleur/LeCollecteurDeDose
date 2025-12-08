@@ -1,4 +1,3 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
@@ -11,16 +10,13 @@ export default defineNuxtConfig({
     '@nuxtjs/i18n',
   ],
 
-  // i18n configuration
   i18n: {
-    locales: [
-      { code: 'fr', name: 'Français', file: 'fr.json' }
-    ],
+    locales: [{ code: 'fr', name: 'Français', file: 'fr.json' }],
     defaultLocale: 'fr',
     langDir: 'locales',
-    strategy: 'no_prefix', // URLs without language prefix since we only have French for now
+    strategy: 'no_prefix',
     lazy: true,
-    detectBrowserLanguage: false, // Disabled for now, will enable when adding more languages
+    detectBrowserLanguage: false,
   },
 
   runtimeConfig: {
@@ -32,7 +28,7 @@ export default defineNuxtConfig({
       }
     },
     session: {
-      maxAge: 60 * 60 * 24 * 7 // 1 week
+      maxAge: 60 * 60 * 24 * 7
     }
   },
 

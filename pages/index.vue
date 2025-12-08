@@ -1,33 +1,22 @@
 <script setup lang="ts">
 const { t } = useI18n();
 
-// SEO
-useHead({
-  title: t("meta.home.title"),
-});
+useHead({ title: t("meta.home.title") });
 
-// Card fan configuration
 const cardCount = 7;
 const cards = Array.from({ length: cardCount }, (_, i) => ({
   id: i,
-  // Calculate spread angle for each card (-30 to +30 degrees)
   baseRotation: -30 + (60 / (cardCount - 1)) * i,
-  // Stagger delay for entrance animation
   delay: i * 0.08,
 }));
 
-// Track which card is being hovered
 const hoveredCard = ref<number | null>(null);
-
-// Card back logo
 const cardBackLogoUrl = "/images/card-back-logo.png";
 
-// Calculate transform for each card
 const getCardStyle = (card: (typeof cards)[0], index: number) => {
   const isHovered = hoveredCard.value === index;
   const baseRotation = card.baseRotation;
 
-  // When hovered, lift the card up and reduce rotation
   let translateY = 0;
   let translateX = 0;
   let rotation = baseRotation;
@@ -38,7 +27,6 @@ const getCardStyle = (card: (typeof cards)[0], index: number) => {
     translateY = -20;
     rotation = baseRotation * 0.9;
     scale = 1.02;
-    // Keep same z-index - card stays in its position
   }
 
   return {
@@ -51,7 +39,6 @@ const getCardStyle = (card: (typeof cards)[0], index: number) => {
   };
 };
 
-// Entrance animation
 const isVisible = ref(false);
 onMounted(() => {
   setTimeout(() => {
@@ -63,21 +50,17 @@ onMounted(() => {
 <template>
   <NuxtLayout>
     <div class="relative min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
-      <!-- Background ambient effects -->
       <div class="home-bg">
         <div class="home-bg__gradient"></div>
         <div class="home-bg__particles"></div>
       </div>
 
-      <!-- Main content -->
       <div
         class="relative z-10 min-h-[calc(100vh-80px)] flex items-center justify-center p-8"
       >
-        <!-- Central box containing all sections -->
         <div
           class="flex flex-col items-center gap-10 md:gap-4 max-w-4xl w-full"
         >
-          <!-- Section 1: Hero (mascot + text) -->
           <section class="hero-section">
             <div
               class="hero-mascot"
@@ -107,7 +90,6 @@ onMounted(() => {
             </div>
           </section>
 
-          <!-- Section 2: Card fan -->
           <section class="flex justify-center w-full mb-[10%]">
             <div class="card-fan" :class="{ 'card-fan--visible': isVisible }">
               <div
@@ -146,7 +128,6 @@ onMounted(() => {
             </div>
           </section>
 
-          <!-- Section 3: CTA Buttons -->
           <section
             class="cta-section"
             :class="{ 'cta-section--visible': isVisible }"
@@ -171,9 +152,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* ===========================================
-   BACKGROUND EFFECTS
-   =========================================== */
 .home-bg {
   position: absolute;
   inset: 0;
@@ -248,9 +226,6 @@ onMounted(() => {
   }
 }
 
-/* ===========================================
-   HERO SECTION
-   =========================================== */
 .hero-section {
   display: flex;
   flex-direction: column;
@@ -270,7 +245,6 @@ onMounted(() => {
   }
 }
 
-/* Mascot (Grizzly) */
 .hero-mascot {
   position: relative;
   width: 140px;
@@ -351,7 +325,6 @@ onMounted(() => {
   }
 }
 
-/* Hero text */
 .hero-text {
   opacity: 0;
   transform: translateY(20px);
@@ -446,9 +419,6 @@ onMounted(() => {
   font-style: italic;
 }
 
-/* ===========================================
-   CARD FAN - Complex animation system
-   =========================================== */
 .card-fan {
   position: relative;
   width: 100%;
@@ -488,7 +458,6 @@ onMounted(() => {
   }
 }
 
-/* Individual card in fan */
 .fan-card {
   position: absolute;
   bottom: 0;
@@ -544,7 +513,6 @@ onMounted(() => {
   transform: rotateY(2deg) rotateX(-2deg);
 }
 
-/* Card back design */
 .fan-card__back {
   position: relative;
   width: 100%;
@@ -706,7 +674,6 @@ onMounted(() => {
   bottom: 30px;
 }
 
-/* Hover glow */
 .fan-card__hover-glow {
   position: absolute;
   inset: 0;
@@ -724,9 +691,6 @@ onMounted(() => {
   opacity: 1;
 }
 
-/* ===========================================
-   CTA SECTION
-   =========================================== */
 .cta-section {
   display: flex;
   flex-direction: column;
