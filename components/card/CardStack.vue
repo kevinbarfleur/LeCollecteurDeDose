@@ -316,6 +316,69 @@ const setFloatingCardRef = (el: any, index: number) => {
 
 // Hovering state (for stack layer styling)
 const isHovering = ref(false);
+
+// ===========================================
+// FLOATING CARDS - ROTATIONS & TILT EFFECT
+// ===========================================
+
+// Random rotations for floating cards in detail view (subtle, like real cards on table)
+const floatingCardRotations = computed(() => {
+  const rotations: number[] = [];
+  const seed = topCard.value.id.charCodeAt(0) * 7 + topCard.value.id.length * 3;
+  
+  for (let i = 0; i < props.count; i++) {
+    const pseudoRandom = Math.sin(seed * (i + 1) * 12345) * 10000;
+    // Subtle rotation: between -3 and +3 degrees
+    const rotation = (pseudoRandom - Math.floor(pseudoRandom) - 0.5) * 6;
+    rotations.push(rotation);
+  }
+  return rotations;
+});
+
+// Tilt state for each floating card
+const floatingCardTilts = ref<Map<number, { rotateX: number; rotateY: number; scale: number }>>(new Map());
+
+const onFloatingCardMouseMove = (e: MouseEvent, index: number) => {
+  const card = floatingCardsRef.value[index];
+  if (!card || animationState.value !== 'expanded') return;
+  
+  const rect = card.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  
+  const rotateY = ((x - centerX) / centerX) * 12; // max 12 degrees
+  const rotateX = ((centerY - y) / centerY) * 12;
+  
+  floatingCardTilts.value.set(index, { rotateX, rotateY, scale: 1.03 });
+};
+
+const onFloatingCardMouseEnter = (index: number) => {
+  floatingCardTilts.value.set(index, { rotateX: 0, rotateY: 0, scale: 1.03 });
+};
+
+const onFloatingCardMouseLeave = (index: number) => {
+  floatingCardTilts.value.set(index, { rotateX: 0, rotateY: 0, scale: 1 });
+};
+
+// Get transform style for a floating card
+const getFloatingCardStyle = (index: number) => {
+  const baseRotation = floatingCardRotations.value[index] || 0;
+  const tilt = floatingCardTilts.value.get(index);
+  
+  if (tilt && (tilt.rotateX !== 0 || tilt.rotateY !== 0 || tilt.scale !== 1)) {
+    return {
+      transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg) rotate(${baseRotation}deg) scale(${tilt.scale})`,
+      transition: 'transform 0.15s ease-out',
+    };
+  }
+  
+  return {
+    transform: `rotate(${baseRotation}deg)`,
+    transition: 'transform 0.3s ease-out',
+  };
+};
 </script>
 
 <template>
@@ -356,11 +419,18 @@ const isHovering = ref(false);
             :key="`floating-${card.id}-${index}`"
             :ref="(el) => setFloatingCardRef(el, index)"
             class="floating-card"
-            :class="[`floating-card--${card.tier.toLowerCase()}`]"
+            :class="[
+              `floating-card--${card.tier.toLowerCase()}`,
+              { 'floating-card--tilting': floatingCardTilts.get(index)?.scale === 1.03 }
+            ]"
             :style="{
               '--tier-color': TIER_CONFIG[card.tier as CardTier]?.color ?? '#2a2a2d',
               '--tier-glow': TIER_CONFIG[card.tier as CardTier]?.glowColor ?? '#3a3a3d',
+              ...getFloatingCardStyle(index),
             }"
+            @mousemove="onFloatingCardMouseMove($event, index)"
+            @mouseenter="onFloatingCardMouseEnter(index)"
+            @mouseleave="onFloatingCardMouseLeave(index)"
           >
             <!-- DETAIL VIEW CONTENT -->
             <div class="detail__title-bar">
@@ -604,6 +674,40 @@ const isHovering = ref(false);
   pointer-events: auto;
   transform-style: preserve-3d;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(0, 0, 0, 0.5);
+  cursor: default;
+  will-change: transform;
+}
+
+/* Hover effect when tilting - subtle, no extra glow for low tiers */
+.floating-card--tilting {
+  border-color: var(--tier-glow, var(--tier-color));
+}
+
+/* Only add glow for higher tiers (T0, T1) */
+.floating-card--tilting.floating-card--t0 {
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.95), 
+    0 0 25px rgba(201, 162, 39, 0.25),
+    0 0 50px rgba(201, 162, 39, 0.15);
+}
+
+.floating-card--tilting.floating-card--t1 {
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.95), 
+    0 0 20px rgba(122, 106, 138, 0.2),
+    0 0 40px rgba(122, 106, 138, 0.1);
+}
+
+/* Subtle glow for T2 */
+.floating-card--tilting.floating-card--t2 {
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.95), 
+    0 0 15px rgba(90, 112, 128, 0.15);
+}
+
+/* No extra glow for T3 - just the base shadow */
+.floating-card--tilting.floating-card--t3 {
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95);
 }
 
 .floating-card--t0 {
