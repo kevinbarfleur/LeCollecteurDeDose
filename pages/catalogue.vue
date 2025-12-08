@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { allCards, mockUserCollection } from '~/data/mockCards'
 import type { Card, CardTier, CardVariation } from '~/types/card'
-import { TIER_CONFIG, VARIATION_CONFIG } from '~/types/card'
+import { TIER_CONFIG, VARIATION_CONFIG, getCardVariation } from '~/types/card'
 
 const { t } = useI18n()
 
@@ -18,7 +18,7 @@ const ownedCardsWithBestVariation = computed(() => {
   
   // Check user collection for owned cards and their best variation
   mockUserCollection.forEach(card => {
-    const variation: CardVariation = card.variation ?? 'standard'
+    const variation: CardVariation = getCardVariation(card)
     const existing = map.get(card.id)
     
     if (existing) {

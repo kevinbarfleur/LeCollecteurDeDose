@@ -51,7 +51,8 @@ export default defineNuxtConfig({
   css: [
     '~/assets/css/main.css',
     '~/assets/css/cards.css',
-    '~/assets/css/foil.css'
+    '~/assets/css/foil.css',
+    '~/assets/css/foil-effects.css'
   ],
 
   tailwindcss: {

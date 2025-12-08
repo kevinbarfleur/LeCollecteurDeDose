@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
-import { VARIATION_CONFIG } from "~/types/card";
+import { VARIATION_CONFIG, getCardVariation } from "~/types/card";
 
 const { t } = useI18n();
 
@@ -39,7 +39,7 @@ const groupedCards = computed(() => {
   const groups = new Map<string, CardGroupWithVariations>();
 
   collection.value.forEach((card) => {
-    const variation: CardVariation = card.variation ?? "standard";
+    const variation: CardVariation = getCardVariation(card);
     const existing = groups.get(card.id);
 
     if (existing) {

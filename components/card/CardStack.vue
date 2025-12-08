@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Card, CardTier, CardVariation } from "~/types/card";
-import { TIER_CONFIG, VARIATION_CONFIG } from "~/types/card";
+import { TIER_CONFIG, VARIATION_CONFIG, getCardVariation } from "~/types/card";
 
 // Interface for variation groups
 interface VariationGroup {
@@ -25,7 +25,7 @@ const sortedVariations = computed(() => {
     // Fallback: compute from cards if variations not passed
     const variationMap = new Map<CardVariation, VariationGroup>();
     props.cards.forEach((card) => {
-      const variation: CardVariation = card.variation ?? 'standard';
+      const variation: CardVariation = getCardVariation(card);
       const existing = variationMap.get(variation);
       if (existing) {
         existing.cards.push(card);

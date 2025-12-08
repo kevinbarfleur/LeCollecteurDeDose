@@ -32,7 +32,18 @@ export interface Card {
   wikiUrl: string
   gameData: CardGameData
   weight?: number
-  variation?: CardVariation  // 'standard' if not specified
+  foil?: boolean  // true if foil variant
+  variation?: CardVariation  // DEPRECATED: use foil instead - kept for backwards compatibility
+}
+
+// Helper function to check if a card is foil (supports both formats)
+export function isCardFoil(card: Card): boolean {
+  return card.foil === true || card.variation === 'foil'
+}
+
+// Helper function to get the variation of a card
+export function getCardVariation(card: Card): CardVariation {
+  return isCardFoil(card) ? 'foil' : 'standard'
 }
 
 export interface UserCollection {

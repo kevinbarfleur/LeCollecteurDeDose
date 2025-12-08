@@ -40,6 +40,25 @@ useHead({
         <h2
           class="font-display text-xl font-semibold text-poe-text-dim text-center mb-6 uppercase tracking-widest"
         >
+          {{ t("about.rules.title") }}
+        </h2>
+
+        <div class="flex flex-col items-center">
+          <RunicButton
+            href="/documents/TCG Collector Rules.pdf"
+            variant="primary"
+            size="lg"
+            icon="document"
+          >
+            {{ t("about.rules.button") }}
+          </RunicButton>
+        </div>
+      </section>
+
+      <section class="w-full max-w-lg mt-12">
+        <h2
+          class="font-display text-xl font-semibold text-poe-text-dim text-center mb-6 uppercase tracking-widest"
+        >
           {{ t("about.socials.title") }}
         </h2>
 

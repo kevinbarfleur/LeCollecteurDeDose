@@ -190,8 +190,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 0.5,
       img: 'https://web.poecdn.com/image/Art/2DItems/Belts/Headhunter.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 21,
@@ -206,7 +205,7 @@ export const mockUserCollection: Card[] = [
       weight: 0.5,
       img: 'https://web.poecdn.com/image/Art/2DItems/Belts/Headhunter.png'
     },
-    variation: 'foil'
+    foil: true
   },
   // T1 - Épiques (1 foil Ashes of the Stars)
   {
@@ -222,7 +221,7 @@ export const mockUserCollection: Card[] = [
       weight: 0.9,
       img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Starforge.png' // dont change, temporary
     },
-    variation: 'foil'
+    foil: true
   },
   // T2 - Peu communs (2 Starforge standard + 1 foil)
   {
@@ -237,8 +236,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.0,
       img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Starforge.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 43,
@@ -252,8 +250,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.0,
       img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Starforge.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 44,
@@ -268,7 +265,7 @@ export const mockUserCollection: Card[] = [
       weight: 1.0,
       img: 'https://web.poecdn.com/image/Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/Starforge.png'
     },
-    variation: 'foil'
+    foil: true
   },
   // T3 - Communs (3 Wanderlust, many Tabula Rasa + 2 foil Tabula)
   {
@@ -283,8 +280,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/Boots/Wanderlust.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 33,
@@ -298,8 +294,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/Boots/Wanderlust.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 34,
@@ -313,8 +308,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/Boots/Wanderlust.png'
-    },
-    variation: 'standard'
+    }
   },
   // Tabula Rasa - mix of standard and foil
   {
@@ -329,8 +323,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 39,
@@ -345,7 +338,7 @@ export const mockUserCollection: Card[] = [
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
     },
-    variation: 'foil'  // First foil Tabula
+    foil: true  // First foil Tabula
   },
   {
     uid: 40,
@@ -359,8 +352,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 41,
@@ -375,7 +367,7 @@ export const mockUserCollection: Card[] = [
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
     },
-    variation: 'foil'  // Second foil Tabula
+    foil: true  // Second foil Tabula
   },
   {
     uid: 45,
@@ -389,8 +381,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 46,
@@ -404,8 +395,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 47,
@@ -419,8 +409,7 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
-    },
-    variation: 'standard'
+    }
   },
   {
     uid: 48,
@@ -434,14 +423,12 @@ export const mockUserCollection: Card[] = [
     gameData: {
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
-    },
-    variation: 'standard'
+    }
   },
   // Additional Tabula Rasa for testing scroll (all standard)
-  { uid: 52, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' }, variation: 'standard' },
-  { uid: 53, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' }, variation: 'standard' },
-  { uid: 54, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' }, variation: 'standard' },
-  { uid: 55, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' }, variation: 'standard' },
-  { uid: 56, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' }, variation: 'standard' }
+  { uid: 52, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 53, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 54, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 55, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 56, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } }
 ]
-

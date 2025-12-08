@@ -1,0 +1,112 @@
+/* ===========================================
+   FOIL EFFECTS - Trainer Gallery Only
+   =========================================== */
+
+/* ===========================================
+   TRAINER GALLERY HOLO EFFECT
+   Tier-colored stripes effect
+   =========================================== */
+[data-foil-effect="trainer-gallery"] .game-card__foil-overlay {
+  --space: 5%;
+  --angle: -22deg;
+  
+  /* Default colors (will be overridden by tier) */
+  --tg-hue-1: 220;
+  --tg-hue-2: 210;
+  --tg-hue-3: 230;
+  --tg-hue-4: 200;
+  --tg-hue-5: 240;
+  --tg-hue-6: 215;
+  --tg-sat: 50%;
+  --tg-light: 55%;
+  --tg-glow-hue: 220;
+  
+  background-image: repeating-linear-gradient(
+    var(--angle),
+    hsla(var(--tg-hue-1), var(--tg-sat), var(--tg-light), 0.75) calc(var(--space) * 1),
+    hsla(var(--tg-hue-2), calc(var(--tg-sat) + 10%), calc(var(--tg-light) + 5%), 0.75) calc(var(--space) * 2),
+    hsla(var(--tg-hue-3), var(--tg-sat), var(--tg-light), 0.75) calc(var(--space) * 3),
+    hsla(var(--tg-hue-4), calc(var(--tg-sat) - 5%), calc(var(--tg-light) + 8%), 0.75) calc(var(--space) * 4),
+    hsla(var(--tg-hue-5), calc(var(--tg-sat) + 5%), calc(var(--tg-light) - 3%), 0.75) calc(var(--space) * 5),
+    hsla(var(--tg-hue-6), var(--tg-sat), calc(var(--tg-light) + 3%), 0.75) calc(var(--space) * 6),
+    hsla(var(--tg-hue-1), var(--tg-sat), var(--tg-light), 0.75) calc(var(--space) * 7)
+  );
+
+  background-blend-mode: color-dodge;
+  background-size: 300% 400%;
+  background-position: 0% calc(var(--pointer-y, 50) * 1%);
+
+  filter: brightness(calc((var(--pointer-from-center, 0.5) * 0.3) + 0.5)) 
+          contrast(2.3) 
+          saturate(1);
+  mix-blend-mode: color-dodge;
+  opacity: 0.5;
+}
+
+[data-foil-effect="trainer-gallery"] .game-card__foil-overlay::after {
+  background-image: radial-gradient(
+    farthest-corner ellipse 
+    at calc(((var(--pointer-x, 50)) * 0.5) + 25%) calc(((var(--pointer-y, 50)) * 0.5) + 25%),
+    hsl(0, 0%, 100%) 5%,
+    hsla(var(--tg-glow-hue), 80%, 15%, 0.6) 40%,
+    hsl(0, 0%, 22%) 120%
+  );
+  background-position: center center;
+  background-size: 400% 500%;
+  filter: brightness(calc((var(--pointer-from-center, 0.5) * 0.2) + 0.4)) 
+          contrast(0.85) 
+          saturate(1.1);
+  mix-blend-mode: hard-light;
+}
+
+/* T0 - LEGENDARY: Gold variations */
+.game-card--t0[data-foil-effect="trainer-gallery"] .game-card__foil-overlay {
+  --tg-hue-1: 45;   /* Gold */
+  --tg-hue-2: 38;   /* Amber */
+  --tg-hue-3: 52;   /* Yellow-gold */
+  --tg-hue-4: 30;   /* Orange-gold */
+  --tg-hue-5: 48;   /* Warm gold */
+  --tg-hue-6: 42;   /* Rich gold */
+  --tg-sat: 75%;
+  --tg-light: 52%;
+  --tg-glow-hue: 45;
+}
+
+/* T1 - EPIC: Purple/Amethyst variations */
+.game-card--t1[data-foil-effect="trainer-gallery"] .game-card__foil-overlay {
+  --tg-hue-1: 278;  /* Purple */
+  --tg-hue-2: 268;  /* Blue-purple */
+  --tg-hue-3: 288;  /* Magenta-purple */
+  --tg-hue-4: 260;  /* Indigo */
+  --tg-hue-5: 295;  /* Pink-purple */
+  --tg-hue-6: 273;  /* Violet */
+  --tg-sat: 60%;
+  --tg-light: 55%;
+  --tg-glow-hue: 280;
+}
+
+/* T2 - RARE: Blue/Steel variations */
+.game-card--t2[data-foil-effect="trainer-gallery"] .game-card__foil-overlay {
+  --tg-hue-1: 210;  /* Blue */
+  --tg-hue-2: 200;  /* Cyan-blue */
+  --tg-hue-3: 220;  /* Deep blue */
+  --tg-hue-4: 195;  /* Teal-blue */
+  --tg-hue-5: 225;  /* Indigo-blue */
+  --tg-hue-6: 205;  /* Steel blue */
+  --tg-sat: 50%;
+  --tg-light: 52%;
+  --tg-glow-hue: 210;
+}
+
+/* T3 - COMMON: Silver/Grey variations */
+.game-card--t3[data-foil-effect="trainer-gallery"] .game-card__foil-overlay {
+  --tg-hue-1: 220;  /* Cool grey */
+  --tg-hue-2: 210;  /* Blue-grey */
+  --tg-hue-3: 230;  /* Purple-grey */
+  --tg-hue-4: 200;  /* Cyan-grey */
+  --tg-hue-5: 225;  /* Slate */
+  --tg-hue-6: 215;  /* Steel grey */
+  --tg-sat: 15%;
+  --tg-light: 55%;
+  --tg-glow-hue: 220;
+}

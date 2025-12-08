@@ -77,6 +77,10 @@
     "title": "Le Collecteur",
     "tagline": "de Dose",
     "description": "Seuls les plus dignes survivront.",
+    "rules": {
+      "title": "Les Règles Sacrées",
+      "button": "Consulter les Règles"
+    },
     "socials": {
       "title": "Rejoins la cave",
       "twitch": "Les Doseurs",
@@ -94,4 +98,3 @@
     "loading": "Chargement..."
   }
 }
-

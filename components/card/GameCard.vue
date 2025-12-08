@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG } from "~/types/card";
+import { useFoilEffect } from "~/composables/useFoilEffect";
 import gsap from "gsap";
+
+// Get the selected foil effect
+const { selectedFoilEffect } = useFoilEffect();
 
 // Variation option interface for the radio selector
 interface VariationOption {
@@ -323,11 +327,19 @@ watch(animationState, (state) => {
   }
 });
 
-// Variation handling
-const cardVariation = computed<CardVariation>(
-  () => props.card.variation ?? "standard"
+// Check if card is foil - supports both foil: true and variation: 'foil'
+const isFoil = computed(() => {
+  // New format: foil: true
+  if (props.card.foil === true) return true;
+  // Legacy format: variation: 'foil'
+  if (props.card.variation === "foil") return true;
+  return false;
+});
+
+// Get card variation for backwards compatibility
+const cardVariation = computed<CardVariation>(() =>
+  isFoil.value ? "foil" : "standard"
 );
-const isFoil = computed(() => cardVariation.value === "foil");
 
 // Hover state for cards
 const isHovering = ref(false);
@@ -579,6 +591,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
             },
           ]"
           :style="{ ...tierStyles, ...floatingFoilStyles }"
+          :data-foil-effect="isFoil ? selectedFoilEffect : undefined"
           @mousemove="onFloatingMouseMove"
           @mouseenter="onFloatingMouseEnter"
           @mouseleave="onFloatingMouseLeave"
@@ -795,6 +808,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
         class="game-card game-card--preview"
         :class="cardClasses"
         :style="{ ...tierStyles, ...foilStyles }"
+        :data-foil-effect="isFoil ? selectedFoilEffect : undefined"
         @mouseenter="onMouseEnter"
         @mouseleave="onMouseLeave"
         @mousemove="onMouseMove"
