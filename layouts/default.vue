@@ -1,11 +1,12 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const route = useRoute();
 
-const navItems = [
-  { path: "/catalogue", label: "Catalogue", icon: "cards" },
-  { path: "/collection", label: "Ma Collection", icon: "user" },
-  { path: "/about", label: "À propos", icon: "info" },
-];
+const navItems = computed(() => [
+  { path: "/catalogue", label: t("nav.catalogue"), icon: "cards" },
+  { path: "/collection", label: t("nav.collection"), icon: "user" },
+  { path: "/about", label: t("nav.about"), icon: "info" },
+]);
 </script>
 
 <template>
@@ -19,7 +20,7 @@ const navItems = [
         <NuxtLink to="/" class="app-header__logo">
           <img
             :src="'/images/logo.png'"
-            alt="Logo Le Collecteur de Dose"
+            :alt="`Logo ${t('app.name')}`"
             class="w-9 h-9 sm:w-12 sm:h-12 object-contain transition-transform duration-fast hover:scale-105"
           />
           <div class="flex flex-col leading-tight">
@@ -29,7 +30,7 @@ const navItems = [
             >
             <span
               class="font-body text-xs sm:text-sm italic text-accent transition-colors duration-fast group-hover:text-accent-light"
-              >de Dose</span
+              >{{ t("app.tagline") }}</span
             >
           </div>
         </NuxtLink>
@@ -76,7 +77,7 @@ const navItems = [
           class="w-5 h-5 sm:w-6 sm:h-6 object-contain opacity-50 transition-opacity duration-base group-hover:opacity-80"
         />
         <p class="font-body text-xs sm:text-sm text-poe-text-muted m-0">
-          Vaal or no balls
+          {{ t("app.footer") }}
         </p>
       </div>
     </footer>

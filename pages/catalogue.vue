@@ -3,9 +3,11 @@ import { allCards, mockUserCollection } from '~/data/mockCards'
 import type { Card, CardTier } from '~/types/card'
 import { TIER_CONFIG } from '~/types/card'
 
+const { t } = useI18n()
+
 // SEO
 useHead({
-  title: 'Catalogue - Le Collecteur de Dose'
+  title: t('meta.catalogue.title')
 })
 
 // Get owned card IDs from user collection
@@ -18,13 +20,13 @@ const ownedCardIds = computed(() => {
 const searchQuery = ref('')
 const selectedTier = ref<CardTier | 'all'>('all')
 
-const tierOptions = [
-  { value: 'all', label: 'Tous', color: 'default' },
-  { value: 'T0', label: 'T0', color: 't0' },
-  { value: 'T1', label: 'T1', color: 't1' },
-  { value: 'T2', label: 'T2', color: 't2' },
-  { value: 'T3', label: 'T3', color: 't3' }
-]
+const tierOptions = computed(() => [
+  { value: 'all', label: t('collection.tiers.all'), color: 'default' },
+  { value: 'T0', label: t('collection.tiers.t0'), color: 't0' },
+  { value: 'T1', label: t('collection.tiers.t1'), color: 't1' },
+  { value: 'T2', label: t('collection.tiers.t2'), color: 't2' },
+  { value: 'T3', label: t('collection.tiers.t3'), color: 't3' }
+])
 
 // Filtered cards
 const filteredCards = computed(() => {
@@ -66,20 +68,20 @@ const stats = computed(() => ({
     <div class="page-container">
       <!-- Page header -->
       <div class="text-center mb-4 sm:mb-8">
-        <h1 class="page-title">Le Registre des Âmes</h1>
+        <h1 class="page-title">{{ t('catalogue.title') }}</h1>
         <p class="font-body text-sm sm:text-base md:text-lg text-poe-text-dim mt-1 sm:mt-2 px-2">
-          Contemple ce que tu ne posséderas probablement jamais, exile.
+          {{ t('catalogue.subtitle') }}
         </p>
       </div>
 
       <!-- Stats bar - Runic tablet -->
       <RunicStats
         :stats="[
-          { value: stats.total, label: 'Total', color: 'default' },
-          { value: stats.t0, label: 'T0', color: 't0' },
-          { value: stats.t1, label: 'T1', color: 't1' },
-          { value: stats.t2, label: 'T2', color: 't2' },
-          { value: stats.t3, label: 'T3', color: 't3' }
+          { value: stats.total, label: t('cards.stats.total'), color: 'default' },
+          { value: stats.t0, label: t('collection.tiers.t0'), color: 't0' },
+          { value: stats.t1, label: t('collection.tiers.t1'), color: 't1' },
+          { value: stats.t2, label: t('collection.tiers.t2'), color: 't2' },
+          { value: stats.t3, label: t('collection.tiers.t3'), color: 't3' }
         ]"
       />
 
@@ -89,7 +91,7 @@ const stats = computed(() => ({
         <div class="flex-1 max-w-full md:max-w-md">
           <RunicInput
             v-model="searchQuery"
-            placeholder="Fouille dans les ténèbres..."
+            :placeholder="t('catalogue.search.placeholder')"
             icon="search"
             size="md"
           />
@@ -107,7 +109,7 @@ const stats = computed(() => ({
       <CardGrid 
         :cards="filteredCards" 
         :owned-card-ids="ownedCardIds"
-        empty-message="Aucune carte ne correspond à votre recherche"
+        :empty-message="t('catalogue.empty')"
       />
     </div>
   </NuxtLayout>

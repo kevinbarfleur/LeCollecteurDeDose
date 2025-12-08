@@ -1,6 +1,8 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 useHead({
-  title: "À propos - Le Collecteur de Dose",
+  title: t("meta.about.title"),
 });
 </script>
 
@@ -15,7 +17,7 @@ useHead({
         <div class="relative z-10 mb-6">
           <img
             :src="'/images/logo.png'"
-            alt="Logo Le Collecteur de Dose"
+            :alt="`Logo ${t('app.name')}`"
             class="about-hero__logo"
           />
         </div>
@@ -25,16 +27,16 @@ useHead({
           <h1
             class="font-display text-5xl md:text-6xl font-bold text-white/90 tracking-wide m-0 drop-shadow-lg"
           >
-            Le Collecteur
+            {{ t("about.title") }}
           </h1>
-          <span class="font-body text-2xl md:text-3xl italic text-accent mt-1"
-            >de Dose</span
-          >
+          <span class="font-body text-2xl md:text-3xl italic text-accent mt-1">
+            {{ t("about.tagline") }}
+          </span>
         </div>
 
         <!-- Description -->
         <p class="relative z-10 font-body text-xl text-poe-text-dim mt-4">
-          Seuls les plus dignes survivront.
+          {{ t("about.description") }}
         </p>
       </section>
 
@@ -43,7 +45,7 @@ useHead({
         <h2
           class="font-display text-xl font-semibold text-poe-text-dim text-center mb-6 uppercase tracking-widest"
         >
-          Rejoins la cave
+          {{ t("about.socials.title") }}
         </h2>
 
         <div class="flex flex-col items-center gap-4">
@@ -53,7 +55,7 @@ useHead({
             size="lg"
             icon="twitch"
           >
-            Les Doseurs
+            {{ t("about.socials.twitch") }}
           </RunicButton>
 
           <RunicButton
@@ -62,7 +64,7 @@ useHead({
             size="lg"
             icon="youtube"
           >
-            Les Doseurs
+            {{ t("about.socials.youtube") }}
           </RunicButton>
 
           <RunicButton
@@ -71,7 +73,7 @@ useHead({
             size="lg"
             icon="youtube"
           >
-            Les Doseurs POE
+            {{ t("about.socials.youtubePoe") }}
           </RunicButton>
         </div>
       </section>

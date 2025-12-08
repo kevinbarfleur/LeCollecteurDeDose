@@ -2,6 +2,8 @@
 import type { Card } from "~/types/card";
 import { useAutoAnimate } from "@formkit/auto-animate/vue";
 
+const { t } = useI18n();
+
 // Type for grouped cards
 interface CardGroup {
   cards: Card[];
@@ -14,6 +16,11 @@ const props = defineProps<{
   emptyMessage?: string;
   ownedCardIds?: string[];
 }>();
+
+// Default empty message from translations
+const displayEmptyMessage = computed(
+  () => props.emptyMessage || t("cards.empty")
+);
 
 // Check if a card is owned
 const isCardOwned = (cardId: string): boolean => {
@@ -108,7 +115,7 @@ const [gridRef] = useAutoAnimate({
         </svg>
       </div>
       <p class="font-body text-lg text-poe-text-dim">
-        {{ emptyMessage || "Aucune carte trouvée" }}
+        {{ displayEmptyMessage }}
       </p>
     </div>
   </div>

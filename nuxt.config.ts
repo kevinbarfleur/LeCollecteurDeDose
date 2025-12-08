@@ -8,7 +8,20 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@vueuse/motion/nuxt',
     'nuxt-auth-utils',
+    '@nuxtjs/i18n',
   ],
+
+  // i18n configuration
+  i18n: {
+    locales: [
+      { code: 'fr', name: 'Français', file: 'fr.json' }
+    ],
+    defaultLocale: 'fr',
+    langDir: 'locales',
+    strategy: 'no_prefix', // URLs without language prefix since we only have French for now
+    lazy: true,
+    detectBrowserLanguage: false, // Disabled for now, will enable when adding more languages
+  },
 
   runtimeConfig: {
     oauth: {

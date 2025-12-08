@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 const { loggedIn, user, clear } = useUserSession()
 
 const handleLogout = async () => {
@@ -23,10 +24,10 @@ const handleLogout = async () => {
         size="sm"
         icon="logout"
         class="twitch-auth__logout-btn"
-        title="Déconnexion"
+        :title="t('auth.logout')"
         @click="handleLogout"
       >
-        <span class="sr-only">Déconnexion</span>
+        <span class="sr-only">{{ t('auth.logout') }}</span>
       </RunicButton>
     </div>
 
@@ -39,7 +40,7 @@ const handleLogout = async () => {
       size="sm"
       icon="twitch"
     >
-      Connexion
+      {{ t('auth.login') }}
     </RunicButton>
   </div>
 </template>

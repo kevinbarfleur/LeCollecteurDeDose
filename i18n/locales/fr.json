@@ -1,0 +1,97 @@
+{
+  "app": {
+    "name": "Le Collecteur de Dose",
+    "tagline": "de Dose",
+    "footer": "Vaal or no balls"
+  },
+  "meta": {
+    "description": "Collection de cartes Path of Exile pour Twitch",
+    "home": {
+      "title": "Le Collecteur de Dose - Accueil"
+    },
+    "collection": {
+      "title": "Ma Collection - Le Collecteur de Dose"
+    },
+    "catalogue": {
+      "title": "Catalogue - Le Collecteur de Dose"
+    },
+    "about": {
+      "title": "À propos - Le Collecteur de Dose"
+    }
+  },
+  "nav": {
+    "catalogue": "Catalogue",
+    "collection": "Ma Collection",
+    "about": "À propos"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion"
+  },
+  "home": {
+    "hero": {
+      "title": "Le Collecteur",
+      "accent": "de Dose",
+      "description": "Collectionne les reliques les plus rares de Wraeclast. Chaque carte raconte une histoire, chaque drop est une légende.",
+      "highlight": "Quel trésor vas-tu découvrir ?"
+    },
+    "cta": {
+      "collection": "Voir ma Collection",
+      "catalogue": "Explorer le Catalogue"
+    }
+  },
+  "catalogue": {
+    "title": "Le Registre des Âmes",
+    "subtitle": "Contemple ce que tu ne posséderas probablement jamais, exile.",
+    "search": {
+      "placeholder": "Fouille dans les ténèbres..."
+    },
+    "empty": "Aucune carte ne correspond à votre recherche"
+  },
+  "collection": {
+    "auth": {
+      "title": "Prouve ton existence",
+      "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
+      "button": "Invoquer Twitch"
+    },
+    "profile": {
+      "role": "Exile"
+    },
+    "stats": {
+      "cards": "Cartes",
+      "unique": "Uniques"
+    },
+    "filters": {
+      "showDuplicates": "Révéler les doublons"
+    },
+    "empty": "Ton inventaire est aussi vide que ton âme. Prouve ta dévotion sur le stream.",
+    "tiers": {
+      "all": "Tous",
+      "t0": "T0",
+      "t1": "T1",
+      "t2": "T2",
+      "t3": "T3"
+    }
+  },
+  "about": {
+    "title": "Le Collecteur",
+    "tagline": "de Dose",
+    "description": "Seuls les plus dignes survivront.",
+    "socials": {
+      "title": "Rejoins la cave",
+      "twitch": "Les Doseurs",
+      "youtube": "Les Doseurs",
+      "youtubePoe": "Les Doseurs POE"
+    }
+  },
+  "cards": {
+    "empty": "Aucune carte trouvée",
+    "stats": {
+      "total": "Total"
+    }
+  },
+  "common": {
+    "loading": "Chargement..."
+  }
+}
+

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 // SEO
 useHead({
-  title: "Le Collecteur de Dose - Accueil",
+  title: t("meta.home.title"),
 });
 
 // Card fan configuration
@@ -91,14 +93,15 @@ onMounted(() => {
 
             <div class="hero-text" :class="{ 'hero-text--visible': isVisible }">
               <h1 class="hero-title">
-                <span class="hero-title__main">Le Collecteur</span>
-                <span class="hero-title__accent">de Dose</span>
+                <span class="hero-title__main">{{ t("home.hero.title") }}</span>
+                <span class="hero-title__accent">{{
+                  t("home.hero.accent")
+                }}</span>
               </h1>
               <p class="hero-description">
-                Collectionne les reliques les plus rares de Wraeclast. Chaque
-                carte raconte une histoire, chaque drop est une légende.
+                {{ t("home.hero.description") }}
                 <span class="hero-description__highlight">
-                  Quel trésor vas-tu découvrir ?
+                  {{ t("home.hero.highlight") }}
                 </span>
               </p>
             </div>
@@ -149,7 +152,7 @@ onMounted(() => {
             :class="{ 'cta-section--visible': isVisible }"
           >
             <RunicButton to="/collection" variant="primary">
-              Voir ma Collection
+              {{ t("home.cta.collection") }}
             </RunicButton>
 
             <RunicButton
@@ -158,7 +161,7 @@ onMounted(() => {
               rune-left="✧"
               rune-right="✧"
             >
-              Explorer le Catalogue
+              {{ t("home.cta.catalogue") }}
             </RunicButton>
           </section>
         </div>

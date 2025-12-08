@@ -2,9 +2,11 @@
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier } from "~/types/card";
 
+const { t } = useI18n();
+
 // SEO
 useHead({
-  title: "Ma Collection - Le Collecteur de Dose",
+  title: t("meta.collection.title"),
 });
 
 // Auth state from nuxt-auth-utils
@@ -59,13 +61,13 @@ const stats = computed(() => {
 const showDuplicates = ref(false);
 const selectedTier = ref<CardTier | "all">("all");
 
-const tierOptions = [
-  { value: "all", label: "Tous", color: "default" },
-  { value: "T0", label: "T0", color: "t0" },
-  { value: "T1", label: "T1", color: "t1" },
-  { value: "T2", label: "T2", color: "t2" },
-  { value: "T3", label: "T3", color: "t3" },
-];
+const tierOptions = computed(() => [
+  { value: "all", label: t("collection.tiers.all"), color: "default" },
+  { value: "T0", label: t("collection.tiers.t0"), color: "t0" },
+  { value: "T1", label: t("collection.tiers.t1"), color: "t1" },
+  { value: "T2", label: t("collection.tiers.t2"), color: "t2" },
+  { value: "T3", label: t("collection.tiers.t3"), color: "t3" },
+]);
 
 // Filtered grouped cards (for stack view - default mode)
 const filteredGroupedCards = computed(() => {
@@ -107,11 +109,10 @@ const filteredIndividualCards = computed(() => {
             />
           </div>
           <h1 class="font-display text-2xl text-poe-text mb-3">
-            Prouve ton existence
+            {{ t("collection.auth.title") }}
           </h1>
           <p class="font-body text-poe-text-dim mb-8 leading-relaxed">
-            Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité,
-            exile.
+            {{ t("collection.auth.description") }}
           </p>
           <RunicButton
             href="/auth/twitch"
@@ -121,7 +122,7 @@ const filteredIndividualCards = computed(() => {
             rune-left="✦"
             rune-right="✦"
           >
-            Invoquer Twitch
+            {{ t("collection.auth.button") }}
           </RunicButton>
         </RunicBox>
       </div>
@@ -151,7 +152,7 @@ const filteredIndividualCards = computed(() => {
                   class="flex items-center gap-2 font-body text-sm text-poe-text-muted italic"
                 >
                   <span class="text-[0.5rem] text-accent opacity-70">◆</span>
-                  <span>Exile</span>
+                  <span>{{ t("collection.profile.role") }}</span>
                   <span class="text-[0.5rem] text-accent opacity-70">◆</span>
                 </div>
               </div>
@@ -165,7 +166,9 @@ const filteredIndividualCards = computed(() => {
                   stats.total
                 }}</span>
                 <span class="collection-main-stats__rune">◆</span>
-                <span class="collection-main-stats__label">Cartes</span>
+                <span class="collection-main-stats__label">{{
+                  t("collection.stats.cards")
+                }}</span>
               </div>
               <div class="collection-main-stats__divider"></div>
               <div class="collection-main-stats__item">
@@ -174,7 +177,9 @@ const filteredIndividualCards = computed(() => {
                   stats.unique
                 }}</span>
                 <span class="collection-main-stats__rune">◆</span>
-                <span class="collection-main-stats__label">Uniques</span>
+                <span class="collection-main-stats__label">{{
+                  t("collection.stats.unique")
+                }}</span>
               </div>
             </div>
 
@@ -208,7 +213,7 @@ const filteredIndividualCards = computed(() => {
             />
             <span
               class="font-body text-sm text-poe-text-dim transition-colors duration-base"
-              >Révéler les doublons</span
+              >{{ t("collection.filters.showDuplicates") }}</span
             >
           </div>
 
@@ -219,14 +224,14 @@ const filteredIndividualCards = computed(() => {
         <CardGrid
           v-if="!showDuplicates"
           :grouped-cards="filteredGroupedCards"
-          empty-message="Ton inventaire est aussi vide que ton âme. Prouve ta dévotion sur le stream."
+          :empty-message="t('collection.empty')"
         />
 
         <!-- Cards grid - Individual mode (duplicates) -->
         <CardGrid
           v-else
           :cards="filteredIndividualCards"
-          empty-message="Ton inventaire est aussi vide que ton âme. Prouve ta dévotion sur le stream."
+          :empty-message="t('collection.empty')"
         />
       </div>
     </div>
