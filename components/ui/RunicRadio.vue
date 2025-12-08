@@ -392,49 +392,94 @@ const handleToggleClick = () => {
 }
 
 /* ==========================================
-   SIZES - Made larger for better readability
+   SIZES - Mobile first, then larger screens
    ========================================== */
 
 /* Small */
 .runic-radio--sm .runic-radio__groove {
-  min-height: 38px;
+  min-height: 32px;
 }
 
 .runic-radio--sm .runic-radio__option {
-  padding: 0.5rem 1.25rem;
+  padding: 0.375rem 0.625rem;
 }
 
 .runic-radio--sm .runic-radio__label,
 .runic-radio--sm .runic-radio__slider-label {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
+}
+
+@media (min-width: 640px) {
+  .runic-radio--sm .runic-radio__groove {
+    min-height: 38px;
+  }
+  
+  .runic-radio--sm .runic-radio__option {
+    padding: 0.5rem 1.25rem;
+  }
+  
+  .runic-radio--sm .runic-radio__label,
+  .runic-radio--sm .runic-radio__slider-label {
+    font-size: 0.75rem;
+  }
 }
 
 /* Medium (default) */
 .runic-radio--md .runic-radio__groove {
-  min-height: 46px;
+  min-height: 38px;
 }
 
 .runic-radio--md .runic-radio__option {
-  padding: 0.625rem 1.5rem;
+  padding: 0.5rem 0.75rem;
 }
 
 .runic-radio--md .runic-radio__label,
 .runic-radio--md .runic-radio__slider-label {
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
+}
+
+@media (min-width: 640px) {
+  .runic-radio--md .runic-radio__groove {
+    min-height: 46px;
+  }
+  
+  .runic-radio--md .runic-radio__option {
+    padding: 0.625rem 1.5rem;
+  }
+  
+  .runic-radio--md .runic-radio__label,
+  .runic-radio--md .runic-radio__slider-label {
+    font-size: 0.8125rem;
+  }
 }
 
 /* Large */
 .runic-radio--lg .runic-radio__groove {
-  min-height: 54px;
+  min-height: 44px;
 }
 
 .runic-radio--lg .runic-radio__option {
-  padding: 0.75rem 1.75rem;
+  padding: 0.5rem 1rem;
 }
 
 .runic-radio--lg .runic-radio__label,
 .runic-radio--lg .runic-radio__slider-label {
-  font-size: 0.9375rem;
+  font-size: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .runic-radio--lg .runic-radio__groove {
+    min-height: 54px;
+  }
+  
+  .runic-radio--lg .runic-radio__option {
+    padding: 0.75rem 1.75rem;
+  }
+  
+  .runic-radio--lg .runic-radio__label,
+  .runic-radio--lg .runic-radio__slider-label {
+    font-size: 0.9375rem;
+  }
 }
 
 /* ==========================================

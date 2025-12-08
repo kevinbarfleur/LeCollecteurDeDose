@@ -256,22 +256,60 @@ const boxPadding = computed(() => props.layout === 'compact' ? 'sm' : 'md');
 /* ==========================================
    RESPONSIVE
    ========================================== */
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .runic-stats__items {
-    gap: 1rem;
+    gap: 0.25rem;
   }
   
   .runic-stats__item {
-    padding: 0.375rem 0.75rem;
-    min-width: 60px;
+    padding: 0.25rem 0.375rem;
+    min-width: 45px;
   }
   
   .runic-stats__value {
-    font-size: 1.5rem;
+    font-size: 1.125rem;
+  }
+  
+  .runic-stats__label {
+    font-size: 0.5rem;
+    letter-spacing: 0.08em;
+  }
+  
+  .runic-stats__rune {
+    display: none;
   }
   
   .runic-stats__separator {
-    right: -0.5rem;
+    right: -0.125rem;
+    height: 40%;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 640px) {
+  .runic-stats__items {
+    gap: 0.5rem;
+  }
+  
+  .runic-stats__item {
+    padding: 0.375rem 0.5rem;
+    min-width: 55px;
+  }
+  
+  .runic-stats__value {
+    font-size: 1.375rem;
+  }
+  
+  .runic-stats__label {
+    font-size: 0.5625rem;
+    letter-spacing: 0.1em;
+  }
+  
+  .runic-stats__rune {
+    font-size: 0.375rem;
+  }
+  
+  .runic-stats__separator {
+    right: -0.25rem;
   }
 }
 </style>

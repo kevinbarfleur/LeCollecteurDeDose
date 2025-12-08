@@ -276,5 +276,55 @@ defineExpose({ focus });
 .runic-input--lg .runic-input__rune {
   font-size: 0.5625rem;
 }
+
+/* ==========================================
+   RESPONSIVE - Mobile optimizations
+   ========================================== */
+@media (max-width: 640px) {
+  /* Small */
+  .runic-input--sm .runic-input__groove {
+    min-height: 34px;
+  }
+  
+  .runic-input--sm .runic-input__field {
+    padding: 0.375rem 1rem;
+    font-size: 0.8125rem;
+  }
+  
+  /* Medium */
+  .runic-input--md .runic-input__groove {
+    min-height: 40px;
+  }
+  
+  .runic-input--md .runic-input__field {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .runic-input--md .runic-input__icon {
+    width: 16px;
+    height: 16px;
+    margin-left: 0.75rem;
+  }
+  
+  .runic-input--md.runic-input--has-icon .runic-input__field {
+    padding-left: 0.625rem;
+  }
+  
+  /* Large */
+  .runic-input--lg .runic-input__groove {
+    min-height: 48px;
+  }
+  
+  .runic-input--lg .runic-input__field {
+    padding: 0.625rem 1.25rem;
+    font-size: 1rem;
+  }
+  
+  /* Hide corner runes on mobile */
+  .runic-input__rune {
+    display: none;
+  }
+}
 </style>
 

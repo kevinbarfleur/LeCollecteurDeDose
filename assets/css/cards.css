@@ -3,16 +3,33 @@
    =========================================== */
 
 :root {
-  /* Card dimensions */
-  --card-width: 200px;
-  --card-height: 280px;
-  --card-border-radius: 12px;
+  /* Card dimensions - Mobile first (2 cards per row) */
+  --card-width: 140px;
+  --card-height: 196px;
+  --card-border-radius: 10px;
   
   /* Tilt settings */
   --tilt-perspective: 1000px;
   
   /* Transition */
   --card-transition: 400ms cubic-bezier(0.03, 0.98, 0.52, 0.99);
+}
+
+/* Tablet and up */
+@media (min-width: 640px) {
+  :root {
+    --card-width: 180px;
+    --card-height: 252px;
+    --card-border-radius: 12px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  :root {
+    --card-width: 200px;
+    --card-height: 280px;
+  }
 }
 
 /* Card container - handles perspective */
@@ -68,25 +85,62 @@
 .game-card__frame::after {
   content: '';
   position: absolute;
-  width: 30px;
-  height: 30px;
-  border: 2px solid var(--tier-color, #3a3a40);
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--tier-color, #3a3a40);
   opacity: 0.5;
   transition: opacity var(--card-transition), border-color var(--card-transition);
 }
 
 .game-card__frame::before {
-  top: 8px;
-  left: 8px;
+  top: 5px;
+  left: 5px;
   border-right: none;
   border-bottom: none;
 }
 
 .game-card__frame::after {
-  bottom: 8px;
-  right: 8px;
+  bottom: 5px;
+  right: 5px;
   border-left: none;
   border-top: none;
+}
+
+@media (min-width: 640px) {
+  .game-card__frame::before,
+  .game-card__frame::after {
+    width: 25px;
+    height: 25px;
+    border-width: 2px;
+  }
+  
+  .game-card__frame::before {
+    top: 6px;
+    left: 6px;
+  }
+  
+  .game-card__frame::after {
+    bottom: 6px;
+    right: 6px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-card__frame::before,
+  .game-card__frame::after {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .game-card__frame::before {
+    top: 8px;
+    left: 8px;
+  }
+  
+  .game-card__frame::after {
+    bottom: 8px;
+    right: 8px;
+  }
 }
 
 /* Hover: brighten corners */
@@ -168,46 +222,112 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 16px;
+  padding: 10px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
   border-radius: 0 0 var(--card-border-radius) var(--card-border-radius);
   z-index: 3;
 }
 
+@media (min-width: 640px) {
+  .game-card__info {
+    padding: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-card__info {
+    padding: 16px;
+  }
+}
+
 .game-card__name {
   font-family: 'Cinzel', serif;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--tier-glow, #c8c8c8);
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
   transition: color var(--card-transition), text-shadow var(--card-transition);
+  /* Truncate long names on mobile */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .game-card__name {
+    font-size: 13px;
+    margin-bottom: 3px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-card__name {
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
 }
 
 .game-card__class {
   font-family: 'Crimson Text', serif;
-  font-size: 11px;
+  font-size: 9px;
   color: #7f7f7f;
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+}
+
+@media (min-width: 640px) {
+  .game-card__class {
+    font-size: 10px;
+    letter-spacing: 0.75px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-card__class {
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
 }
 
 .game-card__tier {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 6px;
+  right: 6px;
   font-family: 'Cinzel', serif;
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
   background: rgba(0, 0, 0, 0.7);
   color: var(--tier-glow, #94a3b8);
   border: 1px solid var(--tier-color, #3a3a45);
   z-index: 4;
   transition: border-color var(--card-transition), color var(--card-transition), box-shadow var(--card-transition);
+}
+
+@media (min-width: 640px) {
+  .game-card__tier {
+    top: 8px;
+    right: 8px;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-card__tier {
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    padding: 2px 8px;
+  }
 }
 
 /* ===========================================

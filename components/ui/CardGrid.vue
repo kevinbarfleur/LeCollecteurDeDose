@@ -115,28 +115,38 @@ const [gridRef] = useAutoAnimate({
 </template>
 
 <style scoped>
-/* Grid layout with auto-fill (requires CSS for minmax) */
+/* Grid layout - Mobile first (2 cards per row on small screens) */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
   justify-items: center;
-  padding: 1rem 0;
-  /* Allow stack layers to overflow */
-  padding-top: 1.5rem;
+  padding: 0.75rem 0;
+  padding-top: 1rem;
 }
 
-@media (min-width: 640px) {
+/* Small tablets - can fit more cards */
+@media (min-width: 480px) {
   .card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 2.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.25rem;
   }
 }
 
+/* Tablets */
+@media (min-width: 640px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+    padding-top: 1.5rem;
+  }
+}
+
+/* Desktop */
 @media (min-width: 1024px) {
   .card-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 3rem;
+    gap: 2rem;
   }
 }
 

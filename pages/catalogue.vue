@@ -65,9 +65,9 @@ const stats = computed(() => ({
   <NuxtLayout>
     <div class="page-container">
       <!-- Page header -->
-      <div class="text-center mb-8">
+      <div class="text-center mb-4 sm:mb-8">
         <h1 class="page-title">Le Registre des Âmes</h1>
-        <p class="font-body text-lg text-poe-text-dim mt-2">
+        <p class="font-body text-sm sm:text-base md:text-lg text-poe-text-dim mt-1 sm:mt-2 px-2">
           Contemple ce que tu ne posséderas probablement jamais, exile.
         </p>
       </div>
@@ -84,9 +84,9 @@ const stats = computed(() => ({
       />
 
       <!-- Filters -->
-      <div class="flex flex-col md:flex-row gap-4 md:items-center md:justify-between my-8">
+      <div class="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6 md:my-8 md:flex-row md:items-center md:justify-between">
         <!-- Search - Runic input -->
-        <div class="flex-1 max-w-md">
+        <div class="flex-1 max-w-full md:max-w-md">
           <RunicInput
             v-model="searchQuery"
             placeholder="Fouille dans les ténèbres..."

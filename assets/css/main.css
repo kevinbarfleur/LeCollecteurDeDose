@@ -96,12 +96,12 @@
 @layer components {
   /* Page layout container */
   .page-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+    @apply max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8;
   }
 
   /* Gradient page title */
   .page-title {
-    @apply font-display text-3xl md:text-4xl text-center mb-8;
+    @apply font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl text-center mb-4 sm:mb-6 md:mb-8;
     background: linear-gradient(135deg, #c8c8c8 0%, #af6025 50%, #c8c8c8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;

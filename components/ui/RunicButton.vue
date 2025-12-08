@@ -416,5 +416,49 @@ const handleClick = (event: MouseEvent) => {
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* ==========================================
+   RESPONSIVE - Mobile optimizations
+   ========================================== */
+@media (max-width: 640px) {
+  .runic-button--sm {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.6875rem;
+    gap: 0.5rem;
+  }
+  
+  .runic-button--md {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.75rem;
+    gap: 0.75rem;
+  }
+  
+  .runic-button--lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    gap: 0.875rem;
+  }
+  
+  .runic-button--sm .runic-button__icon {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .runic-button--md .runic-button__icon,
+  .runic-button__icon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .runic-button--lg .runic-button__icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  /* Hide runes on mobile for cleaner look */
+  .runic-button__rune {
+    display: none;
+  }
+}
 </style>
 

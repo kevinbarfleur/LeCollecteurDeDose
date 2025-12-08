@@ -13,22 +13,22 @@ const navItems = [
     <!-- Header -->
     <header class="app-header">
       <div
-        class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between gap-8 flex-wrap sm:flex-nowrap"
+        class="max-w-[1400px] mx-auto px-3 sm:px-6 py-2 sm:py-4 flex items-center justify-between gap-4 sm:gap-8 flex-wrap sm:flex-nowrap"
       >
         <!-- Logo -->
         <NuxtLink to="/" class="app-header__logo">
           <img
             :src="'/images/logo.png'"
             alt="Logo Le Collecteur de Dose"
-            class="w-12 h-12 object-contain transition-transform duration-fast hover:scale-105"
+            class="w-9 h-9 sm:w-12 sm:h-12 object-contain transition-transform duration-fast hover:scale-105"
           />
           <div class="flex flex-col leading-tight">
             <span
-              class="font-display text-xl font-semibold text-poe-text transition-colors duration-fast group-hover:text-white"
+              class="font-display text-base sm:text-xl font-semibold text-poe-text transition-colors duration-fast group-hover:text-white"
               >Le Collecteur</span
             >
             <span
-              class="font-body text-sm italic text-accent transition-colors duration-fast group-hover:text-accent-light"
+              class="font-body text-xs sm:text-sm italic text-accent transition-colors duration-fast group-hover:text-accent-light"
               >de Dose</span
             >
           </div>
@@ -36,7 +36,7 @@ const navItems = [
 
         <!-- Navigation - Runic tablet style -->
         <nav
-          class="flex order-3 sm:order-none w-full sm:w-auto justify-center mt-2 sm:mt-0"
+          class="flex order-3 sm:order-none w-full sm:w-auto justify-center mt-1 sm:mt-0"
         >
           <div class="app-header__nav-groove">
             <NuxtLink
@@ -68,14 +68,14 @@ const navItems = [
     </main>
 
     <!-- Footer -->
-    <footer class="p-8 border-t border-poe-border/30">
+    <footer class="p-4 sm:p-8 border-t border-poe-border/30">
       <div class="flex items-center justify-center gap-2 group">
         <img
           src="/images/card-back-logo.png"
           alt="Logo"
-          class="w-6 h-6 object-contain opacity-50 transition-opacity duration-base group-hover:opacity-80"
+          class="w-5 h-5 sm:w-6 sm:h-6 object-contain opacity-50 transition-opacity duration-base group-hover:opacity-80"
         />
-        <p class="font-body text-sm text-poe-text-muted m-0">
+        <p class="font-body text-xs sm:text-sm text-poe-text-muted m-0">
           Vaal or no balls
         </p>
       </div>
@@ -114,8 +114,8 @@ const navItems = [
 .app-header__nav-groove {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 4px;
+  gap: 0.125rem;
+  padding: 3px;
 
   /* Carved groove effect */
   background: linear-gradient(
@@ -136,16 +136,23 @@ const navItems = [
   border-bottom-color: rgba(55, 50, 45, 0.3);
 }
 
+@media (min-width: 640px) {
+  .app-header__nav-groove {
+    gap: 0.25rem;
+    padding: 4px;
+  }
+}
+
 .app-header__nav-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
   font-family: "Cinzel", serif;
-  font-size: 0.8125rem;
+  font-size: 0.625rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   text-decoration: none;
   border-radius: 3px;
@@ -156,11 +163,29 @@ const navItems = [
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(80, 75, 70, 0.1);
 }
 
+/* Larger nav items on tablet+ */
+@media (min-width: 640px) {
+  .app-header__nav-item {
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    letter-spacing: 0.05em;
+  }
+}
+
 .app-header__nav-rune {
-  font-size: 0.4rem;
+  font-size: 0.3rem;
   opacity: 0;
   transform: scale(0.5);
   transition: all 0.3s ease;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .app-header__nav-rune {
+    display: inline;
+    font-size: 0.4rem;
+  }
 }
 
 .app-header__nav-item:hover {
