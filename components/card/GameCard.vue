@@ -29,6 +29,12 @@ const animationState = ref<AnimationState>("idle");
 const originalRect = ref<DOMRect | null>(null);
 let currentTimeline: gsap.core.Timeline | null = null;
 
+// Zoom functionality
+const zoomLevel = ref(1);
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 0.15;
+
 const openCard = async () => {
   if (!isOwned.value || !cardRef.value) return;
 
@@ -151,11 +157,33 @@ const closeCard = async () => {
 
   animationState.value = "animating";
 
+  // Calculate dezoom duration based on current zoom level
+  const currentZoom = zoomLevel.value;
+  const needsDezoom = currentZoom > 1;
+  const dezoomDuration = needsDezoom ? 0.25 : 0;
+
+  zoomLevel.value = 1;
+
   currentTimeline = gsap.timeline({
     onComplete: () => {
       resetToIdle();
     },
   });
+
+  // If zoomed, first animate back to scale 1 with rotation reset
+  if (needsDezoom) {
+    currentTimeline.to(
+      card,
+      {
+        scale: 1,
+        rotateX: 0,
+        rotateY: 0,
+        duration: dezoomDuration,
+        ease: "power2.out",
+      },
+      0
+    );
+  }
 
   currentTimeline
     .to(
@@ -165,7 +193,7 @@ const closeCard = async () => {
         duration: 0.15,
         ease: "power2.in",
       },
-      0
+      dezoomDuration
     )
     .to(
       previewView,
@@ -174,7 +202,7 @@ const closeCard = async () => {
         duration: 0.2,
         ease: "power2.out",
       },
-      0.05
+      dezoomDuration + 0.05
     )
     .to(
       card,
@@ -186,7 +214,7 @@ const closeCard = async () => {
         duration: 0.4,
         ease: "power3.out",
       },
-      0.05
+      dezoomDuration + 0.05
     )
     .to(
       overlay,
@@ -196,7 +224,7 @@ const closeCard = async () => {
         duration: 0.35,
         ease: "power2.in",
       },
-      0.1
+      dezoomDuration + 0.1
     );
 };
 
@@ -204,9 +232,36 @@ const resetToIdle = () => {
   animationState.value = "idle";
   originalRect.value = null;
   currentTimeline = null;
+  zoomLevel.value = 1;
 
   if (floatingCardRef.value) {
     gsap.set(floatingCardRef.value, { clearProps: "all" });
+  }
+};
+
+// Handle mouse wheel zoom
+const onFloatingWheel = (e: WheelEvent) => {
+  if (animationState.value !== "expanded") return;
+
+  e.preventDefault();
+
+  const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+  const newZoom = Math.max(
+    MIN_ZOOM,
+    Math.min(MAX_ZOOM, zoomLevel.value + delta)
+  );
+
+  if (newZoom !== zoomLevel.value) {
+    zoomLevel.value = newZoom;
+
+    if (floatingCardRef.value) {
+      gsap.to(floatingCardRef.value, {
+        scale: newZoom,
+        duration: 0.2,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+    }
   }
 };
 
@@ -272,13 +327,18 @@ const onFloatingMouseMove = (e: MouseEvent) => {
   const centerX = rect.width / 2;
   const centerY = rect.height / 2;
 
-  const rotateY = ((x - centerX) / centerX) * 8; // max 8 degrees
-  const rotateX = ((centerY - y) / centerY) * 8;
+  // Reduce tilt intensity when zoomed for better UX
+  const tiltIntensity = zoomLevel.value > 1 ? 5 : 8;
+  const rotateY = ((x - centerX) / centerX) * tiltIntensity;
+  const rotateX = ((centerY - y) / centerY) * tiltIntensity;
+
+  // Apply slight scale boost on top of current zoom
+  const hoverScale = zoomLevel.value * 1.02;
 
   gsap.to(card, {
     rotateX,
     rotateY,
-    scale: 1.02,
+    scale: hoverScale,
     duration: 0.3,
     ease: "power2.out",
     overwrite: "auto",
@@ -295,7 +355,7 @@ const onFloatingMouseLeave = () => {
     gsap.to(floatingCardRef.value, {
       rotateX: 0,
       rotateY: 0,
-      scale: 1,
+      scale: zoomLevel.value, // Keep current zoom level
       duration: 0.5,
       ease: "power2.out",
     });
@@ -353,11 +413,18 @@ const showOverlay = computed(() => animationState.value !== "idle");
         <article
           ref="floatingCardRef"
           class="game-card game-card--floating"
-          :class="[tierClass, { 'game-card--hovering': isFloatingHovering }]"
+          :class="[
+            tierClass,
+            {
+              'game-card--hovering': isFloatingHovering,
+              'game-card--zoomed': zoomLevel > 1,
+            },
+          ]"
           :style="tierStyles"
           @mousemove="onFloatingMouseMove"
           @mouseenter="onFloatingMouseEnter"
           @mouseleave="onFloatingMouseLeave"
+          @wheel.prevent="onFloatingWheel"
         >
           <div class="game-card__tilt-wrapper">
             <button
@@ -678,8 +745,8 @@ const showOverlay = computed(() => animationState.value !== "idle");
 .card-view--detail {
   display: flex;
   flex-direction: column;
-  padding: 14px;
-  gap: 8px;
+  padding: 12px;
+  gap: 6px;
 }
 
 .detail__stagger {
@@ -723,11 +790,31 @@ const showOverlay = computed(() => animationState.value !== "idle");
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    160deg,
-    rgba(18, 17, 15, 0.95) 0%,
-    rgba(10, 9, 8, 0.98) 50%,
-    rgba(13, 12, 10, 1) 100%
+    180deg,
+    rgba(16, 15, 14, 0.98) 0%,
+    rgba(12, 11, 10, 0.99) 30%,
+    rgba(14, 13, 12, 0.98) 70%,
+    rgba(10, 9, 8, 1) 100%
   );
+  border-radius: inherit;
+}
+
+/* Subtle texture overlay */
+.game-card__bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      ellipse at 30% 0%,
+      rgba(60, 55, 50, 0.04) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 70% 100%,
+      rgba(40, 35, 30, 0.03) 0%,
+      transparent 40%
+    );
+  pointer-events: none;
   border-radius: inherit;
 }
 
@@ -735,62 +822,197 @@ const showOverlay = computed(() => animationState.value !== "idle");
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.025;
   mix-blend-mode: overlay;
   border-radius: inherit;
 }
 
+/* ==========================================
+   DETAIL HEADER - Runic engraved metal panel
+   ========================================== */
 .detail__title-bar {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 12px 16px;
+
+  /* Deep carved stone/metal look */
   background: linear-gradient(
     180deg,
-    rgba(18, 16, 14, 0.8) 0%,
-    rgba(10, 9, 8, 0.9) 100%
+    rgba(12, 12, 14, 0.95) 0%,
+    rgba(18, 18, 20, 0.9) 30%,
+    rgba(15, 15, 17, 0.95) 70%,
+    rgba(10, 10, 12, 0.98) 100%
   );
-  border-radius: 8px;
+
+  border-radius: 6px;
+
+  /* Multi-layered carved effect */
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.6),
+    inset 0 1px 2px rgba(0, 0, 0, 0.7), inset 0 -1px 3px rgba(50, 45, 40, 0.08),
+    0 1px 0 rgba(50, 45, 40, 0.2);
+
+  /* Stone border */
+  border: 1px solid rgba(40, 38, 35, 0.6);
+  border-top-color: rgba(30, 28, 25, 0.7);
+  border-bottom-color: rgba(60, 55, 50, 0.25);
+}
+
+/* Corner decorations for header */
+.detail__title-bar::before,
+.detail__title-bar::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+.detail__title-bar::before {
+  top: 6px;
+  left: 6px;
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.35) 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.35) 50%,
+      transparent 100%
+    );
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 0, 0 0;
+  background-repeat: no-repeat;
+}
+
+.detail__title-bar::after {
+  bottom: 6px;
+  right: 6px;
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.35) 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.35) 50%,
+      transparent 100%
+    );
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 100%, 100% 0;
+  background-repeat: no-repeat;
 }
 
 .detail__name {
   font-family: "Cinzel", serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  color: #f0f0f0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  color: var(--tier-glow, #e8e8e8);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.02em;
 }
 
 .detail__tier-badge {
   font-family: "Cinzel", serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(10, 10, 12, 0.7) 100%
+  );
   color: var(--tier-glow, #94a3b8);
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
+/* ==========================================
+   DETAIL ARTWORK - Deep carved inset panel
+   ========================================== */
 .detail__artwork {
+  position: relative;
   flex: 1;
   min-height: 120px;
-  background: linear-gradient(160deg, #050504 0%, #030303 50%, #040403 100%);
-  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 12px;
+  padding: 16px;
+
+  /* Deep recessed background */
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.98) 0%,
+    rgba(12, 12, 14, 0.95) 20%,
+    rgba(10, 10, 12, 0.97) 80%,
+    rgba(6, 6, 8, 0.99) 100%
+  );
+
+  border-radius: 5px;
+
+  /* Deep carved inset effect */
+  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7),
+    inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 -2px 6px rgba(50, 45, 40, 0.06),
+    0 1px 0 rgba(50, 45, 40, 0.15);
+
+  /* Subtle metal border */
+  border: 1px solid rgba(35, 32, 28, 0.7);
+  border-top-color: rgba(25, 22, 18, 0.8);
+  border-bottom-color: rgba(55, 50, 45, 0.2);
+}
+
+/* Subtle texture overlay */
+.detail__artwork::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      ellipse at 50% 30%,
+      rgba(60, 55, 50, 0.04) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 50% 70%,
+      rgba(40, 35, 30, 0.03) 0%,
+      transparent 50%
+    );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Inner frame lines */
+.detail__artwork::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(50, 45, 40, 0.12);
+  border-radius: 3px;
+  pointer-events: none;
 }
 
 .detail__image {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
 
 .detail__image-placeholder {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: flex;
@@ -802,44 +1024,51 @@ const showOverlay = computed(() => animationState.value !== "idle");
   width: 48px;
   height: 48px;
   color: var(--tier-color, #3a3a45);
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
+/* ==========================================
+   DETAIL TYPE LINE - Item class & rarity
+   ========================================== */
 .detail__type-line {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 4px 0;
+  gap: 12px;
+  padding: 6px 0;
 }
 
 .detail__type {
   font-family: "Cinzel", serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #9a9a9a;
+  color: #8a8a8a;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.1em;
 }
 
 .detail__divider {
-  font-size: 10px;
+  font-size: 8px;
   color: var(--tier-color, #4a4a4a);
+  opacity: 0.6;
 }
 
 .detail__rarity {
   font-family: "Crimson Text", serif;
   font-size: 14px;
-  color: var(--tier-glow, #7f7f7f);
+  color: var(--tier-glow, #7a7a7a);
   font-style: italic;
 }
 
+/* ==========================================
+   DETAIL SEPARATORS - Engraved divider lines
+   ========================================== */
 .detail__separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 2px 0;
+  gap: 10px;
+  padding: 4px 0;
 }
 
 .detail__separator-line {
@@ -848,77 +1077,182 @@ const showOverlay = computed(() => animationState.value !== "idle");
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--tier-color, #3a3a40) 50%,
+    rgba(60, 55, 50, 0.25) 30%,
+    var(--tier-color, rgba(60, 55, 50, 0.4)) 50%,
+    rgba(60, 55, 50, 0.25) 70%,
     transparent 100%
   );
 }
 
 .detail__separator-rune {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--tier-color, #4a4a4a);
-  opacity: 0.7;
+  opacity: 0.5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
+/* ==========================================
+   DETAIL FLAVOUR TEXT - Quote section
+   ========================================== */
 .detail__flavour {
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 6px 8px;
-  min-height: 36px;
+  padding: 8px 12px;
+  min-height: 40px;
 }
 
 .detail__flavour p {
   font-family: "Crimson Text", serif;
   font-style: italic;
-  font-size: 15px;
-  line-height: 1.4;
-  color: #9a9a9a;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #888888;
   margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .detail__no-flavour {
-  color: #5a5a5a;
+  color: #4a4a4a;
+  font-size: 13px;
 }
 
+/* ==========================================
+   DETAIL FOOTER - Runic engraved metal panel
+   ========================================== */
 .detail__bottom-info {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 8px 0;
+  padding: 8px 14px;
+
+  /* Carved panel look */
+  background: linear-gradient(
+    180deg,
+    rgba(14, 14, 16, 0.92) 0%,
+    rgba(18, 18, 20, 0.88) 50%,
+    rgba(12, 12, 14, 0.95) 100%
+  );
+
+  border-radius: 5px;
+
+  /* Subtle carved effect */
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 -1px 2px rgba(50, 45, 40, 0.06),
+    0 1px 0 rgba(50, 45, 40, 0.15);
+
+  border: 1px solid rgba(40, 38, 35, 0.5);
+  border-top-color: rgba(30, 28, 25, 0.6);
+  border-bottom-color: rgba(55, 50, 45, 0.2);
+}
+
+/* Corner decorations for footer */
+.detail__bottom-info::before,
+.detail__bottom-info::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.detail__bottom-info::before {
+  top: 5px;
+  left: 5px;
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.3) 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.3) 50%,
+      transparent 100%
+    );
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 0, 0 0;
+  background-repeat: no-repeat;
+}
+
+.detail__bottom-info::after {
+  bottom: 5px;
+  right: 5px;
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.3) 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.3) 50%,
+      transparent 100%
+    );
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 100%, 100% 0;
+  background-repeat: no-repeat;
 }
 
 .detail__collector-number {
   font-family: "Crimson Text", serif;
   font-size: 13px;
-  color: #6a6a6a;
+  color: #5a5a5a;
+  letter-spacing: 0.02em;
 }
 
 .detail__wiki-link {
   font-family: "Cinzel", serif;
-  font-size: 11px;
-  color: #af6025;
+  font-size: 10px;
+  font-weight: 600;
+  color: #7a6a5a;
   text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   padding: 4px 10px;
-  background: rgba(175, 96, 37, 0.15);
-  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    rgba(80, 70, 55, 0.08) 0%,
+    rgba(60, 50, 40, 0.06) 100%
+  );
+  border: 1px solid rgba(80, 70, 55, 0.2);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
 }
 
 .detail__wiki-link:hover {
-  background: rgba(175, 96, 37, 0.25);
-  color: #c97030;
+  background: linear-gradient(
+    180deg,
+    rgba(175, 96, 37, 0.12) 0%,
+    rgba(175, 96, 37, 0.08) 100%
+  );
+  border-color: rgba(175, 96, 37, 0.3);
+  color: #af6025;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .detail__weight {
   font-family: "Cinzel", serif;
-  font-size: 13px;
-  color: var(--tier-glow, #6a6a6a);
+  font-size: 12px;
+  color: var(--tier-glow, #5a5a5a);
+  letter-spacing: 0.02em;
 }
 
 .game-card--floating {
   border: 2px solid var(--tier-color, #2a2a30);
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(0, 0, 0, 0.5);
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* Zoomed state indicator */
+.game-card--floating.game-card--zoomed {
+  cursor: zoom-out;
 }
 
 .game-card--floating.game-card--t0 {
