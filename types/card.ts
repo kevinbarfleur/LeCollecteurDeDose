@@ -2,6 +2,20 @@ export type CardTier = 'T0' | 'T1' | 'T2' | 'T3'
 
 export type CardRarity = 'Unique' | 'Rare' | 'Magic' | 'Normal'
 
+// Card variations (extensible for future variations)
+export type CardVariation = 'standard' | 'foil'
+
+// Configuration for card variations - lower priority = rarer
+export interface VariationConfig {
+  priority: number
+  label: string
+}
+
+export const VARIATION_CONFIG: Record<CardVariation, VariationConfig> = {
+  foil: { priority: 0, label: 'Foil' },
+  standard: { priority: 1, label: 'Standard' }
+}
+
 export interface CardGameData {
   weight: number
   img: string
@@ -18,6 +32,7 @@ export interface Card {
   wikiUrl: string
   gameData: CardGameData
   weight?: number
+  variation?: CardVariation  // 'standard' if not specified
 }
 
 export interface UserCollection {

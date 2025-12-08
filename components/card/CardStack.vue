@@ -1,17 +1,82 @@
 <script setup lang="ts">
-import type { Card, CardTier } from "~/types/card";
-import { TIER_CONFIG } from "~/types/card";
+import type { Card, CardTier, CardVariation } from "~/types/card";
+import { TIER_CONFIG, VARIATION_CONFIG } from "~/types/card";
+
+// Interface for variation groups
+interface VariationGroup {
+  variation: CardVariation;
+  cards: Card[];
+  count: number;
+}
 
 const props = defineProps<{
   cards: Card[];
   count: number;
+  variations?: VariationGroup[];
+  hasMultipleVariations?: boolean;
 }>();
 
 // Visual stack count (max 5)
 const visualStackCount = computed(() => Math.min(props.count, 5));
 
-// The "top" card (visible one - first in array)
-const topCard = computed(() => props.cards[0]);
+// Get unique variations sorted by rarity (foil first)
+const sortedVariations = computed(() => {
+  if (!props.variations) {
+    // Fallback: compute from cards if variations not passed
+    const variationMap = new Map<CardVariation, VariationGroup>();
+    props.cards.forEach((card) => {
+      const variation: CardVariation = card.variation ?? 'standard';
+      const existing = variationMap.get(variation);
+      if (existing) {
+        existing.cards.push(card);
+        existing.count++;
+      } else {
+        variationMap.set(variation, { variation, cards: [card], count: 1 });
+      }
+    });
+    return Array.from(variationMap.values()).sort(
+      (a, b) => VARIATION_CONFIG[a.variation].priority - VARIATION_CONFIG[b.variation].priority
+    );
+  }
+  return props.variations;
+});
+
+// The "top" card - prefer foil if available (rarest variation first)
+const topCard = computed(() => {
+  if (sortedVariations.value.length > 0) {
+    return sortedVariations.value[0].cards[0];
+  }
+  return props.cards[0];
+});
+
+// Selected variation for the detail view
+const selectedVariation = ref<CardVariation>('foil');
+
+// Initialize selected variation when opening detail
+const initSelectedVariation = () => {
+  if (sortedVariations.value.length > 0) {
+    selectedVariation.value = sortedVariations.value[0].variation;
+  }
+};
+
+// Get the card for the currently selected variation
+const selectedCard = computed(() => {
+  const variation = sortedVariations.value.find(v => v.variation === selectedVariation.value);
+  return variation?.cards[0] ?? topCard.value;
+});
+
+// Radio options for variations
+const variationOptions = computed(() => {
+  return sortedVariations.value.map(v => ({
+    value: v.variation,
+    label: `${VARIATION_CONFIG[v.variation].label} (x${v.count})`,
+    color: topCard.value.tier.toLowerCase() // Use tier color for the radio
+  }));
+});
+
+const hasMultipleVariations = computed(() => 
+  props.hasMultipleVariations ?? sortedVariations.value.length > 1
+);
 
 // Tier config for styling
 const tierConfig = computed(() => TIER_CONFIG[topCard.value.tier as CardTier]);
@@ -29,10 +94,6 @@ const isHovering = ref(false);
 // ===========================================
 // STACK OFFSET CALCULATION
 // ===========================================
-// The BASE card (visually at bottom of pile) is at position (0,0) - aligned with grid
-// Cards stacked ON TOP are offset towards up-left
-
-// Generate consistent random rotations for each layer (seeded by card ID)
 const layerRotations = computed(() => {
   const rotations: number[] = [];
   const seed = topCard.value.id.charCodeAt(0) + topCard.value.id.length;
@@ -54,7 +115,6 @@ const getLayerOffset = (layerIndex: number) => {
   };
 };
 
-// The GameCard (top of pile) gets the maximum offset + hover lift
 const topCardOffset = computed(() => {
   const offset = (visualStackCount.value - 1) * 4;
   const lift = isHovering.value ? -4 : 0;
@@ -62,6 +122,19 @@ const topCardOffset = computed(() => {
     transform: `translate(${-offset}px, ${-offset + lift}px)`,
   };
 });
+
+// ===========================================
+// HANDLE STACK CLICK - Open detail with variation selector
+// ===========================================
+const handleStackClick = () => {
+  if (hasMultipleVariations.value) {
+    // Initialize selected variation (foil first if available)
+    initSelectedVariation();
+    // Let the GameCard handle opening its own detail view
+    // The variation selector will be shown above the card
+  }
+  // If only one variation, the GameCard handles its own click
+};
 </script>
 
 <template>
@@ -70,8 +143,9 @@ const topCardOffset = computed(() => {
     <div 
       ref="stackRef"
       class="card-stack"
-      :class="tierClass"
+      :class="[tierClass, { 'card-stack--multi-variation': hasMultipleVariations }]"
       :style="tierStyles"
+      @click="handleStackClick"
     >
       <!-- Stack layers (underneath the top card) -->
       <div 
@@ -100,14 +174,21 @@ const topCardOffset = computed(() => {
         @mouseenter="isHovering = true"
         @mouseleave="isHovering = false"
       >
-        <!-- GameCard handles its own click and detail view -->
+        <!-- GameCard with variation selector support when multiple variations -->
         <GameCard
-          :card="topCard"
+          :card="selectedCard"
           :owned="true"
+          :variation-options="hasMultipleVariations ? variationOptions : undefined"
+          :selected-variation="hasMultipleVariations ? selectedVariation : undefined"
+          @update:selected-variation="selectedVariation = $event as CardVariation"
         />
         <!-- Count badge -->
         <div class="card-stack__count">
           <span>x{{ count }}</span>
+        </div>
+        <!-- Variation indicator badge -->
+        <div v-if="hasMultipleVariations" class="card-stack__variation-indicator">
+          <span>{{ sortedVariations.length }} var.</span>
         </div>
       </div>
     </div>
@@ -128,6 +209,10 @@ const topCardOffset = computed(() => {
 .card-stack {
   position: relative;
   display: inline-block;
+}
+
+.card-stack--multi-variation {
+  cursor: pointer;
 }
 
 /* ===========================================
@@ -244,6 +329,33 @@ const topCardOffset = computed(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   z-index: 20;
   pointer-events: none;
+}
+
+/* ===========================================
+   VARIATION INDICATOR BADGE
+   =========================================== */
+.card-stack__variation-indicator {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  min-width: 36px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.3) 0%, rgba(180, 140, 40, 0.4) 100%);
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  border-radius: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(201, 162, 39, 0.9);
+  padding: 0 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* ===========================================

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
-import type { Card, CardTier } from "~/types/card";
+import type { Card, CardTier, CardVariation } from "~/types/card";
+import { VARIATION_CONFIG } from "~/types/card";
 
 const { t } = useI18n();
 
@@ -17,22 +18,80 @@ const user = computed(() => ({
 
 const collection = computed(() => mockUserCollection);
 
+// Interface for variation grouping
+interface VariationGroup {
+  variation: CardVariation;
+  cards: Card[];
+  count: number;
+}
+
+interface CardGroupWithVariations {
+  cardId: string;
+  name: string;
+  tier: CardTier;
+  cards: Card[];
+  count: number;
+  variations: VariationGroup[];
+  hasMultipleVariations: boolean;
+}
+
 const groupedCards = computed(() => {
-  const groups = new Map<string, { cards: Card[]; count: number }>();
+  const groups = new Map<string, CardGroupWithVariations>();
 
   collection.value.forEach((card) => {
+    const variation: CardVariation = card.variation ?? "standard";
     const existing = groups.get(card.id);
+
     if (existing) {
       existing.cards.push(card);
       existing.count++;
+
+      // Update variation groups
+      const existingVariation = existing.variations.find(
+        (v) => v.variation === variation
+      );
+      if (existingVariation) {
+        existingVariation.cards.push(card);
+        existingVariation.count++;
+      } else {
+        existing.variations.push({
+          variation,
+          cards: [card],
+          count: 1,
+        });
+      }
     } else {
-      groups.set(card.id, { cards: [card], count: 1 });
+      groups.set(card.id, {
+        cardId: card.id,
+        name: card.name,
+        tier: card.tier,
+        cards: [card],
+        count: 1,
+        variations: [
+          {
+            variation,
+            cards: [card],
+            count: 1,
+          },
+        ],
+        hasMultipleVariations: false,
+      });
     }
+  });
+
+  // Sort variations by priority (foil first) and update hasMultipleVariations flag
+  groups.forEach((group) => {
+    group.variations.sort(
+      (a, b) =>
+        VARIATION_CONFIG[a.variation].priority -
+        VARIATION_CONFIG[b.variation].priority
+    );
+    group.hasMultipleVariations = group.variations.length > 1;
   });
 
   const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
   return Array.from(groups.values()).sort(
-    (a, b) => tierOrder[a.cards[0].tier] - tierOrder[b.cards[0].tier]
+    (a, b) => tierOrder[a.tier] - tierOrder[b.tier]
   );
 });
 

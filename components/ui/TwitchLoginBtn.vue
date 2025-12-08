@@ -1,19 +1,19 @@
 <script setup lang="ts">
-const { t } = useI18n()
-const { loggedIn, user, clear } = useUserSession()
+const { t } = useI18n();
+const { loggedIn, user, clear } = useUserSession();
 
 const handleLogout = async () => {
-  await $fetch('/api/auth/logout', { method: 'POST' })
-  await clear()
-  navigateTo('/')
-}
+  await $fetch("/api/auth/logout", { method: "POST" });
+  await clear();
+  navigateTo("/");
+};
 </script>
 
 <template>
   <div class="twitch-auth">
     <div v-if="loggedIn && user" class="twitch-auth__user">
-      <img 
-        :src="user.avatar" 
+      <img
+        :src="user.avatar"
         :alt="user.displayName"
         class="twitch-auth__avatar"
       />
@@ -26,7 +26,7 @@ const handleLogout = async () => {
         :title="t('auth.logout')"
         @click="handleLogout"
       >
-        <span class="sr-only">{{ t('auth.logout') }}</span>
+        <span class="sr-only">{{ t("auth.logout") }}</span>
       </RunicButton>
     </div>
 
@@ -38,7 +38,7 @@ const handleLogout = async () => {
       size="sm"
       icon="twitch"
     >
-      {{ t('auth.login') }}
+      {{ t("auth.login") }}
     </RunicButton>
   </div>
 </template>
@@ -54,11 +54,11 @@ const handleLogout = async () => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid #9146FF;
+  border: 2px solid #9146ff;
 }
 
 .twitch-auth__name {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 0.875rem;
   color: #c8c8c8;
   display: none;
@@ -90,4 +90,3 @@ const handleLogout = async () => {
   border: 0;
 }
 </style>
-

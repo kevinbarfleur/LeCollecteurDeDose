@@ -1,13 +1,46 @@
 <script setup lang="ts">
 import { allCards, mockUserCollection } from '~/data/mockCards'
-import type { Card, CardTier } from '~/types/card'
-import { TIER_CONFIG } from '~/types/card'
+import type { Card, CardTier, CardVariation } from '~/types/card'
+import { TIER_CONFIG, VARIATION_CONFIG } from '~/types/card'
 
 const { t } = useI18n()
 
 useHead({ title: t('meta.catalogue.title') })
 
-const ownedCardIds = computed(() => [...new Set(mockUserCollection.map(card => card.id))])
+// Build a map of owned cards with their best variation (foil > standard)
+const ownedCardsWithBestVariation = computed(() => {
+  const map = new Map<string, { owned: boolean; bestVariation: CardVariation | null; card: Card | null }>()
+  
+  // Initialize with all cards as not owned
+  allCards.forEach(card => {
+    map.set(card.id, { owned: false, bestVariation: null, card: null })
+  })
+  
+  // Check user collection for owned cards and their best variation
+  mockUserCollection.forEach(card => {
+    const variation: CardVariation = card.variation ?? 'standard'
+    const existing = map.get(card.id)
+    
+    if (existing) {
+      existing.owned = true
+      
+      // Keep the best variation (lowest priority = rarer = better)
+      if (!existing.bestVariation || 
+          VARIATION_CONFIG[variation].priority < VARIATION_CONFIG[existing.bestVariation].priority) {
+        existing.bestVariation = variation
+        existing.card = card // Store the actual owned card with this variation
+      }
+    }
+  })
+  
+  return map
+})
+
+const ownedCardIds = computed(() => 
+  Array.from(ownedCardsWithBestVariation.value.entries())
+    .filter(([_, data]) => data.owned)
+    .map(([id]) => id)
+)
 
 const searchQuery = ref('')
 const selectedTier = ref<CardTier | 'all'>('all')
@@ -21,7 +54,19 @@ const tierOptions = computed(() => [
 ])
 
 const filteredCards = computed(() => {
-  let cards = [...allCards]
+  // Start with all cards from the catalogue
+  let cards = allCards.map(card => {
+    // Check if user owns this card with a better variation (foil)
+    const ownedData = ownedCardsWithBestVariation.value.get(card.id)
+    
+    // If owned with a variation, use the owned card (which may be foil)
+    if (ownedData?.owned && ownedData.card) {
+      return ownedData.card
+    }
+    
+    // Otherwise use the catalogue card (standard)
+    return card
+  })
   
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()

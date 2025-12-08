@@ -1,0 +1,453 @@
+/* ===========================================
+   FOIL CARD EFFECT - "Glyphes Éteints" Style
+   UNIFIED INTENSITY - Only colors differ per tier
+   =========================================== */
+
+/* ===========================================
+   BASE FOIL OVERLAY - UNIFIED INTENSITY
+   Same intensity for all tiers
+   =========================================== */
+.game-card__foil-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: inherit;
+  overflow: hidden;
+  
+  /* === UNIFIED VALUES FOR ALL TIERS === */
+  --foil-opacity: 0.4;
+  --foil-opacity-hover: 0.52;
+  --foil-brightness-base: 0.68;
+  --foil-brightness-mult: 0.1;
+  --foil-contrast: 1.7;
+  --foil-contrast-hover: 1.8;
+  --foil-saturate: 1.2;
+  --foil-saturate-hover: 1.3;
+  --foil-gradient-opacity: 0.65;
+  --foil-spotlight-opacity: 0.2;
+  
+  /* === TIER COLOR VARIABLES (defaults - neutral) === */
+  --foil-hue-1: 220;
+  --foil-hue-2: 200;
+  --foil-hue-3: 240;
+  --foil-hue-4: 210;
+  --foil-hue-5: 230;
+  --foil-sat: 25%;
+  --foil-light: 45%;
+  
+  --space: 6%;
+  --angle: -24deg;
+  --imgsize: 250% 350%;
+  
+  background-image:
+    repeating-linear-gradient( var(--angle),  
+      hsla(var(--foil-hue-1), var(--foil-sat), var(--foil-light), var(--foil-gradient-opacity)) calc(var(--space)*1),
+      hsla(var(--foil-hue-2), var(--foil-sat), var(--foil-light), var(--foil-gradient-opacity)) calc(var(--space)*2), 
+      hsla(var(--foil-hue-3), var(--foil-sat), var(--foil-light), var(--foil-gradient-opacity)) calc(var(--space)*3),  
+      hsla(var(--foil-hue-4), var(--foil-sat), var(--foil-light), var(--foil-gradient-opacity)) calc(var(--space)*4),  
+      hsla(var(--foil-hue-5), var(--foil-sat), var(--foil-light), var(--foil-gradient-opacity)) calc(var(--space)*5),
+      hsla(var(--foil-hue-1), var(--foil-sat), var(--foil-light), var(--foil-gradient-opacity)) calc(var(--space)*6)
+    );
+    
+  background-blend-mode: color-dodge;
+  background-size: var(--imgsize);
+  background-position: 0% calc(var(--pointer-y, 50) * 1%), var(--pointer-x, 50%) var(--pointer-y, 50%);
+  
+  /* Capped pointer multiplier to prevent edge spikes */
+  filter: brightness(calc(min(var(--pointer-from-center, 0.5), 0.7) * var(--foil-brightness-mult) + var(--foil-brightness-base))) 
+          contrast(var(--foil-contrast)) 
+          saturate(var(--foil-saturate));
+  mix-blend-mode: color-dodge;
+  
+  opacity: var(--foil-opacity);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* Spotlight effect - UNIFIED */
+.game-card__foil-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  
+  background-image: 
+    radial-gradient( 
+      farthest-corner ellipse 
+      at calc( ((var(--pointer-x, 50)) * 0.5) + 25% ) calc( ((var(--pointer-y, 50)) * 0.5) + 25% ), 
+      hsla(var(--foil-hue-1), calc(var(--foil-sat) + 10%), 65%, var(--foil-spotlight-opacity)) 0%, 
+      hsla(var(--foil-hue-1), var(--foil-sat), 45%, calc(var(--foil-spotlight-opacity) * 0.5)) 35%, 
+      transparent 60% 
+    );
+
+  background-position: center center;
+  background-size: 300% 400%;
+  filter: brightness(0.9) contrast(1.1);
+  mix-blend-mode: soft-light;
+  opacity: 0.8;
+}
+
+/* HOVER STATE - UNIFIED */
+.game-card--foil:hover .game-card__foil-overlay {
+  opacity: var(--foil-opacity-hover);
+  filter: brightness(calc(min(var(--pointer-from-center, 0.5), 0.7) * calc(var(--foil-brightness-mult) + 0.02) + var(--foil-brightness-base))) 
+          contrast(var(--foil-contrast-hover)) 
+          saturate(var(--foil-saturate-hover));
+}
+
+/* ===========================================
+   TIER COLORS ONLY - Same intensity
+   =========================================== */
+
+/* T0 - LEGENDARY: Gold */
+.game-card--foil.game-card--t0 .game-card__foil-overlay {
+  --foil-hue-1: 45;
+  --foil-hue-2: 38;
+  --foil-hue-3: 52;
+  --foil-hue-4: 42;
+  --foil-hue-5: 35;
+  --foil-sat: 70%;
+  --foil-light: 45%;
+  --angle: -20deg;
+}
+
+/* T1 - EPIC: Purple */
+.game-card--foil.game-card--t1 .game-card__foil-overlay {
+  --foil-hue-1: 278;
+  --foil-hue-2: 268;
+  --foil-hue-3: 288;
+  --foil-hue-4: 273;
+  --foil-hue-5: 263;
+  --foil-sat: 55%;
+  --foil-light: 45%;
+  --angle: -28deg;
+}
+
+/* T2 - RARE: Blue */
+.game-card--foil.game-card--t2 .game-card__foil-overlay {
+  --foil-hue-1: 210;
+  --foil-hue-2: 200;
+  --foil-hue-3: 220;
+  --foil-hue-4: 205;
+  --foil-hue-5: 215;
+  --foil-sat: 40%;
+  --foil-light: 42%;
+  --angle: -22deg;
+}
+
+/* T3 - COMMON: Grey/Silver */
+.game-card--foil.game-card--t3 .game-card__foil-overlay {
+  --foil-hue-1: 220;
+  --foil-hue-2: 210;
+  --foil-hue-3: 230;
+  --foil-hue-4: 215;
+  --foil-hue-5: 225;
+  --foil-sat: 12%;
+  --foil-light: 48%;
+  --angle: -24deg;
+}
+
+/* ===========================================
+   FLOATING/DETAIL VIEW - UNIFIED
+   =========================================== */
+.game-card--floating .game-card__foil-overlay {
+  --foil-opacity: 0.42;
+  --foil-opacity-hover: 0.55;
+}
+
+/* ===========================================
+   COSMOS EFFECT - UNIFIED INTENSITY
+   Same visibility for all tiers in detail view
+   =========================================== */
+.detail__artwork--foil {
+  position: relative;
+  
+  /* === UNIFIED COSMOS VALUES === */
+  --cosmos-opacity: 0.55;
+  --cosmos-opacity-hover: 0.65;
+  --cosmos-brightness: 1.1;
+  --cosmos-contrast: 1.15;
+  --cosmos-saturate: 1.1;
+  --cosmos-gradient-opacity: 0.35;
+  --cosmos-glow-opacity: 0.25;
+  --cosmos-star-opacity: 0.15;
+  
+  /* === TIER COLOR VARIABLES (defaults) === */
+  --cosmos-hue: 220;
+  --cosmos-sat: 30%;
+  --cosmos-light: 50%;
+  --cosmos-star-r: 200;
+  --cosmos-star-g: 200;
+  --cosmos-star-b: 220;
+}
+
+/* Base cosmos layer - UNIFIED */
+.detail__artwork--foil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  
+  --space: 5%;
+  
+  background-image: 
+    /* Star points */
+    radial-gradient(ellipse at 20% 30%, rgba(var(--cosmos-star-r), var(--cosmos-star-g), var(--cosmos-star-b), var(--cosmos-star-opacity)) 0%, transparent 3%),
+    radial-gradient(ellipse at 70% 20%, rgba(var(--cosmos-star-r), var(--cosmos-star-g), var(--cosmos-star-b), calc(var(--cosmos-star-opacity) * 0.8)) 0%, transparent 2.5%),
+    radial-gradient(ellipse at 40% 70%, rgba(var(--cosmos-star-r), var(--cosmos-star-g), var(--cosmos-star-b), calc(var(--cosmos-star-opacity) * 0.7)) 0%, transparent 3%),
+    radial-gradient(ellipse at 85% 60%, rgba(var(--cosmos-star-r), var(--cosmos-star-g), var(--cosmos-star-b), calc(var(--cosmos-star-opacity) * 0.8)) 0%, transparent 2%),
+    radial-gradient(ellipse at 15% 80%, rgba(var(--cosmos-star-r), var(--cosmos-star-g), var(--cosmos-star-b), calc(var(--cosmos-star-opacity) * 0.6)) 0%, transparent 2.5%),
+    /* Energy gradient */
+    repeating-linear-gradient(
+      75deg, 
+      hsla(var(--cosmos-hue), var(--cosmos-sat), var(--cosmos-light), var(--cosmos-gradient-opacity)) calc(var(--space)*1), 
+      hsla(calc(var(--cosmos-hue) - 10), var(--cosmos-sat), calc(var(--cosmos-light) + 3%), var(--cosmos-gradient-opacity)) calc(var(--space)*2), 
+      hsla(calc(var(--cosmos-hue) + 10), var(--cosmos-sat), var(--cosmos-light), var(--cosmos-gradient-opacity)) calc(var(--space)*3), 
+      hsla(calc(var(--cosmos-hue) - 5), var(--cosmos-sat), calc(var(--cosmos-light) + 5%), var(--cosmos-gradient-opacity)) calc(var(--space)*4), 
+      hsla(calc(var(--cosmos-hue) + 5), var(--cosmos-sat), calc(var(--cosmos-light) - 2%), var(--cosmos-gradient-opacity)) calc(var(--space)*5), 
+      hsla(var(--cosmos-hue), var(--cosmos-sat), var(--cosmos-light), var(--cosmos-gradient-opacity)) calc(var(--space)*6)
+    ),
+    /* Central glow */
+    radial-gradient( 
+      farthest-corner circle 
+      at calc(var(--pointer-x, 50) * 1%) calc(var(--pointer-y, 50) * 1%), 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) + 15%), 60%, var(--cosmos-glow-opacity)) 5%, 
+      hsla(var(--cosmos-hue), var(--cosmos-sat), 40%, calc(var(--cosmos-glow-opacity) * 0.6)) 40%, 
+      transparent 70% 
+    );
+
+  background-blend-mode: screen, screen, screen, screen, screen, color-dodge, overlay;
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 250% 350%, cover;
+  background-position: 
+    center, center, center, center, center,
+    calc((var(--pointer-from-left, 0.5) * 100%)) calc((var(--pointer-from-top, 0.5) * 100%)),
+    center;
+
+  filter: brightness(var(--cosmos-brightness)) contrast(var(--cosmos-contrast)) saturate(var(--cosmos-saturate));
+  mix-blend-mode: color-dodge;
+  opacity: var(--cosmos-opacity);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* ===========================================
+   TIER COSMOS COLORS ONLY
+   =========================================== */
+
+/* T0 - Gold cosmos */
+.game-card--t0 .detail__artwork--foil {
+  --cosmos-hue: 45;
+  --cosmos-sat: 70%;
+  --cosmos-light: 48%;
+  --cosmos-star-r: 255;
+  --cosmos-star-g: 200;
+  --cosmos-star-b: 100;
+}
+
+/* T0 - Extra glare layers for chromatic effect */
+.game-card--t0 .detail__artwork--foil .cosmos-glare::before,
+.game-card--t0 .detail__artwork--foil .cosmos-glare::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.game-card--t0 .detail__artwork--foil .cosmos-glare::before {
+  /* Secondary glare - offset movement */
+  background-image: 
+    radial-gradient( 
+      ellipse 80% 60% at calc(100% - (var(--pointer-x, 50) * 0.8%)) calc(var(--pointer-y, 50) * 0.6%), 
+      hsla(38, 80%, 70%, 0.35) 0%, 
+      hsla(42, 70%, 55%, 0.15) 30%,
+      transparent 60% 
+    );
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.game-card--t0 .detail__artwork--foil .cosmos-glare::after {
+  /* Tertiary glare - diagonal offset */
+  background-image: 
+    radial-gradient( 
+      ellipse 60% 80% at calc(20% + (var(--pointer-x, 50) * 0.5%)) calc(80% - (var(--pointer-y, 50) * 0.4%)), 
+      hsla(52, 85%, 65%, 0.3) 0%, 
+      hsla(48, 75%, 50%, 0.12) 35%,
+      transparent 55% 
+    );
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}
+
+/* T1 - Purple cosmos */
+.game-card--t1 .detail__artwork--foil {
+  --cosmos-hue: 275;
+  --cosmos-sat: 55%;
+  --cosmos-light: 48%;
+  --cosmos-star-r: 200;
+  --cosmos-star-g: 130;
+  --cosmos-star-b: 255;
+}
+
+/* T1 - Extra glare layers for chromatic effect */
+.game-card--t1 .detail__artwork--foil .cosmos-glare::before,
+.game-card--t1 .detail__artwork--foil .cosmos-glare::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.game-card--t1 .detail__artwork--foil .cosmos-glare::before {
+  /* Secondary glare - offset movement */
+  background-image: 
+    radial-gradient( 
+      ellipse 70% 70% at calc(100% - (var(--pointer-x, 50) * 0.7%)) calc(var(--pointer-y, 50) * 0.7%), 
+      hsla(268, 65%, 68%, 0.35) 0%, 
+      hsla(280, 55%, 52%, 0.15) 30%,
+      transparent 55% 
+    );
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.game-card--t1 .detail__artwork--foil .cosmos-glare::after {
+  /* Tertiary glare - diagonal offset */
+  background-image: 
+    radial-gradient( 
+      ellipse 55% 75% at calc(15% + (var(--pointer-x, 50) * 0.6%)) calc(85% - (var(--pointer-y, 50) * 0.5%)), 
+      hsla(288, 70%, 62%, 0.28) 0%, 
+      hsla(272, 60%, 48%, 0.1) 35%,
+      transparent 50% 
+    );
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}
+
+/* T2 - Blue cosmos */
+.game-card--t2 .detail__artwork--foil {
+  --cosmos-hue: 210;
+  --cosmos-sat: 45%;
+  --cosmos-light: 50%;
+  --cosmos-star-r: 150;
+  --cosmos-star-g: 190;
+  --cosmos-star-b: 255;
+}
+
+/* T3 - Grey cosmos */
+.game-card--t3 .detail__artwork--foil {
+  --cosmos-hue: 220;
+  --cosmos-sat: 15%;
+  --cosmos-light: 52%;
+  --cosmos-star-r: 200;
+  --cosmos-star-g: 200;
+  --cosmos-star-b: 210;
+}
+
+/* Cosmos layer 2 - UNIFIED */
+.detail__artwork--foil .cosmos-layer-2 {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  pointer-events: none;
+  
+  --space: 5%;
+  
+  background-image: 
+    repeating-linear-gradient(
+      75deg, 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) - 5%), calc(var(--cosmos-light) + 3%), 0.2) calc(var(--space)*1), 
+      hsla(calc(var(--cosmos-hue) - 10), var(--cosmos-sat), calc(var(--cosmos-light) + 5%), 0.2) calc(var(--space)*2), 
+      hsla(calc(var(--cosmos-hue) + 10), calc(var(--cosmos-sat) - 3%), calc(var(--cosmos-light) + 2%), 0.2) calc(var(--space)*3), 
+      hsla(var(--cosmos-hue), var(--cosmos-sat), calc(var(--cosmos-light) + 6%), 0.2) calc(var(--space)*4), 
+      hsla(calc(var(--cosmos-hue) + 5), calc(var(--cosmos-sat) - 5%), calc(var(--cosmos-light) + 3%), 0.2) calc(var(--space)*5), 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) - 5%), calc(var(--cosmos-light) + 3%), 0.2) calc(var(--space)*6)
+    );
+
+  background-blend-mode: overlay;
+  background-position: 
+    calc((var(--pointer-from-left, 0.5) * 100%)) calc((var(--pointer-from-top, 0.5) * 100%));
+  background-size: 200% 300%;
+
+  filter: brightness(1.1) contrast(1.15) saturate(0.9);
+  mix-blend-mode: overlay;
+  opacity: 0.32;
+}
+
+/* Cosmos layer 3 - UNIFIED */
+.detail__artwork--foil .cosmos-layer-3 {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  pointer-events: none;
+  
+  --space: 5%;
+  
+  background-image: 
+    repeating-linear-gradient(
+      75deg, 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) - 8%), calc(var(--cosmos-light) + 5%), 0.15) calc(var(--space)*1), 
+      hsla(calc(var(--cosmos-hue) - 8), calc(var(--cosmos-sat) - 5%), calc(var(--cosmos-light) + 8%), 0.15) calc(var(--space)*2), 
+      hsla(calc(var(--cosmos-hue) + 8), calc(var(--cosmos-sat) - 6%), calc(var(--cosmos-light) + 6%), 0.15) calc(var(--space)*3), 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) - 4%), calc(var(--cosmos-light) + 10%), 0.15) calc(var(--space)*4), 
+      hsla(calc(var(--cosmos-hue) + 4), calc(var(--cosmos-sat) - 8%), calc(var(--cosmos-light) + 5%), 0.15) calc(var(--space)*5), 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) - 8%), calc(var(--cosmos-light) + 5%), 0.15) calc(var(--space)*6)
+    );
+
+  background-blend-mode: soft-light;
+  background-position: 
+    calc((var(--pointer-from-left, 0.5) * 100%)) calc((var(--pointer-from-top, 0.5) * 100%));
+  background-size: 180% 280%;
+
+  filter: brightness(1.05) contrast(1.1) saturate(0.85);
+  mix-blend-mode: soft-light;
+  opacity: 0.25;
+}
+
+/* GLARE - UNIFIED with edge cap - MORE INTENSE */
+.detail__artwork--foil .cosmos-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  pointer-events: none;
+  
+  /* Intense glare that follows pointer */
+  background-image: 
+    radial-gradient( 
+      farthest-corner ellipse at calc(var(--pointer-x, 50) * 1%) calc(var(--pointer-y, 50) * 1%), 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) + 20%), 85%, 0.55) 0%, 
+      hsla(var(--cosmos-hue), calc(var(--cosmos-sat) + 10%), 65%, 0.35) 18%,
+      hsla(var(--cosmos-hue), var(--cosmos-sat), 50%, 0.18) 40%,
+      transparent 70% 
+    );
+  background-size: 140% 140%;
+  background-position: calc(var(--pointer-x, 50) * 1%) calc(var(--pointer-y, 50) * 1%);
+  filter: brightness(1.15) contrast(1.3) saturate(1.25);
+  mix-blend-mode: overlay;
+  /* HARD CAP at 0.55 to prevent edge explosion */
+  opacity: calc(0.35 + min(var(--pointer-from-center, 0.3), 0.55) * 0.3);
+  transition: background-position 0.05s ease-out;
+}
+
+/* Hover enhancement - UNIFIED */
+.game-card--floating:hover .detail__artwork--foil::before {
+  opacity: var(--cosmos-opacity-hover);
+}
+
+.game-card--floating:hover .detail__artwork--foil .cosmos-layer-2 {
+  opacity: 0.4;
+}
+
+.game-card--floating:hover .detail__artwork--foil .cosmos-layer-3 {
+  opacity: 0.32;
+}
+
+.game-card--floating:hover .detail__artwork--foil .cosmos-glare {
+  opacity: calc(0.45 + min(var(--pointer-from-center, 0.3), 0.55) * 0.35);
+}
+

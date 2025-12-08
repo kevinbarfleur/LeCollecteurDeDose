@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import type { Card } from "~/types/card";
+import type { Card, CardVariation } from "~/types/card";
 import { useAutoAnimate } from "@formkit/auto-animate/vue";
 
 const { t } = useI18n();
 
-// Type for grouped cards
+// Type for variation groups within a card group
+interface VariationGroup {
+  variation: CardVariation;
+  cards: Card[];
+  count: number;
+}
+
+// Type for grouped cards with variation info
 interface CardGroup {
   cards: Card[];
   count: number;
+  variations?: VariationGroup[];
+  hasMultipleVariations?: boolean;
 }
 
 const props = defineProps<{
@@ -65,7 +74,13 @@ const [gridRef] = useAutoAnimate({
           :show-flavour="false"
           :owned="isCardOwned(group.cards[0].id)"
         />
-        <CardStack v-else :cards="group.cards" :count="group.count" />
+        <CardStack
+          v-else
+          :cards="group.cards"
+          :count="group.count"
+          :variations="group.variations"
+          :has-multiple-variations="group.hasMultipleVariations ?? false"
+        />
       </div>
     </div>
 

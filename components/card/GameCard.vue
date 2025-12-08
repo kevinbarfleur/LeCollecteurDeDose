@@ -1,19 +1,39 @@
 <script setup lang="ts">
-import type { Card, CardTier } from "~/types/card";
+import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG } from "~/types/card";
-import { useCardTilt } from "~/composables/useCardTilt";
 import gsap from "gsap";
+
+// Variation option interface for the radio selector
+interface VariationOption {
+  value: string;
+  label: string;
+  color?: string;
+}
 
 const props = defineProps<{
   card: Card;
   showFlavour?: boolean;
   owned?: boolean;
   previewOnly?: boolean; // When true, disables click to open detail view
+  // Variation selector props (optional - for stack multi-variation support)
+  variationOptions?: VariationOption[];
+  selectedVariation?: string;
 }>();
 
 const emit = defineEmits<{
   click: [card: Card];
+  "update:selectedVariation": [value: string];
 }>();
+
+// Has multiple variations?
+const hasVariationSelector = computed(
+  () => props.variationOptions && props.variationOptions.length > 1
+);
+
+// Handle variation change
+const handleVariationChange = (value: string) => {
+  emit("update:selectedVariation", value);
+};
 
 const cardRef = ref<HTMLElement | null>(null);
 const floatingCardRef = ref<HTMLElement | null>(null);
@@ -303,19 +323,110 @@ watch(animationState, (state) => {
   }
 });
 
-const {
-  isHovering,
-  cardTransform,
-  imageTransform,
-  cardTransition,
-  onMouseEnter,
-  onMouseLeave,
-} = useCardTilt(cardRef, {
-  maxTilt: 15,
-  scale: 1.02,
+// Variation handling
+const cardVariation = computed<CardVariation>(
+  () => props.card.variation ?? "standard"
+);
+const isFoil = computed(() => cardVariation.value === "foil");
+
+// Hover state for cards
+const isHovering = ref(false);
+
+// Pointer tracking for foil effects
+const pointerX = ref(50);
+const pointerY = ref(50);
+const pointerFromCenter = ref(0.5);
+const pointerFromLeft = ref(0.5);
+const pointerFromTop = ref(0.5);
+
+// Preview tilt intensity (slightly less than detail view which uses 8)
+const PREVIEW_TILT_INTENSITY = 6;
+
+const onMouseEnter = () => {
+  isHovering.value = true;
+};
+
+const onMouseLeave = () => {
+  isHovering.value = false;
+  // Reset to center on leave
+  pointerX.value = 50;
+  pointerY.value = 50;
+  pointerFromCenter.value = 0.5;
+  pointerFromLeft.value = 0.5;
+  pointerFromTop.value = 0.5;
+
+  // Reset tilt with GSAP
+  if (cardRef.value) {
+    gsap.to(cardRef.value, {
+      rotateX: 0,
+      rotateY: 0,
+      scale: 1,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  }
+};
+
+// Track mouse position for foil effect AND apply tilt
+const onMouseMove = (e: MouseEvent) => {
+  if (!cardRef.value) return;
+
+  const rect = cardRef.value.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+
+  // Percentage values (0-100)
+  pointerX.value = (x / rect.width) * 100;
+  pointerY.value = (y / rect.height) * 100;
+
+  // Normalized values (0-1)
+  pointerFromLeft.value = x / rect.width;
+  pointerFromTop.value = y / rect.height;
+
+  // Distance from center (0-1, where 0 is center, 1 is corner)
+  const distFromCenter =
+    Math.sqrt(
+      Math.pow((x - centerX) / centerX, 2) +
+        Math.pow((y - centerY) / centerY, 2)
+    ) / Math.sqrt(2); // Normalize to 0-1
+  pointerFromCenter.value = Math.min(1, distFromCenter);
+
+  // Apply GSAP tilt (same logic as detail view, slightly less intense)
+  const rotateY = ((x - centerX) / centerX) * PREVIEW_TILT_INTENSITY;
+  const rotateX = ((centerY - y) / centerY) * PREVIEW_TILT_INTENSITY;
+
+  gsap.to(cardRef.value, {
+    rotateX,
+    rotateY,
+    scale: 1.02,
+    duration: 0.25,
+    ease: "power2.out",
+    overwrite: "auto",
+  });
+};
+
+// CSS variables for foil effect
+const foilStyles = computed(() => {
+  if (!isFoil.value) return {};
+  return {
+    "--pointer-x": pointerX.value,
+    "--pointer-y": pointerY.value,
+    "--pointer-from-center": pointerFromCenter.value,
+    "--pointer-from-left": pointerFromLeft.value,
+    "--pointer-from-top": pointerFromTop.value,
+  };
 });
 
 const isFloatingHovering = ref(false);
+
+// Floating card pointer tracking for foil effects
+const floatingPointerX = ref(50);
+const floatingPointerY = ref(50);
+const floatingPointerFromCenter = ref(0.5);
+const floatingPointerFromLeft = ref(0.5);
+const floatingPointerFromTop = ref(0.5);
 
 const onFloatingMouseMove = (e: MouseEvent) => {
   if (animationState.value !== "expanded" || !floatingCardRef.value) return;
@@ -326,6 +437,19 @@ const onFloatingMouseMove = (e: MouseEvent) => {
   const y = e.clientY - rect.top;
   const centerX = rect.width / 2;
   const centerY = rect.height / 2;
+
+  // Update pointer tracking for foil effect
+  floatingPointerX.value = (x / rect.width) * 100;
+  floatingPointerY.value = (y / rect.height) * 100;
+  floatingPointerFromLeft.value = x / rect.width;
+  floatingPointerFromTop.value = y / rect.height;
+
+  const distFromCenter =
+    Math.sqrt(
+      Math.pow((x - centerX) / centerX, 2) +
+        Math.pow((y - centerY) / centerY, 2)
+    ) / Math.sqrt(2);
+  floatingPointerFromCenter.value = Math.min(1, distFromCenter);
 
   // Reduce tilt intensity when zoomed for better UX
   const tiltIntensity = zoomLevel.value > 1 ? 5 : 8;
@@ -344,6 +468,18 @@ const onFloatingMouseMove = (e: MouseEvent) => {
     overwrite: "auto",
   });
 };
+
+// CSS variables for floating card foil effect
+const floatingFoilStyles = computed(() => {
+  if (!isFoil.value) return {};
+  return {
+    "--pointer-x": floatingPointerX.value,
+    "--pointer-y": floatingPointerY.value,
+    "--pointer-from-center": floatingPointerFromCenter.value,
+    "--pointer-from-left": floatingPointerFromLeft.value,
+    "--pointer-from-top": floatingPointerFromTop.value,
+  };
+});
 
 const onFloatingMouseEnter = () => {
   isFloatingHovering.value = true;
@@ -395,11 +531,14 @@ const tierStyles = computed(() => ({
   "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
 }));
 
-const cardStyles = computed(() => ({
-  ...tierStyles.value,
-  transform: cardTransform.value,
-  transition: cardTransition.value,
-}));
+// Card classes including foil state
+const cardClasses = computed(() => [
+  tierClass.value,
+  {
+    "game-card--hovering": isHovering.value,
+    "game-card--foil": isFoil.value,
+  },
+]);
 
 const showOverlay = computed(() => animationState.value !== "idle");
 </script>
@@ -410,6 +549,24 @@ const showOverlay = computed(() => animationState.value !== "idle");
       <div v-if="showOverlay" class="floating-card-wrapper">
         <div ref="overlayRef" class="card-overlay" @click="handleClose" />
 
+        <!-- Variation selector header (when multiple variations) -->
+        <div
+          v-if="
+            hasVariationSelector &&
+            selectedVariation &&
+            animationState !== 'idle'
+          "
+          class="floating-variation-selector"
+          @click.stop
+        >
+          <RunicRadio
+            :options="variationOptions"
+            :model-value="selectedVariation as string"
+            size="sm"
+            @update:model-value="(val: string | boolean) => handleVariationChange(String(val))"
+          />
+        </div>
+
         <article
           ref="floatingCardRef"
           class="game-card game-card--floating"
@@ -418,14 +575,18 @@ const showOverlay = computed(() => animationState.value !== "idle");
             {
               'game-card--hovering': isFloatingHovering,
               'game-card--zoomed': zoomLevel > 1,
+              'game-card--foil': isFoil,
             },
           ]"
-          :style="tierStyles"
+          :style="{ ...tierStyles, ...floatingFoilStyles }"
           @mousemove="onFloatingMouseMove"
           @mouseenter="onFloatingMouseEnter"
           @mouseleave="onFloatingMouseLeave"
           @wheel.prevent="onFloatingWheel"
         >
+          <!-- Foil overlay for floating card -->
+          <div v-if="isFoil" class="game-card__foil-overlay"></div>
+
           <div class="game-card__tilt-wrapper">
             <button
               v-if="animationState === 'expanded'"
@@ -451,6 +612,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
               <div class="game-card__frame">
                 <div class="game-card__bg"></div>
               </div>
+
               <div class="game-card__image-wrapper">
                 <img
                   v-show="showImage"
@@ -494,7 +656,18 @@ const showOverlay = computed(() => animationState.value !== "idle");
                 <span class="detail__tier-badge">{{ card.tier }}</span>
               </div>
 
-              <div class="detail__artwork detail__stagger" style="--stagger: 1">
+              <div
+                class="detail__artwork detail__stagger"
+                :class="{ 'detail__artwork--foil': isFoil }"
+                style="--stagger: 1"
+              >
+                <!-- Cosmos holo layers for foil cards -->
+                <template v-if="isFoil">
+                  <div class="cosmos-layer-2"></div>
+                  <div class="cosmos-layer-3"></div>
+                  <div class="cosmos-glare"></div>
+                </template>
+
                 <img
                   v-if="showImage"
                   :src="card.gameData.img"
@@ -579,103 +752,126 @@ const showOverlay = computed(() => animationState.value !== "idle");
 
     <div v-if="isFloating && isOwned" class="game-card-placeholder" />
 
-    <article
-      v-if="!isOwned"
-      ref="cardRef"
-      tabindex="-1"
-      aria-label="Carte inconnue"
-      class="game-card game-card--back"
-      :style="{
-        transform: cardTransform,
-        transition: cardTransition,
-      }"
-      @mouseenter="onMouseEnter"
-      @mouseleave="onMouseLeave"
-    >
-      <div class="game-card__frame game-card__frame--back">
-        <div class="game-card__bg game-card__bg--back"></div>
-        <div class="card-back__border"></div>
-        <span class="card-back__rune card-back__rune--tl">✧</span>
-        <span class="card-back__rune card-back__rune--tr">✧</span>
-        <span class="card-back__rune card-back__rune--bl">✧</span>
-        <span class="card-back__rune card-back__rune--br">✧</span>
-      </div>
-      <div class="card-back__logo-wrapper">
-        <img
-          :src="cardBackLogoUrl"
-          alt="Le Collecteur de Dose"
-          class="card-back__logo"
-        />
-      </div>
-      <div class="card-back__decoration">
-        <div class="card-back__line card-back__line--top"></div>
-        <div class="card-back__line card-back__line--bottom"></div>
-      </div>
-    </article>
-
-    <article
-      v-else-if="!isFloating"
-      ref="cardRef"
-      role="button"
-      tabindex="0"
-      :aria-label="`Carte ${card.name}`"
-      class="game-card"
-      :class="[tierClass, { 'game-card--hovering': isHovering }]"
-      :style="cardStyles"
-      @mouseenter="onMouseEnter"
-      @mouseleave="onMouseLeave"
-      @click="handleClick"
-      @keydown.enter="handleClick"
-      @keydown.space="handleClick"
-    >
-      <div class="game-card__frame">
-        <div class="game-card__bg"></div>
-      </div>
-      <div
-        class="game-card__image-wrapper"
-        :style="{ transform: imageTransform }"
+    <!-- Back card (not owned) - Custom tilt like detail view -->
+    <div v-if="!isOwned" class="card-tilt-container">
+      <article
+        ref="cardRef"
+        tabindex="-1"
+        aria-label="Carte inconnue"
+        class="game-card game-card--back game-card--preview"
+        @mouseenter="onMouseEnter"
+        @mouseleave="onMouseLeave"
+        @mousemove="onMouseMove"
       >
-        <div
-          v-if="imageStatus === 'loading' && hasImageUrl"
-          class="game-card__image-loading"
-        >
-          <div class="game-card__spinner"></div>
+        <div class="game-card__frame game-card__frame--back">
+          <div class="game-card__bg game-card__bg--back"></div>
+          <div class="card-back__border"></div>
+          <span class="card-back__rune card-back__rune--tl">✧</span>
+          <span class="card-back__rune card-back__rune--tr">✧</span>
+          <span class="card-back__rune card-back__rune--bl">✧</span>
+          <span class="card-back__rune card-back__rune--br">✧</span>
         </div>
-        <img
-          v-show="showImage"
-          :src="card.gameData.img"
-          :alt="card.name"
-          class="game-card__image"
-        />
-        <div v-if="showPlaceholder" class="game-card__image-placeholder">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div class="card-back__logo-wrapper">
+          <img
+            :src="cardBackLogoUrl"
+            alt="Le Collecteur de Dose"
+            class="card-back__logo"
+          />
+        </div>
+        <div class="card-back__decoration">
+          <div class="card-back__line card-back__line--top"></div>
+          <div class="card-back__line card-back__line--bottom"></div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Front card (owned) - Custom tilt like detail view -->
+    <div v-if="isOwned && !isFloating" class="card-tilt-container">
+      <article
+        ref="cardRef"
+        role="button"
+        tabindex="0"
+        :aria-label="`Carte ${card.name}${isFoil ? ' (Foil)' : ''}`"
+        class="game-card game-card--preview"
+        :class="cardClasses"
+        :style="{ ...tierStyles, ...foilStyles }"
+        @mouseenter="onMouseEnter"
+        @mouseleave="onMouseLeave"
+        @mousemove="onMouseMove"
+        @click="handleClick"
+        @keydown.enter="handleClick"
+        @keydown.space="handleClick"
+      >
+        <div class="game-card__frame">
+          <div class="game-card__bg"></div>
+        </div>
+
+        <!-- Foil overlay effect -->
+        <div v-if="isFoil" class="game-card__foil-overlay"></div>
+
+        <div class="game-card__image-wrapper">
+          <div
+            v-if="imageStatus === 'loading' && hasImageUrl"
+            class="game-card__image-loading"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.5"
-              d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
-            />
-          </svg>
+            <div class="game-card__spinner"></div>
+          </div>
+          <img
+            v-show="showImage"
+            :src="card.gameData.img"
+            :alt="card.name"
+            class="game-card__image"
+          />
+          <div v-if="showPlaceholder" class="game-card__image-placeholder">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+              />
+            </svg>
+          </div>
         </div>
-      </div>
-      <div class="game-card__info">
-        <h3 class="game-card__name">
-          <span class="game-card__name-text">{{ card.name }}</span>
-        </h3>
-        <p class="game-card__class">{{ card.itemClass }}</p>
-      </div>
-    </article>
+        <div class="game-card__info">
+          <h3 class="game-card__name">
+            <span class="game-card__name-text">{{ card.name }}</span>
+          </h3>
+          <p class="game-card__class">{{ card.itemClass }}</p>
+        </div>
+      </article>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .game-card-container {
   position: relative;
+}
+
+/* Container for custom 3D tilt - same behavior as floating card */
+.card-tilt-container {
+  display: block;
+  width: 100%;
+  perspective: 1000px;
+}
+
+/* Preview cards with custom tilt */
+.game-card--preview {
+  transform-style: preserve-3d;
+  transform-origin: center center;
+  will-change: transform;
+  transition: box-shadow 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.game-card--preview:hover {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 5px 15px rgba(0, 0, 0, 0.4);
 }
 
 .game-card-placeholder {
@@ -718,6 +914,9 @@ const showOverlay = computed(() => animationState.value !== "idle");
   border-radius: 12px;
   overflow: hidden;
   background: linear-gradient(160deg, #12110f 0%, #0a0908 50%, #0d0c0a 100%);
+  /* 3D tilt support */
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .game-card--floating {
@@ -935,6 +1134,69 @@ const showOverlay = computed(() => animationState.value !== "idle");
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+/* ==========================================
+   FLOATING VARIATION SELECTOR - Above the card in overlay
+   ========================================== */
+.floating-variation-selector {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1002;
+  padding: 8px 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 22, 0.95) 0%,
+    rgba(12, 12, 15, 0.98) 100%
+  );
+  border: 1px solid rgba(60, 55, 50, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(80, 75, 70, 0.1);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+
+  /* Fade down animation synced with card */
+  animation: fadeDown 0.4s ease-out 0.3s both;
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.floating-variation-selector :deep(.runic-radio) {
+  min-width: 200px;
+}
+
+.floating-variation-selector :deep(.runic-radio__label),
+.floating-variation-selector :deep(.runic-radio__slider-label) {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .floating-variation-selector {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    transform: none;
+    padding: 6px 12px;
+  }
+
+  .floating-variation-selector :deep(.runic-radio) {
+    width: 100%;
+    min-width: unset;
+  }
 }
 
 /* ==========================================
