@@ -34,6 +34,22 @@
   
   /* Default shadow */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  
+  /* Prevent selection */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Prevent image dragging */
+.game-card img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
 }
 
 /* Card background/frame */
