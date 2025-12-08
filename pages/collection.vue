@@ -119,7 +119,7 @@ const filteredIndividualCards = computed(() => {
 
       <!-- Authenticated -->
       <div v-if="loggedIn">
-        <!-- Profile & Stats Hero -->
+        <!-- Profile & Stats Hero - Runic tablet style -->
         <div class="collection-hero">
           <!-- Left: User Profile -->
           <div class="collection-profile">
@@ -141,20 +141,24 @@ const filteredIndividualCards = computed(() => {
             </div>
           </div>
 
-          <!-- Center: Main Stats -->
+          <!-- Center: Main Stats - Large engraved numbers -->
           <div class="collection-main-stats">
             <div class="collection-main-stats__item">
+              <span class="collection-main-stats__rune">◆</span>
               <span class="collection-main-stats__value">{{ stats.total }}</span>
+              <span class="collection-main-stats__rune">◆</span>
               <span class="collection-main-stats__label">Cartes</span>
             </div>
             <div class="collection-main-stats__divider"></div>
             <div class="collection-main-stats__item">
+              <span class="collection-main-stats__rune">◆</span>
               <span class="collection-main-stats__value">{{ stats.unique }}</span>
+              <span class="collection-main-stats__rune">◆</span>
               <span class="collection-main-stats__label">Uniques</span>
             </div>
           </div>
 
-          <!-- Right: Tier Breakdown -->
+          <!-- Right: Tier Breakdown - Compact runic tiles -->
           <div class="collection-tiers">
             <div 
               v-for="tier in ['T0', 'T1', 'T2', 'T3'] as const"
@@ -254,7 +258,7 @@ const filteredIndividualCards = computed(() => {
 }
 
 /* ===========================================
-   COLLECTION HERO SECTION
+   COLLECTION HERO SECTION - Runic carved tablet
    =========================================== */
 .collection-hero {
   display: grid;
@@ -262,38 +266,54 @@ const filteredIndividualCards = computed(() => {
   gap: 1.5rem;
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(15, 15, 18, 0.9) 0%, rgba(10, 10, 12, 0.95) 100%);
-  border: 1px solid rgba(50, 50, 55, 0.4);
-  border-radius: 16px;
   position: relative;
   overflow: hidden;
+  
+  /* Deep carved stone tablet */
+  background: linear-gradient(
+    180deg,
+    rgba(12, 12, 14, 0.95) 0%,
+    rgba(18, 18, 20, 0.9) 30%,
+    rgba(15, 15, 17, 0.95) 70%,
+    rgba(10, 10, 12, 0.98) 100%
+  );
+  
+  border-radius: 6px;
+  
+  /* Multi-layered carved effect */
+  box-shadow: 
+    inset 0 4px 12px rgba(0, 0, 0, 0.7),
+    inset 0 1px 3px rgba(0, 0, 0, 0.8),
+    inset 0 -2px 4px rgba(50, 45, 40, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(50, 45, 40, 0.25);
+  
+  border: 1px solid rgba(40, 38, 35, 0.7);
+  border-top-color: rgba(30, 28, 25, 0.8);
+  border-bottom-color: rgba(60, 55, 50, 0.3);
 }
 
-/* Decorative corner accents */
-.collection-hero::before,
-.collection-hero::after {
-  content: '';
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  border: 1px solid var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.2));
-  pointer-events: none;
-}
-
+/* Stone texture overlay */
 .collection-hero::before {
-  top: -1px;
-  left: -1px;
-  border-right: none;
-  border-bottom: none;
-  border-radius: 16px 0 0 0;
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(60, 55, 50, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(40, 35, 30, 0.04) 0%, transparent 40%);
+  pointer-events: none;
+  border-radius: 5px;
 }
 
+/* Corner decorative runes */
 .collection-hero::after {
-  bottom: -1px;
-  right: -1px;
-  border-left: none;
-  border-top: none;
-  border-radius: 0 0 16px 0;
+  content: "◆";
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 0.5rem;
+  color: rgba(80, 70, 60, 0.3);
+  pointer-events: none;
 }
 
 @media (min-width: 768px) {
@@ -388,7 +408,7 @@ const filteredIndividualCards = computed(() => {
 }
 
 /* ===========================================
-   MAIN STATS
+   MAIN STATS - Engraved numbers
    =========================================== */
 .collection-main-stats {
   display: flex;
@@ -396,13 +416,15 @@ const filteredIndividualCards = computed(() => {
   justify-content: center;
   gap: 2rem;
   padding: 1rem 0;
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 768px) {
   .collection-main-stats {
     padding: 0 3rem;
-    border-left: 1px solid rgba(60, 60, 65, 0.3);
-    border-right: 1px solid rgba(60, 60, 65, 0.3);
+    border-left: 1px solid rgba(50, 48, 45, 0.25);
+    border-right: 1px solid rgba(50, 48, 45, 0.25);
   }
 }
 
@@ -410,45 +432,64 @@ const filteredIndividualCards = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.375rem;
+}
+
+.collection-main-stats__rune {
+  display: inline-block;
+  font-size: 0.5rem;
+  color: rgba(100, 90, 75, 0.4);
+  margin: 0 0.25rem;
 }
 
 .collection-main-stats__value {
   font-family: 'Cinzel', serif;
   font-size: 2.5rem;
   font-weight: 700;
-  color: #e8e8e8;
   line-height: 1;
-  text-shadow: 0 0 30px var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.15));
+  
+  /* Engraved text effect */
+  color: #d0d0d0;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 25px rgba(175, 96, 37, 0.12),
+    0 -1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .collection-main-stats__label {
   font-family: 'Cinzel', serif;
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: #5a5a60;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  
+  /* Engraved look */
+  color: rgba(100, 95, 90, 0.7);
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 -1px 0 rgba(80, 75, 70, 0.1);
 }
 
 .collection-main-stats__divider {
   width: 1px;
-  height: 40px;
+  height: 45px;
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(100, 100, 105, 0.4),
+    rgba(80, 70, 60, 0.3),
     transparent
   );
 }
 
 /* ===========================================
-   TIER BREAKDOWN
+   TIER BREAKDOWN - Runic carved tiles
    =========================================== */
 .collection-tiers {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 768px) {
@@ -462,17 +503,40 @@ const filteredIndividualCards = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(60, 60, 65, 0.3);
-  border-radius: 10px;
+  width: 54px;
+  height: 54px;
+  
+  /* Deep carved stone tile */
+  background: linear-gradient(
+    180deg,
+    rgba(20, 20, 22, 0.95) 0%,
+    rgba(15, 15, 17, 0.9) 50%,
+    rgba(12, 12, 14, 0.95) 100%
+  );
+  
+  border-radius: 4px;
+  
+  box-shadow: 
+    inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 1px rgba(60, 55, 50, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+  
+  border: 1px solid rgba(45, 42, 38, 0.6);
+  border-top-color: rgba(35, 32, 28, 0.7);
+  border-bottom-color: rgba(60, 55, 50, 0.25);
+  
   transition: all 0.3s ease;
 }
 
 .collection-tiers__item:hover {
   transform: translateY(-2px);
-  border-color: var(--tier-color, rgba(60, 60, 65, 0.5));
+  box-shadow: 
+    inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 1px rgba(60, 55, 50, 0.08),
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    0 0 15px var(--tier-glow, rgba(80, 70, 60, 0.1));
 }
 
 .collection-tiers__value {
@@ -480,44 +544,86 @@ const filteredIndividualCards = computed(() => {
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1;
+  
+  /* Engraved effect */
+  text-shadow: 
+    0 2px 3px rgba(0, 0, 0, 0.8),
+    0 -1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .collection-tiers__label {
   font-family: 'Cinzel', serif;
-  font-size: 0.6rem;
+  font-size: 0.5625rem;
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  
+  /* Engraved look */
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 -1px 0 rgba(80, 75, 70, 0.08);
   opacity: 0.7;
 }
 
 /* Tier colors */
+/* T0 - Gold */
 .collection-tiers__item--t0 {
-  --tier-color: rgba(201, 162, 39, 0.4);
-  border-color: rgba(201, 162, 39, 0.25);
+  --tier-glow: rgba(201, 162, 39, 0.15);
+  border-color: rgba(201, 162, 39, 0.2);
 }
-.collection-tiers__item--t0 .collection-tiers__value,
-.collection-tiers__item--t0 .collection-tiers__label { color: #c9a227; }
+.collection-tiers__item--t0 .collection-tiers__value {
+  color: #c9a227;
+  text-shadow: 
+    0 2px 3px rgba(0, 0, 0, 0.8),
+    0 0 15px rgba(201, 162, 39, 0.2);
+}
+.collection-tiers__item--t0 .collection-tiers__label { 
+  color: rgba(201, 162, 39, 0.7); 
+}
 
+/* T1 - Purple */
 .collection-tiers__item--t1 {
-  --tier-color: rgba(122, 106, 138, 0.4);
-  border-color: rgba(122, 106, 138, 0.25);
+  --tier-glow: rgba(122, 106, 138, 0.15);
+  border-color: rgba(122, 106, 138, 0.2);
 }
-.collection-tiers__item--t1 .collection-tiers__value,
-.collection-tiers__item--t1 .collection-tiers__label { color: #9a8aaa; }
+.collection-tiers__item--t1 .collection-tiers__value {
+  color: #9a8aaa;
+  text-shadow: 
+    0 2px 3px rgba(0, 0, 0, 0.8),
+    0 0 15px rgba(122, 106, 138, 0.2);
+}
+.collection-tiers__item--t1 .collection-tiers__label { 
+  color: rgba(122, 106, 138, 0.7); 
+}
 
+/* T2 - Blue/Steel */
 .collection-tiers__item--t2 {
-  --tier-color: rgba(90, 112, 128, 0.4);
-  border-color: rgba(90, 112, 128, 0.25);
+  --tier-glow: rgba(90, 112, 128, 0.15);
+  border-color: rgba(90, 112, 128, 0.2);
 }
-.collection-tiers__item--t2 .collection-tiers__value,
-.collection-tiers__item--t2 .collection-tiers__label { color: #7a9aaa; }
+.collection-tiers__item--t2 .collection-tiers__value {
+  color: #7a9aaa;
+  text-shadow: 
+    0 2px 3px rgba(0, 0, 0, 0.8),
+    0 0 15px rgba(90, 112, 128, 0.2);
+}
+.collection-tiers__item--t2 .collection-tiers__label { 
+  color: rgba(90, 112, 128, 0.7); 
+}
 
+/* T3 - Gray/Iron */
 .collection-tiers__item--t3 {
-  --tier-color: rgba(90, 90, 95, 0.4);
-  border-color: rgba(90, 90, 95, 0.25);
+  --tier-glow: rgba(90, 90, 95, 0.1);
+  border-color: rgba(70, 70, 75, 0.2);
 }
-.collection-tiers__item--t3 .collection-tiers__value,
-.collection-tiers__item--t3 .collection-tiers__label { color: #7a7a80; }
+.collection-tiers__item--t3 .collection-tiers__value {
+  color: #7a7a80;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8);
+}
+.collection-tiers__item--t3 .collection-tiers__label { 
+  color: rgba(90, 90, 95, 0.6); 
+}
 
 /* ===========================================
    TOOLBAR / FILTERS

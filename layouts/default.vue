@@ -26,19 +26,23 @@ const navItems = [
           </div>
         </NuxtLink>
 
-        <!-- Navigation -->
+        <!-- Navigation - Runic tablet style -->
         <nav class="app-header__nav">
-          <NuxtLink
-            v-for="item in navItems"
-            :key="item.path"
-            :to="item.path"
-            class="app-header__nav-item"
-            :class="{
-              'app-header__nav-item--active': route.path === item.path,
-            }"
-          >
-            {{ item.label }}
-          </NuxtLink>
+          <div class="app-header__nav-groove">
+            <NuxtLink
+              v-for="item in navItems"
+              :key="item.path"
+              :to="item.path"
+              class="app-header__nav-item"
+              :class="{
+                'app-header__nav-item--active': route.path === item.path,
+              }"
+            >
+              <span class="app-header__nav-rune">◆</span>
+              <span class="app-header__nav-label">{{ item.label }}</span>
+              <span class="app-header__nav-rune">◆</span>
+            </NuxtLink>
+          </div>
         </nav>
 
         <!-- Auth -->
@@ -144,28 +148,93 @@ const navItems = [
 
 .app-header__nav {
   display: flex;
-  gap: 0.5rem;
+}
+
+/* Runic groove container for nav */
+.app-header__nav-groove {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 4px;
+
+  /* Carved groove effect */
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.9) 0%,
+    rgba(14, 14, 16, 0.85) 50%,
+    rgba(10, 10, 12, 0.9) 100%
+  );
+
+  border-radius: 4px;
+
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    inset 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(60, 55, 50, 0.06),
+    0 1px 0 rgba(45, 40, 35, 0.25);
+
+  border: 1px solid rgba(35, 32, 28, 0.7);
+  border-top-color: rgba(25, 22, 18, 0.8);
+  border-bottom-color: rgba(55, 50, 45, 0.3);
 }
 
 .app-header__nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 1rem;
   font-family: "Cinzel", serif;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #7f7f7f;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   text-decoration: none;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+
+  /* Engraved text look */
+  color: rgba(100, 95, 90, 0.7);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(80, 75, 70, 0.1);
+}
+
+.app-header__nav-rune {
+  font-size: 0.4rem;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s ease;
 }
 
 .app-header__nav-item:hover {
-  color: #c8c8c8;
-  background: rgba(255, 255, 255, 0.05);
+  color: rgba(180, 175, 170, 0.9);
 }
 
+.app-header__nav-item:hover .app-header__nav-rune {
+  opacity: 0.4;
+  transform: scale(1);
+}
+
+/* Active state - raised stone tablet */
 .app-header__nav-item--active {
+  color: #c97a3a;
+
+  background: linear-gradient(
+    180deg,
+    rgba(45, 40, 35, 0.9) 0%,
+    rgba(32, 28, 24, 0.95) 50%,
+    rgba(28, 24, 20, 0.9) 100%
+  );
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(100, 85, 65, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+
+  border: 1px solid rgba(80, 65, 50, 0.4);
+
+  text-shadow: 0 0 10px rgba(175, 96, 37, 0.3), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.app-header__nav-item--active .app-header__nav-rune {
+  opacity: 0.6;
+  transform: scale(1);
   color: #af6025;
-  background: rgba(175, 96, 37, 0.1);
 }
 
 .app-header__auth {
