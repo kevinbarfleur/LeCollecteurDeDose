@@ -18,12 +18,12 @@ const ownedCardIds = computed(() => {
 const searchQuery = ref('')
 const selectedTier = ref<CardTier | 'all'>('all')
 
-const tiers: { value: CardTier | 'all'; label: string }[] = [
-  { value: 'all', label: 'Tous' },
-  { value: 'T0', label: 'T0' },
-  { value: 'T1', label: 'T1' },
-  { value: 'T2', label: 'T2' },
-  { value: 'T3', label: 'T3' }
+const tierOptions = [
+  { value: 'all', label: 'Tous', color: 'default' },
+  { value: 'T0', label: 'T0', color: 't0' },
+  { value: 'T1', label: 'T1', color: 't1' },
+  { value: 'T2', label: 'T2', color: 't2' },
+  { value: 'T3', label: 'T3', color: 't3' }
 ]
 
 // Filtered cards
@@ -112,20 +112,11 @@ const stats = computed(() => ({
         </div>
 
         <!-- Tier filter -->
-        <div class="catalog-filters__tiers">
-          <button
-            v-for="tier in tiers"
-            :key="tier.value"
-            class="catalog-filters__tier-btn"
-            :class="{ 
-              'catalog-filters__tier-btn--active': selectedTier === tier.value,
-              [`catalog-filters__tier-btn--${tier.value.toLowerCase()}`]: tier.value !== 'all'
-            }"
-            @click="selectedTier = tier.value"
-          >
-            {{ tier.label }}
-          </button>
-        </div>
+        <RunicRadio
+          v-model="selectedTier"
+          :options="tierOptions"
+          size="md"
+        />
       </div>
 
       <!-- Cards grid -->
@@ -244,58 +235,5 @@ const stats = computed(() => ({
   box-shadow: 0 0 0 2px rgba(175, 96, 37, 0.2);
 }
 
-.catalog-filters__tiers {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.catalog-filters__tier-btn {
-  padding: 0.5rem 1rem;
-  font-family: 'Cinzel', serif;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #7f7f7f;
-  background: rgba(21, 21, 24, 0.6);
-  border: 1px solid rgba(42, 42, 48, 0.6);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.catalog-filters__tier-btn:hover {
-  background: rgba(42, 42, 48, 0.4);
-  color: #c8c8c8;
-}
-
-.catalog-filters__tier-btn--active {
-  background: rgba(175, 96, 37, 0.2);
-  border-color: #af6025;
-  color: #af6025;
-}
-
-.catalog-filters__tier-btn--t0.catalog-filters__tier-btn--active {
-  background: rgba(201, 162, 39, 0.15);
-  border-color: #6d5a2a;
-  color: #c9a227;
-}
-
-.catalog-filters__tier-btn--t1.catalog-filters__tier-btn--active {
-  background: rgba(122, 106, 138, 0.15);
-  border-color: #3a3445;
-  color: #7a6a8a;
-}
-
-.catalog-filters__tier-btn--t2.catalog-filters__tier-btn--active {
-  background: rgba(90, 112, 128, 0.15);
-  border-color: #3a4550;
-  color: #5a7080;
-}
-
-.catalog-filters__tier-btn--t3.catalog-filters__tier-btn--active {
-  background: rgba(58, 58, 61, 0.2);
-  border-color: #2a2a2d;
-  color: #4a4a4d;
-}
 </style>
 

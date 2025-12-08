@@ -57,6 +57,14 @@ const stats = computed(() => {
 const showDuplicates = ref(false)
 const selectedTier = ref<CardTier | 'all'>('all')
 
+const tierOptions = [
+  { value: 'all', label: 'Tous', color: 'default' },
+  { value: 'T0', label: 'T0', color: 't0' },
+  { value: 'T1', label: 'T1', color: 't1' },
+  { value: 'T2', label: 'T2', color: 't2' },
+  { value: 'T3', label: 'T3', color: 't3' }
+]
+
 // Filtered grouped cards (for stack view - default mode)
 const filteredGroupedCards = computed(() => {
   let groups = groupedCards.value
@@ -162,32 +170,21 @@ const filteredIndividualCards = computed(() => {
 
         <!-- Filters Bar -->
         <div class="collection-toolbar">
-          <label class="collection-toolbar__toggle">
-            <input 
-              v-model="showDuplicates" 
-              type="checkbox"
-              class="collection-toolbar__checkbox"
+          <div class="collection-toolbar__toggle-wrapper">
+            <RunicRadio
+              v-model="showDuplicates"
+              :toggle="true"
+              toggle-color="default"
+              size="sm"
             />
-            <span class="collection-toolbar__toggle-track">
-              <span class="collection-toolbar__toggle-thumb"></span>
-            </span>
             <span class="collection-toolbar__toggle-label">Révéler les duplicatas</span>
-          </label>
-          
-          <div class="collection-toolbar__filters">
-            <button
-              v-for="tier in ['all', 'T0', 'T1', 'T2', 'T3'] as const"
-              :key="tier"
-              class="collection-toolbar__filter-btn"
-              :class="{ 
-                'collection-toolbar__filter-btn--active': selectedTier === tier,
-                [`collection-toolbar__filter-btn--${tier.toLowerCase()}`]: tier !== 'all'
-              }"
-              @click="selectedTier = tier"
-            >
-              {{ tier === 'all' ? 'Tous' : tier }}
-            </button>
           </div>
+          
+          <RunicRadio
+            v-model="selectedTier"
+            :options="tierOptions"
+            size="md"
+          />
         </div>
 
         <!-- Cards grid - Stack mode (default) -->
@@ -544,50 +541,11 @@ const filteredIndividualCards = computed(() => {
   }
 }
 
-/* Toggle Switch */
-.collection-toolbar__toggle {
+/* Toggle Wrapper */
+.collection-toolbar__toggle-wrapper {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  cursor: pointer;
-}
-
-.collection-toolbar__checkbox {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.collection-toolbar__toggle-track {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  background: rgba(40, 40, 45, 0.8);
-  border: 1px solid rgba(60, 60, 65, 0.4);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.collection-toolbar__toggle-thumb {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  background: #5a5a60;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.collection-toolbar__checkbox:checked + .collection-toolbar__toggle-track {
-  background: var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.2));
-  border-color: rgba(175, 96, 37, 0.5);
-}
-
-.collection-toolbar__checkbox:checked + .collection-toolbar__toggle-track .collection-toolbar__toggle-thumb {
-  transform: translateX(20px);
-  background: var(--color-accent, #af6025);
-  box-shadow: 0 0 10px var(--color-accent-glow, rgba(175, 96, 37, 0.5));
 }
 
 .collection-toolbar__toggle-label {
@@ -597,83 +555,5 @@ const filteredIndividualCards = computed(() => {
   transition: color 0.3s ease;
 }
 
-.collection-toolbar__checkbox:checked ~ .collection-toolbar__toggle-label {
-  color: #b8b8c0;
-}
-
-/* Filter Buttons */
-.collection-toolbar__filters {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.collection-toolbar__filter-btn {
-  position: relative;
-  padding: 0.5rem 1.25rem;
-  font-family: 'Cinzel', serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: #5a5a60;
-  background: transparent;
-  border: 1px solid rgba(50, 50, 55, 0.5);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.collection-toolbar__filter-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.02) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.collection-toolbar__filter-btn:hover {
-  color: #8a8a90;
-  border-color: rgba(70, 70, 75, 0.6);
-}
-
-.collection-toolbar__filter-btn:hover::before {
-  opacity: 1;
-}
-
-.collection-toolbar__filter-btn--active {
-  color: var(--color-accent-light, #c97a3a);
-  background: var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.15));
-  border-color: rgba(175, 96, 37, 0.4);
-  box-shadow: 0 0 15px rgba(175, 96, 37, 0.1);
-}
-
-/* Tier-specific active states */
-.collection-toolbar__filter-btn--t0.collection-toolbar__filter-btn--active {
-  color: #c9a227;
-  background: rgba(201, 162, 39, 0.12);
-  border-color: rgba(201, 162, 39, 0.35);
-  box-shadow: 0 0 15px rgba(201, 162, 39, 0.08);
-}
-
-.collection-toolbar__filter-btn--t1.collection-toolbar__filter-btn--active {
-  color: #9a8aaa;
-  background: rgba(122, 106, 138, 0.12);
-  border-color: rgba(122, 106, 138, 0.35);
-  box-shadow: 0 0 15px rgba(122, 106, 138, 0.08);
-}
-
-.collection-toolbar__filter-btn--t2.collection-toolbar__filter-btn--active {
-  color: #7a9aaa;
-  background: rgba(90, 112, 128, 0.12);
-  border-color: rgba(90, 112, 128, 0.35);
-  box-shadow: 0 0 15px rgba(90, 112, 128, 0.08);
-}
-
-.collection-toolbar__filter-btn--t3.collection-toolbar__filter-btn--active {
-  color: #8a8a90;
-  background: rgba(90, 90, 95, 0.12);
-  border-color: rgba(90, 90, 95, 0.35);
-}
 </style>
 
