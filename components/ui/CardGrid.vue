@@ -23,7 +23,10 @@ const isCardOwned = (cardId: string): boolean => {
 
 // Determine if we're in grouped mode
 const isGroupedMode = computed(
-  () => !!props.groupedCards && props.groupedCards.length > 0
+  () =>
+    props.groupedCards !== undefined &&
+    props.groupedCards !== null &&
+    props.groupedCards.length > 0
 );
 
 // Check if we have any items to display
@@ -31,8 +34,14 @@ const hasItems = computed(() => {
   if (isGroupedMode.value) {
     return props.groupedCards && props.groupedCards.length > 0;
   }
-  return props.cards && props.cards.length > 0;
+  return (
+    props.cards !== undefined && props.cards !== null && props.cards.length > 0
+  );
 });
+
+// Safe accessors for template
+const safeGroupedCards = computed(() => props.groupedCards || []);
+const safeCards = computed(() => props.cards || []);
 
 // Auto-animate for filtering
 const [gridRef] = useAutoAnimate({
@@ -46,7 +55,7 @@ const [gridRef] = useAutoAnimate({
     <!-- Grouped mode (with stacks) -->
     <div v-if="isGroupedMode && hasItems" ref="gridRef" class="card-grid">
       <div
-        v-for="group in groupedCards"
+        v-for="group in safeGroupedCards"
         :key="group.cards[0].id"
         class="card-grid__item"
       >
@@ -65,7 +74,7 @@ const [gridRef] = useAutoAnimate({
     <!-- Individual cards mode -->
     <div v-else-if="!isGroupedMode && hasItems" ref="gridRef" class="card-grid">
       <div
-        v-for="(card, index) in cards"
+        v-for="(card, index) in safeCards"
         :key="`${card.id}-${card.uid}`"
         class="card-grid__item"
       >
