@@ -332,6 +332,124 @@ export const mockUserCollection: Card[] = [
       weight: 1.2,
       img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
     }
-  }
+  },
+  {
+    uid: 45,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 46,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 47,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 48,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 49,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 50,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  {
+    uid: 51,
+    id: 'tabula-rasa',
+    name: 'Tabula Rasa',
+    itemClass: 'Simple Robe',
+    rarity: 'Unique',
+    tier: 'T3',
+    flavourText: 'The only limit is your imagination.',
+    wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa',
+    gameData: {
+      weight: 1.2,
+      img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png'
+    }
+  },
+  // Additional Tabula Rasa for testing scroll
+  { uid: 52, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 53, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 54, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 55, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 56, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 57, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 58, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 59, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 60, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 61, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 62, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 63, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 64, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 65, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 66, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 67, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 68, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 69, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } },
+  { uid: 70, id: 'tabula-rasa', name: 'Tabula Rasa', itemClass: 'Simple Robe', rarity: 'Unique', tier: 'T3', flavourText: 'The only limit is your imagination.', wikiUrl: 'https://www.poewiki.net/wiki/Tabula_Rasa', gameData: { weight: 1.2, img: 'https://web.poecdn.com/image/Art/2DItems/Armours/BodyArmours/TabulaRasa.png' } }
 ]
 
