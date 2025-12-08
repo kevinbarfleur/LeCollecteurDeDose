@@ -107,87 +107,83 @@ const filteredIndividualCards = computed(() => {
 
       <!-- Authenticated -->
       <div v-if="loggedIn">
-        <!-- User header -->
-        <div class="collection-header">
-          <div class="collection-header__user">
-            <img 
-              :src="user.avatar" 
-              :alt="user.name"
-              class="collection-header__avatar"
-            />
-            <div>
-              <h1 class="collection-header__name">{{ user.name }}</h1>
-              <p class="collection-header__label">Ma Collection</p>
+        <!-- Profile & Stats Hero -->
+        <div class="collection-hero">
+          <!-- Left: User Profile -->
+          <div class="collection-profile">
+            <div class="collection-profile__avatar-wrapper">
+              <div class="collection-profile__avatar-ring"></div>
+              <img 
+                :src="user.avatar" 
+                :alt="user.name"
+                class="collection-profile__avatar"
+              />
+            </div>
+            <div class="collection-profile__info">
+              <h1 class="collection-profile__name">{{ user.name }}</h1>
+              <div class="collection-profile__subtitle">
+                <span class="collection-profile__rune">◆</span>
+                <span>Collectionneur</span>
+                <span class="collection-profile__rune">◆</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center: Main Stats -->
+          <div class="collection-main-stats">
+            <div class="collection-main-stats__item">
+              <span class="collection-main-stats__value">{{ stats.total }}</span>
+              <span class="collection-main-stats__label">Cartes</span>
+            </div>
+            <div class="collection-main-stats__divider"></div>
+            <div class="collection-main-stats__item">
+              <span class="collection-main-stats__value">{{ stats.unique }}</span>
+              <span class="collection-main-stats__label">Uniques</span>
+            </div>
+          </div>
+
+          <!-- Right: Tier Breakdown -->
+          <div class="collection-tiers">
+            <div 
+              v-for="tier in ['T0', 'T1', 'T2', 'T3'] as const"
+              :key="tier"
+              class="collection-tiers__item"
+              :class="`collection-tiers__item--${tier.toLowerCase()}`"
+            >
+              <span class="collection-tiers__value">{{ stats[tier.toLowerCase() as keyof typeof stats] }}</span>
+              <span class="collection-tiers__label">{{ tier }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Stats -->
-        <div class="collection-stats">
-          <div class="collection-stats__main">
-            <div class="collection-stats__item collection-stats__item--large">
-              <span class="collection-stats__value">{{ stats.total }}</span>
-              <span class="collection-stats__label">Cartes totales</span>
-            </div>
-            <div class="collection-stats__item collection-stats__item--large">
-              <span class="collection-stats__value">{{ stats.unique }}</span>
-              <span class="collection-stats__label">Cartes uniques</span>
-            </div>
-          </div>
-          <div class="collection-stats__tiers">
-            <div class="collection-stats__tier collection-stats__tier--t0">
-              <span class="collection-stats__tier-value">{{ stats.t0 }}</span>
-              <span class="collection-stats__tier-label">T0</span>
-            </div>
-            <div class="collection-stats__tier collection-stats__tier--t1">
-              <span class="collection-stats__tier-value">{{ stats.t1 }}</span>
-              <span class="collection-stats__tier-label">T1</span>
-            </div>
-            <div class="collection-stats__tier collection-stats__tier--t2">
-              <span class="collection-stats__tier-value">{{ stats.t2 }}</span>
-              <span class="collection-stats__tier-label">T2</span>
-            </div>
-            <div class="collection-stats__tier collection-stats__tier--t3">
-              <span class="collection-stats__tier-value">{{ stats.t3 }}</span>
-              <span class="collection-stats__tier-label">T3</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="collection-filters">
-          <label class="collection-filters__toggle">
+        <!-- Filters Bar -->
+        <div class="collection-toolbar">
+          <label class="collection-toolbar__toggle">
             <input 
               v-model="showDuplicates" 
               type="checkbox"
-              class="collection-filters__checkbox"
+              class="collection-toolbar__checkbox"
             />
-            <span class="collection-filters__toggle-label">Afficher les doublons</span>
+            <span class="collection-toolbar__toggle-track">
+              <span class="collection-toolbar__toggle-thumb"></span>
+            </span>
+            <span class="collection-toolbar__toggle-label">Afficher les doublons</span>
           </label>
           
-          <div class="collection-filters__tiers">
+          <div class="collection-toolbar__filters">
             <button
               v-for="tier in ['all', 'T0', 'T1', 'T2', 'T3'] as const"
               :key="tier"
-              class="collection-filters__tier-btn"
+              class="collection-toolbar__filter-btn"
               :class="{ 
-                'collection-filters__tier-btn--active': selectedTier === tier,
-                [`collection-filters__tier-btn--${tier.toLowerCase()}`]: tier !== 'all'
+                'collection-toolbar__filter-btn--active': selectedTier === tier,
+                [`collection-toolbar__filter-btn--${tier.toLowerCase()}`]: tier !== 'all'
               }"
               @click="selectedTier = tier"
             >
               {{ tier === 'all' ? 'Tous' : tier }}
             </button>
           </div>
-        </div>
-
-        <!-- Duplicates indicator -->
-        <div v-if="!showDuplicates" class="collection-duplicates">
-          <template v-for="group in groupedCards" :key="group.cards[0].id">
-            <span v-if="group.count > 1" class="collection-duplicates__badge">
-              {{ group.cards[0].name }} x{{ group.count }}
-            </span>
-          </template>
         </div>
 
         <!-- Cards grid - Stack mode (default) -->
@@ -256,229 +252,424 @@ const filteredIndividualCards = computed(() => {
   line-height: 1.6;
 }
 
-/* Collection header */
-.collection-header {
+/* ===========================================
+   COLLECTION HERO SECTION
+   =========================================== */
+.collection-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
   margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(15, 15, 18, 0.9) 0%, rgba(10, 10, 12, 0.95) 100%);
+  border: 1px solid rgba(50, 50, 55, 0.4);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
 }
 
-.collection-header__user {
+/* Decorative corner accents */
+.collection-hero::before,
+.collection-hero::after {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border: 1px solid rgba(145, 70, 255, 0.2);
+  pointer-events: none;
+}
+
+.collection-hero::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 16px 0 0 0;
+}
+
+.collection-hero::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 16px 0;
+}
+
+@media (min-width: 768px) {
+  .collection-hero {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    padding: 2rem 2.5rem;
+  }
+}
+
+/* ===========================================
+   PROFILE SECTION
+   =========================================== */
+.collection-profile {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.collection-header__avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 3px solid #9146FF;
+.collection-profile__avatar-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
 }
 
-.collection-header__name {
+.collection-profile__avatar-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(145, 70, 255, 0.6) 0%,
+    rgba(145, 70, 255, 0.1) 25%,
+    rgba(145, 70, 255, 0.6) 50%,
+    rgba(145, 70, 255, 0.1) 75%,
+    rgba(145, 70, 255, 0.6) 100%
+  );
+  animation: ring-rotate 8s linear infinite;
+}
+
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.collection-profile__avatar-ring::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #0a0a0c;
+}
+
+.collection-profile__avatar {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.collection-profile__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.collection-profile__name {
   font-family: 'Cinzel', serif;
   font-size: 1.5rem;
-  color: #c8c8c8;
+  font-weight: 600;
+  color: #e8e8e8;
+  letter-spacing: 0.5px;
+  margin: 0;
 }
 
-.collection-header__label {
+.collection-profile__subtitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-family: 'Crimson Text', serif;
   font-size: 0.875rem;
-  color: #7f7f7f;
+  color: #6a6a70;
+  font-style: italic;
 }
 
-/* Stats */
-.collection-stats {
+.collection-profile__rune {
+  font-size: 0.5rem;
+  color: #9146FF;
+  opacity: 0.6;
+}
+
+/* ===========================================
+   MAIN STATS
+   =========================================== */
+.collection-main-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+@media (min-width: 768px) {
+  .collection-main-stats {
+    padding: 0 3rem;
+    border-left: 1px solid rgba(60, 60, 65, 0.3);
+    border-right: 1px solid rgba(60, 60, 65, 0.3);
+  }
+}
+
+.collection-main-stats__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.collection-main-stats__value {
+  font-family: 'Cinzel', serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #e8e8e8;
+  line-height: 1;
+  text-shadow: 0 0 30px rgba(145, 70, 255, 0.15);
+}
+
+.collection-main-stats__label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #5a5a60;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.collection-main-stats__divider {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(100, 100, 105, 0.4),
+    transparent
+  );
+}
+
+/* ===========================================
+   TIER BREAKDOWN
+   =========================================== */
+.collection-tiers {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .collection-tiers {
+    justify-content: flex-end;
+  }
+}
+
+.collection-tiers__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(60, 60, 65, 0.3);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.collection-tiers__item:hover {
+  transform: translateY(-2px);
+  border-color: var(--tier-color, rgba(60, 60, 65, 0.5));
+}
+
+.collection-tiers__value {
+  font-family: 'Cinzel', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.collection-tiers__label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+/* Tier colors */
+.collection-tiers__item--t0 {
+  --tier-color: rgba(201, 162, 39, 0.4);
+  border-color: rgba(201, 162, 39, 0.25);
+}
+.collection-tiers__item--t0 .collection-tiers__value,
+.collection-tiers__item--t0 .collection-tiers__label { color: #c9a227; }
+
+.collection-tiers__item--t1 {
+  --tier-color: rgba(122, 106, 138, 0.4);
+  border-color: rgba(122, 106, 138, 0.25);
+}
+.collection-tiers__item--t1 .collection-tiers__value,
+.collection-tiers__item--t1 .collection-tiers__label { color: #9a8aaa; }
+
+.collection-tiers__item--t2 {
+  --tier-color: rgba(90, 112, 128, 0.4);
+  border-color: rgba(90, 112, 128, 0.25);
+}
+.collection-tiers__item--t2 .collection-tiers__value,
+.collection-tiers__item--t2 .collection-tiers__label { color: #7a9aaa; }
+
+.collection-tiers__item--t3 {
+  --tier-color: rgba(90, 90, 95, 0.4);
+  border-color: rgba(90, 90, 95, 0.25);
+}
+.collection-tiers__item--t3 .collection-tiers__value,
+.collection-tiers__item--t3 .collection-tiers__label { color: #7a7a80; }
+
+/* ===========================================
+   TOOLBAR / FILTERS
+   =========================================== */
+.collection-toolbar {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: rgba(21, 21, 24, 0.6);
-  border: 1px solid rgba(42, 42, 48, 0.5);
+  padding: 1rem 1.25rem;
+  background: rgba(15, 15, 18, 0.6);
+  border: 1px solid rgba(40, 40, 45, 0.4);
   border-radius: 12px;
 }
 
 @media (min-width: 640px) {
-  .collection-stats {
+  .collection-toolbar {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
   }
 }
 
-.collection-stats__main {
-  display: flex;
-  gap: 2rem;
-}
-
-.collection-stats__item {
-  text-align: center;
-}
-
-.collection-stats__item--large .collection-stats__value {
-  font-size: 2rem;
-}
-
-.collection-stats__value {
-  font-family: 'Cinzel', serif;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #c8c8c8;
-  display: block;
-}
-
-.collection-stats__label {
-  font-family: 'Crimson Text', serif;
-  font-size: 0.75rem;
-  color: #7f7f7f;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.collection-stats__tiers {
-  display: flex;
-  gap: 1rem;
-}
-
-.collection-stats__tier {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  min-width: 50px;
-}
-
-.collection-stats__tier-value {
-  font-family: 'Cinzel', serif;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.collection-stats__tier-label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-.collection-stats__tier--t0 .collection-stats__tier-value,
-.collection-stats__tier--t0 .collection-stats__tier-label { color: #c9a227; }
-
-.collection-stats__tier--t1 .collection-stats__tier-value,
-.collection-stats__tier--t1 .collection-stats__tier-label { color: #7a6a8a; }
-
-.collection-stats__tier--t2 .collection-stats__tier-value,
-.collection-stats__tier--t2 .collection-stats__tier-label { color: #5a7080; }
-
-.collection-stats__tier--t3 .collection-stats__tier-value,
-.collection-stats__tier--t3 .collection-stats__tier-label { color: #4a4a4d; }
-
-/* Filters */
-.collection-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .collection-filters {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.collection-filters__toggle {
+/* Toggle Switch */
+.collection-toolbar__toggle {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
 }
 
-.collection-filters__checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: #9146FF;
+.collection-toolbar__checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.collection-filters__toggle-label {
+.collection-toolbar__toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: rgba(40, 40, 45, 0.8);
+  border: 1px solid rgba(60, 60, 65, 0.4);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.collection-toolbar__toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #5a5a60;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.collection-toolbar__checkbox:checked + .collection-toolbar__toggle-track {
+  background: rgba(145, 70, 255, 0.3);
+  border-color: rgba(145, 70, 255, 0.5);
+}
+
+.collection-toolbar__checkbox:checked + .collection-toolbar__toggle-track .collection-toolbar__toggle-thumb {
+  transform: translateX(20px);
+  background: #9146FF;
+  box-shadow: 0 0 10px rgba(145, 70, 255, 0.5);
+}
+
+.collection-toolbar__toggle-label {
   font-family: 'Crimson Text', serif;
-  font-size: 0.875rem;
-  color: #7f7f7f;
+  font-size: 0.9rem;
+  color: #7a7a80;
+  transition: color 0.3s ease;
 }
 
-.collection-filters__tiers {
+.collection-toolbar__checkbox:checked ~ .collection-toolbar__toggle-label {
+  color: #b8b8c0;
+}
+
+/* Filter Buttons */
+.collection-toolbar__filters {
   display: flex;
   gap: 0.5rem;
 }
 
-.collection-filters__tier-btn {
-  padding: 0.5rem 1rem;
+.collection-toolbar__filter-btn {
+  position: relative;
+  padding: 0.5rem 1.25rem;
   font-family: 'Cinzel', serif;
   font-size: 0.75rem;
-  font-weight: 500;
-  color: #7f7f7f;
-  background: rgba(21, 21, 24, 0.6);
-  border: 1px solid rgba(42, 42, 48, 0.6);
-  border-radius: 6px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #5a5a60;
+  background: transparent;
+  border: 1px solid rgba(50, 50, 55, 0.5);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  overflow: hidden;
 }
 
-.collection-filters__tier-btn:hover {
-  background: rgba(42, 42, 48, 0.4);
-  color: #c8c8c8;
+.collection-toolbar__filter-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.02) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.collection-filters__tier-btn--active {
-  background: rgba(145, 70, 255, 0.2);
-  border-color: #9146FF;
-  color: #9146FF;
+.collection-toolbar__filter-btn:hover {
+  color: #8a8a90;
+  border-color: rgba(70, 70, 75, 0.6);
 }
 
-.collection-filters__tier-btn--t0.collection-filters__tier-btn--active {
-  background: rgba(201, 162, 39, 0.15);
-  border-color: #6d5a2a;
+.collection-toolbar__filter-btn:hover::before {
+  opacity: 1;
+}
+
+.collection-toolbar__filter-btn--active {
+  color: #c8c8d0;
+  background: rgba(145, 70, 255, 0.15);
+  border-color: rgba(145, 70, 255, 0.4);
+  box-shadow: 0 0 15px rgba(145, 70, 255, 0.1);
+}
+
+/* Tier-specific active states */
+.collection-toolbar__filter-btn--t0.collection-toolbar__filter-btn--active {
   color: #c9a227;
+  background: rgba(201, 162, 39, 0.12);
+  border-color: rgba(201, 162, 39, 0.35);
+  box-shadow: 0 0 15px rgba(201, 162, 39, 0.08);
 }
 
-.collection-filters__tier-btn--t1.collection-filters__tier-btn--active {
-  background: rgba(122, 106, 138, 0.15);
-  border-color: #3a3445;
-  color: #7a6a8a;
+.collection-toolbar__filter-btn--t1.collection-toolbar__filter-btn--active {
+  color: #9a8aaa;
+  background: rgba(122, 106, 138, 0.12);
+  border-color: rgba(122, 106, 138, 0.35);
+  box-shadow: 0 0 15px rgba(122, 106, 138, 0.08);
 }
 
-.collection-filters__tier-btn--t2.collection-filters__tier-btn--active {
-  background: rgba(90, 112, 128, 0.15);
-  border-color: #3a4550;
-  color: #5a7080;
+.collection-toolbar__filter-btn--t2.collection-toolbar__filter-btn--active {
+  color: #7a9aaa;
+  background: rgba(90, 112, 128, 0.12);
+  border-color: rgba(90, 112, 128, 0.35);
+  box-shadow: 0 0 15px rgba(90, 112, 128, 0.08);
 }
 
-.collection-filters__tier-btn--t3.collection-filters__tier-btn--active {
-  background: rgba(58, 58, 61, 0.2);
-  border-color: #2a2a2d;
-  color: #4a4a4d;
-}
-
-/* Duplicates */
-.collection-duplicates {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.collection-duplicates__badge {
-  padding: 0.25rem 0.75rem;
-  font-family: 'Crimson Text', serif;
-  font-size: 0.75rem;
-  color: #af6025;
-  background: rgba(175, 96, 37, 0.15);
-  border: 1px solid rgba(175, 96, 37, 0.3);
-  border-radius: 20px;
+.collection-toolbar__filter-btn--t3.collection-toolbar__filter-btn--active {
+  color: #8a8a90;
+  background: rgba(90, 90, 95, 0.12);
+  border-color: rgba(90, 90, 95, 0.35);
 }
 </style>
 

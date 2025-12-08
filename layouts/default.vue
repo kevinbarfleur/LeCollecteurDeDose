@@ -1,11 +1,11 @@
 <script setup lang="ts">
-const route = useRoute()
+const route = useRoute();
 
 const navItems = [
-  { path: '/', label: 'Catalogue', icon: 'cards' },
-  { path: '/collection', label: 'Ma Collection', icon: 'user' },
-  { path: '/about', label: 'À propos', icon: 'info' }
-]
+  { path: "/", label: "Catalogue", icon: "cards" },
+  { path: "/collection", label: "Ma Collection", icon: "user" },
+  { path: "/about", label: "À propos", icon: "info" },
+];
 </script>
 
 <template>
@@ -15,9 +15,9 @@ const navItems = [
       <div class="app-header__container">
         <!-- Logo -->
         <NuxtLink to="/" class="app-header__logo">
-          <img 
-            :src="'/images/logo.png'" 
-            alt="Logo Le Collecteur de Dose" 
+          <img
+            :src="'/images/logo.png'"
+            alt="Logo Le Collecteur de Dose"
             class="app-header__logo-img"
           />
           <div class="app-header__logo-text-wrapper">
@@ -33,7 +33,9 @@ const navItems = [
             :key="item.path"
             :to="item.path"
             class="app-header__nav-item"
-            :class="{ 'app-header__nav-item--active': route.path === item.path }"
+            :class="{
+              'app-header__nav-item--active': route.path === item.path,
+            }"
           >
             {{ item.label }}
           </NuxtLink>
@@ -53,7 +55,7 @@ const navItems = [
 
     <!-- Footer -->
     <footer class="app-footer">
-      <p>Créé avec 💜 pour la communauté Twitch</p>
+      <p>Vaal or no balls</p>
     </footer>
   </div>
 </template>
@@ -106,7 +108,7 @@ const navItems = [
 }
 
 .app-header__logo-text {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 1.25rem;
   font-weight: 600;
   color: #c8c8c8;
@@ -114,7 +116,7 @@ const navItems = [
 }
 
 .app-header__logo-accent {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 0.875rem;
   font-style: italic;
   color: #af6025;
@@ -140,7 +142,7 @@ const navItems = [
 
 .app-header__nav-item {
   padding: 0.5rem 1rem;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 0.875rem;
   font-weight: 500;
   color: #7f7f7f;
@@ -175,7 +177,7 @@ const navItems = [
 }
 
 .app-footer p {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 0.875rem;
   color: #4a4a55;
 }
@@ -184,7 +186,7 @@ const navItems = [
   .app-header__container {
     flex-wrap: wrap;
   }
-  
+
   .app-header__nav {
     order: 3;
     width: 100%;
@@ -193,4 +195,3 @@ const navItems = [
   }
 }
 </style>
-
