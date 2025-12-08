@@ -15,6 +15,7 @@ export default defineNuxtConfig({
       twitch: {
         clientId: process.env.NUXT_OAUTH_TWITCH_CLIENT_ID,
         clientSecret: process.env.NUXT_OAUTH_TWITCH_CLIENT_SECRET,
+        redirectURL: process.env.NUXT_OAUTH_TWITCH_REDIRECT_URL,
       }
     },
     session: {
