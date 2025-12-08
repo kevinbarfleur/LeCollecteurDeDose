@@ -95,21 +95,7 @@ const filteredIndividualCards = computed(() => {
     <div class="page-container">
       <!-- Not authenticated -->
       <div v-if="!loggedIn" class="collection-auth">
-        <div class="collection-auth__card">
-          <!-- Corner decorations -->
-          <div
-            class="collection-auth__corner collection-auth__corner--tl"
-          ></div>
-          <div
-            class="collection-auth__corner collection-auth__corner--tr"
-          ></div>
-          <div
-            class="collection-auth__corner collection-auth__corner--bl"
-          ></div>
-          <div
-            class="collection-auth__corner collection-auth__corner--br"
-          ></div>
-
+        <RunicBox padding="lg" max-width="400px" centered>
           <div class="collection-auth__icon">
             <img
               src="/images/logo.png"
@@ -132,69 +118,71 @@ const filteredIndividualCards = computed(() => {
           >
             Invoquer Twitch
           </RunicButton>
-        </div>
+        </RunicBox>
       </div>
 
       <!-- Authenticated -->
       <div v-if="loggedIn">
         <!-- Profile & Stats Hero - Runic tablet style -->
-        <div class="collection-hero">
-          <!-- Left: User Profile -->
-          <div class="collection-profile">
-            <div class="collection-profile__avatar-wrapper">
-              <div class="collection-profile__avatar-ring"></div>
-              <img
-                :src="user.avatar"
-                :alt="user.name"
-                class="collection-profile__avatar"
-              />
+        <RunicBox padding="md" class="collection-hero-box">
+          <div class="collection-hero">
+            <!-- Left: User Profile -->
+            <div class="collection-profile">
+              <div class="collection-profile__avatar-wrapper">
+                <div class="collection-profile__avatar-ring"></div>
+                <img
+                  :src="user.avatar"
+                  :alt="user.name"
+                  class="collection-profile__avatar"
+                />
+              </div>
+              <div class="collection-profile__info">
+                <h1 class="collection-profile__name">{{ user.name }}</h1>
+                <div class="collection-profile__subtitle">
+                  <span class="collection-profile__rune">◆</span>
+                  <span>Exile</span>
+                  <span class="collection-profile__rune">◆</span>
+                </div>
+              </div>
             </div>
-            <div class="collection-profile__info">
-              <h1 class="collection-profile__name">{{ user.name }}</h1>
-              <div class="collection-profile__subtitle">
-                <span class="collection-profile__rune">◆</span>
-                <span>Exile</span>
-                <span class="collection-profile__rune">◆</span>
+
+            <!-- Center: Main Stats - Large engraved numbers -->
+            <div class="collection-main-stats">
+              <div class="collection-main-stats__item">
+                <span class="collection-main-stats__rune">◆</span>
+                <span class="collection-main-stats__value">{{
+                  stats.total
+                }}</span>
+                <span class="collection-main-stats__rune">◆</span>
+                <span class="collection-main-stats__label">Cartes</span>
+              </div>
+              <div class="collection-main-stats__divider"></div>
+              <div class="collection-main-stats__item">
+                <span class="collection-main-stats__rune">◆</span>
+                <span class="collection-main-stats__value">{{
+                  stats.unique
+                }}</span>
+                <span class="collection-main-stats__rune">◆</span>
+                <span class="collection-main-stats__label">Uniques</span>
+              </div>
+            </div>
+
+            <!-- Right: Tier Breakdown - Compact runic tiles -->
+            <div class="collection-tiers">
+              <div
+                v-for="tier in ['T0', 'T1', 'T2', 'T3'] as const"
+                :key="tier"
+                class="collection-tiers__item"
+                :class="`collection-tiers__item--${tier.toLowerCase()}`"
+              >
+                <span class="collection-tiers__value">{{
+                  stats[tier.toLowerCase() as keyof typeof stats]
+                }}</span>
+                <span class="collection-tiers__label">{{ tier }}</span>
               </div>
             </div>
           </div>
-
-          <!-- Center: Main Stats - Large engraved numbers -->
-          <div class="collection-main-stats">
-            <div class="collection-main-stats__item">
-              <span class="collection-main-stats__rune">◆</span>
-              <span class="collection-main-stats__value">{{
-                stats.total
-              }}</span>
-              <span class="collection-main-stats__rune">◆</span>
-              <span class="collection-main-stats__label">Cartes</span>
-            </div>
-            <div class="collection-main-stats__divider"></div>
-            <div class="collection-main-stats__item">
-              <span class="collection-main-stats__rune">◆</span>
-              <span class="collection-main-stats__value">{{
-                stats.unique
-              }}</span>
-              <span class="collection-main-stats__rune">◆</span>
-              <span class="collection-main-stats__label">Uniques</span>
-            </div>
-          </div>
-
-          <!-- Right: Tier Breakdown - Compact runic tiles -->
-          <div class="collection-tiers">
-            <div
-              v-for="tier in ['T0', 'T1', 'T2', 'T3'] as const"
-              :key="tier"
-              class="collection-tiers__item"
-              :class="`collection-tiers__item--${tier.toLowerCase()}`"
-            >
-              <span class="collection-tiers__value">{{
-                stats[tier.toLowerCase() as keyof typeof stats]
-              }}</span>
-              <span class="collection-tiers__label">{{ tier }}</span>
-            </div>
-          </div>
-        </div>
+        </RunicBox>
 
         <!-- Filters Bar -->
         <div class="collection-toolbar">
@@ -240,145 +228,6 @@ const filteredIndividualCards = computed(() => {
   justify-content: center;
 }
 
-.collection-auth__card {
-  position: relative;
-  text-align: center;
-  padding: 3rem;
-  max-width: 400px;
-
-  /* Deep carved stone look */
-  background: linear-gradient(
-    180deg,
-    rgba(12, 12, 14, 0.95) 0%,
-    rgba(18, 18, 20, 0.9) 30%,
-    rgba(15, 15, 17, 0.95) 70%,
-    rgba(10, 10, 12, 0.98) 100%
-  );
-
-  border-radius: 6px;
-
-  /* Multi-layered carved effect */
-  box-shadow: 
-    /* Deep inner shadow */ inset 0 4px 12px rgba(0, 0, 0, 0.7),
-    inset 0 1px 3px rgba(0, 0, 0, 0.8),
-    /* Top highlight - subtle worn edge */ inset 0 1px 0 rgba(60, 55, 50, 0.15),
-    /* Outer glow and depth */ 0 2px 8px rgba(0, 0, 0, 0.6),
-    0 0 1px rgba(0, 0, 0, 0.8);
-
-  /* Worn stone border */
-  border: 1px solid rgba(45, 42, 38, 0.4);
-  border-top-color: rgba(60, 55, 50, 0.3);
-  border-bottom-color: rgba(25, 22, 18, 0.6);
-}
-
-.collection-auth__card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-      ellipse at 30% 20%,
-      rgba(60, 55, 50, 0.03) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 70% 80%,
-      rgba(40, 35, 30, 0.04) 0%,
-      transparent 40%
-    );
-  pointer-events: none;
-  border-radius: 5px;
-}
-
-/* Corner decorations */
-.collection-auth__corner {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  pointer-events: none;
-}
-
-.collection-auth__corner::before,
-.collection-auth__corner::after {
-  content: "";
-  position: absolute;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(90, 85, 75, 0.3) 50%,
-    transparent 100%
-  );
-}
-
-.collection-auth__corner::before {
-  width: 100%;
-  height: 1px;
-}
-
-.collection-auth__corner::after {
-  width: 1px;
-  height: 100%;
-}
-
-.collection-auth__corner--tl {
-  top: 8px;
-  left: 8px;
-}
-
-.collection-auth__corner--tl::before {
-  top: 0;
-  left: 0;
-}
-
-.collection-auth__corner--tl::after {
-  top: 0;
-  left: 0;
-}
-
-.collection-auth__corner--tr {
-  top: 8px;
-  right: 8px;
-}
-
-.collection-auth__corner--tr::before {
-  top: 0;
-  right: 0;
-}
-
-.collection-auth__corner--tr::after {
-  top: 0;
-  right: 0;
-}
-
-.collection-auth__corner--bl {
-  bottom: 8px;
-  left: 8px;
-}
-
-.collection-auth__corner--bl::before {
-  bottom: 0;
-  left: 0;
-}
-
-.collection-auth__corner--bl::after {
-  bottom: 0;
-  left: 0;
-}
-
-.collection-auth__corner--br {
-  bottom: 8px;
-  right: 8px;
-}
-
-.collection-auth__corner--br::before {
-  bottom: 0;
-  right: 0;
-}
-
-.collection-auth__corner--br::after {
-  bottom: 0;
-  right: 0;
-}
-
 .collection-auth__icon {
   width: 160px;
   height: 160px;
@@ -412,73 +261,22 @@ const filteredIndividualCards = computed(() => {
 }
 
 /* ===========================================
-   COLLECTION HERO SECTION - Runic carved tablet
+   COLLECTION HERO SECTION
    =========================================== */
+.collection-hero-box {
+  margin-bottom: 2rem;
+}
+
 .collection-hero {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  position: relative;
-  overflow: hidden;
-
-  /* Deep carved stone tablet */
-  background: linear-gradient(
-    180deg,
-    rgba(12, 12, 14, 0.95) 0%,
-    rgba(18, 18, 20, 0.9) 30%,
-    rgba(15, 15, 17, 0.95) 70%,
-    rgba(10, 10, 12, 0.98) 100%
-  );
-
-  border-radius: 6px;
-
-  /* Multi-layered carved effect */
-  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7),
-    inset 0 1px 3px rgba(0, 0, 0, 0.8), inset 0 -2px 4px rgba(50, 45, 40, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(50, 45, 40, 0.25);
-
-  border: 1px solid rgba(40, 38, 35, 0.7);
-  border-top-color: rgba(30, 28, 25, 0.8);
-  border-bottom-color: rgba(60, 55, 50, 0.3);
-}
-
-/* Stone texture overlay */
-.collection-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-      ellipse at 30% 20%,
-      rgba(60, 55, 50, 0.03) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 70% 80%,
-      rgba(40, 35, 30, 0.04) 0%,
-      transparent 40%
-    );
-  pointer-events: none;
-  border-radius: 5px;
-}
-
-/* Corner decorative runes */
-.collection-hero::after {
-  content: "◆";
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  font-size: 0.5rem;
-  color: rgba(80, 70, 60, 0.3);
-  pointer-events: none;
 }
 
 @media (min-width: 768px) {
   .collection-hero {
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    padding: 2rem 2.5rem;
   }
 }
 

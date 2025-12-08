@@ -13,6 +13,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   layout: "horizontal",
 });
+
+const boxPadding = computed(() => props.layout === 'compact' ? 'sm' : 'md');
 </script>
 
 <template>
@@ -20,14 +22,7 @@ const props = withDefaults(defineProps<Props>(), {
     class="runic-stats"
     :class="[`runic-stats--${layout}`]"
   >
-    <!-- The carved stone tablet -->
-    <div class="runic-stats__tablet">
-      <!-- Corner decorations -->
-      <div class="runic-stats__corner runic-stats__corner--tl"></div>
-      <div class="runic-stats__corner runic-stats__corner--tr"></div>
-      <div class="runic-stats__corner runic-stats__corner--bl"></div>
-      <div class="runic-stats__corner runic-stats__corner--br"></div>
-      
+    <RunicBox :padding="boxPadding">
       <!-- Stats items -->
       <div class="runic-stats__items">
         <div
@@ -50,107 +45,18 @@ const props = withDefaults(defineProps<Props>(), {
           <div v-if="index < stats.length - 1" class="runic-stats__separator"></div>
         </div>
       </div>
-    </div>
+    </RunicBox>
   </div>
 </template>
 
 <style scoped>
 /* ==========================================
-   RUNIC STATS - Carved stone tablet
+   RUNIC STATS - Wrapper
    ========================================== */
 .runic-stats {
   position: relative;
   display: inline-flex;
   width: 100%;
-}
-
-/* ==========================================
-   THE TABLET - Main carved container
-   ========================================== */
-.runic-stats__tablet {
-  position: relative;
-  width: 100%;
-  padding: 1.5rem 2rem;
-  
-  /* Deep carved stone look */
-  background: linear-gradient(
-    180deg,
-    rgba(12, 12, 14, 0.95) 0%,
-    rgba(18, 18, 20, 0.9) 30%,
-    rgba(15, 15, 17, 0.95) 70%,
-    rgba(10, 10, 12, 0.98) 100%
-  );
-  
-  border-radius: 6px;
-  
-  /* Multi-layered carved effect */
-  box-shadow: 
-    /* Deep inner shadow */
-    inset 0 4px 12px rgba(0, 0, 0, 0.7),
-    inset 0 1px 3px rgba(0, 0, 0, 0.8),
-    /* Bottom highlight for 3D */
-    inset 0 -2px 4px rgba(50, 45, 40, 0.08),
-    /* Outer shadow */
-    0 2px 8px rgba(0, 0, 0, 0.4),
-    0 1px 0 rgba(50, 45, 40, 0.25);
-  
-  /* Stone border */
-  border: 1px solid rgba(40, 38, 35, 0.7);
-  border-top-color: rgba(30, 28, 25, 0.8);
-  border-bottom-color: rgba(60, 55, 50, 0.3);
-}
-
-/* Stone texture overlay */
-.runic-stats__tablet::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: 
-    radial-gradient(ellipse at 30% 20%, rgba(60, 55, 50, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(40, 35, 30, 0.04) 0%, transparent 40%);
-  pointer-events: none;
-  border-radius: 5px;
-}
-
-/* ==========================================
-   CORNER DECORATIONS
-   ========================================== */
-.runic-stats__corner {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  pointer-events: none;
-}
-
-.runic-stats__corner::before,
-.runic-stats__corner::after {
-  content: "";
-  position: absolute;
-  background: linear-gradient(
-    to right,
-    rgba(80, 70, 55, 0.15),
-    rgba(80, 70, 55, 0.4),
-    rgba(80, 70, 55, 0.15)
-  );
-}
-
-.runic-stats__corner--tl { top: 8px; left: 8px; }
-.runic-stats__corner--tr { top: 8px; right: 8px; transform: rotate(90deg); }
-.runic-stats__corner--bl { bottom: 8px; left: 8px; transform: rotate(-90deg); }
-.runic-stats__corner--br { bottom: 8px; right: 8px; transform: rotate(180deg); }
-
-.runic-stats__corner::before {
-  width: 20px;
-  height: 1px;
-  top: 0;
-  left: 0;
-}
-
-.runic-stats__corner::after {
-  width: 1px;
-  height: 20px;
-  top: 0;
-  left: 0;
 }
 
 /* ==========================================
@@ -326,10 +232,6 @@ const props = withDefaults(defineProps<Props>(), {
 /* ==========================================
    COMPACT LAYOUT
    ========================================== */
-.runic-stats--compact .runic-stats__tablet {
-  padding: 1rem 1.5rem;
-}
-
 .runic-stats--compact .runic-stats__items {
   gap: 1rem;
 }
@@ -355,10 +257,6 @@ const props = withDefaults(defineProps<Props>(), {
    RESPONSIVE
    ========================================== */
 @media (max-width: 640px) {
-  .runic-stats__tablet {
-    padding: 1.25rem 1.5rem;
-  }
-  
   .runic-stats__items {
     gap: 1rem;
   }
