@@ -66,9 +66,9 @@ const stats = computed(() => ({
     <div class="page-container">
       <!-- Page header -->
       <div class="catalog-header">
-        <h1 class="page-title">Catalogue des Cartes</h1>
+        <h1 class="page-title">Le Registre des Âmes</h1>
         <p class="catalog-subtitle">
-          Découvrez toutes les cartes disponibles dans Le Collecteur de Dose
+          Contemple ce que tu ne posséderas probablement jamais, exile.
         </p>
       </div>
 
@@ -106,7 +106,7 @@ const stats = computed(() => ({
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Rechercher une carte..."
+            placeholder="Fouille dans les ténèbres..."
             class="catalog-filters__input"
           />
         </div>

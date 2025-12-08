@@ -92,15 +92,15 @@ const filteredIndividualCards = computed(() => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
-          <h1 class="collection-auth__title">Accédez à votre collection</h1>
+          <h1 class="collection-auth__title">Prouve ton existence</h1>
           <p class="collection-auth__text">
-            Connectez-vous avec votre compte Twitch pour voir vos cartes collectées
+            Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.
           </p>
           <a href="/auth/twitch" class="btn-twitch">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
             </svg>
-            Connexion avec Twitch
+            Invoquer Twitch
           </a>
         </div>
       </div>
@@ -123,7 +123,7 @@ const filteredIndividualCards = computed(() => {
               <h1 class="collection-profile__name">{{ user.name }}</h1>
               <div class="collection-profile__subtitle">
                 <span class="collection-profile__rune">◆</span>
-                <span>Collectionneur</span>
+                <span>Exile</span>
                 <span class="collection-profile__rune">◆</span>
               </div>
             </div>
@@ -167,7 +167,7 @@ const filteredIndividualCards = computed(() => {
             <span class="collection-toolbar__toggle-track">
               <span class="collection-toolbar__toggle-thumb"></span>
             </span>
-            <span class="collection-toolbar__toggle-label">Afficher les doublons</span>
+            <span class="collection-toolbar__toggle-label">Révéler les duplicatas</span>
           </label>
           
           <div class="collection-toolbar__filters">
@@ -190,14 +190,14 @@ const filteredIndividualCards = computed(() => {
         <CardGrid 
           v-if="!showDuplicates"
           :grouped-cards="filteredGroupedCards"
-          empty-message="Vous n'avez pas encore de cartes. Participez au stream pour en obtenir !"
+          empty-message="Ton inventaire est aussi vide que ton âme. Prouve ta dévotion sur le stream."
         />
         
         <!-- Cards grid - Individual mode (duplicates) -->
         <CardGrid 
           v-else
           :cards="filteredIndividualCards"
-          empty-message="Vous n'avez pas encore de cartes. Participez au stream pour en obtenir !"
+          empty-message="Ton inventaire est aussi vide que ton âme. Prouve ta dévotion sur le stream."
         />
       </div>
     </div>

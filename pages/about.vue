@@ -1,31 +1,31 @@
 <script setup lang="ts">
 useHead({
-  title: 'À propos - Le Collecteur de Dose'
-})
+  title: "À propos - Le Collecteur de Dose",
+});
 
 const socialLinks = [
   {
-    name: 'Twitch',
-    url: 'https://www.twitch.tv/les_doseurs',
-    label: 'Les Doseurs',
-    icon: 'twitch',
-    color: '#9146FF'
+    name: "Twitch",
+    url: "https://www.twitch.tv/les_doseurs",
+    label: "Les Doseurs",
+    icon: "twitch",
+    color: "#9146FF",
   },
   {
-    name: 'YouTube',
-    url: 'https://www.youtube.com/@LesDoseurs',
-    label: 'Les Doseurs',
-    icon: 'youtube',
-    color: '#FF0000'
+    name: "YouTube",
+    url: "https://www.youtube.com/@LesDoseurs",
+    label: "Les Doseurs",
+    icon: "youtube",
+    color: "#FF0000",
   },
   {
-    name: 'YouTube',
-    url: 'https://www.youtube.com/@LesDoseursPOE',
-    label: 'Les Doseurs POE',
-    icon: 'youtube',
-    color: '#FF0000'
-  }
-]
+    name: "YouTube",
+    url: "https://www.youtube.com/@LesDoseursPOE",
+    label: "Les Doseurs POE",
+    icon: "youtube",
+    color: "#FF0000",
+  },
+];
 </script>
 
 <template>
@@ -34,12 +34,12 @@ const socialLinks = [
       <!-- Hero section -->
       <section class="about-hero">
         <div class="about-hero__glow"></div>
-        
+
         <!-- Logo -->
         <div class="about-hero__logo-wrapper">
-          <img 
-            :src="'/images/logo.png'" 
-            alt="Logo Le Collecteur de Dose" 
+          <img
+            :src="'/images/logo.png'"
+            alt="Logo Le Collecteur de Dose"
             class="about-hero__logo"
           />
         </div>
@@ -51,15 +51,13 @@ const socialLinks = [
         </div>
 
         <!-- Description -->
-        <p class="about-hero__description">
-          Collectionnez les cartes, dominez le jeu
-        </p>
+        <p class="about-hero__description">Seuls les plus dignes survivront.</p>
       </section>
 
       <!-- Social links -->
       <section class="about-socials">
-        <h2 class="about-socials__title">Retrouvez-nous</h2>
-        
+        <h2 class="about-socials__title">Rejoins la cave</h2>
+
         <div class="about-socials__grid">
           <a
             v-for="link in socialLinks"
@@ -72,11 +70,23 @@ const socialLinks = [
           >
             <!-- Icon -->
             <div class="social-card__icon">
-              <svg v-if="link.icon === 'twitch'" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+              <svg
+                v-if="link.icon === 'twitch'"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"
+                />
               </svg>
-              <svg v-else-if="link.icon === 'youtube'" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              <svg
+                v-else-if="link.icon === 'youtube'"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+                />
               </svg>
             </div>
 
@@ -87,21 +97,22 @@ const socialLinks = [
             </div>
 
             <!-- Arrow -->
-            <svg class="social-card__arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            <svg
+              class="social-card__arrow"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
             </svg>
           </a>
         </div>
-      </section>
-
-      <!-- CTA -->
-      <section class="about-cta">
-        <NuxtLink to="/" class="about-cta__btn">
-          <span>Voir le Catalogue</span>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        </NuxtLink>
       </section>
     </div>
   </NuxtLayout>
@@ -133,7 +144,11 @@ const socialLinks = [
   transform: translate(-50%, -50%);
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(175, 96, 37, 0.15) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(175, 96, 37, 0.15) 0%,
+    transparent 70%
+  );
   pointer-events: none;
   z-index: 0;
 }
@@ -153,8 +168,13 @@ const socialLinks = [
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .about-hero__title-wrapper {
@@ -167,7 +187,7 @@ const socialLinks = [
 }
 
 .about-hero__title {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 3rem;
   font-weight: 700;
   color: #e0e0e0;
@@ -177,7 +197,7 @@ const socialLinks = [
 }
 
 .about-hero__subtitle {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 1.5rem;
   font-style: italic;
   color: #af6025;
@@ -187,7 +207,7 @@ const socialLinks = [
 .about-hero__description {
   position: relative;
   z-index: 1;
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 1.25rem;
   color: #7f7f7f;
   margin-top: 1rem;
@@ -201,7 +221,7 @@ const socialLinks = [
 }
 
 .about-socials__title {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 1.25rem;
   font-weight: 600;
   color: #7f7f7f;
@@ -266,7 +286,7 @@ const socialLinks = [
 }
 
 .social-card__platform {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 0.75rem;
   font-weight: 600;
   color: #5a5a5a;
@@ -275,7 +295,7 @@ const socialLinks = [
 }
 
 .social-card__label {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 1.25rem;
   color: #c8c8c8;
   margin-top: 0.125rem;
@@ -303,7 +323,7 @@ const socialLinks = [
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 2rem;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 1rem;
   font-weight: 600;
   color: #1a1a1c;
@@ -347,4 +367,3 @@ const socialLinks = [
   }
 }
 </style>
-
