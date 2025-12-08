@@ -6,13 +6,13 @@ useHead({
 
 <template>
   <NuxtLayout>
-    <div class="about-page">
+    <div class="min-h-[80vh] flex flex-col items-center px-4 py-8">
       <!-- Hero section -->
-      <section class="about-hero">
+      <section class="relative flex flex-col items-center text-center py-12">
         <div class="about-hero__glow"></div>
 
         <!-- Logo -->
-        <div class="about-hero__logo-wrapper">
+        <div class="relative z-10 mb-6">
           <img
             :src="'/images/logo.png'"
             alt="Logo Le Collecteur de Dose"
@@ -21,20 +21,32 @@ useHead({
         </div>
 
         <!-- Title -->
-        <div class="about-hero__title-wrapper">
-          <h1 class="about-hero__title">Le Collecteur</h1>
-          <span class="about-hero__subtitle">de Dose</span>
+        <div class="relative z-10 flex flex-col leading-none mb-4">
+          <h1
+            class="font-display text-5xl md:text-6xl font-bold text-white/90 tracking-wide m-0 drop-shadow-lg"
+          >
+            Le Collecteur
+          </h1>
+          <span class="font-body text-2xl md:text-3xl italic text-accent mt-1"
+            >de Dose</span
+          >
         </div>
 
         <!-- Description -->
-        <p class="about-hero__description">Seuls les plus dignes survivront.</p>
+        <p class="relative z-10 font-body text-xl text-poe-text-dim mt-4">
+          Seuls les plus dignes survivront.
+        </p>
       </section>
 
       <!-- Social links -->
-      <section class="about-socials">
-        <h2 class="about-socials__title">Rejoins la cave</h2>
+      <section class="w-full max-w-lg mt-12">
+        <h2
+          class="font-display text-xl font-semibold text-poe-text-dim text-center mb-6 uppercase tracking-widest"
+        >
+          Rejoins la cave
+        </h2>
 
-        <div class="about-socials__grid">
+        <div class="flex flex-col items-center gap-4">
           <RunicButton
             href="https://www.twitch.tv/les_doseurs"
             variant="twitch"
@@ -68,24 +80,7 @@ useHead({
 </template>
 
 <style scoped>
-.about-page {
-  min-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem 1rem;
-}
-
-/* Hero Section */
-.about-hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 3rem 0;
-}
-
+/* Glow effect behind logo */
 .about-hero__glow {
   position: absolute;
   top: 50%;
@@ -102,12 +97,7 @@ useHead({
   z-index: 0;
 }
 
-.about-hero__logo-wrapper {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 1.5rem;
-}
-
+/* Logo with float animation */
 .about-hero__logo {
   width: 180px;
   height: 180px;
@@ -126,80 +116,11 @@ useHead({
   }
 }
 
-.about-hero__title-wrapper {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
-  margin-bottom: 1rem;
-}
-
-.about-hero__title {
-  font-family: "Cinzel", serif;
-  font-size: 3rem;
-  font-weight: 700;
-  color: #e0e0e0;
-  letter-spacing: 2px;
-  margin: 0;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-}
-
-.about-hero__subtitle {
-  font-family: "Crimson Text", serif;
-  font-size: 1.5rem;
-  font-style: italic;
-  color: #af6025;
-  margin-top: 0.25rem;
-}
-
-.about-hero__description {
-  position: relative;
-  z-index: 1;
-  font-family: "Crimson Text", serif;
-  font-size: 1.25rem;
-  color: #7f7f7f;
-  margin-top: 1rem;
-}
-
-/* Social Links */
-.about-socials {
-  width: 100%;
-  max-width: 500px;
-  margin-top: 3rem;
-}
-
-.about-socials__title {
-  font-family: "Cinzel", serif;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #7f7f7f;
-  text-align: center;
-  margin-bottom: 1.5rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-.about-socials__grid {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-/* Responsive */
+/* Responsive logo size */
 @media (min-width: 768px) {
   .about-hero__logo {
     width: 220px;
     height: 220px;
-  }
-
-  .about-hero__title {
-    font-size: 4rem;
-  }
-
-  .about-hero__subtitle {
-    font-size: 2rem;
   }
 }
 </style>

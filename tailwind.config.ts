@@ -48,6 +48,24 @@ export default {
         'display': ['Cinzel', 'serif'],
         'body': ['Crimson Text', 'serif'],
       },
+      // Border radius aligned with design system
+      borderRadius: {
+        'sm': '6px',
+        'md': '10px',
+        'lg': '12px',
+        'xl': '16px',
+      },
+      // Custom transition timing functions
+      transitionTimingFunction: {
+        'smooth': 'cubic-bezier(0.03, 0.98, 0.52, 0.99)',
+        'bounce': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+      // Custom transition durations
+      transitionDuration: {
+        'fast': '150ms',
+        'base': '300ms',
+        'slow': '400ms',
+      },
       boxShadow: {
         'card': '0 4px 20px rgba(0, 0, 0, 0.5)',
         'card-hover': '0 8px 40px rgba(0, 0, 0, 0.7)',

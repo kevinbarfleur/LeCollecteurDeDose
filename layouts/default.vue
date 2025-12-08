@@ -9,25 +9,35 @@ const navItems = [
 </script>
 
 <template>
-  <div class="app-layout">
+  <div class="min-h-screen flex flex-col">
     <!-- Header -->
     <header class="app-header">
-      <div class="app-header__container">
+      <div
+        class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between gap-8 flex-wrap sm:flex-nowrap"
+      >
         <!-- Logo -->
         <NuxtLink to="/" class="app-header__logo">
           <img
             :src="'/images/logo.png'"
             alt="Logo Le Collecteur de Dose"
-            class="app-header__logo-img"
+            class="w-12 h-12 object-contain transition-transform duration-fast hover:scale-105"
           />
-          <div class="app-header__logo-text-wrapper">
-            <span class="app-header__logo-text">Le Collecteur</span>
-            <span class="app-header__logo-accent">de Dose</span>
+          <div class="flex flex-col leading-tight">
+            <span
+              class="font-display text-xl font-semibold text-poe-text transition-colors duration-fast group-hover:text-white"
+              >Le Collecteur</span
+            >
+            <span
+              class="font-body text-sm italic text-accent transition-colors duration-fast group-hover:text-accent-light"
+              >de Dose</span
+            >
           </div>
         </NuxtLink>
 
         <!-- Navigation - Runic tablet style -->
-        <nav class="app-header__nav">
+        <nav
+          class="flex order-3 sm:order-none w-full sm:w-auto justify-center mt-2 sm:mt-0"
+        >
           <div class="app-header__nav-groove">
             <NuxtLink
               v-for="item in navItems"
@@ -46,38 +56,35 @@ const navItems = [
         </nav>
 
         <!-- Auth -->
-        <div class="app-header__auth">
+        <div class="flex items-center">
           <TwitchLoginBtn />
         </div>
       </div>
     </header>
 
     <!-- Main content -->
-    <main class="app-main">
+    <main class="flex-1">
       <slot />
     </main>
 
     <!-- Footer -->
-    <footer class="app-footer">
-      <div class="app-footer__content">
+    <footer class="p-8 border-t border-poe-border/30">
+      <div class="flex items-center justify-center gap-2 group">
         <img
           src="/images/card-back-logo.png"
           alt="Logo"
-          class="app-footer__logo"
+          class="w-6 h-6 object-contain opacity-50 transition-opacity duration-base group-hover:opacity-80"
         />
-        <p>Vaal or no balls</p>
+        <p class="font-body text-sm text-poe-text-muted m-0">
+          Vaal or no balls
+        </p>
       </div>
     </footer>
   </div>
 </template>
 
 <style scoped>
-.app-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
+/* Header - sticky with blur effect */
 .app-header {
   position: sticky;
   top: 0;
@@ -87,67 +94,20 @@ const navItems = [
   border-bottom: 1px solid rgba(42, 42, 48, 0.5);
 }
 
-.app-header__container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1rem 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
+/* Logo link with hover effect */
 .app-header__logo {
   display: flex;
-  flex-direction: row;
   align-items: center;
   gap: 0.75rem;
   text-decoration: none;
 }
 
-.app-header__logo-img {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  transition: transform 0.2s ease;
-}
-
-.app-header__logo-text-wrapper {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.app-header__logo-text {
-  font-family: "Cinzel", serif;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #c8c8c8;
-  transition: color 0.2s ease;
-}
-
-.app-header__logo-accent {
-  font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
-  font-style: italic;
-  color: #af6025;
-  transition: color 0.2s ease;
-}
-
-.app-header__logo:hover .app-header__logo-img {
-  transform: scale(1.05);
-}
-
-.app-header__logo:hover .app-header__logo-text {
+.app-header__logo:hover span:first-of-type {
   color: #e0e0e0;
 }
 
-.app-header__logo:hover .app-header__logo-accent {
+.app-header__logo:hover span:last-of-type {
   color: #c97a3a;
-}
-
-.app-header__nav {
-  display: flex;
 }
 
 /* Runic groove container for nav */
@@ -235,58 +195,5 @@ const navItems = [
   opacity: 0.6;
   transform: scale(1);
   color: #af6025;
-}
-
-.app-header__auth {
-  display: flex;
-  align-items: center;
-}
-
-.app-main {
-  flex: 1;
-}
-
-.app-footer {
-  padding: 2rem;
-  border-top: 1px solid rgba(42, 42, 48, 0.3);
-}
-
-.app-footer__content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.app-footer__logo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  opacity: 0.5;
-  transition: opacity 0.3s ease;
-}
-
-.app-footer__content:hover .app-footer__logo {
-  opacity: 0.8;
-}
-
-.app-footer p {
-  font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
-  color: #4a4a55;
-  margin: 0;
-}
-
-@media (max-width: 640px) {
-  .app-header__container {
-    flex-wrap: wrap;
-  }
-
-  .app-header__nav {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    margin-top: 0.5rem;
-  }
 }
 </style>

@@ -4,7 +4,7 @@
 
 /* ===========================================
    DESIGN SYSTEM - CSS Custom Properties
-   Centralized color, spacing, and transition definitions
+   Used by complex components (Runic*, cards)
    =========================================== */
 :root {
   /* Accent / Active color (Copper/Bronze) */
@@ -26,7 +26,7 @@
   --color-text-dim: #7f7f7f;
   --color-text-muted: #5a5a60;
   
-  /* Tier colors */
+  /* Tier colors (glow = bright, bg = muted) */
   --color-tier-t0: #c9a227;
   --color-tier-t0-bg: #6d5a2a;
   --color-tier-t1: #7a6a8a;
@@ -36,7 +36,7 @@
   --color-tier-t3: #5a5a5d;
   --color-tier-t3-bg: #2a2a2d;
   
-  /* Transitions */
+  /* Transitions - for complex CSS animations */
   --transition-fast: 150ms ease;
   --transition-base: 300ms ease;
   --transition-smooth: 300ms cubic-bezier(0.03, 0.98, 0.52, 0.99);
@@ -54,7 +54,9 @@
   --shadow-glow-accent: 0 0 15px var(--color-accent-glow);
 }
 
-/* Base styles */
+/* ===========================================
+   BASE STYLES
+   =========================================== */
 @layer base {
   html {
     @apply bg-poe-bg text-poe-text antialiased;
@@ -87,11 +89,17 @@
   }
 }
 
+/* ===========================================
+   COMPONENT CLASSES
+   Reusable patterns that combine Tailwind utilities
+   =========================================== */
 @layer components {
+  /* Page layout container */
   .page-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
   }
 
+  /* Gradient page title */
   .page-title {
     @apply font-display text-3xl md:text-4xl text-center mb-8;
     background: linear-gradient(135deg, #c8c8c8 0%, #af6025 50%, #c8c8c8 100%);
@@ -99,79 +107,4 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-
-  .btn-primary {
-    @apply px-6 py-2 rounded font-display text-sm tracking-wider uppercase;
-    @apply bg-gradient-to-r from-accent-dark to-accent;
-    @apply text-white shadow-lg;
-    @apply transition-all duration-300;
-    @apply hover:shadow-lg hover:scale-105;
-    --tw-shadow-color: rgba(175, 96, 37, 0.3);
-  }
-
-  /* Twitch button - keeps purple as it's brand-specific */
-  .btn-twitch {
-    @apply px-6 py-3 rounded-lg font-display text-sm tracking-wider;
-    @apply bg-[#9146FF] text-white;
-    @apply flex items-center gap-3;
-    @apply transition-all duration-300;
-    @apply hover:bg-[#7c3aed] hover:shadow-lg hover:shadow-purple-500/30;
-  }
-  
-  /* Accent button - uses copper color */
-  .btn-accent {
-    @apply px-6 py-3 rounded-lg font-display text-sm tracking-wider;
-    @apply text-white;
-    @apply flex items-center gap-3;
-    @apply transition-all duration-300;
-    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
-  }
-  
-  .btn-accent:hover {
-    box-shadow: 0 0 20px var(--color-accent-glow);
-    transform: translateY(-2px);
-  }
-  
-  /* ===========================================
-     DESIGN SYSTEM UTILITIES
-     =========================================== */
-  
-  /* Text colors using design system */
-  .text-accent {
-    color: var(--color-accent);
-  }
-  
-  .text-accent-light {
-    color: var(--color-accent-light);
-  }
-  
-  /* Border accent */
-  .border-accent {
-    border-color: var(--color-accent);
-  }
-  
-  /* Background accent */
-  .bg-accent-subtle {
-    background: var(--color-accent-glow-subtle);
-  }
-  
-  /* Glow effects */
-  .glow-accent {
-    box-shadow: var(--shadow-glow-accent);
-  }
-  
-  /* Active state base */
-  .state-active {
-    color: var(--color-accent-light);
-    background: var(--color-accent-glow-subtle);
-    border-color: rgba(175, 96, 37, 0.4);
-  }
-  
-  /* Focus ring */
-  .focus-accent:focus {
-    outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 2px var(--color-accent-glow-subtle);
-  }
 }
-

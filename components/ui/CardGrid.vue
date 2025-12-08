@@ -51,7 +51,7 @@ const [gridRef] = useAutoAnimate({
 </script>
 
 <template>
-  <div class="card-grid-wrapper">
+  <div class="relative">
     <!-- Grouped mode (with stacks) -->
     <div v-if="isGroupedMode && hasItems" ref="gridRef" class="card-grid">
       <div
@@ -87,13 +87,17 @@ const [gridRef] = useAutoAnimate({
     </div>
 
     <!-- Empty state -->
-    <div v-else class="card-grid__empty">
-      <div class="card-grid__empty-icon">
+    <div
+      v-else
+      class="flex flex-col items-center justify-center py-16 px-8 text-center"
+    >
+      <div class="w-20 h-20 mb-6 text-poe-border">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
+          class="w-full h-full"
         >
           <path
             stroke-linecap="round"
@@ -103,7 +107,7 @@ const [gridRef] = useAutoAnimate({
           />
         </svg>
       </div>
-      <p class="card-grid__empty-text">
+      <p class="font-body text-lg text-poe-text-dim">
         {{ emptyMessage || "Aucune carte trouvée" }}
       </p>
     </div>
@@ -111,10 +115,7 @@ const [gridRef] = useAutoAnimate({
 </template>
 
 <style scoped>
-.card-grid-wrapper {
-  position: relative;
-}
-
+/* Grid layout with auto-fill (requires CSS for minmax) */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -139,6 +140,7 @@ const [gridRef] = useAutoAnimate({
   }
 }
 
+/* Card item with entrance animation */
 .card-grid__item {
   animation: card-enter 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
   overflow: visible;
@@ -154,32 +156,5 @@ const [gridRef] = useAutoAnimate({
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-
-.card-grid__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-}
-
-.card-grid__empty-icon {
-  width: 80px;
-  height: 80px;
-  margin-bottom: 1.5rem;
-  color: #3a3a45;
-}
-
-.card-grid__empty-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.card-grid__empty-text {
-  font-family: "Crimson Text", serif;
-  font-size: 1.125rem;
-  color: #7f7f7f;
 }
 </style>

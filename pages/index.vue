@@ -60,7 +60,7 @@ onMounted(() => {
 
 <template>
   <NuxtLayout>
-    <div class="home-page">
+    <div class="relative min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
       <!-- Background ambient effects -->
       <div class="home-bg">
         <div class="home-bg__gradient"></div>
@@ -68,9 +68,13 @@ onMounted(() => {
       </div>
 
       <!-- Main content -->
-      <div class="home-content">
+      <div
+        class="relative z-10 min-h-[calc(100vh-80px)] flex items-center justify-center p-8"
+      >
         <!-- Central box containing all sections -->
-        <div class="home-box">
+        <div
+          class="flex flex-col items-center gap-10 md:gap-4 max-w-4xl w-full"
+        >
           <!-- Section 1: Hero (mascot + text) -->
           <section class="hero-section">
             <div
@@ -101,7 +105,7 @@ onMounted(() => {
           </section>
 
           <!-- Section 2: Card fan -->
-          <section class="card-section">
+          <section class="flex justify-center w-full mb-[10%]">
             <div class="card-fan" :class="{ 'card-fan--visible': isVisible }">
               <div
                 v-for="(card, index) in cards"
@@ -164,16 +168,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* ===========================================
-   PAGE LAYOUT
-   =========================================== */
-.home-page {
-  position: relative;
-  min-height: calc(100vh - 80px);
-  overflow-x: hidden;
-  width: 100%;
-}
-
 /* ===========================================
    BACKGROUND EFFECTS
    =========================================== */
@@ -252,37 +246,6 @@ onMounted(() => {
 }
 
 /* ===========================================
-   MAIN CONTENT
-   =========================================== */
-.home-content {
-  position: relative;
-  z-index: 1;
-  min-height: calc(100vh - 80px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-
-/* ===========================================
-   HOME BOX - Container for all sections
-   =========================================== */
-.home-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2.5rem;
-  max-width: 1000px;
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .home-box {
-    gap: 1rem;
-  }
-}
-
-/* ===========================================
    HERO SECTION
    =========================================== */
 .hero-section {
@@ -315,10 +278,31 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+@media (min-width: 640px) {
+  .hero-mascot {
+    width: 160px;
+    height: 160px;
+  }
+}
+
 @media (min-width: 768px) {
   .hero-mascot {
     width: 180px;
     height: 180px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-mascot {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero-mascot {
+    width: 200px;
+    height: 200px;
   }
 }
 
@@ -389,10 +373,28 @@ onMounted(() => {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
+@media (min-width: 640px) {
+  .hero-title__main {
+    font-size: 2.5rem;
+  }
+}
+
 @media (min-width: 768px) {
   .hero-title__main {
     display: inline;
     font-size: 2.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-title__main {
+    font-size: 2.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero-title__main {
+    font-size: 3rem;
   }
 }
 
@@ -428,6 +430,12 @@ onMounted(() => {
   }
 }
 
+@media (min-width: 1024px) {
+  .hero-description {
+    font-size: 1.125rem;
+  }
+}
+
 .hero-description__highlight {
   display: block;
   margin-top: 0.75rem;
@@ -436,15 +444,8 @@ onMounted(() => {
 }
 
 /* ===========================================
-   CARD SECTION
+   CARD FAN - Complex animation system
    =========================================== */
-.card-section {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: 10%;
-}
-
 .card-fan {
   position: relative;
   width: 100%;
@@ -464,6 +465,26 @@ onMounted(() => {
   transform: translateY(0);
 }
 
+@media (min-width: 640px) {
+  .card-fan {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-fan {
+    height: 350px;
+    max-width: 750px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .card-fan {
+    height: 400px;
+    max-width: 850px;
+  }
+}
+
 /* Individual card in fan */
 .fan-card {
   position: absolute;
@@ -478,6 +499,27 @@ onMounted(() => {
   transition: all 0.3s ease-out;
   animation: card-entrance 0.6s ease backwards;
   animation-delay: calc(0.5s + var(--delay));
+}
+
+@media (min-width: 640px) {
+  .fan-card {
+    width: 165px;
+    height: 231px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .fan-card {
+    width: 190px;
+    height: 266px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .fan-card {
+    width: 220px;
+    height: 308px;
+  }
 }
 
 @keyframes card-entrance {
@@ -702,79 +744,6 @@ onMounted(() => {
   .cta-section {
     flex-direction: row;
     gap: 1.5rem;
-  }
-}
-
-/* ===========================================
-   RESPONSIVE
-   =========================================== */
-@media (min-width: 640px) {
-  .hero-mascot {
-    width: 160px;
-    height: 160px;
-  }
-
-  .hero-title__main {
-    font-size: 2.5rem;
-  }
-
-  .card-fan {
-    height: 300px;
-  }
-
-  .fan-card {
-    width: 165px;
-    height: 231px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .hero-mascot {
-    width: 180px;
-    height: 180px;
-  }
-
-  .hero-title__main {
-    font-size: 2.75rem;
-  }
-
-  .hero-description {
-    font-size: 1.125rem;
-  }
-
-  .card-fan {
-    height: 350px;
-    max-width: 750px;
-  }
-
-  .fan-card {
-    width: 190px;
-    height: 266px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .home-box {
-    gap: 3.5rem;
-  }
-
-  .hero-mascot {
-    width: 200px;
-    height: 200px;
-  }
-
-  .hero-title__main {
-    font-size: 3rem;
-  }
-
-  .card-fan {
-    height: 400px;
-    max-width: 850px;
-  }
-
-  .fan-card {
-    width: 220px;
-    height: 308px;
   }
 }
 </style>

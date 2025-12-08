@@ -299,7 +299,7 @@
 /* T3 - Commun (Basalte) */
 .game-card--t3 {
   --tier-color: #2a2a2d;
-  --tier-glow: #4a4a4d;
+  --tier-glow: #5a5a5d;
 }
 
 .game-card--t3 .game-card__frame {

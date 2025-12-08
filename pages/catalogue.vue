@@ -65,9 +65,9 @@ const stats = computed(() => ({
   <NuxtLayout>
     <div class="page-container">
       <!-- Page header -->
-      <div class="catalog-header">
+      <div class="text-center mb-8">
         <h1 class="page-title">Le Registre des Âmes</h1>
-        <p class="catalog-subtitle">
+        <p class="font-body text-lg text-poe-text-dim mt-2">
           Contemple ce que tu ne posséderas probablement jamais, exile.
         </p>
       </div>
@@ -84,9 +84,9 @@ const stats = computed(() => ({
       />
 
       <!-- Filters -->
-      <div class="catalog-filters">
+      <div class="flex flex-col md:flex-row gap-4 md:items-center md:justify-between my-8">
         <!-- Search - Runic input -->
-        <div class="catalog-filters__search">
+        <div class="flex-1 max-w-md">
           <RunicInput
             v-model="searchQuery"
             placeholder="Fouille dans les ténèbres..."
@@ -112,39 +112,3 @@ const stats = computed(() => ({
     </div>
   </NuxtLayout>
 </template>
-
-<style scoped>
-.catalog-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.catalog-subtitle {
-  font-family: 'Crimson Text', serif;
-  font-size: 1.125rem;
-  color: #7f7f7f;
-  margin-top: 0.5rem;
-}
-
-.catalog-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  margin-top: 2rem;
-}
-
-@media (min-width: 768px) {
-  .catalog-filters {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.catalog-filters__search {
-  flex: 1;
-  max-width: 400px;
-}
-</style>
-

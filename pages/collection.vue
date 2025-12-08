@@ -94,17 +94,22 @@ const filteredIndividualCards = computed(() => {
   <NuxtLayout>
     <div class="page-container">
       <!-- Not authenticated -->
-      <div v-if="!loggedIn" class="collection-auth">
+      <div
+        v-if="!loggedIn"
+        class="min-h-[60vh] flex items-center justify-center"
+      >
         <RunicBox padding="lg" max-width="400px" centered>
-          <div class="collection-auth__icon">
+          <div class="w-40 h-40 mx-auto mb-6">
             <img
               src="/images/logo.png"
               alt="Logo"
-              class="collection-auth__logo"
+              class="w-full h-full object-contain"
             />
           </div>
-          <h1 class="collection-auth__title">Prouve ton existence</h1>
-          <p class="collection-auth__text">
+          <h1 class="font-display text-2xl text-poe-text mb-3">
+            Prouve ton existence
+          </h1>
+          <p class="font-body text-poe-text-dim mb-8 leading-relaxed">
             Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité,
             exile.
           </p>
@@ -124,8 +129,8 @@ const filteredIndividualCards = computed(() => {
       <!-- Authenticated -->
       <div v-if="loggedIn">
         <!-- Profile & Stats Hero - Runic tablet style -->
-        <RunicBox padding="md" class="collection-hero-box">
-          <div class="collection-hero">
+        <RunicBox padding="md" class="mb-8">
+          <div class="grid gap-6 md:grid-cols-[auto_1fr_auto] md:items-center">
             <!-- Left: User Profile -->
             <div class="collection-profile">
               <div class="collection-profile__avatar-wrapper">
@@ -136,12 +141,18 @@ const filteredIndividualCards = computed(() => {
                   class="collection-profile__avatar"
                 />
               </div>
-              <div class="collection-profile__info">
-                <h1 class="collection-profile__name">{{ user.name }}</h1>
-                <div class="collection-profile__subtitle">
-                  <span class="collection-profile__rune">◆</span>
+              <div class="flex flex-col gap-1">
+                <h1
+                  class="font-display text-2xl font-semibold text-white/90 tracking-wide m-0"
+                >
+                  {{ user.name }}
+                </h1>
+                <div
+                  class="flex items-center gap-2 font-body text-sm text-poe-text-muted italic"
+                >
+                  <span class="text-[0.5rem] text-accent opacity-70">◆</span>
                   <span>Exile</span>
-                  <span class="collection-profile__rune">◆</span>
+                  <span class="text-[0.5rem] text-accent opacity-70">◆</span>
                 </div>
               </div>
             </div>
@@ -185,15 +196,18 @@ const filteredIndividualCards = computed(() => {
         </RunicBox>
 
         <!-- Filters Bar -->
-        <div class="collection-toolbar">
-          <div class="collection-toolbar__toggle-wrapper">
+        <div
+          class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between mb-8 p-4 bg-poe-surface/60 border border-poe-border/40 rounded-xl"
+        >
+          <div class="flex items-center gap-3">
             <RunicRadio
               v-model="showDuplicates"
               :toggle="true"
               toggle-color="default"
               size="sm"
             />
-            <span class="collection-toolbar__toggle-label"
+            <span
+              class="font-body text-sm text-poe-text-dim transition-colors duration-base"
               >Révéler les doublons</span
             >
           </div>
@@ -220,68 +234,8 @@ const filteredIndividualCards = computed(() => {
 </template>
 
 <style scoped>
-/* Auth view */
-.collection-auth {
-  min-height: 60vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.collection-auth__icon {
-  width: 160px;
-  height: 160px;
-  margin: 0 auto 1.5rem;
-}
-
-.collection-auth__icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.collection-auth__logo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.collection-auth__title {
-  font-family: "Cinzel", serif;
-  font-size: 1.5rem;
-  color: #c8c8c8;
-  margin-bottom: 0.75rem;
-}
-
-.collection-auth__text {
-  font-family: "Crimson Text", serif;
-  font-size: 1rem;
-  color: #7f7f7f;
-  margin-bottom: 2rem;
-  line-height: 1.6;
-}
-
 /* ===========================================
-   COLLECTION HERO SECTION
-   =========================================== */
-.collection-hero-box {
-  margin-bottom: 2rem;
-}
-
-.collection-hero {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .collection-hero {
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-  }
-}
-
-/* ===========================================
-   PROFILE SECTION
+   PROFILE SECTION - Avatar with animated ring
    =========================================== */
 .collection-profile {
   display: flex;
@@ -334,37 +288,6 @@ const filteredIndividualCards = computed(() => {
   border-radius: 50%;
   object-fit: cover;
   z-index: 1;
-}
-
-.collection-profile__info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.collection-profile__name {
-  font-family: "Cinzel", serif;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #e8e8e8;
-  letter-spacing: 0.5px;
-  margin: 0;
-}
-
-.collection-profile__subtitle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
-  color: #6a6a70;
-  font-style: italic;
-}
-
-.collection-profile__rune {
-  font-size: 0.5rem;
-  color: var(--color-accent, #af6025);
-  opacity: 0.7;
 }
 
 /* ===========================================
@@ -565,41 +488,5 @@ const filteredIndividualCards = computed(() => {
 }
 .collection-tiers__item--t3 .collection-tiers__label {
   color: rgba(90, 90, 95, 0.6);
-}
-
-/* ===========================================
-   TOOLBAR / FILTERS
-   =========================================== */
-.collection-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding: 1rem 1.25rem;
-  background: rgba(15, 15, 18, 0.6);
-  border: 1px solid rgba(40, 40, 45, 0.4);
-  border-radius: 12px;
-}
-
-@media (min-width: 640px) {
-  .collection-toolbar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-/* Toggle Wrapper */
-.collection-toolbar__toggle-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.collection-toolbar__toggle-label {
-  font-family: "Crimson Text", serif;
-  font-size: 0.9rem;
-  color: #7a7a80;
-  transition: color 0.3s ease;
 }
 </style>
