@@ -65,33 +65,45 @@
 .game-card__frame::after {
   content: '';
   position: absolute;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--tier-color, #3a3a40);
-  opacity: 0.5;
-  transition: opacity var(--card-transition), border-color var(--card-transition);
+  width: 16px;
+  height: 16px;
+  opacity: 0.4;
+  transition: opacity var(--card-transition), filter var(--card-transition);
+  pointer-events: none;
 }
 
+/* Top-left corner - subtle engraved L */
 .game-card__frame::before {
   top: 5px;
   left: 5px;
-  border-right: none;
-  border-bottom: none;
+  background: 
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.4) 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(80, 70, 55, 0.4) 50%,
+      transparent 100%
+    );
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 0, 0 0;
+  background-repeat: no-repeat;
 }
 
+/* Bottom-right corner - hidden */
 .game-card__frame::after {
-  bottom: 5px;
-  right: 5px;
-  border-left: none;
-  border-top: none;
+  display: none;
 }
 
 @media (min-width: 640px) {
   .game-card__frame::before,
   .game-card__frame::after {
-    width: 25px;
-    height: 25px;
-    border-width: 2px;
+    width: 20px;
+    height: 20px;
   }
   
   .game-card__frame::before {
@@ -108,8 +120,8 @@
 @media (min-width: 1024px) {
   .game-card__frame::before,
   .game-card__frame::after {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
   }
   
   .game-card__frame::before {
@@ -123,11 +135,32 @@
   }
 }
 
+/* Hover state - subtle glow with tier color */
 .game-card--hovering .game-card__frame::before,
 .game-card--hovering .game-card__frame::after {
-  opacity: 0.8;
-  border-color: var(--tier-glow, var(--tier-color));
+  opacity: 0.6;
 }
+
+.game-card--hovering .game-card__frame::before {
+  background: 
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--tier-glow, rgba(100, 90, 70, 0.5)) 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--tier-glow, rgba(100, 90, 70, 0.5)) 50%,
+      transparent 100%
+    );
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 0, 0 0;
+  background-repeat: no-repeat;
+}
+
+
 
 .game-card__image-wrapper {
   position: absolute;
@@ -215,6 +248,11 @@
 }
 
 .game-card__name {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-family: 'Cinzel', serif;
   font-size: 11px;
   font-weight: 600;
@@ -223,15 +261,48 @@
   margin-bottom: 2px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
   transition: color var(--card-transition), text-shadow var(--card-transition);
+}
+
+/* Diamond ornaments on each side of the name */
+.game-card__name::before,
+.game-card__name::after {
+  content: '';
+  flex-shrink: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--tier-color, rgba(80, 70, 55, 0.6));
+  transform: rotate(45deg);
+  opacity: 0.4;
+  transition: opacity var(--card-transition), background var(--card-transition);
+}
+
+.game-card--hovering .game-card__name::before,
+.game-card--hovering .game-card__name::after {
+  opacity: 0.7;
+  background: var(--tier-glow, rgba(100, 90, 70, 0.8));
+}
+
+.game-card__name-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 @media (min-width: 640px) {
   .game-card__name {
     font-size: 13px;
     margin-bottom: 3px;
+    gap: 8px;
+  }
+  
+  .game-card__name::before,
+  .game-card__name::after {
+    width: 5px;
+    height: 5px;
+  }
+  
+  .game-card__name-text {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
@@ -242,6 +313,13 @@
   .game-card__name {
     font-size: 14px;
     margin-bottom: 4px;
+    gap: 10px;
+  }
+  
+  .game-card__name::before,
+  .game-card__name::after {
+    width: 5px;
+    height: 5px;
   }
 }
 

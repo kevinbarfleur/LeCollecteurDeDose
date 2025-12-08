@@ -411,7 +411,9 @@ const showOverlay = computed(() => animationState.value !== "idle");
                 </div>
               </div>
               <div class="game-card__info">
-                <h3 class="game-card__name">{{ card.name }}</h3>
+                <h3 class="game-card__name">
+                  <span class="game-card__name-text">{{ card.name }}</span>
+                </h3>
                 <p class="game-card__class">{{ card.itemClass }}</p>
               </div>
             </div>
@@ -595,7 +597,9 @@ const showOverlay = computed(() => animationState.value !== "idle");
         </div>
       </div>
       <div class="game-card__info">
-        <h3 class="game-card__name">{{ card.name }}</h3>
+        <h3 class="game-card__name">
+          <span class="game-card__name-text">{{ card.name }}</span>
+        </h3>
         <p class="game-card__class">{{ card.itemClass }}</p>
       </div>
     </article>
