@@ -275,7 +275,7 @@ const filteredIndividualCards = computed(() => {
   position: absolute;
   width: 60px;
   height: 60px;
-  border: 1px solid rgba(145, 70, 255, 0.2);
+  border: 1px solid var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.2));
   pointer-events: none;
 }
 
@@ -324,11 +324,11 @@ const filteredIndividualCards = computed(() => {
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
-    rgba(145, 70, 255, 0.6) 0%,
-    rgba(145, 70, 255, 0.1) 25%,
-    rgba(145, 70, 255, 0.6) 50%,
-    rgba(145, 70, 255, 0.1) 75%,
-    rgba(145, 70, 255, 0.6) 100%
+    rgba(175, 96, 37, 0.7) 0%,
+    rgba(175, 96, 37, 0.15) 25%,
+    rgba(175, 96, 37, 0.7) 50%,
+    rgba(175, 96, 37, 0.15) 75%,
+    rgba(175, 96, 37, 0.7) 100%
   );
   animation: ring-rotate 8s linear infinite;
 }
@@ -382,8 +382,8 @@ const filteredIndividualCards = computed(() => {
 
 .collection-profile__rune {
   font-size: 0.5rem;
-  color: #9146FF;
-  opacity: 0.6;
+  color: var(--color-accent, #af6025);
+  opacity: 0.7;
 }
 
 /* ===========================================
@@ -418,7 +418,7 @@ const filteredIndividualCards = computed(() => {
   font-weight: 700;
   color: #e8e8e8;
   line-height: 1;
-  text-shadow: 0 0 30px rgba(145, 70, 255, 0.15);
+  text-shadow: 0 0 30px var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.15));
 }
 
 .collection-main-stats__label {
@@ -576,14 +576,14 @@ const filteredIndividualCards = computed(() => {
 }
 
 .collection-toolbar__checkbox:checked + .collection-toolbar__toggle-track {
-  background: rgba(145, 70, 255, 0.3);
-  border-color: rgba(145, 70, 255, 0.5);
+  background: var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.2));
+  border-color: rgba(175, 96, 37, 0.5);
 }
 
 .collection-toolbar__checkbox:checked + .collection-toolbar__toggle-track .collection-toolbar__toggle-thumb {
   transform: translateX(20px);
-  background: #9146FF;
-  box-shadow: 0 0 10px rgba(145, 70, 255, 0.5);
+  background: var(--color-accent, #af6025);
+  box-shadow: 0 0 10px var(--color-accent-glow, rgba(175, 96, 37, 0.5));
 }
 
 .collection-toolbar__toggle-label {
@@ -638,10 +638,10 @@ const filteredIndividualCards = computed(() => {
 }
 
 .collection-toolbar__filter-btn--active {
-  color: #c8c8d0;
-  background: rgba(145, 70, 255, 0.15);
-  border-color: rgba(145, 70, 255, 0.4);
-  box-shadow: 0 0 15px rgba(145, 70, 255, 0.1);
+  color: var(--color-accent-light, #c97a3a);
+  background: var(--color-accent-glow-subtle, rgba(175, 96, 37, 0.15));
+  border-color: rgba(175, 96, 37, 0.4);
+  box-shadow: 0 0 15px rgba(175, 96, 37, 0.1);
 }
 
 /* Tier-specific active states */

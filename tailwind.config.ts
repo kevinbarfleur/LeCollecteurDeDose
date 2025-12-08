@@ -15,9 +15,20 @@ export default {
         'poe': {
           'bg': '#0c0c0e',
           'surface': '#151518',
+          'surface-light': '#1a1a1f',
           'border': '#2a2a30',
+          'border-light': '#3a3a40',
           'text': '#c8c8c8',
           'text-dim': '#7f7f7f',
+          'text-muted': '#5a5a60',
+        },
+        // Accent color - Copper/Bronze (used for active states, links, highlights)
+        'accent': {
+          DEFAULT: '#af6025',
+          light: '#c97a3a',
+          dark: '#8a4d1e',
+          glow: 'rgba(175, 96, 37, 0.4)',
+          'glow-subtle': 'rgba(175, 96, 37, 0.15)',
         },
         // Tier colors - "Glyphes Éteints" palette
         'tier': {
@@ -28,8 +39,9 @@ export default {
           't2': '#3a4550',        // Ardoise
           't2-glow': '#5a7080',   // Éclat subtil
           't3': '#2a2a2d',        // Basalte
+          't3-glow': '#5a5a5d',   // Lueur grise
         },
-        // Rarity colors (PoE style)
+        // Rarity colors (PoE style) - alias for accent
         'unique': '#af6025',
       },
       fontFamily: {
@@ -39,9 +51,12 @@ export default {
       boxShadow: {
         'card': '0 4px 20px rgba(0, 0, 0, 0.5)',
         'card-hover': '0 8px 40px rgba(0, 0, 0, 0.7)',
+        'glow-accent': '0 0 15px rgba(175, 96, 37, 0.4)',
+        'glow-accent-subtle': '0 0 10px rgba(175, 96, 37, 0.2)',
         'glow-t0': '0 0 20px rgba(201, 162, 39, 0.3)',
         'glow-t1': '0 0 15px rgba(122, 106, 138, 0.25)',
         'glow-t2': '0 0 10px rgba(90, 112, 128, 0.2)',
+        'glow-t3': '0 0 8px rgba(90, 90, 93, 0.15)',
       },
       animation: {
         'shimmer': 'shimmer 3s ease-in-out infinite',
