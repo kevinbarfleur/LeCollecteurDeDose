@@ -2,7 +2,7 @@
 const route = useRoute();
 
 const navItems = [
-  { path: "/", label: "Catalogue", icon: "cards" },
+  { path: "/catalogue", label: "Catalogue", icon: "cards" },
   { path: "/collection", label: "Ma Collection", icon: "user" },
   { path: "/about", label: "À propos", icon: "info" },
 ];
