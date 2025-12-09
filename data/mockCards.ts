@@ -113,6 +113,17 @@ const cardDb = {
   circle_of_guilt: getCardById('circle_of_guilt'),
   vivinsect: getCardById('vivinsect'),
   tasalios_sign: getCardById('tasalios_sign'),
+  the_light_of_meaning: getCardById('the_light_of_meaning'),
+  the_magnate: getCardById('the_magnate'),
+  the_interrogation: getCardById('the_interrogation'),
+  the_queens_hunger: getCardById('the_queens_hunger'),
+  the_coming_calamity: getCardById('the_coming_calamity'),
+  the_flow_untethered: getCardById('the_flow_untethered'),
+  the_torrents_reclamation: getCardById('the_torrents_reclamation'),
+  the_ivory_tower: getCardById('the_ivory_tower'),
+  the_three_dragons: getCardById('the_three_dragons'),
+  the_rat_cage: getCardById('the_rat_cage'),
+  the_iron_fortress: getCardById('the_iron_fortress'),
   
   // T3 - Common items
   bloodsoaked_medallion: getCardById('bloodsoaked_medallion'),
@@ -310,6 +321,44 @@ const collectionCards: (Card | undefined)[] = [
   createCollectionCard(cardDb.maligaros_restraint),
   createCollectionCard(cardDb.olesyas_delight),
   
+  // ========== T2 UNCOMMONS - Mid-tier items ==========
+  
+  // The Magnate - Damage belt
+  createCollectionCard(cardDb.the_magnate),
+  createCollectionCard(cardDb.the_magnate),
+  
+  // The Flow Untethered - Harbinger belt
+  createCollectionCard(cardDb.the_flow_untethered),
+  
+  // The Torrent's Reclamation - Quiver belt
+  createCollectionCard(cardDb.the_torrents_reclamation),
+  createCollectionCard(cardDb.the_torrents_reclamation, true), // foil
+  
+  // The Ivory Tower - ES body armour
+  createCollectionCard(cardDb.the_ivory_tower),
+  
+  // The Coming Calamity - Herald chest
+  createCollectionCard(cardDb.the_coming_calamity),
+  createCollectionCard(cardDb.the_coming_calamity),
+  
+  // The Three Dragons - Elemental helmet
+  createCollectionCard(cardDb.the_three_dragons),
+  createCollectionCard(cardDb.the_three_dragons),
+  createCollectionCard(cardDb.the_three_dragons),
+  
+  // The Iron Fortress - Block chest
+  createCollectionCard(cardDb.the_iron_fortress),
+  
+  // The Light of Meaning - Jewel
+  createCollectionCard(cardDb.the_light_of_meaning),
+  createCollectionCard(cardDb.the_light_of_meaning),
+  
+  // The Interrogation - Secrets jewel
+  createCollectionCard(cardDb.the_interrogation),
+  
+  // The Rat Cage - Fire damage chest
+  createCollectionCard(cardDb.the_rat_cage),
+
   // ========== T1 EPICS - A few lucky drops ==========
   
   // Megalomaniac - Cluster jewel
