@@ -710,7 +710,7 @@ onUnmounted(() => {
   width: 100%;
   padding: 0.75rem 1rem;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 3px;
   cursor: pointer;
   text-align: left;
@@ -718,28 +718,63 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
+/* Hover: runic borders */
 .runic-select__option:hover {
-  background: rgba(175, 96, 37, 0.1);
+  border-color: rgba(175, 135, 80, 0.3);
+  box-shadow: 
+    inset 0 0 0 1px rgba(175, 135, 80, 0.1),
+    0 0 8px rgba(175, 135, 80, 0.05);
 }
 
+.runic-select__option:hover::before,
+.runic-select__option:hover::after {
+  content: "◆";
+  position: absolute;
+  font-size: 0.4rem;
+  color: rgba(175, 135, 80, 0.5);
+}
+
+.runic-select__option:hover::before {
+  top: 50%;
+  left: 4px;
+  transform: translateY(-50%);
+}
+
+.runic-select__option:hover::after {
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+}
+
+/* Selected: subtle dashed pattern background */
 .runic-select__option--selected {
-  background: rgba(175, 96, 37, 0.15);
+  background: 
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 4px,
+      rgba(175, 135, 80, 0.06) 4px,
+      rgba(175, 135, 80, 0.06) 8px
+    );
+  border-color: rgba(175, 135, 80, 0.2);
+}
+
+.runic-select__option--selected:hover {
+  background: 
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 4px,
+      rgba(175, 135, 80, 0.08) 4px,
+      rgba(175, 135, 80, 0.08) 8px
+    );
+  border-color: rgba(175, 135, 80, 0.35);
 }
 
 /* Pinned indicator for selected options in multiple mode */
 .runic-select__option--pinned {
-  border-left: 2px solid rgba(175, 96, 37, 0.5);
+  border-left: 2px solid rgba(175, 135, 80, 0.4);
   padding-left: calc(1rem - 2px);
-}
-
-.runic-select__option--pinned::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(175, 96, 37, 0.2), transparent);
 }
 
 /* Checkbox for multiple mode */

@@ -109,12 +109,12 @@ const stats = computed(() => {
   };
 });
 
-// Filters
-const searchQuery = ref("");
-const selectedCategories = ref<string[]>([]);
-const showDuplicates = ref(false);
-const selectedTier = ref<CardTier | "all">("all");
-const selectedSort = ref("rarity-asc");
+// Persisted filters (stored in sessionStorage)
+const searchQuery = usePersistedFilter("collection_search", "");
+const selectedCategories = usePersistedFilter<string[]>("collection_categories", []);
+const showDuplicates = usePersistedFilter("collection_duplicates", false);
+const selectedTier = usePersistedFilter<CardTier | "all">("collection_tier", "all");
+const selectedSort = usePersistedFilter("collection_sort", "rarity-asc");
 
 // Sort options
 type SortOption = "rarity-asc" | "rarity-desc" | "alpha-asc" | "alpha-desc" | "category-asc" | "category-desc";
@@ -402,42 +402,51 @@ const filteredIndividualCards = computed(() => {
         </div>
 
         <!-- Filters -->
-        <div class="flex flex-col gap-3 sm:gap-4 mb-8">
-          <!-- Search, Category and Sort filters -->
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div class="flex-1 max-w-full sm:max-w-xs">
-              <RunicInput
-                v-model="searchQuery"
-                :placeholder="t('catalogue.search.placeholder')"
-                icon="search"
-                size="md"
-              />
+        <RunicBox padding="md" class="mb-8">
+          <div class="flex flex-col gap-4">
+            <!-- Search, Category and Sort filters -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div class="flex-1 max-w-full sm:max-w-xs">
+                <RunicInput
+                  v-model="searchQuery"
+                  :placeholder="t('catalogue.search.placeholder')"
+                  icon="search"
+                  size="md"
+                />
+              </div>
+
+              <div class="flex-1 max-w-full sm:max-w-xs">
+                <RunicSelect
+                  v-model="selectedCategories"
+                  :options="categoryOptions"
+                  placeholder="Catégories possédées..."
+                  size="md"
+                  :searchable="true"
+                  :multiple="true"
+                  :max-visible-items="10"
+                />
+              </div>
+
+              <div class="w-full sm:w-auto sm:min-w-[200px]">
+                <RunicSelect
+                  v-model="selectedSort"
+                  :options="sortOptions"
+                  placeholder="Trier par..."
+                  size="md"
+                />
+              </div>
             </div>
 
-            <div class="flex-1 max-w-full sm:max-w-xs">
-              <RunicSelect
-                v-model="selectedCategories"
-                :options="categoryOptions"
-                placeholder="Catégories possédées..."
-                size="md"
-                :searchable="true"
-                :multiple="true"
-                :max-visible-items="10"
-              />
+            <!-- Runic separator -->
+            <div class="runic-separator">
+              <span class="runic-separator__rune">◆</span>
+              <span class="runic-separator__line"></span>
+              <span class="runic-separator__rune-center">✦</span>
+              <span class="runic-separator__line"></span>
+              <span class="runic-separator__rune">◆</span>
             </div>
 
-            <div class="w-full sm:w-auto sm:min-w-[200px]">
-              <RunicSelect
-                v-model="selectedSort"
-                :options="sortOptions"
-                placeholder="Trier par..."
-                size="md"
-              />
-            </div>
-          </div>
-
-          <!-- Duplicates toggle and Tier filter -->
-          <RunicBox padding="sm">
+            <!-- Duplicates toggle and Tier filter -->
             <div
               class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between"
             >
@@ -460,8 +469,8 @@ const filteredIndividualCards = computed(() => {
                 size="md"
               />
             </div>
-          </RunicBox>
-        </div>
+          </div>
+        </RunicBox>
 
         <CardGrid
           v-if="!showDuplicates"
@@ -575,5 +584,37 @@ const filteredIndividualCards = computed(() => {
   .collection-tiers {
     justify-content: flex-end;
   }
+}
+
+.runic-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.runic-separator__rune {
+  font-size: 0.5rem;
+  color: var(--color-accent);
+  opacity: 0.5;
+}
+
+.runic-separator__rune-center {
+  font-size: 0.625rem;
+  color: var(--color-accent);
+  opacity: 0.7;
+  text-shadow: 0 0 8px var(--color-accent);
+}
+
+.runic-separator__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(175, 135, 80, 0.15) 30%,
+    rgba(175, 135, 80, 0.15) 70%,
+    transparent
+  );
 }
 </style>

@@ -38,10 +38,11 @@ const ownedCardIds = computed(() =>
     .map(([id]) => id)
 )
 
-const searchQuery = ref('')
-const selectedTier = ref<CardTier | 'all'>('all')
-const selectedCategories = ref<string[]>([])
-const selectedSort = ref('rarity-asc')
+// Persisted filters (stored in sessionStorage)
+const searchQuery = usePersistedFilter('catalogue_search', '')
+const selectedTier = usePersistedFilter<CardTier | 'all'>('catalogue_tier', 'all')
+const selectedCategories = usePersistedFilter<string[]>('catalogue_categories', [])
+const selectedSort = usePersistedFilter('catalogue_sort', 'rarity-asc')
 
 // Sort options
 type SortOption = 'rarity-asc' | 'rarity-desc' | 'alpha-asc' | 'alpha-desc' | 'category-asc' | 'category-desc'
@@ -198,50 +199,61 @@ const stats = computed(() => ({
       />
       </div>
 
-      <!-- Filters row -->
-      <div class="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6 md:my-8">
-        <!-- Search, Category and Sort filters -->
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div class="flex-1 max-w-full sm:max-w-xs">
-            <RunicInput
-              v-model="searchQuery"
-              :placeholder="t('catalogue.search.placeholder')"
-              icon="search"
-              size="md"
-            />
-          </div>
-          
-          <div class="flex-1 max-w-full sm:max-w-xs">
-            <RunicSelect
-              v-model="selectedCategories"
-              :options="categoryOptions"
-              placeholder="Catégories d'objets..."
-              size="md"
-              :searchable="true"
-              :multiple="true"
-              :max-visible-items="10"
-            />
+      <!-- Filters -->
+      <RunicBox padding="md" class="mb-8">
+        <div class="flex flex-col gap-4">
+          <!-- Search, Category and Sort filters -->
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="flex-1 max-w-full sm:max-w-xs">
+              <RunicInput
+                v-model="searchQuery"
+                :placeholder="t('catalogue.search.placeholder')"
+                icon="search"
+                size="md"
+              />
+            </div>
+            
+            <div class="flex-1 max-w-full sm:max-w-xs">
+              <RunicSelect
+                v-model="selectedCategories"
+                :options="categoryOptions"
+                placeholder="Catégories d'objets..."
+                size="md"
+                :searchable="true"
+                :multiple="true"
+                :max-visible-items="10"
+              />
+            </div>
+
+            <div class="w-full sm:w-auto sm:min-w-[200px]">
+              <RunicSelect
+                v-model="selectedSort"
+                :options="sortOptions"
+                placeholder="Trier par..."
+                size="md"
+              />
+            </div>
           </div>
 
-          <div class="w-full sm:w-auto sm:min-w-[200px]">
-            <RunicSelect
-              v-model="selectedSort"
-              :options="sortOptions"
-              placeholder="Trier par..."
+          <!-- Runic separator -->
+          <div class="runic-separator">
+            <span class="runic-separator__rune">◆</span>
+            <span class="runic-separator__line"></span>
+            <span class="runic-separator__rune-center">✦</span>
+            <span class="runic-separator__line"></span>
+            <span class="runic-separator__rune">◆</span>
+          </div>
+
+          <!-- Tier filter -->
+          <div class="flex justify-end">
+            <RunicRadio
+              v-model="selectedTier"
+              :options="tierOptions"
               size="md"
             />
           </div>
         </div>
-
-        <!-- Tier filter -->
-        <div class="flex justify-end">
-          <RunicRadio
-            v-model="selectedTier"
-            :options="tierOptions"
-            size="md"
-          />
-        </div>
-      </div>
+      </RunicBox>
 
       <CardGrid 
         :cards="filteredCards" 
@@ -251,3 +263,37 @@ const stats = computed(() => ({
     </div>
   </NuxtLayout>
 </template>
+
+<style scoped>
+.runic-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.runic-separator__rune {
+  font-size: 0.5rem;
+  color: var(--color-accent);
+  opacity: 0.5;
+}
+
+.runic-separator__rune-center {
+  font-size: 0.625rem;
+  color: var(--color-accent);
+  opacity: 0.7;
+  text-shadow: 0 0 8px var(--color-accent);
+}
+
+.runic-separator__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(175, 135, 80, 0.15) 30%,
+    rgba(175, 135, 80, 0.15) 70%,
+    transparent
+  );
+}
+</style>
