@@ -9,6 +9,7 @@ const navItems = computed(() => [
 ]);
 
 const showSettings = ref(false);
+const showLegalModal = ref(false);
 </script>
 
 <template>
@@ -74,17 +75,40 @@ const showSettings = ref(false);
     </main>
 
     <footer class="app-footer">
-      <div class="flex items-center justify-center gap-2 group p-4 sm:p-8">
-        <img
-          src="/images/card-back-logo.png"
-          alt="Logo"
-          class="w-5 h-5 sm:w-6 sm:h-6 object-contain opacity-50 transition-opacity duration-base group-hover:opacity-80"
-        />
-        <p class="font-body text-xs sm:text-sm text-poe-text-muted m-0">
-          {{ t("app.footer") }}
-        </p>
+      <div class="flex flex-col items-center gap-3 p-4 sm:p-6">
+        <!-- Original footer content -->
+        <div class="flex items-center gap-2 group">
+          <img
+            src="/images/card-back-logo.png"
+            alt="Logo"
+            class="w-5 h-5 sm:w-6 sm:h-6 object-contain opacity-50 transition-opacity duration-base group-hover:opacity-80"
+          />
+          <p class="font-body text-xs sm:text-sm text-poe-text-muted m-0">
+            {{ t("app.footer") }}
+          </p>
+        </div>
+
+        <!-- Disclaimer line -->
+        <div class="footer-disclaimer">
+          <span class="footer-disclaimer__rune">◆</span>
+          <p class="footer-disclaimer__text">
+            {{ t("footer.disclaimer") }}
+          </p>
+          <span class="footer-disclaimer__separator">·</span>
+          <button
+            type="button"
+            class="footer-disclaimer__link"
+            @click="showLegalModal = true"
+          >
+            {{ t("footer.legal_link") }}
+          </button>
+          <span class="footer-disclaimer__rune">◆</span>
+        </div>
       </div>
     </footer>
+
+    <!-- Legal Modal -->
+    <LegalModal v-model="showLegalModal" />
   </div>
 </template>
 
@@ -609,6 +633,70 @@ const showSettings = ref(false);
     transparent
   );
   pointer-events: none;
+}
+
+/* Footer Disclaimer */
+.footer-disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footer-disclaimer__rune {
+  font-size: 0.375rem;
+  color: rgba(80, 70, 60, 0.4);
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .footer-disclaimer__rune {
+    display: inline;
+  }
+}
+
+.footer-disclaimer__text {
+  margin: 0;
+  font-family: "Crimson Text", serif;
+  font-size: 0.6875rem;
+  color: rgba(100, 95, 90, 0.6);
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .footer-disclaimer__text {
+    font-size: 0.75rem;
+  }
+}
+
+.footer-disclaimer__separator {
+  color: rgba(80, 70, 60, 0.4);
+  font-size: 0.75rem;
+}
+
+.footer-disclaimer__link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: "Crimson Text", serif;
+  font-size: 0.6875rem;
+  color: rgba(175, 96, 37, 0.7);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .footer-disclaimer__link {
+    font-size: 0.75rem;
+  }
+}
+
+.footer-disclaimer__link:hover {
+  color: #c97a3a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .page-backdrop__corner {

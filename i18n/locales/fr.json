@@ -103,5 +103,31 @@
   },
   "common": {
     "loading": "Chargement..."
+  },
+  "footer": {
+    "disclaimer": "Fansite non officiel — Non affilié à Grinding Gear Games",
+    "legal_link": "Mentions légales"
+  },
+  "legal": {
+    "title": "Mentions Légales",
+    "close": "Fermer",
+    "disclaimer": {
+      "title": "Clause de non-affiliation",
+      "text": "Ce site est un fansite non officiel dédié à Path of Exile, un jeu développé et publié par Grinding Gear Games (GGG). Ce site n'est ni affilié, ni approuvé, ni sponsorisé par Grinding Gear Games. Il s'agit d'un projet créé par des fans, pour des fans."
+    },
+    "trademarks": {
+      "title": "Propriété intellectuelle",
+      "text": "Path of Exile® est une marque déposée de Grinding Gear Games. Tous les noms, logos, images, personnages, objets et autres éléments graphiques ou textuels relatifs à Path of Exile sont la propriété exclusive de Grinding Gear Games. Ces éléments sont utilisés ici à des fins non commerciales et à titre purement informatif, conformément aux principes de fair use."
+    },
+    "liability": {
+      "title": "Limitation de responsabilité",
+      "text": "Les informations fournies sur ce site le sont à titre purement informatif et récréatif. Nous ne garantissons pas l'exactitude, l'exhaustivité ou l'actualité des informations présentées. Ce site ne collecte aucune donnée personnelle sensible. L'utilisation de ce site se fait à vos propres risques."
+    },
+    "links": {
+      "title": "Liens officiels",
+      "poe_terms": "Conditions d'utilisation de Path of Exile",
+      "poe_site": "Site officiel de Path of Exile",
+      "ggg_site": "Site officiel de Grinding Gear Games"
+    }
   }
 }
