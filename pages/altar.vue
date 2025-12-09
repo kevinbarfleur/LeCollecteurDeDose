@@ -186,13 +186,20 @@ const altarClasses = computed(() => ({
 }));
 
 // Watch for card selection changes
-watch(selectedCardId, (newId) => {
+watch(selectedCardId, async (newId, oldId) => {
   if (newId) {
     const group = groupedCards.value.find((g) => g.cardId === newId);
     if (group && group.variations.length > 0) {
       selectedVariation.value = group.variations[0].variation;
     }
-    // Animate card onto altar
+    
+    // If there was a previous card, eject it first
+    if (oldId && isCardOnAltar.value && altarCardRef.value && !isAnimating.value) {
+      isAnimating.value = true;
+      await ejectCard();
+    }
+    
+    // Animate new card onto altar
     placeCardOnAltar();
   } else {
     isCardOnAltar.value = false;
@@ -206,52 +213,101 @@ watch(selectedCardId, (newId) => {
 
 const altarCardRef = ref<HTMLElement | null>(null);
 const cardBackLogoUrl = "/images/card-back-logo.png";
+const isCardAnimatingIn = ref(false);
+const isCardAnimatingOut = ref(false);
 
+// Get random entry direction (from outside viewport)
+const getRandomEntryPoint = () => {
+  const side = Math.floor(Math.random() * 4);
+  const spin = (Math.random() - 0.5) * 540; // 1.5 spins max
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  
+  // Large offset to ensure card is fully outside viewport + margins
+  const horizontalOffset = vw + 100;
+  const verticalOffset = vh + 100;
+  
+  switch (side) {
+    case 0: // From top
+      return { x: (Math.random() - 0.5) * 300, y: -verticalOffset, rotation: spin };
+    case 1: // From right
+      return { x: horizontalOffset, y: (Math.random() - 0.5) * 200, rotation: spin };
+    case 2: // From bottom
+      return { x: (Math.random() - 0.5) * 300, y: verticalOffset, rotation: spin };
+    case 3: // From left
+    default:
+      return { x: -horizontalOffset, y: (Math.random() - 0.5) * 200, rotation: spin };
+  }
+};
+
+// Get random exit direction (towards outside viewport, random angle)
+const getRandomExitPoint = () => {
+  const angle = Math.random() * Math.PI * 2; // Random angle
+  // Large distance to ensure card exits fully off screen
+  const distance = Math.max(window.innerWidth, window.innerHeight) + 200;
+  const spin = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 540); // 1-2.5 full spins
+  
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+    rotation: spin,
+  };
+};
+
+// Card flies in from outside the screen
 const placeCardOnAltar = async () => {
   isAnimating.value = true;
-  isCardOnAltar.value = false;
   isCardFlipped.value = false;
+  isCardAnimatingIn.value = true;
 
   await nextTick();
-
   isCardOnAltar.value = true;
+  await nextTick();
 
   if (altarCardRef.value) {
-    gsap.fromTo(
-      altarCardRef.value,
-      {
-        scale: 0.3,
-        opacity: 0,
-        rotateY: 180,
-        y: -50,
+    gsap.killTweensOf(altarCardRef.value);
+    
+    const entry = getRandomEntryPoint();
+    
+    // Set initial position (offscreen with rotation)
+    gsap.set(altarCardRef.value, {
+      x: entry.x,
+      y: entry.y,
+      rotation: entry.rotation,
+      scale: 1,
+      opacity: 1,
+    });
+    
+    // Fly in and land on altar with strong deceleration at the end
+    gsap.to(altarCardRef.value, {
+      x: 0,
+      y: 0,
+      rotation: 0,
+      duration: 0.85,
+      ease: "expo.out", // Strong slowdown at the end for realistic landing
+      onComplete: () => {
+        isCardAnimatingIn.value = false;
+        isAnimating.value = false;
       },
-      {
-        scale: 1,
-        opacity: 1,
-        rotateY: 0,
-        y: 0,
-        duration: 0.6,
-        ease: "back.out(1.4)",
-        onComplete: () => {
-          isAnimating.value = false;
-        },
-      }
-    );
+    });
   } else {
+    isCardAnimatingIn.value = false;
     isAnimating.value = false;
   }
 };
 
+// Clean card flip animation (Y-axis only, smooth)
 const flipCard = async () => {
   if (!altarCardRef.value || isAnimating.value) return;
 
   isAnimating.value = true;
+  
+  const targetRotateY = isCardFlipped.value ? 0 : 180;
   isCardFlipped.value = !isCardFlipped.value;
 
-  // Dramatic flip animation
   gsap.to(altarCardRef.value, {
-    rotateY: isCardFlipped.value ? 180 : 0,
-    duration: 0.5,
+    rotateY: targetRotateY,
+    duration: 0.6,
     ease: "power2.inOut",
     onComplete: () => {
       isAnimating.value = false;
@@ -259,28 +315,38 @@ const flipCard = async () => {
   });
 };
 
-// Remove card from altar with animation
+// Card is thrown/ejected towards a random direction with spin
+const ejectCard = async () => {
+  if (!altarCardRef.value) return;
+  
+  isCardAnimatingOut.value = true;
+  const exit = getRandomExitPoint();
+  
+  await new Promise<void>((resolve) => {
+    gsap.to(altarCardRef.value, {
+      x: exit.x,
+      y: exit.y,
+      rotation: exit.rotation,
+      duration: 0.5,
+      ease: "power2.in",
+      onComplete: () => {
+        isCardAnimatingOut.value = false;
+        resolve();
+      },
+    });
+  });
+  
+  isCardOnAltar.value = false;
+  isCardFlipped.value = false;
+};
+
+// Remove card from altar
 const removeCardFromAltar = async () => {
   if (!altarCardRef.value || isAnimating.value || !isCardOnAltar.value) return;
 
   isAnimating.value = true;
-
-  // Animate card leaving the altar
-  await new Promise<void>((resolve) => {
-    gsap.to(altarCardRef.value, {
-      scale: 0.3,
-      opacity: 0,
-      y: 50,
-      rotateY: -180,
-      duration: 0.5,
-      ease: "power2.in",
-      onComplete: resolve,
-    });
-  });
-
-  // Reset state
-  isCardOnAltar.value = false;
-  isCardFlipped.value = false;
+  await ejectCard();
+  
   selectedCardId.value = "";
   isAnimating.value = false;
 };
@@ -576,7 +642,10 @@ const endDragOrb = async () => {
                 v-if="displayCard && isCardOnAltar"
                 ref="altarCardRef"
                 class="altar-card"
-                :class="{ 'altar-card--flipped': isCardFlipped }"
+                :class="{ 
+                  'altar-card--flipped': isCardFlipped,
+                  'altar-card--animating': isCardAnimatingIn || isCardAnimatingOut,
+                }"
               >
                 <!-- Front face - GameCard with full interactivity -->
                 <div class="altar-card__face altar-card__face--front">
@@ -696,6 +765,17 @@ const endDragOrb = async () => {
 /* ==========================================
    ALTAR PAGE LAYOUT
    ========================================== */
+/* Force overflow visible on parent containers for card animations */
+:global(html),
+:global(body) {
+  overflow-x: clip !important;
+}
+
+:global(.main-content),
+:global(.main-content__inner) {
+  overflow: visible !important;
+}
+
 .altar-page {
   display: flex;
   flex-direction: column;
@@ -770,6 +850,10 @@ const endDragOrb = async () => {
   align-items: center;
   min-height: 450px;
   padding: 2rem;
+  overflow: visible;
+  /* Higher z-index so animated cards appear above other page elements */
+  position: relative;
+  z-index: 10;
 }
 
 /* ==========================================
@@ -785,6 +869,7 @@ const endDragOrb = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 
   /* Stone platform base - dormant/dark */
   background: radial-gradient(
@@ -1016,6 +1101,12 @@ const endDragOrb = async () => {
   justify-content: center;
   border-radius: 12px;
   
+  /* Perspective for card flip only */
+  perspective: 600px;
+  
+  /* Allow card to overflow during animations */
+  overflow: visible;
+  
   /* Inset groove - dormant */
   background: linear-gradient(
     180deg,
@@ -1088,6 +1179,13 @@ const endDragOrb = async () => {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* During entry/exit animations, card needs high z-index to fly over everything */
+.altar-card--animating {
+  z-index: 9999;
+  pointer-events: none;
 }
 
 .altar-card__face {
@@ -1371,33 +1469,33 @@ const endDragOrb = async () => {
   border-radius: 50%;
   overflow: hidden;
   
-  /* Deep carved orb effect */
+  /* Deep carved orb effect - red theme */
   background: linear-gradient(
     160deg,
-    #1a1815 0%,
-    #0d0c0a 40%,
-    #080706 100%
+    #1a1512 0%,
+    #0d0a09 40%,
+    #080605 100%
   );
   
   box-shadow: 
     inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(80, 60, 40, 0.1),
+    inset 0 -2px 8px rgba(80, 40, 40, 0.1),
     0 4px 12px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(175, 96, 37, 0.1);
+    0 0 20px rgba(160, 50, 50, 0.15);
   
-  border: 2px solid rgba(80, 60, 40, 0.3);
+  border: 2px solid rgba(100, 50, 50, 0.35);
   
   transition: all 0.3s ease;
 }
 
 .vaal-orb:not(.vaal-orb--disabled):hover .vaal-orb__inner {
   transform: scale(1.1);
-  border-color: rgba(175, 96, 37, 0.5);
+  border-color: rgba(180, 60, 60, 0.6);
   box-shadow: 
     inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(175, 96, 37, 0.2),
+    inset 0 -2px 8px rgba(180, 60, 60, 0.25),
     0 6px 20px rgba(0, 0, 0, 0.6),
-    0 0 30px rgba(175, 96, 37, 0.3);
+    0 0 35px rgba(180, 50, 50, 0.4);
 }
 
 .vaal-orb__image {
@@ -1415,8 +1513,8 @@ const endDragOrb = async () => {
   border-radius: 50%;
   background: radial-gradient(
     circle at center,
-    rgba(175, 96, 37, 0) 30%,
-    rgba(175, 96, 37, 0) 100%
+    rgba(160, 50, 50, 0) 30%,
+    rgba(160, 50, 50, 0) 100%
   );
   pointer-events: none;
   transition: all 0.3s ease;
@@ -1426,9 +1524,9 @@ const endDragOrb = async () => {
 .vaal-orb__glow--active {
   background: radial-gradient(
     circle at center,
-    rgba(175, 96, 37, 0.3) 0%,
-    rgba(175, 96, 37, 0.1) 40%,
-    rgba(175, 96, 37, 0) 70%
+    rgba(180, 50, 50, 0.4) 0%,
+    rgba(160, 40, 40, 0.15) 40%,
+    rgba(140, 30, 30, 0) 70%
   );
 }
 
@@ -1447,12 +1545,12 @@ const endDragOrb = async () => {
 
 .vaal-orb--floating .vaal-orb__inner {
   transform: scale(1.2);
-  border-color: rgba(175, 96, 37, 0.6);
+  border-color: rgba(180, 60, 60, 0.7);
   box-shadow: 
     inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(175, 96, 37, 0.3),
+    inset 0 -2px 8px rgba(180, 60, 60, 0.35),
     0 8px 30px rgba(0, 0, 0, 0.7),
-    0 0 50px rgba(175, 96, 37, 0.4);
+    0 0 50px rgba(180, 50, 50, 0.5);
   /* Only transition visual properties, not position */
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1460,30 +1558,30 @@ const endDragOrb = async () => {
 /* Returning animation - shrink slightly */
 .vaal-orb--returning .vaal-orb__inner {
   transform: scale(0.9);
-  border-color: rgba(175, 96, 37, 0.3);
+  border-color: rgba(160, 50, 50, 0.35);
   box-shadow: 
     inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(175, 96, 37, 0.1),
+    inset 0 -2px 8px rgba(160, 50, 50, 0.15),
     0 4px 15px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(175, 96, 37, 0.2);
+    0 0 20px rgba(160, 50, 50, 0.25);
 }
 
 .vaal-orb--over-card .vaal-orb__inner {
   transform: scale(1.4);
-  border-color: rgba(175, 96, 37, 0.9);
+  border-color: rgba(200, 60, 60, 0.95);
   box-shadow: 
     inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(175, 96, 37, 0.5),
+    inset 0 -2px 8px rgba(200, 60, 60, 0.55),
     0 12px 50px rgba(0, 0, 0, 0.8),
-    0 0 100px rgba(175, 96, 37, 0.7);
+    0 0 100px rgba(200, 50, 50, 0.7);
 }
 
 .vaal-orb--over-card .vaal-orb__glow {
   background: radial-gradient(
     circle at center,
-    rgba(175, 96, 37, 0.6) 0%,
-    rgba(175, 96, 37, 0.25) 40%,
-    rgba(175, 96, 37, 0) 70%
+    rgba(200, 50, 50, 0.65) 0%,
+    rgba(180, 40, 40, 0.3) 40%,
+    rgba(160, 30, 30, 0) 70%
   );
   animation: pulseGlow 0.4s ease-in-out infinite;
 }
