@@ -183,6 +183,7 @@ const altarClasses = computed(() => ({
   'altar-platform--t3': displayCard.value?.tier === 'T3',
   'altar-platform--foil': isCurrentCardFoil.value,
   'altar-platform--active': isCardOnAltar.value,
+  'altar-platform--vaal': isOrbOverCard.value, // Vaal theme takes over when orb is on card
 }));
 
 // Watch for card selection changes
@@ -369,6 +370,69 @@ let originY = 0;
 let currentX = 0;
 let currentY = 0;
 
+// ==========================================
+// HEARTBEAT EFFECT - Card "panics" when orb approaches
+// ==========================================
+const heartbeatIntensity = ref(0); // 0 = calm, 1 = max panic
+
+// Calculate heartbeat intensity based on distance from orb to card center
+const updateHeartbeatIntensity = (orbX: number, orbY: number) => {
+  if (!altarCardRef.value) {
+    heartbeatIntensity.value = 0.3; // Base intensity when dragging but no card ref
+    return;
+  }
+  
+  const cardRect = altarCardRef.value.getBoundingClientRect();
+  const cardCenterX = cardRect.left + cardRect.width / 2;
+  const cardCenterY = cardRect.top + cardRect.height / 2;
+  
+  // Calculate distance from orb to card center
+  const dx = orbX - cardCenterX;
+  const dy = orbY - cardCenterY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  
+  // Max distance for intensity calculation (beyond this, base intensity)
+  const maxDistance = 400;
+  // Min distance (at or below this, max intensity)
+  const minDistance = 50;
+  
+  if (distance <= minDistance) {
+    heartbeatIntensity.value = 1; // MAX PANIC!
+  } else if (distance >= maxDistance) {
+    heartbeatIntensity.value = 0.2; // Just aware something is coming
+  } else {
+    // Linear interpolation - closer = more intense
+    const normalizedDistance = (distance - minDistance) / (maxDistance - minDistance);
+    heartbeatIntensity.value = 1 - normalizedDistance * 0.8; // 0.2 to 1 range
+  }
+};
+
+// Computed CSS variable for heartbeat animation
+const heartbeatStyles = computed(() => {
+  if (!isCardOnAltar.value) return {};
+  
+  // Base heartbeat when card is on altar
+  const baseSpeed = 2; // seconds
+  const panicSpeed = 0.25; // seconds at max panic
+  
+  // Calculate speed based on intensity (higher intensity = faster)
+  const speed = isDraggingOrb.value 
+    ? baseSpeed - (heartbeatIntensity.value * (baseSpeed - panicSpeed))
+    : baseSpeed;
+  
+  // Calculate scale intensity (subtle when calm, dramatic when panicking)
+  const baseScale = 1.005;
+  const panicScale = isDraggingOrb.value 
+    ? 1.01 + (heartbeatIntensity.value * 0.04) // Up to 1.05 scale at max panic
+    : baseScale;
+  
+  return {
+    '--heartbeat-speed': `${speed}s`,
+    '--heartbeat-scale': panicScale,
+    '--heartbeat-glow-intensity': isDraggingOrb.value ? heartbeatIntensity.value : 0.15,
+  };
+});
+
 // Set orb ref
 const setOrbRef = (el: HTMLElement | null, index: number) => {
   if (el) {
@@ -444,6 +508,9 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
       clientY <= cardRect.bottom;
     isOrbOverCard.value = isOver;
   }
+  
+  // Update heartbeat intensity based on proximity
+  updateHeartbeatIntensity(clientX, clientY);
 };
 
 const endDragOrb = async () => {
@@ -473,11 +540,13 @@ const endDragOrb = async () => {
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
     isOrbOverCard.value = false;
+    heartbeatIntensity.value = 0; // Reset heartbeat
     
     await flipCard();
   } else {
     // Return to origin with smooth GSAP animation directly on DOM element
     isReturningOrb.value = true;
+    heartbeatIntensity.value = 0; // Reset heartbeat when returning
     
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
@@ -645,7 +714,10 @@ const endDragOrb = async () => {
                 :class="{ 
                   'altar-card--flipped': isCardFlipped,
                   'altar-card--animating': isCardAnimatingIn || isCardAnimatingOut,
+                  'altar-card--heartbeat': !isCardAnimatingIn && !isCardAnimatingOut,
+                  'altar-card--panicking': isDraggingOrb && !isCardAnimatingIn && !isCardAnimatingOut,
                 }"
+                :style="heartbeatStyles"
               >
                 <!-- Front face - GameCard with full interactivity -->
                 <div class="altar-card__face altar-card__face--front">
@@ -950,6 +1022,81 @@ const endDragOrb = async () => {
   animation: foilGlowSubtle 4s ease-in-out infinite;
 }
 
+/* ==========================================
+   VAAL THEME - Smooth overlay transition
+   ========================================== */
+
+/* Vaal overlay - fades in smoothly over the tier theme */
+.altar-platform::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+      ellipse at center,
+      rgba(50, 15, 15, 0.85) 0%,
+      rgba(30, 10, 10, 0.9) 50%,
+      rgba(15, 5, 5, 0.95) 100%
+    );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Vaal glow effect - separate layer for pulsing */
+.altar-platform::after {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(200, 50, 50, 0.3) 0%,
+    rgba(180, 40, 40, 0.15) 40%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: -1;
+  animation: vaalGlowPulse 0.6s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+/* When Vaal is active, fade in the overlay and glow */
+.altar-platform--active.altar-platform--vaal::before {
+  opacity: 1;
+}
+
+.altar-platform--active.altar-platform--vaal::after {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+/* Override CSS variables smoothly for elements that use them */
+.altar-platform--active.altar-platform--vaal {
+  --altar-accent: #c83232;
+  --altar-rune-color: rgba(200, 50, 50, 0.8);
+}
+
+/* Vaal theme overrides foil too */
+.altar-platform--active.altar-platform--foil.altar-platform--vaal {
+  --altar-accent: #c83232;
+  --altar-rune-color: rgba(200, 50, 50, 0.8);
+}
+
+@keyframes vaalGlowPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
 @keyframes foilGlowSubtle {
   0%, 100% {
     box-shadow: 
@@ -981,7 +1128,9 @@ const endDragOrb = async () => {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  transition: border-color 0.6s ease, opacity 0.6s ease;
+  /* Smooth transition for color changes */
+  transition: border-color 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
+  z-index: 1;
 }
 
 /* Dormant state - barely visible, no animation */
@@ -1003,7 +1152,7 @@ const endDragOrb = async () => {
   border: 1px dotted rgba(50, 45, 40, 0.1);
 }
 
-/* Active state - colored and rotating */
+/* Active state - colored and rotating (base animations never change) */
 .altar-platform--active .altar-circle--outer {
   border-color: color-mix(in srgb, var(--altar-accent) 25%, transparent);
   animation: rotateCircle 60s linear infinite;
@@ -1032,6 +1181,22 @@ const endDragOrb = async () => {
   animation: rotateCircle 30s linear infinite, foilCircle 4s ease-in-out infinite 1s;
 }
 
+/* Vaal circles - color transitions smoothly, brightness pulses via filter */
+.altar-platform--active.altar-platform--vaal .altar-circle--outer {
+  border-color: rgba(200, 50, 50, 0.5);
+  filter: drop-shadow(0 0 4px rgba(200, 50, 50, 0.4));
+}
+
+.altar-platform--active.altar-platform--vaal .altar-circle--middle {
+  border-color: rgba(220, 60, 60, 0.6);
+  filter: drop-shadow(0 0 6px rgba(220, 60, 60, 0.5));
+}
+
+.altar-platform--active.altar-platform--vaal .altar-circle--inner {
+  border-color: rgba(240, 70, 70, 0.7);
+  filter: drop-shadow(0 0 8px rgba(240, 70, 70, 0.6));
+}
+
 @keyframes foilCircle {
   0%, 100% { border-color: rgba(180, 160, 220, 0.35); }
   33% { border-color: rgba(220, 160, 180, 0.35); }
@@ -1051,8 +1216,10 @@ const endDragOrb = async () => {
   font-size: 1.25rem;
   color: rgba(50, 45, 40, 0.2);
   text-shadow: none;
-  transition: color 0.6s ease, text-shadow 0.6s ease, opacity 0.6s ease;
+  /* Smooth transitions for all visual properties */
+  transition: color 0.4s ease, text-shadow 0.4s ease, opacity 0.4s ease, transform 0.4s ease, filter 0.4s ease;
   opacity: 0.4;
+  z-index: 2;
 }
 
 .altar-rune--n { top: 8%; left: 50%; transform: translateX(-50%); }
@@ -1060,7 +1227,7 @@ const endDragOrb = async () => {
 .altar-rune--s { bottom: 8%; left: 50%; transform: translateX(-50%); }
 .altar-rune--w { top: 50%; left: 8%; transform: translateY(-50%); }
 
-/* Active state - colored and glowing */
+/* Active state - colored and glowing (base animation stays constant) */
 .altar-platform--active .altar-rune {
   color: var(--altar-rune-color);
   text-shadow: 0 0 8px color-mix(in srgb, var(--altar-accent) 30%, transparent);
@@ -1072,6 +1239,24 @@ const endDragOrb = async () => {
 .altar-platform--active .altar-rune--e { animation-delay: 0.75s; }
 .altar-platform--active .altar-rune--s { animation-delay: 1.5s; }
 .altar-platform--active .altar-rune--w { animation-delay: 2.25s; }
+
+/* Vaal runes - enhanced glow via filter (transitions smoothly) */
+.altar-platform--active.altar-platform--vaal .altar-rune {
+  filter: drop-shadow(0 0 10px rgba(200, 50, 50, 0.6)) drop-shadow(0 0 20px rgba(180, 40, 40, 0.3));
+}
+
+.altar-platform--active.altar-platform--vaal .altar-rune--n { 
+  transform: translateX(-50%) scale(1.15); 
+}
+.altar-platform--active.altar-platform--vaal .altar-rune--e { 
+  transform: translateY(-50%) scale(1.15); 
+}
+.altar-platform--active.altar-platform--vaal .altar-rune--s { 
+  transform: translateX(-50%) scale(1.15); 
+}
+.altar-platform--active.altar-platform--vaal .altar-rune--w { 
+  transform: translateY(-50%) scale(1.15); 
+}
 
 @keyframes pulseRune {
   0%, 100% { opacity: 0.6; }
@@ -1106,6 +1291,7 @@ const endDragOrb = async () => {
   
   /* Allow card to overflow during animations */
   overflow: visible;
+  z-index: 2;
   
   /* Inset groove - dormant */
   background: linear-gradient(
@@ -1122,7 +1308,8 @@ const endDragOrb = async () => {
   
   border: 1px solid rgba(40, 38, 35, 0.25);
   
-  transition: all 0.5s ease;
+  /* Smooth transitions for Vaal theme change */
+  transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
 }
 
 .altar-card-slot--active {
@@ -1134,12 +1321,13 @@ const endDragOrb = async () => {
 }
 
 .altar-card-slot--highlight {
-  border-color: color-mix(in srgb, var(--altar-accent) 60%, transparent);
+  border-color: rgba(200, 50, 50, 0.7);
   box-shadow: 
     inset 0 4px 15px rgba(0, 0, 0, 0.5),
-    inset 0 -2px 10px rgba(40, 35, 30, 0.03),
+    inset 0 -2px 10px rgba(200, 50, 50, 0.15),
     0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 20px color-mix(in srgb, var(--altar-accent) 15%, transparent);
+    0 0 30px rgba(200, 50, 50, 0.35),
+    0 0 60px rgba(180, 40, 40, 0.2);
 }
 
 /* ==========================================
@@ -1180,6 +1368,103 @@ const endDragOrb = async () => {
   height: 100%;
   transform-style: preserve-3d;
   will-change: transform;
+  
+  /* CSS variables for heartbeat effect */
+  --heartbeat-speed: 2s;
+  --heartbeat-scale: 1.005;
+  --heartbeat-glow-intensity: 0.15;
+}
+
+/* ==========================================
+   HEARTBEAT ANIMATION - Card "breathes" on altar
+   ========================================== */
+.altar-card--heartbeat {
+  animation: cardHeartbeat var(--heartbeat-speed) ease-in-out infinite;
+}
+
+/* When panicking (orb being dragged), add glow effect */
+.altar-card--panicking {
+  animation: cardHeartbeatPanic var(--heartbeat-speed) ease-in-out infinite;
+}
+
+.altar-card--panicking::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 12px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(180, 50, 50, calc(var(--heartbeat-glow-intensity) * 0.5)) 0%,
+    rgba(160, 40, 40, calc(var(--heartbeat-glow-intensity) * 0.25)) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: -1;
+  animation: heartbeatGlow var(--heartbeat-speed) ease-in-out infinite;
+}
+
+@keyframes cardHeartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(var(--heartbeat-scale));
+  }
+  30% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(calc(var(--heartbeat-scale) * 0.997));
+  }
+  60% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cardHeartbeatPanic {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  15% {
+    transform: scale(var(--heartbeat-scale));
+    filter: brightness(calc(1 + var(--heartbeat-glow-intensity) * 0.15));
+  }
+  30% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  45% {
+    transform: scale(calc(var(--heartbeat-scale) * 0.997));
+    filter: brightness(calc(1 + var(--heartbeat-glow-intensity) * 0.1));
+  }
+  60% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes heartbeatGlow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  30% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  45% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+  60% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
 }
 
 /* During entry/exit animations, card needs high z-index to fly over everything */
