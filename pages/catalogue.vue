@@ -40,6 +40,42 @@ const ownedCardIds = computed(() =>
 
 const searchQuery = ref('')
 const selectedTier = ref<CardTier | 'all'>('all')
+const selectedCategories = ref<string[]>([])
+const selectedSort = ref('rarity-asc')
+
+// Sort options
+type SortOption = 'rarity-asc' | 'rarity-desc' | 'alpha-asc' | 'alpha-desc' | 'category-asc' | 'category-desc'
+
+const sortOptions = [
+  { value: 'rarity-asc', label: 'Rareté ↑ (T0 → T3)' },
+  { value: 'rarity-desc', label: 'Rareté ↓ (T3 → T0)' },
+  { value: 'alpha-asc', label: 'Alphabétique (A → Z)' },
+  { value: 'alpha-desc', label: 'Alphabétique (Z → A)' },
+  { value: 'category-asc', label: 'Catégorie (A → Z)' },
+  { value: 'category-desc', label: 'Catégorie (Z → A)' }
+]
+
+// Extract unique categories from all cards with count
+const categoryOptions = computed(() => {
+  const categoryMap = new Map<string, number>()
+  
+  allCards.forEach(card => {
+    const current = categoryMap.get(card.itemClass) || 0
+    categoryMap.set(card.itemClass, current + 1)
+  })
+  
+  // Sort by count descending, then alphabetically
+  return Array.from(categoryMap.entries())
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1]
+      return a[0].localeCompare(b[0])
+    })
+    .map(([category, count]) => ({
+      value: category,
+      label: category,
+      count
+    }))
+})
 
 const tierOptions = computed(() => [
   { value: 'all', label: t('collection.tiers.all'), color: 'default' },
@@ -48,6 +84,50 @@ const tierOptions = computed(() => [
   { value: 'T2', label: t('collection.tiers.t2'), color: 't2' },
   { value: 'T3', label: t('collection.tiers.t3'), color: 't3' }
 ])
+
+// Sort function
+const sortCards = (cards: Card[], sortType: SortOption): Card[] => {
+  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 }
+  
+  return [...cards].sort((a, b) => {
+    switch (sortType) {
+      case 'rarity-asc':
+        // T0 first (most rare)
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[a.tier] - tierOrder[b.tier]
+        }
+        return a.name.localeCompare(b.name)
+      
+      case 'rarity-desc':
+        // T3 first (most common)
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[b.tier] - tierOrder[a.tier]
+        }
+        return a.name.localeCompare(b.name)
+      
+      case 'alpha-asc':
+        return a.name.localeCompare(b.name)
+      
+      case 'alpha-desc':
+        return b.name.localeCompare(a.name)
+      
+      case 'category-asc':
+        if (a.itemClass !== b.itemClass) {
+          return a.itemClass.localeCompare(b.itemClass)
+        }
+        return a.name.localeCompare(b.name)
+      
+      case 'category-desc':
+        if (a.itemClass !== b.itemClass) {
+          return b.itemClass.localeCompare(a.itemClass)
+        }
+        return a.name.localeCompare(b.name)
+      
+      default:
+        return 0
+    }
+  })
+}
 
 const filteredCards = computed(() => {
   let cards = allCards.map(card => {
@@ -60,22 +140,32 @@ const filteredCards = computed(() => {
     return card
   })
   
+  // Filter by search query - only return owned cards when searching
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    cards = cards.filter(card => 
-      card.name.toLowerCase().includes(query) ||
-      card.itemClass.toLowerCase().includes(query)
-    )
+    cards = cards.filter(card => {
+      // Must be owned to appear in search results
+      const isOwned = ownedCardIds.value.includes(card.id)
+      if (!isOwned) return false
+      
+      // Then match the search query
+      return card.name.toLowerCase().includes(query) ||
+             card.itemClass.toLowerCase().includes(query)
+    })
   }
   
+  // Filter by selected categories
+  if (selectedCategories.value.length > 0) {
+    cards = cards.filter(card => selectedCategories.value.includes(card.itemClass))
+  }
+  
+  // Filter by tier
   if (selectedTier.value !== 'all') {
     cards = cards.filter(card => card.tier === selectedTier.value)
   }
   
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 }
-  cards.sort((a, b) => tierOrder[a.tier] - tierOrder[b.tier])
-  
-  return cards
+  // Apply sorting
+  return sortCards(cards, selectedSort.value as SortOption)
 })
 
 const stats = computed(() => ({
@@ -108,21 +198,49 @@ const stats = computed(() => ({
       />
       </div>
 
-      <div class="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6 md:my-8 md:flex-row md:items-center md:justify-between">
-        <div class="flex-1 max-w-full md:max-w-md">
-          <RunicInput
-            v-model="searchQuery"
-            :placeholder="t('catalogue.search.placeholder')"
-            icon="search"
+      <!-- Filters row -->
+      <div class="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6 md:my-8">
+        <!-- Search, Category and Sort filters -->
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div class="flex-1 max-w-full sm:max-w-xs">
+            <RunicInput
+              v-model="searchQuery"
+              :placeholder="t('catalogue.search.placeholder')"
+              icon="search"
+              size="md"
+            />
+          </div>
+          
+          <div class="flex-1 max-w-full sm:max-w-xs">
+            <RunicSelect
+              v-model="selectedCategories"
+              :options="categoryOptions"
+              placeholder="Catégories d'objets..."
+              size="md"
+              :searchable="true"
+              :multiple="true"
+              :max-visible-items="10"
+            />
+          </div>
+
+          <div class="w-full sm:w-auto sm:min-w-[200px]">
+            <RunicSelect
+              v-model="selectedSort"
+              :options="sortOptions"
+              placeholder="Trier par..."
+              size="md"
+            />
+          </div>
+        </div>
+
+        <!-- Tier filter -->
+        <div class="flex justify-end">
+          <RunicRadio
+            v-model="selectedTier"
+            :options="tierOptions"
             size="md"
           />
         </div>
-
-        <RunicRadio
-          v-model="selectedTier"
-          :options="tierOptions"
-          size="md"
-        />
       </div>
 
       <CardGrid 
