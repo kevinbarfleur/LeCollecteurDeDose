@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
-import { VARIATION_CONFIG, getCardVariation } from "~/types/card";
+import { VARIATION_CONFIG, TIER_CONFIG, getCardVariation, isCardFoil } from "~/types/card";
 import gsap from "gsap";
 
 const { t } = useI18n();
@@ -152,6 +152,38 @@ const displayCard = computed<Card | null>(() => {
   // Fallback to first card
   return selectedCardGroup.value.cards[0] || null;
 });
+
+// ==========================================
+// ALTAR THEME BASED ON CARD
+// ==========================================
+
+// Check if current card is foil
+const isCurrentCardFoil = computed(() => {
+  if (!displayCard.value) return false;
+  return isCardFoil(displayCard.value);
+});
+
+// Get tier config for current card
+const currentTierConfig = computed(() => {
+  if (!displayCard.value) return null;
+  return TIER_CONFIG[displayCard.value.tier as CardTier];
+});
+
+// Altar theme styles based on card (CSS variables applied via classes now)
+const altarThemeStyles = computed(() => {
+  // CSS classes handle the theming, this is kept for potential custom overrides
+  return {};
+});
+
+// Altar classes based on card
+const altarClasses = computed(() => ({
+  'altar-platform--t0': displayCard.value?.tier === 'T0',
+  'altar-platform--t1': displayCard.value?.tier === 'T1',
+  'altar-platform--t2': displayCard.value?.tier === 'T2',
+  'altar-platform--t3': displayCard.value?.tier === 'T3',
+  'altar-platform--foil': isCurrentCardFoil.value,
+  'altar-platform--active': isCardOnAltar.value,
+}));
 
 // Watch for card selection changes
 watch(selectedCardId, (newId) => {
@@ -509,7 +541,11 @@ const endDragOrb = async () => {
         <!-- Altar area -->
         <div ref="altarAreaRef" class="altar-area">
           <!-- The altar platform -->
-          <div class="altar-platform">
+          <div 
+            class="altar-platform"
+            :class="altarClasses"
+            :style="altarThemeStyles"
+          >
             <!-- Runic circles decoration -->
             <div class="altar-circle altar-circle--outer"></div>
             <div class="altar-circle altar-circle--middle"></div>
@@ -579,9 +615,7 @@ const endDragOrb = async () => {
               </div>
             </div>
 
-            <!-- Altar glow effect when orb hovers -->
-            <div class="altar-glow" :class="{ 'altar-glow--active': isOrbOverCard }"></div>
-          </div>
+            </div>
         </div>
 
         <!-- Vaal Orbs inventory -->
@@ -742,6 +776,9 @@ const endDragOrb = async () => {
    ALTAR PLATFORM - The ritual circle
    ========================================== */
 .altar-platform {
+  --altar-accent: #3a3530;
+  --altar-rune-color: rgba(60, 55, 50, 0.3);
+  
   position: relative;
   width: 320px;
   height: 400px;
@@ -749,23 +786,107 @@ const endDragOrb = async () => {
   align-items: center;
   justify-content: center;
 
-  /* Stone platform base */
+  /* Stone platform base - dormant/dark */
   background: radial-gradient(
       ellipse at center,
-      rgba(30, 28, 25, 0.6) 0%,
-      rgba(20, 18, 15, 0.8) 50%,
-      rgba(12, 10, 8, 0.95) 100%
+      rgba(25, 23, 20, 0.6) 0%,
+      rgba(18, 16, 14, 0.8) 50%,
+      rgba(10, 9, 8, 0.95) 100%
     ),
-    linear-gradient(180deg, rgba(25, 22, 18, 0.9) 0%, rgba(15, 12, 10, 0.95) 100%);
+    linear-gradient(180deg, rgba(20, 18, 15, 0.9) 0%, rgba(12, 10, 8, 0.95) 100%);
 
   border-radius: 50%;
   
-  /* Deep carved effect */
+  /* Dormant - no glow, just shadow */
   box-shadow: 
     inset 0 8px 30px rgba(0, 0, 0, 0.8),
-    inset 0 -4px 20px rgba(60, 50, 40, 0.1),
-    0 20px 60px rgba(0, 0, 0, 0.6),
-    0 0 80px rgba(175, 96, 37, 0.05);
+    inset 0 -4px 20px rgba(40, 35, 30, 0.08),
+    0 15px 40px rgba(0, 0, 0, 0.5);
+    
+  transition: box-shadow 0.6s ease, background 0.6s ease;
+}
+
+/* ==========================================
+   ALTAR ACTIVATED STATE (with card)
+   ========================================== */
+
+/* T0 - Gold/Amber - Active */
+.altar-platform--active.altar-platform--t0 {
+  --altar-accent: #c9a227;
+  --altar-rune-color: rgba(201, 162, 39, 0.6);
+  box-shadow: 
+    inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(109, 90, 42, 0.1),
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(201, 162, 39, 0.08);
+}
+
+/* T1 - Purple/Obsidian - Active */
+.altar-platform--active.altar-platform--t1 {
+  --altar-accent: #7a6a8a;
+  --altar-rune-color: rgba(122, 106, 138, 0.6);
+  box-shadow: 
+    inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(58, 52, 69, 0.1),
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    0 0 35px rgba(122, 106, 138, 0.06);
+}
+
+/* T2 - Blue/Slate - Active */
+.altar-platform--active.altar-platform--t2 {
+  --altar-accent: #5a7080;
+  --altar-rune-color: rgba(90, 112, 128, 0.6);
+  box-shadow: 
+    inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(58, 69, 80, 0.1),
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(90, 112, 128, 0.05);
+}
+
+/* T3 - Gray/Basalt - Active */
+.altar-platform--active.altar-platform--t3 {
+  --altar-accent: #5a5a5d;
+  --altar-rune-color: rgba(90, 90, 93, 0.5);
+  box-shadow: 
+    inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(42, 42, 45, 0.08),
+    0 15px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Foil - Rainbow/Prismatic - Active */
+.altar-platform--active.altar-platform--foil {
+  --altar-accent: #c0a0ff;
+  --altar-rune-color: rgba(192, 160, 255, 0.7);
+  box-shadow: 
+    inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(180, 160, 220, 0.08),
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    0 0 50px rgba(180, 160, 255, 0.1);
+  animation: foilGlowSubtle 4s ease-in-out infinite;
+}
+
+@keyframes foilGlowSubtle {
+  0%, 100% {
+    box-shadow: 
+      inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(180, 160, 220, 0.08),
+      0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 50px rgba(180, 160, 255, 0.1);
+  }
+  33% {
+    box-shadow: 
+      inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(220, 180, 180, 0.08),
+      0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 50px rgba(255, 180, 200, 0.1);
+  }
+  66% {
+    box-shadow: 
+      inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(160, 220, 180, 0.08),
+      0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 50px rgba(160, 255, 200, 0.1);
+  }
 }
 
 /* ==========================================
@@ -774,40 +895,67 @@ const endDragOrb = async () => {
 .altar-circle {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(80, 70, 55, 0.2);
   pointer-events: none;
+  transition: border-color 0.6s ease, opacity 0.6s ease;
 }
 
+/* Dormant state - barely visible, no animation */
 .altar-circle--outer {
   width: 95%;
   height: 95%;
-  border-style: dashed;
-  animation: rotateCircle 60s linear infinite;
+  border: 1px dashed rgba(50, 45, 40, 0.15);
 }
 
 .altar-circle--middle {
   width: 85%;
   height: 85%;
-  border-width: 2px;
-  border-color: rgba(175, 96, 37, 0.15);
-  animation: rotateCircle 45s linear infinite reverse;
+  border: 2px solid rgba(50, 45, 40, 0.12);
 }
 
 .altar-circle--inner {
   width: 75%;
   height: 75%;
-  border-style: dotted;
-  border-color: rgba(120, 100, 70, 0.25);
+  border: 1px dotted rgba(50, 45, 40, 0.1);
+}
+
+/* Active state - colored and rotating */
+.altar-platform--active .altar-circle--outer {
+  border-color: color-mix(in srgb, var(--altar-accent) 25%, transparent);
+  animation: rotateCircle 60s linear infinite;
+}
+
+.altar-platform--active .altar-circle--middle {
+  border-color: color-mix(in srgb, var(--altar-accent) 35%, transparent);
+  animation: rotateCircle 45s linear infinite reverse;
+}
+
+.altar-platform--active .altar-circle--inner {
+  border-color: color-mix(in srgb, var(--altar-accent) 45%, transparent);
   animation: rotateCircle 30s linear infinite;
 }
 
+/* Foil circles - animated colors (only when active) */
+.altar-platform--active.altar-platform--foil .altar-circle--outer {
+  animation: rotateCircle 60s linear infinite, foilCircle 4s ease-in-out infinite;
+}
+
+.altar-platform--active.altar-platform--foil .altar-circle--middle {
+  animation: rotateCircle 45s linear infinite reverse, foilCircle 4s ease-in-out infinite 0.5s;
+}
+
+.altar-platform--active.altar-platform--foil .altar-circle--inner {
+  animation: rotateCircle 30s linear infinite, foilCircle 4s ease-in-out infinite 1s;
+}
+
+@keyframes foilCircle {
+  0%, 100% { border-color: rgba(180, 160, 220, 0.35); }
+  33% { border-color: rgba(220, 160, 180, 0.35); }
+  66% { border-color: rgba(160, 220, 200, 0.35); }
+}
+
 @keyframes rotateCircle {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ==========================================
@@ -816,25 +964,44 @@ const endDragOrb = async () => {
 .altar-rune {
   position: absolute;
   font-size: 1.25rem;
-  color: rgba(175, 96, 37, 0.4);
-  text-shadow: 0 0 10px rgba(175, 96, 37, 0.3);
+  color: rgba(50, 45, 40, 0.2);
+  text-shadow: none;
+  transition: color 0.6s ease, text-shadow 0.6s ease, opacity 0.6s ease;
+  opacity: 0.4;
+}
+
+.altar-rune--n { top: 8%; left: 50%; transform: translateX(-50%); }
+.altar-rune--e { top: 50%; right: 8%; transform: translateY(-50%); }
+.altar-rune--s { bottom: 8%; left: 50%; transform: translateX(-50%); }
+.altar-rune--w { top: 50%; left: 8%; transform: translateY(-50%); }
+
+/* Active state - colored and glowing */
+.altar-platform--active .altar-rune {
+  color: var(--altar-rune-color);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--altar-accent) 30%, transparent);
+  opacity: 1;
   animation: pulseRune 3s ease-in-out infinite;
 }
 
-.altar-rune--n { top: 8%; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-.altar-rune--e { top: 50%; right: 8%; transform: translateY(-50%); animation-delay: 0.75s; }
-.altar-rune--s { bottom: 8%; left: 50%; transform: translateX(-50%); animation-delay: 1.5s; }
-.altar-rune--w { top: 50%; left: 8%; transform: translateY(-50%); animation-delay: 2.25s; }
+.altar-platform--active .altar-rune--n { animation-delay: 0s; }
+.altar-platform--active .altar-rune--e { animation-delay: 0.75s; }
+.altar-platform--active .altar-rune--s { animation-delay: 1.5s; }
+.altar-platform--active .altar-rune--w { animation-delay: 2.25s; }
 
 @keyframes pulseRune {
-  0%, 100% {
-    opacity: 0.4;
-    text-shadow: 0 0 10px rgba(175, 96, 37, 0.3);
-  }
-  50% {
-    opacity: 0.8;
-    text-shadow: 0 0 20px rgba(175, 96, 37, 0.6);
-  }
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Foil runes - rainbow animation (only when active) */
+.altar-platform--active.altar-platform--foil .altar-rune {
+  animation: pulseRune 3s ease-in-out infinite, foilRune 4s ease-in-out infinite;
+}
+
+@keyframes foilRune {
+  0%, 100% { color: rgba(180, 160, 220, 0.7); text-shadow: 0 0 10px rgba(180, 160, 220, 0.3); }
+  33% { color: rgba(220, 160, 180, 0.7); text-shadow: 0 0 10px rgba(220, 160, 180, 0.3); }
+  66% { color: rgba(160, 220, 200, 0.7); text-shadow: 0 0 10px rgba(160, 220, 200, 0.3); }
 }
 
 /* ==========================================
@@ -849,7 +1016,7 @@ const endDragOrb = async () => {
   justify-content: center;
   border-radius: 12px;
   
-  /* Inset groove */
+  /* Inset groove - dormant */
   background: linear-gradient(
     180deg,
     rgba(8, 8, 10, 0.9) 0%,
@@ -859,29 +1026,29 @@ const endDragOrb = async () => {
   
   box-shadow: 
     inset 0 4px 15px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 10px rgba(60, 50, 40, 0.05),
+    inset 0 -2px 10px rgba(40, 35, 30, 0.03),
     0 2px 8px rgba(0, 0, 0, 0.3);
   
-  border: 1px solid rgba(50, 45, 40, 0.3);
+  border: 1px solid rgba(40, 38, 35, 0.25);
   
-  transition: all 0.4s ease;
+  transition: all 0.5s ease;
 }
 
 .altar-card-slot--active {
+  border-color: color-mix(in srgb, var(--altar-accent) 35%, transparent);
   box-shadow: 
-    inset 0 4px 15px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(175, 96, 37, 0.15),
+    inset 0 4px 15px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 10px rgba(40, 35, 30, 0.03),
     0 2px 8px rgba(0, 0, 0, 0.3);
-  border-color: rgba(175, 96, 37, 0.3);
 }
 
 .altar-card-slot--highlight {
+  border-color: color-mix(in srgb, var(--altar-accent) 60%, transparent);
   box-shadow: 
     inset 0 4px 15px rgba(0, 0, 0, 0.5),
-    0 0 50px rgba(175, 96, 37, 0.4),
-    0 0 100px rgba(175, 96, 37, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.3);
-  border-color: rgba(175, 96, 37, 0.6);
+    inset 0 -2px 10px rgba(40, 35, 30, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 20px color-mix(in srgb, var(--altar-accent) 15%, transparent);
 }
 
 /* ==========================================
@@ -1084,43 +1251,6 @@ const endDragOrb = async () => {
 .card-back__line--top { top: 45px; }
 .card-back__line--bottom { bottom: 45px; }
 
-/* ==========================================
-   ALTAR GLOW EFFECT
-   ========================================== */
-.altar-glow {
-  position: absolute;
-  inset: -20px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at center,
-    rgba(175, 96, 37, 0) 40%,
-    rgba(175, 96, 37, 0) 100%
-  );
-  pointer-events: none;
-  transition: all 0.4s ease;
-  z-index: -1;
-}
-
-.altar-glow--active {
-  background: radial-gradient(
-    circle at center,
-    rgba(175, 96, 37, 0.15) 20%,
-    rgba(175, 96, 37, 0.05) 50%,
-    rgba(175, 96, 37, 0) 80%
-  );
-  animation: glowPulse 1s ease-in-out infinite;
-}
-
-@keyframes glowPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
-}
 
 /* ==========================================
    VAAL ORBS SECTION
