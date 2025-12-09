@@ -59,17 +59,17 @@
   mix-blend-mode: hard-light;
 }
 
-/* T0 - LEGENDARY: Gold variations */
+/* T0 - LEGENDARY: Pure Yellow Gold (subtle intensity) */
 .game-card--t0[data-foil-effect="trainer-gallery"] .game-card__foil-overlay {
-  --tg-hue-1: 45;   /* Gold */
-  --tg-hue-2: 38;   /* Amber */
-  --tg-hue-3: 52;   /* Yellow-gold */
-  --tg-hue-4: 30;   /* Orange-gold */
-  --tg-hue-5: 48;   /* Warm gold */
-  --tg-hue-6: 42;   /* Rich gold */
-  --tg-sat: 75%;
-  --tg-light: 52%;
-  --tg-glow-hue: 45;
+  --tg-hue-1: 56;   /* Yellow */
+  --tg-hue-2: 55;   /* Yellow */
+  --tg-hue-3: 57;   /* Yellow */
+  --tg-hue-4: 56;   /* Yellow */
+  --tg-hue-5: 55;   /* Yellow */
+  --tg-hue-6: 56;   /* Yellow */
+  --tg-sat: 70%;
+  --tg-light: 54%;
+  --tg-glow-hue: 56;
 }
 
 /* T1 - EPIC: Purple/Amethyst variations */
