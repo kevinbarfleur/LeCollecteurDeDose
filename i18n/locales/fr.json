@@ -35,6 +35,11 @@
       "description": "Collectionne les reliques les plus rares de Wraeclast. Chaque carte raconte une histoire, chaque drop est une légende.",
       "highlight": "Quel trésor vas-tu découvrir ?"
     },
+    "logs": {
+      "title": "Dernières Invocations",
+      "opened": "a ouvert un booster",
+      "legendary": "✦ Relique Légendaire ✦"
+    },
     "cta": {
       "collection": "Voir ma Collection",
       "catalogue": "Explorer le Catalogue"

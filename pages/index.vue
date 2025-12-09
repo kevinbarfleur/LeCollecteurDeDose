@@ -1,43 +1,41 @@
 <script setup lang="ts">
+import { mockBoosterLogs } from "~/data/mockBoosterLogs";
+
 const { t } = useI18n();
 
 useHead({ title: t("meta.home.title") });
 
-const cardCount = 7;
-const cards = Array.from({ length: cardCount }, (_, i) => ({
-  id: i,
-  baseRotation: -30 + (60 / (cardCount - 1)) * i,
-  delay: i * 0.08,
-}));
-
-const hoveredCard = ref<number | null>(null);
-const cardBackLogoUrl = "/images/card-back-logo.png";
-
-const getCardStyle = (card: (typeof cards)[0], index: number) => {
-  const isHovered = hoveredCard.value === index;
-  const baseRotation = card.baseRotation;
-
-  let translateY = 0;
-  let translateX = 0;
-  let rotation = baseRotation;
-  let scale = 1;
-  let zIndex = index + 1;
-
-  if (isHovered) {
-    translateY = -20;
-    rotation = baseRotation * 0.9;
-    scale = 1.02;
-  }
-
-  return {
-    "--rotation": `${rotation}deg`,
-    "--translate-y": `${translateY}px`,
-    "--translate-x": `${translateX}px`,
-    "--scale": scale,
-    "--z-index": zIndex,
-    "--delay": `${card.delay}s`,
-  };
-};
+// Card fan component (commenté pour l'instant, gardé pour référence future)
+// const cardCount = 7;
+// const cards = Array.from({ length: cardCount }, (_, i) => ({
+//   id: i,
+//   baseRotation: -30 + (60 / (cardCount - 1)) * i,
+//   delay: i * 0.08,
+// }));
+// const hoveredCard = ref<number | null>(null);
+// const cardBackLogoUrl = "/images/card-back-logo.png";
+// const getCardStyle = (card: (typeof cards)[0], index: number) => {
+//   const isHovered = hoveredCard.value === index;
+//   const baseRotation = card.baseRotation;
+//   let translateY = 0;
+//   let translateX = 0;
+//   let rotation = baseRotation;
+//   let scale = 1;
+//   let zIndex = index + 1;
+//   if (isHovered) {
+//     translateY = -20;
+//     rotation = baseRotation * 0.9;
+//     scale = 1.02;
+//   }
+//   return {
+//     "--rotation": `${rotation}deg`,
+//     "--translate-y": `${translateY}px`,
+//     "--translate-x": `${translateX}px`,
+//     "--scale": scale,
+//     "--z-index": zIndex,
+//     "--delay": `${card.delay}s`,
+//   };
+// };
 
 const isVisible = ref(false);
 onMounted(() => {
@@ -56,11 +54,9 @@ onMounted(() => {
       </div>
 
       <div
-        class="relative z-10 min-h-[calc(100vh-80px)] flex items-center justify-center p-8"
+        class="relative z-10 min-h-[calc(100vh-80px)] flex items-center justify-center p-4 sm:p-6"
       >
-        <div
-          class="flex flex-col items-center gap-10 md:gap-4 max-w-4xl w-full"
-        >
+        <div class="flex flex-col items-center gap-4 md:gap-3 max-w-6xl w-full">
           <section class="hero-section">
             <div
               class="hero-mascot"
@@ -90,6 +86,15 @@ onMounted(() => {
             </div>
           </section>
 
+          <!-- Section Logs de Boosters -->
+          <section
+            class="logs-section"
+            :class="{ 'logs-section--visible': isVisible }"
+          >
+            <BoosterLogs :logs="mockBoosterLogs" max-height="55vh" />
+          </section>
+
+          <!-- Card Fan (commenté pour référence future)
           <section class="flex justify-center w-full mb-[10%]">
             <div class="card-fan" :class="{ 'card-fan--visible': isVisible }">
               <div
@@ -127,6 +132,7 @@ onMounted(() => {
               </div>
             </div>
           </section>
+          -->
 
           <section
             class="cta-section"
@@ -230,7 +236,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 0.75rem;
   width: 100%;
   text-align: center;
 }
@@ -240,15 +246,15 @@ onMounted(() => {
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
     text-align: left;
   }
 }
 
 .hero-mascot {
   position: relative;
-  width: 140px;
-  height: 140px;
+  width: 100px;
+  height: 100px;
   opacity: 0;
   transform: scale(0.8) translateY(20px);
   transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -257,29 +263,29 @@ onMounted(() => {
 
 @media (min-width: 640px) {
   .hero-mascot {
-    width: 160px;
-    height: 160px;
+    width: 120px;
+    height: 120px;
   }
 }
 
 @media (min-width: 768px) {
   .hero-mascot {
-    width: 180px;
-    height: 180px;
+    width: 140px;
+    height: 140px;
   }
 }
 
 @media (min-width: 1024px) {
   .hero-mascot {
-    width: 180px;
-    height: 180px;
+    width: 150px;
+    height: 150px;
   }
 }
 
 @media (min-width: 1280px) {
   .hero-mascot {
-    width: 200px;
-    height: 200px;
+    width: 160px;
+    height: 160px;
   }
 }
 
@@ -337,7 +343,7 @@ onMounted(() => {
 }
 
 .hero-title {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .hero-title__main {
@@ -414,7 +420,7 @@ onMounted(() => {
 
 .hero-description__highlight {
   display: block;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   color: #c9a227;
   font-style: italic;
 }
@@ -689,6 +695,27 @@ onMounted(() => {
 
 .fan-card:hover .fan-card__hover-glow {
   opacity: 1;
+}
+
+.logs-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease 0.4s;
+}
+
+.logs-section--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (min-width: 768px) {
+  .logs-section {
+    margin-bottom: 2rem;
+  }
 }
 
 .cta-section {
