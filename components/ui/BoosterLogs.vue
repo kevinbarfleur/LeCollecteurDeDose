@@ -12,7 +12,6 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t, locale } = useI18n();
-const logsContainer = ref<HTMLElement | null>(null);
 
 function formatTimestamp(date: Date): string {
   const now = new Date();
@@ -51,23 +50,9 @@ function getTierGlow(tier: string): string {
   return TIER_CONFIG[tier as keyof typeof TIER_CONFIG]?.glowColor ?? '#5a5a5d';
 }
 
-function scrollToBottom() {
-  if (logsContainer.value) {
-    logsContainer.value.scrollTop = logsContainer.value.scrollHeight;
-  }
-}
-
-onMounted(() => {
-  nextTick(() => {
-    scrollToBottom();
-  });
-});
-
-watch(() => props.logs.length, () => {
-  nextTick(() => {
-    scrollToBottom();
-  });
-});
+// With column-reverse: first item in DOM appears at bottom
+// So we reverse logs: [newest, ..., oldest] → newest at bottom, oldest at top
+const displayLogs = computed(() => [...props.logs].reverse());
 </script>
 
 <template>
@@ -84,13 +69,12 @@ watch(() => props.logs.length, () => {
     </div>
 
     <div 
-      ref="logsContainer"
       class="booster-logs__container"
       :style="{ maxHeight }"
     >
       <div class="booster-logs__list">
         <article
-          v-for="log in logs"
+          v-for="log in displayLogs"
           :key="log.id"
           class="log-entry"
           :class="{
@@ -116,21 +100,23 @@ watch(() => props.logs.length, () => {
                 v-for="item in log.content"
                 :key="item.uid"
                 class="log-entry__card"
-                :class="`log-entry__card--${item.card.tier.toLowerCase()}`"
+                :class="[
+                  `log-entry__card--${item.card.tier.toLowerCase()}`,
+                  { 'log-entry__card--foil': item.isFoil }
+                ]"
                 :style="{
                   '--tier-color': getTierColor(item.card.tier),
                   '--tier-glow': getTierGlow(item.card.tier),
                 }"
               >
+                <span v-if="item.isFoil" class="log-entry__card-foil-badge">✦</span>
                 <span class="log-entry__card-tier">{{ item.card.tier }}</span>
                 <span class="log-entry__card-name">{{ item.card.name }}</span>
+                <span v-if="item.isFoil" class="log-entry__card-foil-shine"></span>
               </div>
             </div>
           </div>
 
-          <div v-if="log.highestTier === 'T0'" class="log-entry__celebration">
-            <span class="log-entry__celebration-text">{{ t('home.logs.legendary') }}</span>
-          </div>
         </article>
       </div>
     </div>
@@ -221,7 +207,7 @@ watch(() => props.logs.length, () => {
 
 .booster-logs__header-title {
   font-family: "Cinzel", serif;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -255,9 +241,9 @@ watch(() => props.logs.length, () => {
 
 .booster-logs__list {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  flex-direction: column-reverse;
+  gap: 0.625rem;
+  padding: 1rem;
 }
 
 .booster-logs__fade-top,
@@ -367,7 +353,7 @@ watch(() => props.logs.length, () => {
 
 .log-entry__username {
   font-family: "Cinzel", serif;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: rgba(220, 215, 205, 0.95);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -380,7 +366,7 @@ watch(() => props.logs.length, () => {
 
 .log-entry__timestamp {
   font-family: "Cormorant Garamond", serif;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-style: italic;
   color: rgba(120, 115, 105, 0.8);
 }
@@ -396,34 +382,36 @@ watch(() => props.logs.length, () => {
   align-items: center;
   gap: 0.375rem;
   font-family: "Cormorant Garamond", serif;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: rgba(140, 135, 125, 0.9);
 }
 
 .log-entry__booster-icon {
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .log-entry__cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
+  gap: 0.5rem;
 }
 
 .log-entry__card {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.1875rem 0.5rem;
+  gap: 0.375rem;
+  padding: 0.3125rem 0.625rem;
   background: linear-gradient(
     180deg,
     rgba(20, 20, 22, 0.8) 0%,
     rgba(14, 14, 16, 0.9) 100%
   );
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid rgba(var(--tier-color-rgb, 60, 58, 55), 0.3);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   transition: all 0.2s ease;
+  overflow: hidden;
 }
 
 .log-entry__card:hover {
@@ -462,77 +450,135 @@ watch(() => props.logs.length, () => {
 .log-entry__card-tier {
   font-family: "Cinzel", serif;
   font-weight: 700;
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   color: var(--tier-glow);
   text-shadow: 0 0 4px rgba(var(--tier-glow-rgb), 0.3);
 }
 
 .log-entry__card-name {
   font-family: "Cormorant Garamond", serif;
+  font-size: 0.875rem;
   color: rgba(180, 175, 165, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 140px;
 }
 
 .log-entry__card--t0 .log-entry__card-name {
   color: #c9a227;
 }
 
-.log-entry__celebration {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(201, 162, 39, 0.15);
-  text-align: center;
+.log-entry__card--foil {
+  --foil-space: 8%;
+  --foil-angle: -22deg;
 }
 
-.log-entry__celebration-text {
-  font-family: "Cinzel", serif;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: #c9a227;
-  text-shadow: 0 0 12px rgba(201, 162, 39, 0.5);
-  animation: celebration-pulse 2s ease-in-out infinite;
+.log-entry__card--foil.log-entry__card--t0 {
+  --foil-hue-1: 45;
+  --foil-hue-2: 38;
+  --foil-hue-3: 52;
+  --foil-sat: 70%;
+  --foil-light: 50%;
 }
 
-@keyframes celebration-pulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+.log-entry__card--foil.log-entry__card--t1 {
+  --foil-hue-1: 278;
+  --foil-hue-2: 268;
+  --foil-hue-3: 288;
+  --foil-sat: 55%;
+  --foil-light: 50%;
 }
+
+.log-entry__card--foil.log-entry__card--t2 {
+  --foil-hue-1: 210;
+  --foil-hue-2: 200;
+  --foil-hue-3: 220;
+  --foil-sat: 45%;
+  --foil-light: 48%;
+}
+
+.log-entry__card--foil.log-entry__card--t3 {
+  --foil-hue-1: 220;
+  --foil-hue-2: 210;
+  --foil-hue-3: 230;
+  --foil-sat: 15%;
+  --foil-light: 52%;
+}
+
+.log-entry__card-foil-badge {
+  font-size: 0.5625rem;
+  color: hsla(var(--foil-hue-1, 220), calc(var(--foil-sat, 50%) + 10%), 75%, 0.95);
+  text-shadow: 0 0 4px hsla(var(--foil-hue-1, 220), var(--foil-sat, 50%), 60%, 0.6);
+}
+
+.log-entry__card-foil-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    var(--foil-angle, -22deg),
+    hsla(var(--foil-hue-1, 220), var(--foil-sat, 50%), var(--foil-light, 50%), 0.35) 0%,
+    hsla(var(--foil-hue-2, 210), var(--foil-sat, 50%), calc(var(--foil-light, 50%) + 5%), 0.25) var(--foil-space, 8%),
+    hsla(var(--foil-hue-3, 230), var(--foil-sat, 50%), var(--foil-light, 50%), 0.35) calc(var(--foil-space, 8%) * 2),
+    hsla(var(--foil-hue-1, 220), var(--foil-sat, 50%), calc(var(--foil-light, 50%) + 3%), 0.3) calc(var(--foil-space, 8%) * 3)
+  );
+  mix-blend-mode: color-dodge;
+  opacity: 0.5;
+  pointer-events: none;
+  animation: foil-shimmer 4s linear infinite;
+}
+
+@keyframes foil-shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
 
 @media (min-width: 640px) {
   .booster-logs__header-title {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
   
   .booster-logs__list {
-    gap: 0.625rem;
-    padding: 1rem;
+    gap: 0.75rem;
+    padding: 1.25rem;
   }
   
   .log-entry {
-    padding: 1rem;
+    padding: 1.125rem;
   }
   
   .log-entry__username {
+    font-size: 1rem;
+  }
+  
+  .log-entry__timestamp {
     font-size: 0.875rem;
   }
   
+  .log-entry__card {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .log-entry__card-tier {
+    font-size: 0.75rem;
+  }
+  
   .log-entry__card-name {
-    max-width: 150px;
+    font-size: 0.9375rem;
+    max-width: 180px;
   }
 }
 
 @media (min-width: 1024px) {
   .booster-logs__list {
-    gap: 0.75rem;
+    gap: 0.875rem;
   }
   
   .log-entry__card-name {
-    max-width: 180px;
+    max-width: 220px;
   }
 }
 </style>

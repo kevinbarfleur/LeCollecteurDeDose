@@ -4,6 +4,7 @@ import { allCards } from './mockCards';
 export interface BoosterContent {
   uid: number;
   card: Card;
+  isFoil: boolean;
 }
 
 export interface BoosterLog {
@@ -105,17 +106,34 @@ const twitchUsernames = [
   'DoseMatinale',
 ];
 
-function getRandomCard(tier?: CardTier): Card {
-  let filteredCards = allCards;
-  if (tier) {
-    filteredCards = allCards.filter(c => c.tier === tier);
-  }
+function getCardByTier(tier: CardTier): Card {
+  const filteredCards = allCards.filter(c => c.tier === tier);
   return filteredCards[Math.floor(Math.random() * filteredCards.length)];
 }
 
-function getRandomHighTierCard(): Card {
+function getRandomWeightedCard(): Card {
+  const tiers: CardTier[] = ['T0', 'T1', 'T2', 'T3'];
+  // T0 très rare mais pas impossible, T1 rare, T2/T3 communs
+  const weights = [0.002, 0.05, 0.30, 0.648];
+  const random = Math.random();
+  let cumulative = 0;
+  let selectedTier: CardTier = 'T3';
+  
+  for (let i = 0; i < weights.length; i++) {
+    cumulative += weights[i];
+    if (random < cumulative) {
+      selectedTier = tiers[i];
+      break;
+    }
+  }
+  
+  return getCardByTier(selectedTier);
+}
+
+function getGuaranteedHighTierCard(): Card {
   const highTiers: CardTier[] = ['T0', 'T1', 'T2'];
-  const weights = [0.05, 0.20, 0.75];
+  // T0 ~2%, T1 ~15%, T2 ~83% - équilibré pour voir quelques T0 sur 60 logs
+  const weights = [0.02, 0.15, 0.83];
   const random = Math.random();
   let cumulative = 0;
   let selectedTier: CardTier = 'T2';
@@ -128,18 +146,22 @@ function getRandomHighTierCard(): Card {
     }
   }
   
-  return getRandomCard(selectedTier);
+  return getCardByTier(selectedTier);
+}
+
+function rollFoil(): boolean {
+  return Math.random() < 0.12; // ~12% de chance d'être foil
 }
 
 function generateBoosterContent(): BoosterContent[] {
   const content: BoosterContent[] = [];
   let uidCounter = 1;
   
-  const guaranteedHighTier = getRandomHighTierCard();
-  content.push({ uid: uidCounter++, card: guaranteedHighTier });
+  const guaranteedHighTier = getGuaranteedHighTierCard();
+  content.push({ uid: uidCounter++, card: guaranteedHighTier, isFoil: rollFoil() });
   
   for (let i = 0; i < 4; i++) {
-    content.push({ uid: uidCounter++, card: getRandomCard() });
+    content.push({ uid: uidCounter++, card: getRandomWeightedCard(), isFoil: rollFoil() });
   }
   
   return content.sort((a, b) => {
