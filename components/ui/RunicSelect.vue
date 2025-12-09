@@ -594,6 +594,8 @@ onUnmounted(() => {
     0 0 1px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(80, 75, 70, 0.15);
 
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -662,12 +664,9 @@ onUnmounted(() => {
    ========================================== */
 .runic-select__dropdown-inner {
   overflow-y: auto;
-  max-height: inherit;
+  flex: 1;
+  min-height: 0;
   padding: 4px;
-}
-
-.runic-select__dropdown--searchable .runic-select__dropdown-inner {
-  max-height: calc(100% - 52px);
 }
 
 /* Custom scrollbar */
@@ -976,15 +975,7 @@ onUnmounted(() => {
   }
 
   .runic-select__dropdown {
-    max-height: 300px;
-  }
-
-  .runic-select__dropdown-inner {
-    max-height: 300px;
-  }
-  
-  .runic-select__dropdown--searchable .runic-select__dropdown-inner {
-    max-height: calc(300px - 52px);
+    max-height: 300px !important;
   }
 }
 </style>

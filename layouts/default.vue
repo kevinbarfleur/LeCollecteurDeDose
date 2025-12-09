@@ -5,6 +5,7 @@ const route = useRoute();
 const navItems = computed(() => [
   { path: "/catalogue", label: t("nav.catalogue"), icon: "cards" },
   { path: "/collection", label: t("nav.collection"), icon: "user" },
+  { path: "/altar", label: t("nav.altar"), icon: "altar" },
   { path: "/about", label: t("nav.about"), icon: "info" },
 ]);
 
