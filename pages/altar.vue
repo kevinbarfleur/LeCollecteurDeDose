@@ -227,6 +227,32 @@ const flipCard = async () => {
   });
 };
 
+// Remove card from altar with animation
+const removeCardFromAltar = async () => {
+  if (!altarCardRef.value || isAnimating.value || !isCardOnAltar.value) return;
+
+  isAnimating.value = true;
+
+  // Animate card leaving the altar
+  await new Promise<void>((resolve) => {
+    gsap.to(altarCardRef.value, {
+      scale: 0.3,
+      opacity: 0,
+      y: 50,
+      rotateY: -180,
+      duration: 0.5,
+      ease: "power2.in",
+      onComplete: resolve,
+    });
+  });
+
+  // Reset state
+  isCardOnAltar.value = false;
+  isCardFlipped.value = false;
+  selectedCardId.value = "";
+  isAnimating.value = false;
+};
+
 // ==========================================
 // VAAL ORB DRAG & DROP
 // ==========================================
@@ -234,12 +260,16 @@ const flipCard = async () => {
 const isDraggingOrb = ref(false);
 const isReturningOrb = ref(false);
 const draggedOrbIndex = ref<number | null>(null);
-const orbPosition = ref({ x: 0, y: 0 });
-const originPosition = ref({ x: 0, y: 0 });
 const isOrbOverCard = ref(false);
 const altarAreaRef = ref<HTMLElement | null>(null);
 const floatingOrbRef = ref<HTMLElement | null>(null);
 const orbRefs = ref<HTMLElement[]>([]);
+
+// Store origin position for return animation
+let originX = 0;
+let originY = 0;
+let currentX = 0;
+let currentY = 0;
 
 // Set orb ref
 const setOrbRef = (el: HTMLElement | null, index: number) => {
@@ -257,10 +287,8 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   const orbElement = orbRefs.value[index];
   if (orbElement) {
     const rect = orbElement.getBoundingClientRect();
-    originPosition.value = {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-    };
+    originX = rect.left + rect.width / 2;
+    originY = rect.top + rect.height / 2;
   }
 
   isDraggingOrb.value = true;
@@ -268,7 +296,20 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
 
   const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
   const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
-  orbPosition.value = { x: clientX, y: clientY };
+  currentX = clientX;
+  currentY = clientY;
+
+  // Wait for floating orb to be rendered, then set initial position
+  nextTick(() => {
+    if (floatingOrbRef.value) {
+      gsap.set(floatingOrbRef.value, {
+        left: clientX,
+        top: clientY,
+        xPercent: -50,
+        yPercent: -50,
+      });
+    }
+  });
 
   document.addEventListener("mousemove", onDragOrb);
   document.addEventListener("mouseup", endDragOrb);
@@ -277,7 +318,7 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
 };
 
 const onDragOrb = (event: MouseEvent | TouchEvent) => {
-  if (!isDraggingOrb.value) return;
+  if (!isDraggingOrb.value || !floatingOrbRef.value) return;
 
   if ("touches" in event) {
     event.preventDefault();
@@ -286,8 +327,14 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
   const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
   
-  // Instant position update - no animation during drag
-  orbPosition.value = { x: clientX, y: clientY };
+  currentX = clientX;
+  currentY = clientY;
+
+  // Instant position update using GSAP set (no animation)
+  gsap.set(floatingOrbRef.value, {
+    left: clientX,
+    top: clientY,
+  });
 
   // Check if orb is over the card
   if (altarCardRef.value) {
@@ -311,14 +358,14 @@ const endDragOrb = async () => {
 
   // If orb was dropped on card, consume it and flip the card
   if (isOrbOverCard.value && vaalOrbs.value > 0) {
-    // Consume animation - orb shrinks and disappears
+    // Consume animation - orb shrinks and disappears with dramatic effect
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
         gsap.to(floatingOrbRef.value, {
           scale: 0,
           opacity: 0,
-          duration: 0.25,
-          ease: "power2.in",
+          duration: 0.3,
+          ease: "power3.in",
           onComplete: resolve,
         });
       });
@@ -331,20 +378,28 @@ const endDragOrb = async () => {
     
     await flipCard();
   } else {
-    // Return to origin with animation
+    // Return to origin with smooth GSAP animation directly on DOM element
     isReturningOrb.value = true;
     
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
-        gsap.to(orbPosition.value, {
-          x: originPosition.value.x,
-          y: originPosition.value.y,
-          duration: 0.35,
-          ease: "back.out(1.2)",
-          onUpdate: () => {
-            // Force reactivity update
-            orbPosition.value = { ...orbPosition.value };
-          },
+        gsap.to(floatingOrbRef.value, {
+          left: originX,
+          top: originY,
+          scale: 0.8,
+          duration: 0.4,
+          ease: "power2.out",
+          onComplete: resolve,
+        });
+      });
+      
+      // Quick fade out at origin
+      await new Promise<void>((resolve) => {
+        gsap.to(floatingOrbRef.value, {
+          opacity: 0,
+          scale: 0.6,
+          duration: 0.15,
+          ease: "power2.in",
           onComplete: resolve,
         });
       });
@@ -356,16 +411,6 @@ const endDragOrb = async () => {
     isReturningOrb.value = false;
   }
 };
-
-// Computed style for dragged orb - instant follow, no CSS transition
-const draggedOrbStyle = computed(() => ({
-  position: "fixed" as const,
-  left: `${orbPosition.value.x}px`,
-  top: `${orbPosition.value.y}px`,
-  transform: "translate(-50%, -50%)",
-  pointerEvents: "none" as const,
-  zIndex: 10000,
-}));
 </script>
 
 <template>
@@ -409,7 +454,7 @@ const draggedOrbStyle = computed(() => ({
         <div class="altar-header">
           <RunicHeader
             title="Autel"
-            subtitle="Utilisez les Vaal Orbs pour révéler le dos de vos cartes"
+            subtitle="Vaal or no balls, Exile."  
           />
         </div>
 
@@ -441,6 +486,21 @@ const draggedOrbStyle = computed(() => ({
                   placeholder="Choisir la variante..."
                   size="md"
                 />
+              </div>
+
+              <!-- Remove card button -->
+              <div
+                v-if="isCardOnAltar && !isAnimating"
+                class="selector-field selector-field--action"
+              >
+                <RunicButton
+                  size="md"
+                  rune-left="✕"
+                  rune-right="✕"
+                  @click="removeCardFromAltar"
+                >
+                  Retirer
+                </RunicButton>
               </div>
             </div>
           </RunicBox>
@@ -475,25 +535,27 @@ const draggedOrbStyle = computed(() => ({
                 <p class="altar-empty__text">Placez une carte sur l'autel</p>
               </div>
 
-              <!-- Card display -->
+              <!-- Card display with 3D flip -->
               <div
                 v-if="displayCard && isCardOnAltar"
                 ref="altarCardRef"
                 class="altar-card"
                 :class="{ 'altar-card--flipped': isCardFlipped }"
               >
-                <!-- Front face -->
+                <!-- Front face - GameCard with full interactivity -->
                 <div class="altar-card__face altar-card__face--front">
-                  <GameCard
-                    :card="displayCard"
-                    :owned="true"
-                    :preview-only="true"
-                  />
+                  <div class="altar-card__game-card-wrapper">
+                    <GameCard
+                      :card="displayCard"
+                      :owned="true"
+                    />
+                  </div>
                 </div>
 
-                <!-- Back face -->
+                <!-- Back face - Card back design -->
                 <div class="altar-card__face altar-card__face--back">
                   <div class="card-back">
+                    <div class="card-back__bg"></div>
                     <div class="card-back__frame">
                       <div class="card-back__border"></div>
                       <span class="card-back__rune card-back__rune--tl">✧</span>
@@ -510,9 +572,7 @@ const draggedOrbStyle = computed(() => ({
                     </div>
                     <div class="card-back__decoration">
                       <div class="card-back__line card-back__line--top"></div>
-                      <div
-                        class="card-back__line card-back__line--bottom"
-                      ></div>
+                      <div class="card-back__line card-back__line--bottom"></div>
                     </div>
                   </div>
                 </div>
@@ -572,7 +632,7 @@ const draggedOrbStyle = computed(() => ({
           </RunicBox>
         </div>
 
-        <!-- Dragged orb (follows cursor) -->
+        <!-- Dragged orb (follows cursor) - position controlled by GSAP -->
         <Teleport to="body">
           <div
             v-if="isDraggingOrb"
@@ -582,7 +642,6 @@ const draggedOrbStyle = computed(() => ({
               'vaal-orb--over-card': isOrbOverCard,
               'vaal-orb--returning': isReturningOrb 
             }"
-            :style="draggedOrbStyle"
           >
             <div class="vaal-orb__inner">
               <img
@@ -618,19 +677,23 @@ const draggedOrbStyle = computed(() => ({
    CARD SELECTOR
    ========================================== */
 .altar-selector {
-  max-width: 600px;
+  max-width: 750px;
   margin: 0 auto;
   width: 100%;
 }
 
 .selector-grid {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
 }
 
 @media (min-width: 640px) {
   .selector-grid {
-    grid-template-columns: 2fr 1fr;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1rem;
   }
 }
 
@@ -638,6 +701,21 @@ const draggedOrbStyle = computed(() => ({
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .selector-field {
+    width: auto;
+    flex: 1;
+    max-width: 280px;
+  }
+  
+  .selector-field--action {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 120px;
+  }
 }
 
 .selector-label {
@@ -843,7 +921,6 @@ const draggedOrbStyle = computed(() => ({
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  perspective: 1000px;
 }
 
 .altar-card__face {
@@ -851,15 +928,40 @@ const draggedOrbStyle = computed(() => ({
   inset: 0;
   backface-visibility: hidden;
   border-radius: 8px;
-  overflow: hidden;
+  /* No overflow hidden - let GameCard effects work */
 }
 
 .altar-card__face--front {
   transform: rotateY(0deg);
+  transform-style: preserve-3d;
 }
 
 .altar-card__face--back {
   transform: rotateY(180deg);
+  overflow: hidden;
+}
+
+/* Wrapper for GameCard to ensure proper sizing */
+.altar-card__game-card-wrapper {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+/* Ensure GameCard fills the space and has pointer events */
+.altar-card__game-card-wrapper :deep(.game-card-container) {
+  width: 100%;
+  height: 100%;
+}
+
+.altar-card__game-card-wrapper :deep(.card-tilt-container) {
+  width: 100%;
+  height: 100%;
+}
+
+.altar-card__game-card-wrapper :deep(.game-card) {
+  width: 100%;
+  height: 100%;
 }
 
 /* ==========================================
@@ -869,6 +971,13 @@ const draggedOrbStyle = computed(() => ({
   width: 100%;
   height: 100%;
   position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-back__bg {
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     160deg,
     #0a0908 0%,
@@ -876,13 +985,35 @@ const draggedOrbStyle = computed(() => ({
     #030303 60%,
     #080706 100%
   );
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: inherit;
+}
+
+.card-back__bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(20, 15, 12, 0.3) 0%,
+    transparent 70%
+  );
+  border-radius: inherit;
+}
+
+.card-back__bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  border-radius: inherit;
 }
 
 .card-back__frame {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
 
 .card-back__border {
@@ -1172,12 +1303,16 @@ const draggedOrbStyle = computed(() => ({
 }
 
 /* ==========================================
-   FLOATING/DRAGGED ORB
+   FLOATING/DRAGGED ORB - Position controlled by GSAP
    ========================================== */
 .vaal-orb--floating {
+  position: fixed;
   width: 80px;
   height: 80px;
-  /* No animation - instant follow */
+  z-index: 10000;
+  pointer-events: none;
+  /* GSAP controls left/top - no CSS transitions on position */
+  will-change: transform, left, top;
 }
 
 .vaal-orb--floating .vaal-orb__inner {
@@ -1188,7 +1323,8 @@ const draggedOrbStyle = computed(() => ({
     inset 0 -2px 8px rgba(175, 96, 37, 0.3),
     0 8px 30px rgba(0, 0, 0, 0.7),
     0 0 50px rgba(175, 96, 37, 0.4);
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  /* Only transition visual properties, not position */
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Returning animation - shrink slightly */
@@ -1203,23 +1339,23 @@ const draggedOrbStyle = computed(() => ({
 }
 
 .vaal-orb--over-card .vaal-orb__inner {
-  transform: scale(1.3);
-  border-color: rgba(175, 96, 37, 0.8);
+  transform: scale(1.4);
+  border-color: rgba(175, 96, 37, 0.9);
   box-shadow: 
     inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(175, 96, 37, 0.4),
-    0 10px 40px rgba(0, 0, 0, 0.8),
-    0 0 80px rgba(175, 96, 37, 0.6);
+    inset 0 -2px 8px rgba(175, 96, 37, 0.5),
+    0 12px 50px rgba(0, 0, 0, 0.8),
+    0 0 100px rgba(175, 96, 37, 0.7);
 }
 
 .vaal-orb--over-card .vaal-orb__glow {
   background: radial-gradient(
     circle at center,
-    rgba(175, 96, 37, 0.5) 0%,
-    rgba(175, 96, 37, 0.2) 40%,
+    rgba(175, 96, 37, 0.6) 0%,
+    rgba(175, 96, 37, 0.25) 40%,
     rgba(175, 96, 37, 0) 70%
   );
-  animation: pulseGlow 0.5s ease-in-out infinite;
+  animation: pulseGlow 0.4s ease-in-out infinite;
 }
 
 @keyframes pulseGlow {
@@ -1228,8 +1364,8 @@ const draggedOrbStyle = computed(() => ({
     opacity: 1;
   }
   50% {
-    transform: scale(1.2);
-    opacity: 0.8;
+    transform: scale(1.3);
+    opacity: 0.85;
   }
 }
 
