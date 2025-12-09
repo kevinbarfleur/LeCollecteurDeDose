@@ -1296,14 +1296,11 @@ const endDragOrb = async () => {
                 @mousedown="(e) => startDragOrb(e, index)"
                 @touchstart="(e) => startDragOrb(e, index)"
               >
-                <div class="vaal-orb__inner">
-                  <img
-                    :src="cardBackLogoUrl"
-                    alt="Vaal Orb"
-                    class="vaal-orb__image"
-                  />
-                </div>
-                <div class="vaal-orb__glow"></div>
+                <img
+                  :src="cardBackLogoUrl"
+                  alt="Vaal Orb"
+                  class="vaal-orb__image"
+                />
               </button>
 
               <!-- Empty state -->
@@ -1328,14 +1325,11 @@ const endDragOrb = async () => {
               'vaal-orb--returning': isReturningOrb 
             }"
           >
-            <div class="vaal-orb__inner">
-              <img
-                :src="cardBackLogoUrl"
-                alt="Vaal Orb"
-                class="vaal-orb__image"
-              />
-            </div>
-            <div class="vaal-orb__glow vaal-orb__glow--active"></div>
+            <img
+              :src="cardBackLogoUrl"
+              alt="Vaal Orb"
+              class="vaal-orb__image"
+            />
           </div>
         </Teleport>
 
@@ -2391,13 +2385,13 @@ const endDragOrb = async () => {
    ========================================== */
 .vaal-orb {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   background: transparent;
   border: none;
   cursor: grab;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .vaal-orb:active {
@@ -2405,80 +2399,27 @@ const endDragOrb = async () => {
 }
 
 .vaal-orb--disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  filter: grayscale(0.5);
 }
 
 .vaal-orb--dragging {
   opacity: 0.3;
 }
 
-.vaal-orb__inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
-  
-  /* Deep carved orb effect - red theme */
-  background: linear-gradient(
-    160deg,
-    #1a1512 0%,
-    #0d0a09 40%,
-    #080605 100%
-  );
-  
-  box-shadow: 
-    inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(80, 40, 40, 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(160, 50, 50, 0.15);
-  
-  border: 2px solid rgba(100, 50, 50, 0.35);
-  
-  transition: all 0.3s ease;
-}
-
-.vaal-orb:not(.vaal-orb--disabled):hover .vaal-orb__inner {
-  transform: scale(1.1);
-  border-color: rgba(180, 60, 60, 0.6);
-  box-shadow: 
-    inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(180, 60, 60, 0.25),
-    0 6px 20px rgba(0, 0, 0, 0.6),
-    0 0 35px rgba(180, 50, 50, 0.4);
+.vaal-orb:not(.vaal-orb--disabled):hover {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 12px rgba(180, 50, 50, 0.7)) 
+          drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
 }
 
 .vaal-orb__image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  padding: 12px;
-  opacity: 0.8;
-  filter: sepia(30%) brightness(0.9);
-}
-
-.vaal-orb__glow {
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at center,
-    rgba(160, 50, 50, 0) 30%,
-    rgba(160, 50, 50, 0) 100%
-  );
-  pointer-events: none;
-  transition: all 0.3s ease;
-}
-
-.vaal-orb:not(.vaal-orb--disabled):hover .vaal-orb__glow,
-.vaal-orb__glow--active {
-  background: radial-gradient(
-    circle at center,
-    rgba(180, 50, 50, 0.4) 0%,
-    rgba(160, 40, 40, 0.15) 40%,
-    rgba(140, 30, 30, 0) 70%
-  );
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  transition: filter 0.2s ease;
 }
 
 /* ==========================================
@@ -2486,65 +2427,46 @@ const endDragOrb = async () => {
    ========================================== */
 .vaal-orb--floating {
   position: fixed;
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   z-index: 10000;
   pointer-events: none;
-  /* GSAP controls left/top - no CSS transitions on position */
   will-change: transform, left, top;
+  filter: drop-shadow(0 0 15px rgba(180, 50, 50, 0.6)) 
+          drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
 }
 
-.vaal-orb--floating .vaal-orb__inner {
-  transform: scale(1.2);
-  border-color: rgba(180, 60, 60, 0.7);
-  box-shadow: 
-    inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(180, 60, 60, 0.35),
-    0 8px 30px rgba(0, 0, 0, 0.7),
-    0 0 50px rgba(180, 50, 50, 0.5);
-  /* Only transition visual properties, not position */
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+.vaal-orb--floating .vaal-orb__image {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
 }
 
-/* Returning animation - shrink slightly */
-.vaal-orb--returning .vaal-orb__inner {
+.vaal-orb--returning {
+  filter: drop-shadow(0 0 8px rgba(160, 50, 50, 0.4)) 
+          drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.vaal-orb--returning .vaal-orb__image {
   transform: scale(0.9);
-  border-color: rgba(160, 50, 50, 0.35);
-  box-shadow: 
-    inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(160, 50, 50, 0.15),
-    0 4px 15px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(160, 50, 50, 0.25);
 }
 
-.vaal-orb--over-card .vaal-orb__inner {
-  transform: scale(1.4);
-  border-color: rgba(200, 60, 60, 0.95);
-  box-shadow: 
-    inset 0 3px 10px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(200, 60, 60, 0.55),
-    0 12px 50px rgba(0, 0, 0, 0.8),
-    0 0 100px rgba(200, 50, 50, 0.7);
+.vaal-orb--over-card {
+  filter: drop-shadow(0 0 25px rgba(200, 50, 50, 0.8)) 
+          drop-shadow(0 0 50px rgba(180, 40, 40, 0.5))
+          drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7));
 }
 
-.vaal-orb--over-card .vaal-orb__glow {
-  background: radial-gradient(
-    circle at center,
-    rgba(200, 50, 50, 0.65) 0%,
-    rgba(180, 40, 40, 0.3) 40%,
-    rgba(160, 30, 30, 0) 70%
-  );
-  animation: pulseGlow 0.4s ease-in-out infinite;
+.vaal-orb--over-card .vaal-orb__image {
+  transform: scale(1.3);
+  animation: pulseOrb 0.4s ease-in-out infinite;
 }
 
-@keyframes pulseGlow {
+@keyframes pulseOrb {
   0%, 100% {
-    transform: scale(1);
-    opacity: 1;
+    transform: scale(1.3);
   }
   50% {
-    transform: scale(1.3);
-    opacity: 0.85;
+    transform: scale(1.4);
   }
 }
 
@@ -2761,13 +2683,13 @@ const endDragOrb = async () => {
   }
 
   .vaal-orb {
-    width: 56px;
-    height: 56px;
+    width: 40px;
+    height: 40px;
   }
 
   .vaal-orb--floating {
-    width: 70px;
-    height: 70px;
+    width: 56px;
+    height: 56px;
   }
 }
 </style>
