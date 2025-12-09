@@ -15,6 +15,9 @@
     "catalogue": {
       "title": "Catalogue - Le Collecteur de Dose"
     },
+    "altar": {
+      "title": "Autel - Le Collecteur de Dose"
+    },
     "about": {
       "title": "À propos - Le Collecteur de Dose"
     }
@@ -22,6 +25,7 @@
   "nav": {
     "catalogue": "Catalogue",
     "collection": "Ma Collection",
+    "altar": "Autel",
     "about": "À propos"
   },
   "auth": {
