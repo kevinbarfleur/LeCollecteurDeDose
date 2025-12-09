@@ -1117,7 +1117,7 @@ const endDragOrb = async () => {
         <!-- Header -->
         <div class="altar-header">
           <RunicHeader
-            title="Autel"
+            title="Autel (Demo)"
             subtitle="Vaal or no balls, Exile."  
           />
         </div>
@@ -1349,28 +1349,25 @@ const endDragOrb = async () => {
                     <span class="admin-modal__icon">⚙</span>
                     Admin / Debug
                   </h3>
-                  <button class="admin-modal__close" @click="showAdminModal = false">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  <RunicButton
+                    variant="ghost"
+                    size="sm"
+                    icon="close"
+                    @click="showAdminModal = false"
+                  />
                 </div>
                 
                 <div class="admin-modal__content">
                   <div class="admin-field">
-                    <label class="admin-field__label">Forcer le résultat Vaal</label>
+                    <RunicSelect
+                      v-model="forcedOutcome"
+                      :options="forcedOutcomeOptions"
+                      label="Forcer le résultat Vaal"
+                      size="md"
+                    />
                     <p class="admin-field__hint">
                       Sélectionne un résultat pour tester les animations
                     </p>
-                    <select v-model="forcedOutcome" class="admin-field__select">
-                      <option 
-                        v-for="option in forcedOutcomeOptions" 
-                        :key="option.value" 
-                        :value="option.value"
-                      >
-                        {{ option.label }}
-                      </option>
-                    </select>
                   </div>
 
                   <div class="admin-field">
@@ -1378,13 +1375,19 @@ const endDragOrb = async () => {
                     <p class="admin-field__hint">
                       Ajuste le nombre de Vaal Orbs disponibles
                     </p>
-                    <input 
-                      v-model.number="vaalOrbs" 
-                      type="number" 
-                      min="0" 
-                      max="99"
-                      class="admin-field__input"
-                    />
+                    <div class="admin-field__number">
+                      <button 
+                        class="admin-field__btn"
+                        :disabled="vaalOrbs <= 0"
+                        @click="vaalOrbs = Math.max(0, vaalOrbs - 1)"
+                      >−</button>
+                      <span class="admin-field__value">{{ vaalOrbs }}</span>
+                      <button 
+                        class="admin-field__btn"
+                        :disabled="vaalOrbs >= 99"
+                        @click="vaalOrbs = Math.min(99, vaalOrbs + 1)"
+                      >+</button>
+                    </div>
                   </div>
 
                   <div class="admin-info">
@@ -2599,32 +2602,6 @@ const endDragOrb = async () => {
   font-size: 1.25rem;
 }
 
-.admin-modal__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: rgba(80, 70, 60, 0.2);
-  border: 1px solid rgba(80, 70, 60, 0.3);
-  border-radius: 4px;
-  color: rgba(200, 190, 180, 0.6);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.admin-modal__close:hover {
-  background: rgba(175, 96, 37, 0.2);
-  border-color: rgba(175, 96, 37, 0.4);
-  color: var(--color-accent);
-}
-
-.admin-modal__close svg {
-  width: 16px;
-  height: 16px;
-}
-
 .admin-modal__content {
   padding: 1.25rem;
   display: flex;
@@ -2655,43 +2632,65 @@ const endDragOrb = async () => {
   margin: 0;
 }
 
-.admin-field__select,
-.admin-field__input {
-  width: 100%;
-  padding: 0.625rem 1rem;
-  font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
-  color: #c8c8c8;
+.admin-field__number {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.admin-field__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(200, 190, 180, 0.8);
   background: linear-gradient(
     180deg,
-    rgba(8, 8, 10, 0.95) 0%,
-    rgba(14, 14, 16, 0.9) 100%
+    rgba(30, 28, 25, 0.9) 0%,
+    rgba(22, 20, 18, 0.95) 100%
   );
-  border: 1px solid rgba(60, 55, 50, 0.4);
+  border: 1px solid rgba(80, 70, 60, 0.4);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.admin-field__select:hover,
-.admin-field__input:hover {
+.admin-field__btn:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    rgba(40, 38, 35, 0.9) 0%,
+    rgba(30, 28, 25, 0.95) 100%
+  );
   border-color: rgba(175, 96, 37, 0.5);
+  color: var(--color-accent);
 }
 
-.admin-field__select:focus,
-.admin-field__input:focus {
-  outline: none;
-  border-color: rgba(175, 96, 37, 0.6);
-  box-shadow: 0 0 0 2px rgba(175, 96, 37, 0.15);
+.admin-field__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.admin-field__select option {
-  background: #1a1816;
-  color: #c8c8c8;
-}
-
-.admin-field__input {
-  cursor: text;
+.admin-field__value {
+  min-width: 48px;
+  padding: 0.5rem 0.75rem;
+  font-family: "Cinzel", serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-accent);
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.98) 0%,
+    rgba(14, 14, 16, 0.95) 100%
+  );
+  border: 1px solid rgba(60, 55, 50, 0.5);
+  border-radius: 4px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .admin-info {
