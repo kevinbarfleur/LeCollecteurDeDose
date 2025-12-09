@@ -7,7 +7,7 @@ import html2canvas from "html2canvas";
 
 const { t } = useI18n();
 
-useHead({ title: "Autel" });
+useHead({ title: "Autel - Le Collecteur de Dose" });
 
 const { loggedIn } = useUserSession();
 
@@ -134,6 +134,7 @@ const selectedCardId = ref<string>("");
 const selectedVariation = ref<CardVariation>("standard");
 const isCardFlipped = ref(false);
 const isCardOnAltar = ref(false);
+const isAltarActive = ref(false); // Visual state - fades out smoothly
 const isAnimating = ref(false);
 
 // Get the selected card group
@@ -193,8 +194,8 @@ const altarClasses = computed(() => ({
   'altar-platform--t2': displayCard.value?.tier === 'T2',
   'altar-platform--t3': displayCard.value?.tier === 'T3',
   'altar-platform--foil': isCurrentCardFoil.value,
-  'altar-platform--active': isCardOnAltar.value,
-  'altar-platform--vaal': isOrbOverCard.value, // Vaal theme takes over when orb is on card
+  'altar-platform--active': isAltarActive.value,
+  'altar-platform--vaal': isOrbOverCard.value,
 }));
 
 // Watch for card selection changes
@@ -220,6 +221,7 @@ watch(selectedCardId, async (newId, oldId) => {
     // Animate new card onto altar
     placeCardOnAltar();
   } else {
+    isAltarActive.value = false;
     isCardOnAltar.value = false;
     isCardFlipped.value = false;
   }
@@ -281,6 +283,7 @@ const placeCardOnAltar = async () => {
 
   await nextTick();
   isCardOnAltar.value = true;
+  isAltarActive.value = true;
   await nextTick();
 
   if (altarCardRef.value) {
@@ -541,6 +544,7 @@ const cleanupAfterDestruction = (destroyedCardUid: number) => {
   capturedCardDimensions.value = null;
   isCardBeingDestroyed.value = false;
   isCardOnAltar.value = false;
+  isAltarActive.value = false;
   isCardFlipped.value = false;
   selectedCardId.value = "";
   isAnimating.value = false;
@@ -657,6 +661,9 @@ const destroyCard = async () => {
   });
   
   await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Start fading out the altar as disintegration begins
+  isAltarActive.value = false;
   
   const cardSlot = altarCardRef.value.parentElement;
   if (!cardSlot) {
@@ -815,6 +822,8 @@ const ejectCard = async () => {
   if (!altarCardRef.value) return;
   
   isCardAnimatingOut.value = true;
+  isAltarActive.value = false;
+  
   const exit = getRandomExitPoint();
   
   await new Promise<void>((resolve) => {
