@@ -3,6 +3,7 @@ import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { VARIATION_CONFIG, TIER_CONFIG, getCardVariation, isCardFoil } from "~/types/card";
 import gsap from "gsap";
+import html2canvas from "html2canvas";
 
 const { t } = useI18n();
 
@@ -11,14 +12,24 @@ useHead({ title: "Autel" });
 const { loggedIn } = useUserSession();
 
 // ==========================================
-// USER DATA - Vaal Orbs & Collection
+// USER DATA - Vaal Orbs & Collection (Local Session Copy)
 // ==========================================
 
 // Mock user Vaal Orbs (in real app, this would come from user state/API)
-const vaalOrbs = ref(5);
+const vaalOrbs = ref(14);
 
-// User's collection
-const collection = computed(() => mockUserCollection);
+// Local session copy of the collection - persists during the session
+// Deep clone to avoid mutating the original mockUserCollection
+const localCollection = ref<Card[]>([]);
+
+// Initialize local collection on mount
+onMounted(() => {
+  // Deep clone the mock collection for this session
+  localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
+});
+
+// User's collection - points to local session copy
+const collection = computed(() => localCollection.value);
 
 // ==========================================
 // CARD GROUPING WITH VARIATIONS
@@ -194,6 +205,12 @@ watch(selectedCardId, async (newId, oldId) => {
       selectedVariation.value = group.variations[0].variation;
     }
     
+    // Clear snapshots and dimensions when changing cards
+    cardSnapshot.value = null;
+    imageSnapshot.value = null;
+    capturedImageDimensions.value = null;
+    capturedCardDimensions.value = null;
+    
     // If there was a previous card, eject it first
     if (oldId && isCardOnAltar.value && altarCardRef.value && !isAnimating.value) {
       isAnimating.value = true;
@@ -213,6 +230,7 @@ watch(selectedCardId, async (newId, oldId) => {
 // ==========================================
 
 const altarCardRef = ref<HTMLElement | null>(null);
+const cardFrontRef = ref<HTMLElement | null>(null);
 const cardBackLogoUrl = "/images/card-back-logo.png";
 const isCardAnimatingIn = ref(false);
 const isCardAnimatingOut = ref(false);
@@ -289,6 +307,8 @@ const placeCardOnAltar = async () => {
       onComplete: () => {
         isCardAnimatingIn.value = false;
         isAnimating.value = false;
+        // Capture snapshot after card has landed and rendered
+        captureCardSnapshot();
       },
     });
   } else {
@@ -297,23 +317,497 @@ const placeCardOnAltar = async () => {
   }
 };
 
-// Clean card flip animation (Y-axis only, smooth)
-const flipCard = async () => {
-  if (!altarCardRef.value || isAnimating.value) return;
+// ==========================================
+// VAAL ORB OUTCOMES
+// ==========================================
+type VaalOutcome = 'nothing' | 'foil' | 'destroyed';
+type ForcedOutcome = 'random' | VaalOutcome;
+
+// State for destruction animation
+const isCardBeingDestroyed = ref(false);
+
+// Admin/Debug settings
+const showAdminModal = ref(false);
+const forcedOutcome = ref<ForcedOutcome>('random');
+
+const forcedOutcomeOptions = [
+  { value: 'random', label: '🎲 Aléatoire (défaut)' },
+  { value: 'nothing', label: '😐 Rien ne se passe' },
+  { value: 'foil', label: '✨ Transformation Foil' },
+  { value: 'destroyed', label: '💀 Destruction' },
+];
+
+// Simulate Vaal outcome (will be server-side later)
+const simulateVaalOutcome = (): VaalOutcome => {
+  // If a forced outcome is set, use it
+  if (forcedOutcome.value !== 'random') {
+    return forcedOutcome.value;
+  }
+  
+  const rand = Math.random();
+  // 50% nothing, 30% foil, 20% destroyed
+  if (rand < 0.5) return 'nothing';
+  if (rand < 0.8) return 'foil';
+  return 'destroyed';
+};
+
+// Transform card to foil instantly with dramatic effect
+const transformToFoil = async () => {
+  if (!altarCardRef.value || !displayCard.value) return;
 
   isAnimating.value = true;
   
-  const targetRotateY = isCardFlipped.value ? 0 : 180;
-  isCardFlipped.value = !isCardFlipped.value;
-
+  // Find the card in the local collection and update it
+  const cardIndex = localCollection.value.findIndex(c => c.uid === displayCard.value!.uid);
+  if (cardIndex !== -1) {
+    localCollection.value[cardIndex].foil = true;
+  }
+  
+  // Phase 1: Build up glow
   gsap.to(altarCardRef.value, {
-    rotateY: targetRotateY,
-    duration: 0.6,
-    ease: "power2.inOut",
+    filter: "brightness(1.8) saturate(1.5)",
+    scale: 1.05,
+    duration: 0.2,
+    ease: "power2.in",
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 200));
+  
+  // Phase 2: Bright flash - this is when the transformation happens visually
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(3) saturate(2)",
+    scale: 1.1,
+    duration: 0.1,
+    ease: "power2.out",
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Phase 3: Settle back with the new foil appearance
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(1) saturate(1)",
+    scale: 1,
+    duration: 0.4,
+    ease: "power2.out",
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 400));
+  isAnimating.value = false;
+  
+  // Re-capture snapshot with the new foil appearance
+  captureCardSnapshot();
+};
+
+const DISINTEGRATION_FRAMES = 64;
+const REPETITION_COUNT = 2;
+
+const cardSnapshot = ref<HTMLCanvasElement | null>(null);
+const imageSnapshot = ref<HTMLCanvasElement | null>(null);
+const isCapturingSnapshot = ref(false);
+const capturedImageDimensions = ref<{ width: number; height: number } | null>(null);
+const capturedCardDimensions = ref<{ width: number; height: number } | null>(null);
+
+const findCardImageElement = (): HTMLElement | null => {
+  if (!cardFrontRef.value) return null;
+  return cardFrontRef.value.querySelector('.game-card__image-wrapper') as HTMLElement | null;
+};
+
+const loadImageToCanvas = (imgUrl: string, targetWidth?: number, targetHeight?: number): Promise<HTMLCanvasElement | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    
+    img.onload = () => {
+      const width = targetWidth || img.naturalWidth;
+      const height = targetHeight || img.naturalHeight;
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas);
+      } else {
+        resolve(null);
+      }
+    };
+    
+    img.onerror = () => resolve(null);
+    img.src = `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
+  });
+};
+
+// Capture both the image and the full card as canvas snapshots
+const captureCardSnapshot = async () => {
+  if (!cardFrontRef.value || isCapturingSnapshot.value) return;
+  
+  isCapturingSnapshot.value = true;
+  
+  try {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    if (!cardFrontRef.value) {
+      isCapturingSnapshot.value = false;
+      return;
+    }
+    
+    const imgElement = cardFrontRef.value.querySelector('.game-card__image') as HTMLImageElement;
+    const imageWrapperElement = findCardImageElement();
+    
+    if (imgElement && imgElement.src && imageWrapperElement) {
+      const wrapperRect = imageWrapperElement.getBoundingClientRect();
+      const naturalRatio = imgElement.naturalWidth / imgElement.naturalHeight;
+      const wrapperRatio = wrapperRect.width / wrapperRect.height;
+      
+      const displaySize = naturalRatio > wrapperRatio 
+        ? wrapperRect.width 
+        : wrapperRect.height * naturalRatio;
+      
+      const targetSize = Math.round(displaySize);
+      const directCanvas = await loadImageToCanvas(imgElement.src, targetSize, targetSize);
+      
+      if (directCanvas && canvasHasContent(directCanvas)) {
+        imageSnapshot.value = directCanvas;
+        capturedImageDimensions.value = { width: targetSize, height: targetSize };
+      }
+    }
+    
+    const cardRect = cardFrontRef.value.getBoundingClientRect();
+    const canvas = await html2canvas(cardFrontRef.value, {
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+      imageTimeout: 10000,
+    });
+    
+    cardSnapshot.value = canvas;
+    capturedCardDimensions.value = { width: cardRect.width, height: cardRect.height };
+  } catch (error) {
+    cardSnapshot.value = null;
+  }
+  
+  isCapturingSnapshot.value = false;
+};
+
+const canvasHasContent = (canvas: HTMLCanvasElement): boolean => {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] > 0) return true;
+  }
+  return false;
+};
+
+const generateDisintegrationFrames = (canvas: HTMLCanvasElement, count: number): HTMLCanvasElement[] => {
+  const { width, height } = canvas;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return [];
+  
+  const originalData = ctx.getImageData(0, 0, width, height);
+  const imageDatas = [...Array(count)].map(() => ctx.createImageData(width, height));
+  
+  for (let x = 0; x < width; ++x) {
+    for (let y = 0; y < height; ++y) {
+      for (let i = 0; i < REPETITION_COUNT; ++i) {
+        const dataIndex = Math.floor(count * (Math.random() + 2 * x / width) / 3);
+        const pixelIndex = (y * width + x) * 4;
+        for (let offset = 0; offset < 4; ++offset) {
+          imageDatas[dataIndex].data[pixelIndex + offset] = originalData.data[pixelIndex + offset];
+        }
+      }
+    }
+  }
+  
+  return imageDatas.map(data => {
+    const newCanvas = document.createElement("canvas");
+    newCanvas.width = width;
+    newCanvas.height = height;
+    newCanvas.getContext("2d")?.putImageData(data, 0, 0);
+    return newCanvas;
+  });
+};
+
+const cleanupAfterDestruction = (destroyedCardUid: number) => {
+  const cardIndex = localCollection.value.findIndex(c => c.uid === destroyedCardUid);
+  if (cardIndex !== -1) {
+    localCollection.value.splice(cardIndex, 1);
+  }
+  
+  cardSnapshot.value = null;
+  imageSnapshot.value = null;
+  capturedImageDimensions.value = null;
+  capturedCardDimensions.value = null;
+  isCardBeingDestroyed.value = false;
+  isCardOnAltar.value = false;
+  isCardFlipped.value = false;
+  selectedCardId.value = "";
+  isAnimating.value = false;
+  
+  if (altarCardRef.value) {
+    gsap.set(altarCardRef.value, {
+      x: 0,
+      y: 0,
+      scale: 1,
+      opacity: 1,
+      rotation: 0,
+      rotateY: 0,
+      filter: "none",
+    });
+  }
+};
+
+const createDisintegrationEffect = (
+  canvas: HTMLCanvasElement, 
+  container: HTMLElement,
+  options: {
+    frameCount?: number;
+    direction?: 'up' | 'out';
+    duration?: number;
+    delayMultiplier?: number;
+    targetWidth?: number;
+    targetHeight?: number;
+  } = {}
+): Promise<HTMLCanvasElement[]> => {
+  const {
+    frameCount = DISINTEGRATION_FRAMES,
+    direction = 'out',
+    duration = 1.2,
+    delayMultiplier = 1.5,
+    targetWidth,
+    targetHeight
+  } = options;
+  
+  const displayWidth = targetWidth || canvas.width;
+  const displayHeight = targetHeight || canvas.height;
+  const frames = generateDisintegrationFrames(canvas, frameCount);
+  
+  frames.forEach((frame) => {
+    frame.style.cssText = `
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: ${displayWidth}px;
+      height: ${displayHeight}px;
+      opacity: 1;
+      transform: rotate(0deg) translate(0px, 0px);
+    `;
+    container.appendChild(frame);
+  });
+  
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        frames.forEach((frame, i) => {
+          frame.style.transition = `transform ${duration}s ease-out, opacity ${duration}s ease-out`;
+          frame.style.transitionDelay = `${(delayMultiplier * i / frames.length)}s`;
+        });
+        
+        requestAnimationFrame(() => {
+          frames.forEach(frame => {
+            const randomAngle = 2 * Math.PI * (Math.random() - 0.5);
+            let translateX: number, translateY: number;
+            
+            if (direction === 'up') {
+              translateX = (Math.random() - 0.5) * 120;
+              translateY = -100 - Math.random() * 150;
+            } else {
+              const distance = 80 + Math.random() * 60;
+              translateX = distance * Math.cos(randomAngle);
+              translateY = distance * Math.sin(randomAngle) - 30;
+            }
+            
+            frame.style.transform = `
+              rotate(${25 * (Math.random() - 0.5)}deg) 
+              translate(${translateX}px, ${translateY}px)
+              rotate(${20 * (Math.random() - 0.5)}deg)
+            `;
+            frame.style.opacity = "0";
+          });
+          
+          resolve(frames);
+        });
+      });
+    });
+  });
+};
+
+const destroyCard = async () => {
+  if (!altarCardRef.value || !displayCard.value) return;
+
+  isAnimating.value = true;
+  isCardBeingDestroyed.value = true;
+  
+  const destroyedCardUid = displayCard.value.uid;
+  
+  const shakeTl = gsap.timeline();
+  for (let i = 0; i < 6; i++) {
+    shakeTl.to(altarCardRef.value, {
+      x: (i % 2 === 0 ? -1 : 1) * (4 + i),
+      duration: 0.04,
+      ease: "none",
+    });
+  }
+  shakeTl.to(altarCardRef.value, { x: 0, duration: 0.03 });
+  
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(1.5) sepia(0.4) saturate(1.2)",
+    duration: 0.25,
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  const cardSlot = altarCardRef.value.parentElement;
+  if (!cardSlot) {
+    cleanupAfterDestruction(destroyedCardUid);
+    return;
+  }
+  
+  try {
+    const containers: HTMLElement[] = [];
+    const imageElement = findCardImageElement();
+    const hasImageSnapshot = imageSnapshot.value && canvasHasContent(imageSnapshot.value);
+    
+    if (hasImageSnapshot && imageElement && altarCardRef.value) {
+      const imgTag = imageElement.querySelector('.game-card__image') as HTMLImageElement | null;
+      const imgRect = imgTag?.getBoundingClientRect();
+      const actualWidth = imgRect?.width || imageElement.clientWidth;
+      const actualHeight = imgRect?.height || imageElement.clientHeight;
+      const altarRect = altarCardRef.value.getBoundingClientRect();
+      const relativeTop = imgRect ? (imgRect.top - altarRect.top) : (imageElement.getBoundingClientRect().top - altarRect.top);
+      const relativeLeft = imgRect ? (imgRect.left - altarRect.left) : (imageElement.getBoundingClientRect().left - altarRect.left);
+      
+      const imgContainer = document.createElement("div");
+      imgContainer.className = "disintegration-container";
+      imgContainer.style.cssText = `
+        position: absolute;
+        top: ${relativeTop}px;
+        left: ${relativeLeft}px;
+        width: ${actualWidth}px;
+        height: ${actualHeight}px;
+        pointer-events: none;
+        z-index: 101;
+        overflow: visible;
+      `;
+      
+      altarCardRef.value.appendChild(imgContainer);
+      containers.push(imgContainer);
+      
+      await createDisintegrationEffect(imageSnapshot.value!, imgContainer, {
+        frameCount: 48,
+        direction: 'up',
+        duration: 0.8,
+        delayMultiplier: 0.4,
+        targetWidth: actualWidth,
+        targetHeight: actualHeight
+      });
+      
+      if (imgTag) imgTag.style.opacity = '0';
+      
+      // Wait for image disintegration to finish (duration + max delay)
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+    
+    let cardCanvas = cardSnapshot.value;
+    if (!cardCanvas && cardFrontRef.value) {
+      try {
+        cardCanvas = await html2canvas(cardFrontRef.value, {
+          backgroundColor: null,
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+        });
+      } catch (e) {}
+    }
+    
+    if (cardCanvas && altarCardRef.value && capturedCardDimensions.value) {
+      const { width: cardWidth, height: cardHeight } = capturedCardDimensions.value;
+      
+      const cardContainer = document.createElement("div");
+      cardContainer.className = "disintegration-container";
+      cardContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: ${cardWidth}px;
+        height: ${cardHeight}px;
+        pointer-events: none;
+        z-index: 100;
+        overflow: visible;
+      `;
+      
+      cardSlot.appendChild(cardContainer);
+      containers.push(cardContainer);
+      
+      gsap.set(altarCardRef.value, { opacity: 0 });
+      
+      await createDisintegrationEffect(cardCanvas, cardContainer, {
+        frameCount: 64,
+        direction: 'out',
+        duration: 0.9,
+        delayMultiplier: 0.7,
+        targetWidth: cardWidth,
+        targetHeight: cardHeight
+      });
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    containers.forEach(c => c.remove());
+    
+  } catch (error) {
+    gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  cleanupAfterDestruction(destroyedCardUid);
+};
+
+// Flip card to back (first part of Vaal ritual)
+// Handle Vaal outcome - instant result
+const handleVaalOutcome = async (outcome: VaalOutcome) => {
+  
+  switch (outcome) {
+    case 'nothing':
+      // Nothing happens - just a brief flash to indicate the orb was consumed
+      await showNothingEffect();
+      break;
+      
+    case 'foil':
+      // Transform to foil instantly
+      await transformToFoil();
+      break;
+      
+    case 'destroyed':
+      // Destroy the card
+      await destroyCard();
+      break;
+  }
+};
+
+// Effect when nothing happens
+const showNothingEffect = async () => {
+  if (!altarCardRef.value) return;
+  
+  isAnimating.value = true;
+  
+  // Brief disappointed flash
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(1.3) saturate(0.8)",
+    duration: 0.15,
+    ease: "power2.out",
     onComplete: () => {
-      isAnimating.value = false;
+      gsap.to(altarCardRef.value, {
+        filter: "brightness(1) saturate(1)",
+        duration: 0.3,
+        ease: "power2.out",
+      });
     },
   });
+  
+  await new Promise(resolve => setTimeout(resolve, 400));
+  isAnimating.value = false;
 };
 
 // Card is thrown/ejected towards a random direction with spin
@@ -409,7 +903,8 @@ const updateHeartbeatIntensity = (orbX: number, orbY: number) => {
 
 // Computed CSS variable for heartbeat animation
 const heartbeatStyles = computed(() => {
-  if (!isCardOnAltar.value) return {};
+  // Don't apply heartbeat styles during any animation
+  if (!isCardOnAltar.value || isAnimating.value || isCardBeingDestroyed.value) return {};
   
   // Base heartbeat when card is on altar
   const baseSpeed = 2; // seconds
@@ -521,7 +1016,7 @@ const endDragOrb = async () => {
   document.removeEventListener("touchmove", onDragOrb);
   document.removeEventListener("touchend", endDragOrb);
 
-  // If orb was dropped on card, consume it and flip the card
+  // If orb was dropped on card, consume it and apply Vaal outcome
   if (isOrbOverCard.value && vaalOrbs.value > 0) {
     // Consume animation - orb shrinks and disappears with dramatic effect
     if (floatingOrbRef.value) {
@@ -542,7 +1037,9 @@ const endDragOrb = async () => {
     isOrbOverCard.value = false;
     heartbeatIntensity.value = 0; // Reset heartbeat
     
-    await flipCard();
+    // Apply Vaal outcome instantly
+    const outcome = simulateVaalOutcome();
+    await handleVaalOutcome(outcome);
   } else {
     // Return to origin with smooth GSAP animation directly on DOM element
     isReturningOrb.value = true;
@@ -714,13 +1211,14 @@ const endDragOrb = async () => {
                 :class="{ 
                   'altar-card--flipped': isCardFlipped,
                   'altar-card--animating': isCardAnimatingIn || isCardAnimatingOut,
-                  'altar-card--heartbeat': !isCardAnimatingIn && !isCardAnimatingOut,
+                  'altar-card--heartbeat': !isCardAnimatingIn && !isCardAnimatingOut && !isCardBeingDestroyed && !isAnimating,
                   'altar-card--panicking': isDraggingOrb && !isCardAnimatingIn && !isCardAnimatingOut,
+                  'altar-card--destroying': isCardBeingDestroyed,
                 }"
                 :style="heartbeatStyles"
               >
                 <!-- Front face - GameCard with full interactivity -->
-                <div class="altar-card__face altar-card__face--front">
+                <div ref="cardFrontRef" class="altar-card__face altar-card__face--front">
                   <div class="altar-card__game-card-wrapper">
                     <GameCard
                       :card="displayCard"
@@ -761,7 +1259,19 @@ const endDragOrb = async () => {
 
         <!-- Vaal Orbs inventory -->
         <div class="vaal-orbs-section">
-          <RunicBox padding="md">
+          <RunicBox padding="md" class="vaal-orbs-box">
+            <!-- Admin settings button (top right) -->
+            <RunicButton
+              variant="ghost"
+              size="sm"
+              icon="settings"
+              class="vaal-admin-btn"
+              title="Admin / Debug"
+              @click="showAdminModal = true"
+            >
+              <span class="sr-only">Admin</span>
+            </RunicButton>
+
             <div class="vaal-orbs-header">
               <h3 class="vaal-orbs-title">
                 <span class="vaal-orbs-icon">◈</span>
@@ -827,6 +1337,72 @@ const endDragOrb = async () => {
             </div>
             <div class="vaal-orb__glow vaal-orb__glow--active"></div>
           </div>
+        </Teleport>
+
+        <!-- Admin Modal -->
+        <Teleport to="body">
+          <Transition name="modal">
+            <div v-if="showAdminModal" class="admin-modal-overlay" @click.self="showAdminModal = false">
+              <div class="admin-modal">
+                <div class="admin-modal__header">
+                  <h3 class="admin-modal__title">
+                    <span class="admin-modal__icon">⚙</span>
+                    Admin / Debug
+                  </h3>
+                  <button class="admin-modal__close" @click="showAdminModal = false">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div class="admin-modal__content">
+                  <div class="admin-field">
+                    <label class="admin-field__label">Forcer le résultat Vaal</label>
+                    <p class="admin-field__hint">
+                      Sélectionne un résultat pour tester les animations
+                    </p>
+                    <select v-model="forcedOutcome" class="admin-field__select">
+                      <option 
+                        v-for="option in forcedOutcomeOptions" 
+                        :key="option.value" 
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="admin-field">
+                    <label class="admin-field__label">Vaal Orbs</label>
+                    <p class="admin-field__hint">
+                      Ajuste le nombre de Vaal Orbs disponibles
+                    </p>
+                    <input 
+                      v-model.number="vaalOrbs" 
+                      type="number" 
+                      min="0" 
+                      max="99"
+                      class="admin-field__input"
+                    />
+                  </div>
+
+                  <div class="admin-info">
+                    <div class="admin-info__item">
+                      <span class="admin-info__label">Collection:</span>
+                      <span class="admin-info__value">{{ localCollection.length }} cartes</span>
+                    </div>
+                    <div class="admin-info__item">
+                      <span class="admin-info__label">Mode forcé:</span>
+                      <span class="admin-info__value" :class="{ 'admin-info__value--active': forcedOutcome !== 'random' }">
+                        {{ forcedOutcome === 'random' ? 'Non' : 'Oui' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Transition>
         </Teleport>
       </div>
     </div>
@@ -1369,6 +1945,9 @@ const endDragOrb = async () => {
   transform-style: preserve-3d;
   will-change: transform;
   
+  /* Allow disintegration particles to escape */
+  overflow: visible;
+  
   /* CSS variables for heartbeat effect */
   --heartbeat-speed: 2s;
   --heartbeat-scale: 1.005;
@@ -1465,6 +2044,62 @@ const endDragOrb = async () => {
     opacity: 0.6;
     transform: scale(1);
   }
+}
+
+/* ==========================================
+   DESTRUCTION ANIMATION
+   ========================================== */
+.altar-card--destroying {
+  /* Disable heartbeat during destruction */
+  animation: none !important;
+}
+
+.altar-card--destroying::before {
+  /* Red corruption glow during destruction */
+  content: "";
+  position: absolute;
+  inset: -20px;
+  border-radius: 16px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(200, 50, 50, 0.6) 0%,
+    rgba(180, 30, 30, 0.3) 40%,
+    transparent 70%
+  );
+  animation: destructionGlow 0.15s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes destructionGlow {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* ==========================================
+   DISINTEGRATION EFFECT (Thanos snap)
+   ========================================== */
+.disintegration-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  overflow: visible;
+}
+
+.disintegration-container canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* During entry/exit animations, card needs high z-index to fly over everything */
@@ -1642,6 +2277,34 @@ const endDragOrb = async () => {
   max-width: 600px;
   margin: 0 auto;
   width: 100%;
+}
+
+.vaal-orbs-box {
+  position: relative;
+}
+
+.vaal-admin-btn {
+  position: absolute !important;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  padding: 0.5rem !important;
+}
+
+.vaal-admin-btn :deep(.runic-button__text) {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .vaal-orbs-header {
@@ -1880,6 +2543,208 @@ const endDragOrb = async () => {
     transform: scale(1.3);
     opacity: 0.85;
   }
+}
+
+/* ==========================================
+   ADMIN MODAL
+   ========================================== */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+.admin-modal {
+  background: linear-gradient(
+    180deg,
+    rgba(22, 20, 18, 0.98) 0%,
+    rgba(16, 14, 12, 0.99) 100%
+  );
+  border: 1px solid rgba(175, 96, 37, 0.3);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(175, 96, 37, 0.1),
+    inset 0 1px 0 rgba(80, 70, 60, 0.15);
+}
+
+.admin-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(60, 55, 50, 0.3);
+}
+
+.admin-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "Cinzel", serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  margin: 0;
+}
+
+.admin-modal__icon {
+  font-size: 1.25rem;
+}
+
+.admin-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: rgba(80, 70, 60, 0.2);
+  border: 1px solid rgba(80, 70, 60, 0.3);
+  border-radius: 4px;
+  color: rgba(200, 190, 180, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-modal__close:hover {
+  background: rgba(175, 96, 37, 0.2);
+  border-color: rgba(175, 96, 37, 0.4);
+  color: var(--color-accent);
+}
+
+.admin-modal__close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-modal__content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-field__label {
+  font-family: "Cinzel", serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(200, 190, 180, 0.8);
+}
+
+.admin-field__hint {
+  font-family: "Crimson Text", serif;
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: rgba(140, 130, 120, 0.6);
+  margin: 0;
+}
+
+.admin-field__select,
+.admin-field__input {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  font-family: "Crimson Text", serif;
+  font-size: 0.9375rem;
+  color: #c8c8c8;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.95) 0%,
+    rgba(14, 14, 16, 0.9) 100%
+  );
+  border: 1px solid rgba(60, 55, 50, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-field__select:hover,
+.admin-field__input:hover {
+  border-color: rgba(175, 96, 37, 0.5);
+}
+
+.admin-field__select:focus,
+.admin-field__input:focus {
+  outline: none;
+  border-color: rgba(175, 96, 37, 0.6);
+  box-shadow: 0 0 0 2px rgba(175, 96, 37, 0.15);
+}
+
+.admin-field__select option {
+  background: #1a1816;
+  color: #c8c8c8;
+}
+
+.admin-field__input {
+  cursor: text;
+}
+
+.admin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px solid rgba(60, 55, 50, 0.2);
+}
+
+.admin-info__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: "Crimson Text", serif;
+  font-size: 0.875rem;
+}
+
+.admin-info__label {
+  color: rgba(140, 130, 120, 0.7);
+}
+
+.admin-info__value {
+  color: rgba(200, 190, 180, 0.9);
+}
+
+.admin-info__value--active {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* Modal transition */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.modal-enter-active .admin-modal,
+.modal-leave-active .admin-modal {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .admin-modal,
+.modal-leave-to .admin-modal {
+  transform: scale(0.95) translateY(-10px);
+  opacity: 0;
 }
 
 /* ==========================================
