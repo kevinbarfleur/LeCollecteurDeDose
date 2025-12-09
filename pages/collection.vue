@@ -29,6 +29,7 @@ interface CardGroupWithVariations {
   cardId: string;
   name: string;
   tier: CardTier;
+  itemClass: string;
   cards: Card[];
   count: number;
   variations: VariationGroup[];
@@ -65,6 +66,7 @@ const groupedCards = computed(() => {
         cardId: card.id,
         name: card.name,
         tier: card.tier,
+        itemClass: card.itemClass,
         cards: [card],
         count: 1,
         variations: [
@@ -107,8 +109,130 @@ const stats = computed(() => {
   };
 });
 
-const showDuplicates = ref(false);
-const selectedTier = ref<CardTier | "all">("all");
+// Persisted filters (stored in sessionStorage)
+const searchQuery = usePersistedFilter("collection_search", "");
+const selectedCategories = usePersistedFilter<string[]>("collection_categories", []);
+const showDuplicates = usePersistedFilter("collection_duplicates", false);
+const selectedTier = usePersistedFilter<CardTier | "all">("collection_tier", "all");
+const selectedSort = usePersistedFilter("collection_sort", "rarity-asc");
+
+// Sort options
+type SortOption = "rarity-asc" | "rarity-desc" | "alpha-asc" | "alpha-desc" | "category-asc" | "category-desc";
+
+const sortOptions = [
+  { value: "rarity-asc", label: "Rareté ↑ (T0 → T3)" },
+  { value: "rarity-desc", label: "Rareté ↓ (T3 → T0)" },
+  { value: "alpha-asc", label: "Alphabétique (A → Z)" },
+  { value: "alpha-desc", label: "Alphabétique (Z → A)" },
+  { value: "category-asc", label: "Catégorie (A → Z)" },
+  { value: "category-desc", label: "Catégorie (Z → A)" },
+];
+
+// Sort function for cards
+const sortCards = (cards: Card[], sortType: SortOption): Card[] => {
+  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
+
+  return [...cards].sort((a, b) => {
+    switch (sortType) {
+      case "rarity-asc":
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[a.tier] - tierOrder[b.tier];
+        }
+        return a.name.localeCompare(b.name);
+
+      case "rarity-desc":
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[b.tier] - tierOrder[a.tier];
+        }
+        return a.name.localeCompare(b.name);
+
+      case "alpha-asc":
+        return a.name.localeCompare(b.name);
+
+      case "alpha-desc":
+        return b.name.localeCompare(a.name);
+
+      case "category-asc":
+        if (a.itemClass !== b.itemClass) {
+          return a.itemClass.localeCompare(b.itemClass);
+        }
+        return a.name.localeCompare(b.name);
+
+      case "category-desc":
+        if (a.itemClass !== b.itemClass) {
+          return b.itemClass.localeCompare(a.itemClass);
+        }
+        return a.name.localeCompare(b.name);
+
+      default:
+        return 0;
+    }
+  });
+};
+
+// Sort function for grouped cards
+const sortGroupedCards = (groups: CardGroupWithVariations[], sortType: SortOption): CardGroupWithVariations[] => {
+  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
+
+  return [...groups].sort((a, b) => {
+    switch (sortType) {
+      case "rarity-asc":
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[a.tier] - tierOrder[b.tier];
+        }
+        return a.name.localeCompare(b.name);
+
+      case "rarity-desc":
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[b.tier] - tierOrder[a.tier];
+        }
+        return a.name.localeCompare(b.name);
+
+      case "alpha-asc":
+        return a.name.localeCompare(b.name);
+
+      case "alpha-desc":
+        return b.name.localeCompare(a.name);
+
+      case "category-asc":
+        if (a.itemClass !== b.itemClass) {
+          return a.itemClass.localeCompare(b.itemClass);
+        }
+        return a.name.localeCompare(b.name);
+
+      case "category-desc":
+        if (a.itemClass !== b.itemClass) {
+          return b.itemClass.localeCompare(a.itemClass);
+        }
+        return a.name.localeCompare(b.name);
+
+      default:
+        return 0;
+    }
+  });
+};
+
+// Extract unique categories from player's collection only (with count)
+const categoryOptions = computed(() => {
+  const categoryMap = new Map<string, number>();
+
+  collection.value.forEach((card) => {
+    const current = categoryMap.get(card.itemClass) || 0;
+    categoryMap.set(card.itemClass, current + 1);
+  });
+
+  // Sort by count descending, then alphabetically
+  return Array.from(categoryMap.entries())
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    })
+    .map(([category, count]) => ({
+      value: category,
+      label: category,
+      count,
+    }));
+});
 
 const tierOptions = computed(() => [
   { value: "all", label: t("collection.tiers.all"), color: "default" },
@@ -120,20 +244,60 @@ const tierOptions = computed(() => [
 
 const filteredGroupedCards = computed(() => {
   let groups = groupedCards.value;
-  if (selectedTier.value !== "all") {
-    groups = groups.filter((g) => g.cards[0].tier === selectedTier.value);
+
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    groups = groups.filter(
+      (g) =>
+        g.name.toLowerCase().includes(query) ||
+        g.itemClass.toLowerCase().includes(query)
+    );
   }
-  return groups;
+
+  // Filter by selected categories
+  if (selectedCategories.value.length > 0) {
+    groups = groups.filter((g) =>
+      selectedCategories.value.includes(g.itemClass)
+    );
+  }
+
+  // Filter by tier
+  if (selectedTier.value !== "all") {
+    groups = groups.filter((g) => g.tier === selectedTier.value);
+  }
+
+  // Apply sorting
+  return sortGroupedCards(groups, selectedSort.value as SortOption);
 });
 
 const filteredIndividualCards = computed(() => {
   let cards = collection.value;
 
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    cards = cards.filter(
+      (card) =>
+        card.name.toLowerCase().includes(query) ||
+        card.itemClass.toLowerCase().includes(query)
+    );
+  }
+
+  // Filter by selected categories
+  if (selectedCategories.value.length > 0) {
+    cards = cards.filter((card) =>
+      selectedCategories.value.includes(card.itemClass)
+    );
+  }
+
+  // Filter by tier
   if (selectedTier.value !== "all") {
     cards = cards.filter((card) => card.tier === selectedTier.value);
   }
 
-  return cards;
+  // Apply sorting
+  return sortCards(cards, selectedSort.value as SortOption);
 });
 </script>
 
@@ -237,28 +401,74 @@ const filteredIndividualCards = computed(() => {
           </RunicBox>
         </div>
 
-        <RunicBox padding="sm" class="mb-8">
-          <div
-            class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between"
-          >
-            <div class="flex items-center gap-3">
-              <RunicRadio
-                v-model="showDuplicates"
-                :toggle="true"
-                toggle-color="default"
-                size="sm"
-              />
-              <span
-                class="font-body text-sm text-poe-text-dim transition-colors duration-base"
-                >{{ t("collection.filters.showDuplicates") }}</span
-              >
+        <!-- Filters -->
+        <RunicBox padding="md" class="mb-8">
+          <div class="flex flex-col gap-4">
+            <!-- Search, Category and Sort filters -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div class="flex-1 max-w-full sm:max-w-xs">
+                <RunicInput
+                  v-model="searchQuery"
+                  :placeholder="t('catalogue.search.placeholder')"
+                  icon="search"
+                  size="md"
+                />
+              </div>
+
+              <div class="flex-1 max-w-full sm:max-w-xs">
+                <RunicSelect
+                  v-model="selectedCategories"
+                  :options="categoryOptions"
+                  placeholder="Catégories possédées..."
+                  size="md"
+                  :searchable="true"
+                  :multiple="true"
+                  :max-visible-items="10"
+                />
+              </div>
+
+              <div class="w-full sm:w-auto sm:min-w-[200px]">
+                <RunicSelect
+                  v-model="selectedSort"
+                  :options="sortOptions"
+                  placeholder="Trier par..."
+                  size="md"
+                />
+              </div>
             </div>
 
-            <RunicRadio
-              v-model="selectedTier"
-              :options="tierOptions"
-              size="md"
-            />
+            <!-- Runic separator -->
+            <div class="runic-separator">
+              <span class="runic-separator__rune">◆</span>
+              <span class="runic-separator__line"></span>
+              <span class="runic-separator__rune-center">✦</span>
+              <span class="runic-separator__line"></span>
+              <span class="runic-separator__rune">◆</span>
+            </div>
+
+            <!-- Duplicates toggle and Tier filter -->
+            <div
+              class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between"
+            >
+              <div class="flex items-center gap-3">
+                <RunicRadio
+                  v-model="showDuplicates"
+                  :toggle="true"
+                  toggle-color="default"
+                  size="sm"
+                />
+                <span
+                  class="font-body text-sm text-poe-text-dim transition-colors duration-base"
+                  >{{ t("collection.filters.showDuplicates") }}</span
+                >
+              </div>
+
+              <RunicRadio
+                v-model="selectedTier"
+                :options="tierOptions"
+                size="md"
+              />
+            </div>
           </div>
         </RunicBox>
 
@@ -374,5 +584,37 @@ const filteredIndividualCards = computed(() => {
   .collection-tiers {
     justify-content: flex-end;
   }
+}
+
+.runic-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.runic-separator__rune {
+  font-size: 0.5rem;
+  color: var(--color-accent);
+  opacity: 0.5;
+}
+
+.runic-separator__rune-center {
+  font-size: 0.625rem;
+  color: var(--color-accent);
+  opacity: 0.7;
+  text-shadow: 0 0 8px var(--color-accent);
+}
+
+.runic-separator__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(175, 135, 80, 0.15) 30%,
+    rgba(175, 135, 80, 0.15) 70%,
+    transparent
+  );
 }
 </style>

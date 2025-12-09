@@ -99,15 +99,15 @@
    TIER COLORS ONLY - Same intensity
    =========================================== */
 
-/* T0 - LEGENDARY: Gold */
+/* T0 - LEGENDARY: Pure Yellow Gold (subtle intensity) */
 .game-card--foil.game-card--t0 .game-card__foil-overlay {
-  --foil-hue-1: 45;
-  --foil-hue-2: 38;
-  --foil-hue-3: 52;
-  --foil-hue-4: 42;
-  --foil-hue-5: 35;
-  --foil-sat: 70%;
-  --foil-light: 45%;
+  --foil-hue-1: 56;
+  --foil-hue-2: 55;
+  --foil-hue-3: 57;
+  --foil-hue-4: 56;
+  --foil-hue-5: 55;
+  --foil-sat: 65%;
+  --foil-light: 50%;
   --angle: -20deg;
 }
 
@@ -234,14 +234,14 @@
    TIER COSMOS COLORS ONLY
    =========================================== */
 
-/* T0 - Gold cosmos */
+/* T0 - Pure Yellow Gold cosmos (subtle intensity) */
 .game-card--t0 .detail__artwork--foil {
-  --cosmos-hue: 45;
+  --cosmos-hue: 56;
   --cosmos-sat: 70%;
-  --cosmos-light: 48%;
+  --cosmos-light: 52%;
   --cosmos-star-r: 255;
-  --cosmos-star-g: 200;
-  --cosmos-star-b: 100;
+  --cosmos-star-g: 235;
+  --cosmos-star-b: 40;
 }
 
 /* T0 - Extra glare layers for chromatic effect */

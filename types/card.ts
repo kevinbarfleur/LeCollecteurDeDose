@@ -19,6 +19,7 @@ export const VARIATION_CONFIG: Record<CardVariation, VariationConfig> = {
 export interface CardGameData {
   weight: number
   img: string
+  foilImg?: string  // Optional foil image URL from POE wiki
 }
 
 export interface Card {
@@ -28,12 +29,13 @@ export interface Card {
   itemClass: string
   rarity: CardRarity
   tier: CardTier
-  flavourText: string
+  flavourText: string | null  // Can be null in POE wiki data
   wikiUrl: string
   gameData: CardGameData
   weight?: number
   foil?: boolean  // true if foil variant
   variation?: CardVariation  // DEPRECATED: use foil instead - kept for backwards compatibility
+  relevanceScore?: number  // Optional score from POE wiki data
 }
 
 // Helper function to check if a card is foil (supports both formats)

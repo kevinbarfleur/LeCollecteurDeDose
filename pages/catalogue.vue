@@ -38,8 +38,45 @@ const ownedCardIds = computed(() =>
     .map(([id]) => id)
 )
 
-const searchQuery = ref('')
-const selectedTier = ref<CardTier | 'all'>('all')
+// Persisted filters (stored in sessionStorage)
+const searchQuery = usePersistedFilter('catalogue_search', '')
+const selectedTier = usePersistedFilter<CardTier | 'all'>('catalogue_tier', 'all')
+const selectedCategories = usePersistedFilter<string[]>('catalogue_categories', [])
+const selectedSort = usePersistedFilter('catalogue_sort', 'rarity-asc')
+
+// Sort options
+type SortOption = 'rarity-asc' | 'rarity-desc' | 'alpha-asc' | 'alpha-desc' | 'category-asc' | 'category-desc'
+
+const sortOptions = [
+  { value: 'rarity-asc', label: 'Rareté ↑ (T0 → T3)' },
+  { value: 'rarity-desc', label: 'Rareté ↓ (T3 → T0)' },
+  { value: 'alpha-asc', label: 'Alphabétique (A → Z)' },
+  { value: 'alpha-desc', label: 'Alphabétique (Z → A)' },
+  { value: 'category-asc', label: 'Catégorie (A → Z)' },
+  { value: 'category-desc', label: 'Catégorie (Z → A)' }
+]
+
+// Extract unique categories from all cards with count
+const categoryOptions = computed(() => {
+  const categoryMap = new Map<string, number>()
+  
+  allCards.forEach(card => {
+    const current = categoryMap.get(card.itemClass) || 0
+    categoryMap.set(card.itemClass, current + 1)
+  })
+  
+  // Sort by count descending, then alphabetically
+  return Array.from(categoryMap.entries())
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1]
+      return a[0].localeCompare(b[0])
+    })
+    .map(([category, count]) => ({
+      value: category,
+      label: category,
+      count
+    }))
+})
 
 const tierOptions = computed(() => [
   { value: 'all', label: t('collection.tiers.all'), color: 'default' },
@@ -48,6 +85,50 @@ const tierOptions = computed(() => [
   { value: 'T2', label: t('collection.tiers.t2'), color: 't2' },
   { value: 'T3', label: t('collection.tiers.t3'), color: 't3' }
 ])
+
+// Sort function
+const sortCards = (cards: Card[], sortType: SortOption): Card[] => {
+  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 }
+  
+  return [...cards].sort((a, b) => {
+    switch (sortType) {
+      case 'rarity-asc':
+        // T0 first (most rare)
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[a.tier] - tierOrder[b.tier]
+        }
+        return a.name.localeCompare(b.name)
+      
+      case 'rarity-desc':
+        // T3 first (most common)
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
+          return tierOrder[b.tier] - tierOrder[a.tier]
+        }
+        return a.name.localeCompare(b.name)
+      
+      case 'alpha-asc':
+        return a.name.localeCompare(b.name)
+      
+      case 'alpha-desc':
+        return b.name.localeCompare(a.name)
+      
+      case 'category-asc':
+        if (a.itemClass !== b.itemClass) {
+          return a.itemClass.localeCompare(b.itemClass)
+        }
+        return a.name.localeCompare(b.name)
+      
+      case 'category-desc':
+        if (a.itemClass !== b.itemClass) {
+          return b.itemClass.localeCompare(a.itemClass)
+        }
+        return a.name.localeCompare(b.name)
+      
+      default:
+        return 0
+    }
+  })
+}
 
 const filteredCards = computed(() => {
   let cards = allCards.map(card => {
@@ -60,22 +141,32 @@ const filteredCards = computed(() => {
     return card
   })
   
+  // Filter by search query - only return owned cards when searching
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    cards = cards.filter(card => 
-      card.name.toLowerCase().includes(query) ||
-      card.itemClass.toLowerCase().includes(query)
-    )
+    cards = cards.filter(card => {
+      // Must be owned to appear in search results
+      const isOwned = ownedCardIds.value.includes(card.id)
+      if (!isOwned) return false
+      
+      // Then match the search query
+      return card.name.toLowerCase().includes(query) ||
+             card.itemClass.toLowerCase().includes(query)
+    })
   }
   
+  // Filter by selected categories
+  if (selectedCategories.value.length > 0) {
+    cards = cards.filter(card => selectedCategories.value.includes(card.itemClass))
+  }
+  
+  // Filter by tier
   if (selectedTier.value !== 'all') {
     cards = cards.filter(card => card.tier === selectedTier.value)
   }
   
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 }
-  cards.sort((a, b) => tierOrder[a.tier] - tierOrder[b.tier])
-  
-  return cards
+  // Apply sorting
+  return sortCards(cards, selectedSort.value as SortOption)
 })
 
 const stats = computed(() => ({
@@ -108,22 +199,61 @@ const stats = computed(() => ({
       />
       </div>
 
-      <div class="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6 md:my-8 md:flex-row md:items-center md:justify-between">
-        <div class="flex-1 max-w-full md:max-w-md">
-          <RunicInput
-            v-model="searchQuery"
-            :placeholder="t('catalogue.search.placeholder')"
-            icon="search"
-            size="md"
-          />
-        </div>
+      <!-- Filters -->
+      <RunicBox padding="md" class="mb-8">
+        <div class="flex flex-col gap-4">
+          <!-- Search, Category and Sort filters -->
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="flex-1 max-w-full sm:max-w-xs">
+              <RunicInput
+                v-model="searchQuery"
+                :placeholder="t('catalogue.search.placeholder')"
+                icon="search"
+                size="md"
+              />
+            </div>
+            
+            <div class="flex-1 max-w-full sm:max-w-xs">
+              <RunicSelect
+                v-model="selectedCategories"
+                :options="categoryOptions"
+                placeholder="Catégories d'objets..."
+                size="md"
+                :searchable="true"
+                :multiple="true"
+                :max-visible-items="10"
+              />
+            </div>
 
-        <RunicRadio
-          v-model="selectedTier"
-          :options="tierOptions"
-          size="md"
-        />
-      </div>
+            <div class="w-full sm:w-auto sm:min-w-[200px]">
+              <RunicSelect
+                v-model="selectedSort"
+                :options="sortOptions"
+                placeholder="Trier par..."
+                size="md"
+              />
+            </div>
+          </div>
+
+          <!-- Runic separator -->
+          <div class="runic-separator">
+            <span class="runic-separator__rune">◆</span>
+            <span class="runic-separator__line"></span>
+            <span class="runic-separator__rune-center">✦</span>
+            <span class="runic-separator__line"></span>
+            <span class="runic-separator__rune">◆</span>
+          </div>
+
+          <!-- Tier filter -->
+          <div class="flex justify-end">
+            <RunicRadio
+              v-model="selectedTier"
+              :options="tierOptions"
+              size="md"
+            />
+          </div>
+        </div>
+      </RunicBox>
 
       <CardGrid 
         :cards="filteredCards" 
@@ -133,3 +263,37 @@ const stats = computed(() => ({
     </div>
   </NuxtLayout>
 </template>
+
+<style scoped>
+.runic-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.runic-separator__rune {
+  font-size: 0.5rem;
+  color: var(--color-accent);
+  opacity: 0.5;
+}
+
+.runic-separator__rune-center {
+  font-size: 0.625rem;
+  color: var(--color-accent);
+  opacity: 0.7;
+  text-shadow: 0 0 8px var(--color-accent);
+}
+
+.runic-separator__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(175, 135, 80, 0.15) 30%,
+    rgba(175, 135, 80, 0.15) 70%,
+    transparent
+  );
+}
+</style>

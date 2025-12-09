@@ -4,12 +4,14 @@ interface Props {
   placeholder?: string;
   icon?: "search" | "filter" | "none";
   size?: "sm" | "md" | "lg";
+  clearable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: "",
   icon: "none",
   size: "md",
+  clearable: true,
 });
 
 const emit = defineEmits<{
@@ -23,6 +25,13 @@ const updateValue = (event: Event) => {
   emit("update:modelValue", target.value);
 };
 
+const clearValue = () => {
+  emit("update:modelValue", "");
+  inputRef.value?.focus();
+};
+
+const showClear = computed(() => props.clearable && props.modelValue.length > 0);
+
 const focus = () => {
   inputRef.value?.focus();
 };
@@ -35,7 +44,10 @@ defineExpose({ focus });
     class="runic-input"
     :class="[
       `runic-input--${size}`,
-      { 'runic-input--has-icon': icon !== 'none' }
+      { 
+        'runic-input--has-icon': icon !== 'none',
+        'runic-input--has-clear': showClear
+      }
     ]"
   >
     <!-- The carved groove container -->
@@ -63,6 +75,19 @@ defineExpose({ focus });
         :placeholder="placeholder"
         @input="updateValue"
       />
+
+      <!-- Clear button -->
+      <button
+        v-if="showClear"
+        type="button"
+        class="runic-input__clear"
+        @click="clearValue"
+        aria-label="Effacer"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
       
       <!-- Inner glow line -->
       <div class="runic-input__glow"></div>
@@ -185,6 +210,41 @@ defineExpose({ focus });
 }
 
 /* ==========================================
+   CLEAR BUTTON
+   ========================================== */
+.runic-input__clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-right: 0.75rem;
+  padding: 0;
+  background: rgba(80, 70, 60, 0.3);
+  border: none;
+  border-radius: 50%;
+  color: rgba(200, 200, 200, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 3;
+}
+
+.runic-input__clear:hover {
+  background: rgba(175, 96, 37, 0.4);
+  color: #fff;
+}
+
+.runic-input__clear:active {
+  transform: scale(0.95);
+}
+
+.runic-input__clear svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ==========================================
    GLOW LINE - Bottom accent
    ========================================== */
 .runic-input__glow {
@@ -225,6 +285,10 @@ defineExpose({ focus });
   padding-left: 0.75rem;
 }
 
+.runic-input--sm.runic-input--has-clear .runic-input__field {
+  padding-right: 0.5rem;
+}
+
 .runic-input--sm .runic-input__icon {
   width: 16px;
   height: 16px;
@@ -232,6 +296,17 @@ defineExpose({ focus });
 
 .runic-input--sm .runic-input__rune {
   font-size: 0.4rem;
+}
+
+.runic-input--sm .runic-input__clear {
+  width: 18px;
+  height: 18px;
+  margin-right: 0.5rem;
+}
+
+.runic-input--sm .runic-input__clear svg {
+  width: 10px;
+  height: 10px;
 }
 
 /* Medium */
@@ -246,6 +321,10 @@ defineExpose({ focus });
 
 .runic-input--md.runic-input--has-icon .runic-input__field {
   padding-left: 0.875rem;
+}
+
+.runic-input--md.runic-input--has-clear .runic-input__field {
+  padding-right: 0.5rem;
 }
 
 .runic-input--md .runic-input__icon {
@@ -267,6 +346,10 @@ defineExpose({ focus });
   padding-left: 1rem;
 }
 
+.runic-input--lg.runic-input--has-clear .runic-input__field {
+  padding-right: 0.5rem;
+}
+
 .runic-input--lg .runic-input__icon {
   width: 22px;
   height: 22px;
@@ -275,6 +358,17 @@ defineExpose({ focus });
 
 .runic-input--lg .runic-input__rune {
   font-size: 0.5625rem;
+}
+
+.runic-input--lg .runic-input__clear {
+  width: 24px;
+  height: 24px;
+  margin-right: 1rem;
+}
+
+.runic-input--lg .runic-input__clear svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* ==========================================
@@ -327,4 +421,3 @@ defineExpose({ focus });
   }
 }
 </style>
-
