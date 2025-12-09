@@ -96,16 +96,16 @@ const stats = computed(() => ({
           :subtitle="t('catalogue.subtitle')"
           attached
         />
-        <RunicStats
-          :stats="[
-            { value: stats.total, label: t('cards.stats.total'), color: 'default' },
-            { value: stats.t0, label: t('collection.tiers.t0'), color: 't0' },
-            { value: stats.t1, label: t('collection.tiers.t1'), color: 't1' },
-            { value: stats.t2, label: t('collection.tiers.t2'), color: 't2' },
-            { value: stats.t3, label: t('collection.tiers.t3'), color: 't3' }
-          ]"
+      <RunicStats
+        :stats="[
+          { value: stats.total, label: t('cards.stats.total'), color: 'default' },
+          { value: stats.t0, label: t('collection.tiers.t0'), color: 't0' },
+          { value: stats.t1, label: t('collection.tiers.t1'), color: 't1' },
+          { value: stats.t2, label: t('collection.tiers.t2'), color: 't2' },
+          { value: stats.t3, label: t('collection.tiers.t3'), color: 't3' }
+        ]"
           attached
-        />
+      />
       </div>
 
       <div class="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6 md:my-8 md:flex-row md:items-center md:justify-between">

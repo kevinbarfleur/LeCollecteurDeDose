@@ -820,6 +820,12 @@ const showOverlay = computed(() => animationState.value !== "idle");
           <div class="game-card__bg"></div>
         </div>
 
+        <!-- Runic corners -->
+        <div class="game-card__corner game-card__corner--tl"></div>
+        <div class="game-card__corner game-card__corner--tr"></div>
+        <div class="game-card__corner game-card__corner--bl"></div>
+        <div class="game-card__corner game-card__corner--br"></div>
+
         <!-- Foil overlay effect -->
         <div v-if="isFoil" class="game-card__foil-overlay"></div>
 
@@ -925,10 +931,9 @@ const showOverlay = computed(() => animationState.value !== "idle");
   width: 100%;
   aspect-ratio: 2.5/3.5;
   cursor: pointer;
-  border-radius: 12px;
+  border-radius: var(--card-border-radius, 8px);
   overflow: hidden;
   background: linear-gradient(160deg, #12110f 0%, #0a0908 50%, #0d0c0a 100%);
-  /* 3D tilt support */
   transform-style: preserve-3d;
   will-change: transform;
 }
@@ -1520,7 +1525,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
 }
 
 .game-card--floating {
-  border: 2px solid var(--tier-color, #2a2a30);
+  border: 1px solid var(--tier-color, #2a2a30);
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(0, 0, 0, 0.5);
   transform-origin: center center;
   will-change: transform;
