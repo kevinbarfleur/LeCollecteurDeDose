@@ -172,91 +172,95 @@ const filteredIndividualCards = computed(() => {
       </div>
 
       <div v-if="loggedIn">
-        <RunicBox padding="md" class="mb-8">
-          <div class="grid gap-6 md:grid-cols-[auto_1fr_auto] md:items-center">
-            <div class="collection-profile">
-              <div class="collection-profile__avatar-wrapper">
-                <div class="collection-profile__avatar-ring"></div>
-                <img
-                  :src="user.avatar"
-                  :alt="user.name"
-                  class="collection-profile__avatar"
-                />
-              </div>
-              <div class="flex flex-col gap-1">
-                <h1
-                  class="font-display text-2xl font-semibold text-white/90 tracking-wide m-0"
-                >
-                  {{ user.name }}
-                </h1>
-                <div
-                  class="flex items-center gap-2 font-body text-sm text-poe-text-muted italic"
-                >
-                  <span class="text-[0.5rem] text-accent opacity-70">◆</span>
-                  <span>{{ t("collection.profile.role") }}</span>
-                  <span class="text-[0.5rem] text-accent opacity-70">◆</span>
+        <div class="mb-8">
+          <RunicHeader
+            :title="t('collection.title')"
+            :subtitle="t('collection.subtitle')"
+            attached
+          />
+          <RunicBox padding="md" attached>
+            <div
+              class="grid gap-6 md:grid-cols-[auto_1fr_auto] md:items-center"
+            >
+              <div class="collection-profile">
+                <div class="collection-profile__avatar-wrapper">
+                  <div class="collection-profile__avatar-ring"></div>
+                  <img
+                    :src="user.avatar"
+                    :alt="user.name"
+                    class="collection-profile__avatar"
+                  />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <h1
+                    class="font-display text-2xl font-semibold text-white/90 tracking-wide m-0"
+                  >
+                    {{ user.name }}
+                  </h1>
+                  <div
+                    class="flex items-center gap-2 font-body text-sm text-poe-text-muted italic"
+                  >
+                    <span class="text-[0.5rem] text-accent opacity-70">◆</span>
+                    <span>{{ t("collection.profile.role") }}</span>
+                    <span class="text-[0.5rem] text-accent opacity-70">◆</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="collection-main-stats">
-              <div class="collection-main-stats__item">
-                <span class="collection-main-stats__rune">◆</span>
-                <span class="collection-main-stats__value">{{
-                  stats.total
-                }}</span>
-                <span class="collection-main-stats__rune">◆</span>
-                <span class="collection-main-stats__label">{{
-                  t("collection.stats.cards")
-                }}</span>
+              <div class="collection-main-stats">
+                <RunicNumber
+                  :value="stats.total"
+                  :label="t('collection.stats.cards')"
+                  color="default"
+                  size="lg"
+                />
+                <div class="collection-main-stats__divider"></div>
+                <RunicNumber
+                  :value="stats.unique"
+                  :label="t('collection.stats.unique')"
+                  color="default"
+                  size="lg"
+                />
               </div>
-              <div class="collection-main-stats__divider"></div>
-              <div class="collection-main-stats__item">
-                <span class="collection-main-stats__rune">◆</span>
-                <span class="collection-main-stats__value">{{
-                  stats.unique
-                }}</span>
-                <span class="collection-main-stats__rune">◆</span>
-                <span class="collection-main-stats__label">{{
-                  t("collection.stats.unique")
-                }}</span>
+
+              <div class="collection-tiers">
+                <RunicNumber
+                  v-for="tier in ['T0', 'T1', 'T2', 'T3'] as const"
+                  :key="tier"
+                  :value="stats[tier.toLowerCase() as keyof typeof stats]"
+                  :label="tier"
+                  :color="tier.toLowerCase() as 't0' | 't1' | 't2' | 't3'"
+                  size="sm"
+                />
               </div>
             </div>
+          </RunicBox>
+        </div>
 
-            <div class="collection-tiers">
-              <div
-                v-for="tier in ['T0', 'T1', 'T2', 'T3'] as const"
-                :key="tier"
-                class="collection-tiers__item"
-                :class="`collection-tiers__item--${tier.toLowerCase()}`"
+        <RunicBox padding="sm" class="mb-8">
+          <div
+            class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between"
+          >
+            <div class="flex items-center gap-3">
+              <RunicRadio
+                v-model="showDuplicates"
+                :toggle="true"
+                toggle-color="default"
+                size="sm"
+              />
+              <span
+                class="font-body text-sm text-poe-text-dim transition-colors duration-base"
+                >{{ t("collection.filters.showDuplicates") }}</span
               >
-                <span class="collection-tiers__value">{{
-                  stats[tier.toLowerCase() as keyof typeof stats]
-                }}</span>
-                <span class="collection-tiers__label">{{ tier }}</span>
-              </div>
             </div>
+
+            <RunicRadio
+              v-model="selectedTier"
+              :options="tierOptions"
+              size="md"
+            />
           </div>
         </RunicBox>
-
-        <div
-          class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between mb-8 p-4 bg-poe-surface/60 border border-poe-border/40 rounded-xl"
-        >
-          <div class="flex items-center gap-3">
-            <RunicRadio
-              v-model="showDuplicates"
-              :toggle="true"
-              toggle-color="default"
-              size="sm"
-            />
-            <span
-              class="font-body text-sm text-poe-text-dim transition-colors duration-base"
-              >{{ t("collection.filters.showDuplicates") }}</span
-            >
-          </div>
-
-          <RunicRadio v-model="selectedTier" :options="tierOptions" size="md" />
-        </div>
 
         <CardGrid
           v-if="!showDuplicates"
@@ -332,7 +336,7 @@ const filteredIndividualCards = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: 1.5rem;
   padding: 1rem 0;
   position: relative;
   z-index: 1;
@@ -340,44 +344,11 @@ const filteredIndividualCards = computed(() => {
 
 @media (min-width: 768px) {
   .collection-main-stats {
-    padding: 0 3rem;
+    padding: 0 2rem;
+    gap: 2rem;
     border-left: 1px solid rgba(50, 48, 45, 0.25);
     border-right: 1px solid rgba(50, 48, 45, 0.25);
   }
-}
-
-.collection-main-stats__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.collection-main-stats__rune {
-  display: inline-block;
-  font-size: 0.5rem;
-  color: rgba(100, 90, 75, 0.4);
-  margin: 0 0.25rem;
-}
-
-.collection-main-stats__value {
-  font-family: "Cinzel", serif;
-  font-size: 2.5rem;
-  font-weight: 700;
-  line-height: 1;
-  color: #d0d0d0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 25px rgba(175, 96, 37, 0.12),
-    0 -1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.collection-main-stats__label {
-  font-family: "Cinzel", serif;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: rgba(100, 95, 90, 0.7);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(80, 75, 70, 0.1);
 }
 
 .collection-main-stats__divider {
@@ -403,107 +374,5 @@ const filteredIndividualCards = computed(() => {
   .collection-tiers {
     justify-content: flex-end;
   }
-}
-
-.collection-tiers__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 54px;
-  background: linear-gradient(
-    180deg,
-    rgba(20, 20, 22, 0.95) 0%,
-    rgba(15, 15, 17, 0.9) 50%,
-    rgba(12, 12, 14, 0.95) 100%
-  );
-
-  border-radius: 4px;
-
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7),
-    inset 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(60, 55, 50, 0.05),
-    0 1px 3px rgba(0, 0, 0, 0.3);
-
-  border: 1px solid rgba(45, 42, 38, 0.6);
-  border-top-color: rgba(35, 32, 28, 0.7);
-  border-bottom-color: rgba(60, 55, 50, 0.25);
-
-  transition: all 0.3s ease;
-}
-
-.collection-tiers__item:hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7),
-    inset 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(60, 55, 50, 0.08),
-    0 3px 8px rgba(0, 0, 0, 0.4),
-    0 0 15px var(--tier-glow, rgba(80, 70, 60, 0.1));
-}
-
-.collection-tiers__value {
-  font-family: "Cinzel", serif;
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1;
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8), 0 -1px 0 rgba(255, 255, 255, 0.03);
-}
-
-.collection-tiers__label {
-  font-family: "Cinzel", serif;
-  font-size: 0.5625rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-top: 2px;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(80, 75, 70, 0.08);
-  opacity: 0.7;
-}
-
-.collection-tiers__item--t0 {
-  --tier-glow: rgba(201, 162, 39, 0.15);
-  border-color: rgba(201, 162, 39, 0.2);
-}
-.collection-tiers__item--t0 .collection-tiers__value {
-  color: #c9a227;
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8), 0 0 15px rgba(201, 162, 39, 0.2);
-}
-.collection-tiers__item--t0 .collection-tiers__label {
-  color: rgba(201, 162, 39, 0.7);
-}
-
-.collection-tiers__item--t1 {
-  --tier-glow: rgba(122, 106, 138, 0.15);
-  border-color: rgba(122, 106, 138, 0.2);
-}
-.collection-tiers__item--t1 .collection-tiers__value {
-  color: #9a8aaa;
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8), 0 0 15px rgba(122, 106, 138, 0.2);
-}
-.collection-tiers__item--t1 .collection-tiers__label {
-  color: rgba(122, 106, 138, 0.7);
-}
-
-.collection-tiers__item--t2 {
-  --tier-glow: rgba(90, 112, 128, 0.15);
-  border-color: rgba(90, 112, 128, 0.2);
-}
-.collection-tiers__item--t2 .collection-tiers__value {
-  color: #7a9aaa;
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8), 0 0 15px rgba(90, 112, 128, 0.2);
-}
-.collection-tiers__item--t2 .collection-tiers__label {
-  color: rgba(90, 112, 128, 0.7);
-}
-
-.collection-tiers__item--t3 {
-  --tier-glow: rgba(90, 90, 95, 0.1);
-  border-color: rgba(70, 70, 75, 0.2);
-}
-.collection-tiers__item--t3 .collection-tiers__value {
-  color: #7a7a80;
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8);
-}
-.collection-tiers__item--t3 .collection-tiers__label {
-  color: rgba(90, 90, 95, 0.6);
 }
 </style>

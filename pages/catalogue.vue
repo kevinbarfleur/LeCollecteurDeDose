@@ -7,16 +7,13 @@ const { t } = useI18n()
 
 useHead({ title: t('meta.catalogue.title') })
 
-// Build a map of owned cards with their best variation (foil > standard)
 const ownedCardsWithBestVariation = computed(() => {
   const map = new Map<string, { owned: boolean; bestVariation: CardVariation | null; card: Card | null }>()
   
-  // Initialize with all cards as not owned
   allCards.forEach(card => {
     map.set(card.id, { owned: false, bestVariation: null, card: null })
   })
   
-  // Check user collection for owned cards and their best variation
   mockUserCollection.forEach(card => {
     const variation: CardVariation = getCardVariation(card)
     const existing = map.get(card.id)
@@ -24,11 +21,10 @@ const ownedCardsWithBestVariation = computed(() => {
     if (existing) {
       existing.owned = true
       
-      // Keep the best variation (lowest priority = rarer = better)
       if (!existing.bestVariation || 
           VARIATION_CONFIG[variation].priority < VARIATION_CONFIG[existing.bestVariation].priority) {
         existing.bestVariation = variation
-        existing.card = card // Store the actual owned card with this variation
+        existing.card = card
       }
     }
   })
@@ -54,17 +50,13 @@ const tierOptions = computed(() => [
 ])
 
 const filteredCards = computed(() => {
-  // Start with all cards from the catalogue
   let cards = allCards.map(card => {
-    // Check if user owns this card with a better variation (foil)
     const ownedData = ownedCardsWithBestVariation.value.get(card.id)
     
-    // If owned with a variation, use the owned card (which may be foil)
     if (ownedData?.owned && ownedData.card) {
       return ownedData.card
     }
     
-    // Otherwise use the catalogue card (standard)
     return card
   })
   
@@ -98,22 +90,23 @@ const stats = computed(() => ({
 <template>
   <NuxtLayout>
     <div class="page-container">
-      <div class="text-center mb-4 sm:mb-8">
-        <h1 class="page-title">{{ t('catalogue.title') }}</h1>
-        <p class="font-body text-sm sm:text-base md:text-lg text-poe-text-dim mt-1 sm:mt-2 px-2">
-          {{ t('catalogue.subtitle') }}
-        </p>
+      <div class="mb-4 sm:mb-8">
+        <RunicHeader
+          :title="t('catalogue.title')"
+          :subtitle="t('catalogue.subtitle')"
+          attached
+        />
+        <RunicStats
+          :stats="[
+            { value: stats.total, label: t('cards.stats.total'), color: 'default' },
+            { value: stats.t0, label: t('collection.tiers.t0'), color: 't0' },
+            { value: stats.t1, label: t('collection.tiers.t1'), color: 't1' },
+            { value: stats.t2, label: t('collection.tiers.t2'), color: 't2' },
+            { value: stats.t3, label: t('collection.tiers.t3'), color: 't3' }
+          ]"
+          attached
+        />
       </div>
-
-      <RunicStats
-        :stats="[
-          { value: stats.total, label: t('cards.stats.total'), color: 'default' },
-          { value: stats.t0, label: t('collection.tiers.t0'), color: 't0' },
-          { value: stats.t1, label: t('collection.tiers.t1'), color: 't1' },
-          { value: stats.t2, label: t('collection.tiers.t2'), color: 't2' },
-          { value: stats.t3, label: t('collection.tiers.t3'), color: 't3' }
-        ]"
-      />
 
       <div class="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6 md:my-8 md:flex-row md:items-center md:justify-between">
         <div class="flex-1 max-w-full md:max-w-md">

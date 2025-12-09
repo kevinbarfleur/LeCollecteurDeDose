@@ -49,6 +49,8 @@
     "empty": "Aucune carte ne correspond à votre recherche"
   },
   "collection": {
+    "title": "Ma Collection",
+    "subtitle": "Les reliques que tu as arrachées aux ténèbres de Wraeclast.",
     "auth": {
       "title": "Prouve ton existence",
       "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
@@ -77,12 +79,17 @@
     "title": "Le Collecteur",
     "tagline": "de Dose",
     "description": "Seuls les plus dignes survivront.",
+    "hero": {
+      "subtitle": "Une quête éternelle pour les reliques de Wraeclast"
+    },
     "rules": {
       "title": "Les Règles Sacrées",
+      "subtitle": "Les lois qui régissent la chasse aux reliques",
       "button": "Consulter les Règles"
     },
     "socials": {
-      "title": "Rejoins la cave",
+      "title": "Rejoins la Cave",
+      "subtitle": "Là où les exilés se rassemblent",
       "twitch": "Les Doseurs",
       "youtube": "Les Doseurs",
       "youtubePoe": "Les Doseurs POE"

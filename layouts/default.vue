@@ -8,12 +8,11 @@ const navItems = computed(() => [
   { path: "/about", label: t("nav.about"), icon: "info" },
 ]);
 
-// Settings modal state
 const showSettings = ref(false);
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="min-h-screen flex flex-col forged-metal">
     <header class="app-header">
       <div
         class="max-w-[1400px] mx-auto px-3 sm:px-6 py-2 sm:py-4 flex items-center justify-between gap-4 sm:gap-8 flex-wrap sm:flex-nowrap"
@@ -58,46 +57,24 @@ const showSettings = ref(false);
 
         <div class="flex items-center gap-3">
           <TwitchLoginBtn />
-          <!-- Settings Button - Commented out for now
-          <button
-            type="button"
-            class="app-header__settings-btn"
-            aria-label="Paramètres"
-            @click="showSettings = true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </button>
-          -->
         </div>
       </div>
     </header>
 
-    <!-- Settings Modal - Commented out for now
-    <SettingsModal v-model="showSettings" />
-    -->
-
-    <main class="flex-1">
-      <slot />
+    <main class="flex-1 main-content">
+      <div class="page-backdrop" aria-hidden="true">
+        <div class="page-backdrop__corner page-backdrop__corner--tl"></div>
+        <div class="page-backdrop__corner page-backdrop__corner--tr"></div>
+        <div class="page-backdrop__corner page-backdrop__corner--bl"></div>
+        <div class="page-backdrop__corner page-backdrop__corner--br"></div>
+      </div>
+      <div class="main-content__inner">
+        <slot />
+      </div>
     </main>
 
-    <footer class="p-4 sm:p-8 border-t border-poe-border/30">
-      <div class="flex items-center justify-center gap-2 group">
+    <footer class="app-footer">
+      <div class="flex items-center justify-center gap-2 group p-4 sm:p-8">
         <img
           src="/images/card-back-logo.png"
           alt="Logo"
@@ -116,9 +93,43 @@ const showSettings = ref(false);
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(12px);
-  background: rgba(12, 12, 14, 0.85);
-  border-bottom: 1px solid rgba(42, 42, 48, 0.5);
+  background: linear-gradient(
+    180deg,
+    rgba(14, 14, 16, 0.98) 0%,
+    rgba(10, 10, 12, 0.95) 50%,
+    rgba(8, 8, 10, 0.98) 100%
+  );
+  box-shadow: inset 0 -4px 12px rgba(0, 0, 0, 0.6),
+    inset 0 2px 4px rgba(50, 45, 40, 0.04), 0 4px 16px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(50, 45, 40, 0.15);
+  border-bottom: 1px solid rgba(55, 50, 45, 0.3);
+}
+
+.app-header::before {
+  content: "";
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  width: 25px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(175, 96, 37, 0.35),
+    rgba(80, 70, 55, 0.15),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.app-header::after {
+  content: "";
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  width: 20px;
+  height: 1px;
+  background: linear-gradient(to left, rgba(80, 70, 55, 0.25), transparent);
+  pointer-events: none;
 }
 
 .app-header__logo {
@@ -131,7 +142,6 @@ const showSettings = ref(false);
 .app-header__logo:hover span:first-of-type {
   color: #e0e0e0;
 }
-
 .app-header__logo:hover span:last-of-type {
   color: #c97a3a;
 }
@@ -208,7 +218,6 @@ const showSettings = ref(false);
 .app-header__nav-item:hover {
   color: rgba(180, 175, 170, 0.9);
 }
-
 .app-header__nav-item:hover .app-header__nav-rune {
   opacity: 0.4;
   transform: scale(1);
@@ -234,56 +243,489 @@ const showSettings = ref(false);
   color: #af6025;
 }
 
-/* Settings Button - Same size as logout button */
-.app-header__settings-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  margin-left: 0.5rem;
-  background: linear-gradient(
-    180deg,
-    rgba(30, 25, 20, 0.95) 0%,
-    rgba(15, 12, 10, 0.98) 100%
-  );
-  border: 1px solid rgba(60, 55, 50, 0.4);
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: inset 0 1px 0 rgba(80, 70, 60, 0.15), 0 2px 8px rgba(0, 0, 0, 0.4);
+.forged-metal {
+  position: relative;
+  background: #0a0a0c;
 }
 
-.app-header__settings-btn::before {
+.forged-metal::before {
   content: "";
-  position: absolute;
-  inset: 3px;
-  border: 1px solid rgba(60, 50, 40, 0.2);
-  border-radius: 1px;
+  position: fixed;
+  inset: 0;
   pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+      127deg,
+      transparent 7.8%,
+      rgba(200, 140, 60, 0.15) 7.802%,
+      transparent 7.804%
+    ),
+    linear-gradient(
+      124deg,
+      transparent 9.2%,
+      rgba(90, 70, 40, 0.06) 9.201%,
+      transparent 9.202%
+    ),
+    linear-gradient(
+      131deg,
+      transparent 11.5%,
+      rgba(180, 120, 50, 0.04) 11.501%,
+      transparent 11.502%
+    ),
+    linear-gradient(
+      -38deg,
+      transparent 84.5%,
+      rgba(175, 96, 37, 0.1) 84.501%,
+      transparent 84.502%
+    ),
+    linear-gradient(
+      -41deg,
+      transparent 86.1%,
+      rgba(120, 85, 50, 0.05) 86.101%,
+      transparent 86.102%
+    ),
+    linear-gradient(
+      -36deg,
+      transparent 82.8%,
+      rgba(210, 160, 80, 0.12) 82.801%,
+      transparent 82.802%
+    ),
+    linear-gradient(
+      163deg,
+      transparent 71.3%,
+      rgba(180, 120, 50, 0.11) 71.301%,
+      transparent 71.302%
+    ),
+    linear-gradient(
+      168deg,
+      transparent 74.8%,
+      rgba(100, 75, 45, 0.04) 74.801%,
+      transparent 74.802%
+    ),
+    linear-gradient(
+      161deg,
+      transparent 69.1%,
+      rgba(150, 100, 45, 0.07) 69.101%,
+      transparent 69.102%
+    ),
+    linear-gradient(
+      93deg,
+      transparent 2.4%,
+      rgba(160, 100, 40, 0.08) 2.401%,
+      transparent 2.402%
+    ),
+    linear-gradient(
+      96deg,
+      transparent 4.1%,
+      rgba(80, 60, 35, 0.03) 4.101%,
+      transparent 4.102%
+    ),
+    linear-gradient(
+      91deg,
+      transparent 1.2%,
+      rgba(190, 130, 55, 0.13) 1.201%,
+      transparent 1.202%
+    ),
+    linear-gradient(
+      -62deg,
+      transparent 14.2%,
+      rgba(190, 130, 55, 0.12) 14.201%,
+      transparent 14.202%
+    ),
+    linear-gradient(
+      -58deg,
+      transparent 17.5%,
+      rgba(110, 80, 45, 0.05) 17.501%,
+      transparent 17.502%
+    ),
+    linear-gradient(
+      -66deg,
+      transparent 12.8%,
+      rgba(170, 115, 50, 0.08) 12.801%,
+      transparent 12.802%
+    ),
+    linear-gradient(
+      174deg,
+      transparent 44.6%,
+      rgba(170, 110, 45, 0.07) 44.601%,
+      transparent 44.602%
+    ),
+    linear-gradient(
+      52deg,
+      transparent 87.3%,
+      rgba(200, 150, 70, 0.14) 87.301%,
+      transparent 87.302%
+    ),
+    linear-gradient(
+      58deg,
+      transparent 89.8%,
+      rgba(100, 70, 40, 0.04) 89.801%,
+      transparent 89.802%
+    ),
+    linear-gradient(
+      48deg,
+      transparent 85.2%,
+      rgba(220, 170, 80, 0.09) 85.201%,
+      transparent 85.202%
+    ),
+    linear-gradient(
+      -18deg,
+      transparent 4.7%,
+      rgba(150, 100, 50, 0.06) 4.701%,
+      transparent 4.702%
+    ),
+    linear-gradient(
+      -22deg,
+      transparent 6.9%,
+      rgba(180, 125, 55, 0.1) 6.901%,
+      transparent 6.902%
+    );
 }
 
-.app-header__settings-btn svg {
-  width: 12px;
-  height: 12px;
-  color: rgba(140, 130, 120, 0.7);
-  transition: all 0.3s ease;
+.forged-metal::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+      144deg,
+      transparent 24.3%,
+      rgba(185, 125, 50, 0.09) 24.301%,
+      transparent 24.302%
+    ),
+    linear-gradient(
+      139deg,
+      transparent 28.1%,
+      rgba(95, 70, 40, 0.03) 28.101%,
+      transparent 28.102%
+    ),
+    linear-gradient(
+      147deg,
+      transparent 21.6%,
+      rgba(210, 155, 65, 0.12) 21.601%,
+      transparent 21.602%
+    ),
+    linear-gradient(
+      -78deg,
+      transparent 91.4%,
+      rgba(200, 140, 60, 0.11) 91.401%,
+      transparent 91.402%
+    ),
+    linear-gradient(
+      -83deg,
+      transparent 93.7%,
+      rgba(110, 80, 45, 0.04) 93.701%,
+      transparent 93.702%
+    ),
+    linear-gradient(
+      -75deg,
+      transparent 89.2%,
+      rgba(175, 120, 55, 0.08) 89.201%,
+      transparent 89.202%
+    ),
+    linear-gradient(
+      176deg,
+      transparent 81.2%,
+      rgba(165, 105, 45, 0.08) 81.201%,
+      transparent 81.202%
+    ),
+    linear-gradient(
+      -47deg,
+      transparent 59.5%,
+      rgba(180, 120, 55, 0.06) 59.501%,
+      transparent 59.502%
+    ),
+    linear-gradient(
+      -52deg,
+      transparent 62.8%,
+      rgba(90, 65, 35, 0.02) 62.801%,
+      transparent 62.802%
+    ),
+    linear-gradient(
+      -44deg,
+      transparent 56.1%,
+      rgba(195, 135, 60, 0.1) 56.101%,
+      transparent 56.102%
+    ),
+    linear-gradient(
+      112deg,
+      transparent 33.4%,
+      rgba(195, 135, 55, 0.1) 33.401%,
+      transparent 33.402%
+    ),
+    linear-gradient(
+      107deg,
+      transparent 36.9%,
+      rgba(105, 75, 42, 0.04) 36.901%,
+      transparent 36.902%
+    ),
+    linear-gradient(
+      118deg,
+      transparent 30.2%,
+      rgba(215, 160, 70, 0.13) 30.201%,
+      transparent 30.202%
+    ),
+    linear-gradient(
+      -28deg,
+      transparent 78.6%,
+      rgba(175, 115, 50, 0.07) 78.601%,
+      transparent 78.602%
+    ),
+    linear-gradient(
+      68deg,
+      transparent 42.1%,
+      rgba(210, 155, 70, 0.14) 42.101%,
+      transparent 42.102%
+    ),
+    linear-gradient(
+      73deg,
+      transparent 45.5%,
+      rgba(100, 72, 38, 0.03) 45.501%,
+      transparent 45.502%
+    ),
+    linear-gradient(
+      64deg,
+      transparent 39.8%,
+      rgba(185, 130, 55, 0.08) 39.801%,
+      transparent 39.802%
+    ),
+    linear-gradient(
+      155deg,
+      transparent 52.3%,
+      rgba(170, 115, 50, 0.05) 52.301%,
+      transparent 52.302%
+    ),
+    linear-gradient(
+      -8deg,
+      transparent 95.1%,
+      rgba(200, 145, 60, 0.11) 95.101%,
+      transparent 95.102%
+    ),
+    linear-gradient(
+      182deg,
+      transparent 67.4%,
+      rgba(155, 105, 48, 0.06) 67.401%,
+      transparent 67.402%
+    );
 }
 
-.app-header__settings-btn:hover {
-  border-color: rgba(100, 85, 70, 0.5);
-  box-shadow: inset 0 1px 0 rgba(100, 85, 70, 0.2),
-    0 4px 15px rgba(0, 0, 0, 0.4);
-}
-
-.app-header__settings-btn:hover svg {
-  color: rgba(160, 145, 130, 0.9);
-  transform: rotate(45deg);
+.main-content {
+  position: relative;
+  margin: 16px 12px;
 }
 
 @media (min-width: 640px) {
-  .app-header__settings-btn svg {
-    width: 14px;
-    height: 14px;
+  .main-content {
+    margin: 20px 16px;
   }
+}
+@media (min-width: 1024px) {
+  .main-content {
+    margin: 24px 24px;
+  }
+}
+
+.main-content__inner {
+  position: relative;
+  z-index: 2;
+}
+
+.page-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 6px;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.98) 0%,
+    rgba(12, 12, 14, 0.95) 30%,
+    rgba(10, 10, 12, 0.96) 70%,
+    rgba(6, 6, 8, 0.99) 100%
+  );
+  box-shadow: inset 0 6px 20px rgba(0, 0, 0, 0.8),
+    inset 0 2px 4px rgba(0, 0, 0, 0.9), inset 0 -2px 6px rgba(50, 45, 40, 0.06),
+    inset 4px 0 12px rgba(0, 0, 0, 0.5), inset -4px 0 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(35, 33, 30, 0.6);
+  border-top-color: rgba(25, 23, 20, 0.7);
+  border-bottom-color: rgba(55, 50, 45, 0.25);
+}
+
+.page-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: radial-gradient(
+      ellipse at 20% 15%,
+      rgba(50, 45, 38, 0.025) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 80% 85%,
+      rgba(35, 30, 25, 0.03) 0%,
+      transparent 40%
+    );
+  pointer-events: none;
+}
+
+.app-footer {
+  position: relative;
+  z-index: 10;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.98) 0%,
+    rgba(10, 10, 12, 0.95) 50%,
+    rgba(12, 12, 14, 0.98) 100%
+  );
+  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 4px rgba(50, 45, 40, 0.04), 0 -2px 12px rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(35, 33, 30, 0.5);
+}
+
+.app-footer::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  width: 18px;
+  height: 1px;
+  background: linear-gradient(to right, rgba(80, 70, 55, 0.2), transparent);
+  pointer-events: none;
+}
+
+.app-footer::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(
+    to left,
+    rgba(175, 96, 37, 0.3),
+    rgba(80, 70, 55, 0.12),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.page-backdrop__corner {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.page-backdrop__corner--tl {
+  top: 12px;
+  left: 12px;
+  width: 30px;
+  height: 30px;
+}
+.page-backdrop__corner--tl::before {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(175, 96, 37, 0.4),
+    rgba(80, 70, 55, 0.2),
+    transparent
+  );
+}
+.page-backdrop__corner--tl::after {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    rgba(175, 96, 37, 0.4),
+    rgba(80, 70, 55, 0.2),
+    transparent
+  );
+}
+
+.page-backdrop__corner--tr {
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+}
+.page-backdrop__corner--tr::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 20px;
+  height: 1px;
+  background: linear-gradient(to left, rgba(80, 70, 55, 0.35), transparent);
+}
+.page-backdrop__corner--tr::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 1px;
+  height: 20px;
+  background: linear-gradient(to bottom, rgba(80, 70, 55, 0.35), transparent);
+}
+
+.page-backdrop__corner--bl {
+  bottom: 12px;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+}
+.page-backdrop__corner--bl::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 16px;
+  height: 1px;
+  background: linear-gradient(to right, rgba(80, 70, 55, 0.25), transparent);
+}
+.page-backdrop__corner--bl::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 16px;
+  background: linear-gradient(to top, rgba(80, 70, 55, 0.25), transparent);
+}
+
+.page-backdrop__corner--br {
+  bottom: 12px;
+  right: 12px;
+  width: 35px;
+  height: 35px;
+}
+.page-backdrop__corner--br::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 35px;
+  height: 1px;
+  background: linear-gradient(
+    to left,
+    rgba(175, 96, 37, 0.3),
+    rgba(80, 70, 55, 0.15),
+    transparent
+  );
+}
+.page-backdrop__corner--br::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  height: 35px;
+  background: linear-gradient(
+    to top,
+    rgba(175, 96, 37, 0.3),
+    rgba(80, 70, 55, 0.15),
+    transparent
+  );
 }
 </style>
