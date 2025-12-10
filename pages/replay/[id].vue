@@ -620,9 +620,11 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 <style scoped>
 /* ===== PAGE LAYOUT ===== */
 .replay-page {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 500px; /* Ensures minimum visibility */
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .replay-state {
@@ -635,13 +637,15 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 
 .replay-content {
   flex: 1;
+  min-height: 0; /* Important for flex shrinking */
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
-  gap: 1.5rem;
+  gap: 1rem;
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
+  overflow: hidden;
 }
 
 /* ===== LOADING STATE ===== */
@@ -754,10 +758,10 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 /* ===== STAGE ===== */
 .replay-stage {
   flex: 1;
+  min-height: 0; /* Allow shrinking */
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 450px;
 }
 
 /* ALTAR PLATFORM */
@@ -766,12 +770,14 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   --altar-rune-color: rgba(60, 55, 50, 0.3);
   
   position: relative;
-  width: 320px;
-  height: 400px;
+  width: min(320px, 90vw);
+  height: min(400px, 100%);
+  aspect-ratio: 320 / 400;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: visible;
+  flex-shrink: 1;
 
   background: radial-gradient(
       ellipse at center,
