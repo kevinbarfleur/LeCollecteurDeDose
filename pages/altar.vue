@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
-import { VARIATION_CONFIG, TIER_CONFIG, getCardVariation, isCardFoil } from "~/types/card";
+import {
+  VARIATION_CONFIG,
+  TIER_CONFIG,
+  getCardVariation,
+  isCardFoil,
+} from "~/types/card";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
@@ -15,7 +20,9 @@ const { loggedIn, user: authUser } = useUserSession();
 
 const user = computed(() => ({
   name: authUser.value?.displayName || "Guest",
-  avatar: authUser.value?.avatar || "https://static-cdn.jtvnw.net/jtv_user_pictures/default-profile_image-300x300.png",
+  avatar:
+    authUser.value?.avatar ||
+    "https://static-cdn.jtvnw.net/jtv_user_pictures/default-profile_image-300x300.png",
 }));
 
 // ==========================================
@@ -203,13 +210,13 @@ const altarThemeStyles = computed(() => {
 
 // Altar classes based on card
 const altarClasses = computed(() => ({
-  'altar-platform--t0': displayCard.value?.tier === 'T0',
-  'altar-platform--t1': displayCard.value?.tier === 'T1',
-  'altar-platform--t2': displayCard.value?.tier === 'T2',
-  'altar-platform--t3': displayCard.value?.tier === 'T3',
-  'altar-platform--foil': isCurrentCardFoil.value,
-  'altar-platform--active': isAltarActive.value,
-  'altar-platform--vaal': isOrbOverCard.value,
+  "altar-platform--t0": displayCard.value?.tier === "T0",
+  "altar-platform--t1": displayCard.value?.tier === "T1",
+  "altar-platform--t2": displayCard.value?.tier === "T2",
+  "altar-platform--t3": displayCard.value?.tier === "T3",
+  "altar-platform--foil": isCurrentCardFoil.value,
+  "altar-platform--active": isAltarActive.value,
+  "altar-platform--vaal": isOrbOverCard.value,
 }));
 
 // Watch for card selection changes
@@ -219,19 +226,24 @@ watch(selectedCardId, async (newId, oldId) => {
     if (group && group.variations.length > 0) {
       selectedVariation.value = group.variations[0].variation;
     }
-    
+
     // Clear snapshots and dimensions when changing cards
     cardSnapshot.value = null;
     imageSnapshot.value = null;
     capturedImageDimensions.value = null;
     capturedCardDimensions.value = null;
-    
+
     // If there was a previous card, eject it first
-    if (oldId && isCardOnAltar.value && altarCardRef.value && !isAnimating.value) {
+    if (
+      oldId &&
+      isCardOnAltar.value &&
+      altarCardRef.value &&
+      !isAnimating.value
+    ) {
       isAnimating.value = true;
       await ejectCard();
     }
-    
+
     // Animate new card onto altar
     placeCardOnAltar();
   } else {
@@ -257,21 +269,37 @@ const getRandomEntryPoint = () => {
   const spin = (Math.random() - 0.5) * 540; // 1.5 spins max
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  
+
   // Large offset to ensure card is fully outside viewport + margins
   const horizontalOffset = vw + 100;
   const verticalOffset = vh + 100;
-  
+
   switch (side) {
     case 0: // From top
-      return { x: (Math.random() - 0.5) * 300, y: -verticalOffset, rotation: spin };
+      return {
+        x: (Math.random() - 0.5) * 300,
+        y: -verticalOffset,
+        rotation: spin,
+      };
     case 1: // From right
-      return { x: horizontalOffset, y: (Math.random() - 0.5) * 200, rotation: spin };
+      return {
+        x: horizontalOffset,
+        y: (Math.random() - 0.5) * 200,
+        rotation: spin,
+      };
     case 2: // From bottom
-      return { x: (Math.random() - 0.5) * 300, y: verticalOffset, rotation: spin };
+      return {
+        x: (Math.random() - 0.5) * 300,
+        y: verticalOffset,
+        rotation: spin,
+      };
     case 3: // From left
     default:
-      return { x: -horizontalOffset, y: (Math.random() - 0.5) * 200, rotation: spin };
+      return {
+        x: -horizontalOffset,
+        y: (Math.random() - 0.5) * 200,
+        rotation: spin,
+      };
   }
 };
 
@@ -281,7 +309,7 @@ const getRandomExitPoint = () => {
   // Large distance to ensure card exits fully off screen
   const distance = Math.max(window.innerWidth, window.innerHeight) + 200;
   const spin = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 540); // 1-2.5 full spins
-  
+
   return {
     x: Math.cos(angle) * distance,
     y: Math.sin(angle) * distance,
@@ -302,9 +330,9 @@ const placeCardOnAltar = async () => {
 
   if (altarCardRef.value) {
     gsap.killTweensOf(altarCardRef.value);
-    
+
     const entry = getRandomEntryPoint();
-    
+
     // Set initial position (offscreen with rotation)
     gsap.set(altarCardRef.value, {
       x: entry.x,
@@ -313,7 +341,7 @@ const placeCardOnAltar = async () => {
       scale: 1,
       opacity: 1,
     });
-    
+
     // Fly in and land on altar with strong deceleration at the end
     gsap.to(altarCardRef.value, {
       x: 0,
@@ -337,14 +365,14 @@ const placeCardOnAltar = async () => {
 // ==========================================
 // VAAL ORB OUTCOMES
 // ==========================================
-type VaalOutcome = 'nothing' | 'foil' | 'destroyed';
-type ForcedOutcome = 'random' | VaalOutcome;
+type VaalOutcome = "nothing" | "foil" | "destroyed";
+type ForcedOutcome = "random" | VaalOutcome;
 
 // State for destruction animation
 const isCardBeingDestroyed = ref(false);
 
 // Admin/Debug settings
-const forcedOutcome = ref<ForcedOutcome>('random');
+const forcedOutcome = ref<ForcedOutcome>("random");
 
 // Replay Recording
 const {
@@ -359,7 +387,7 @@ const {
   recordPosition,
   stopRecording,
   cancelRecording,
-  copyUrlToClipboard
+  copyUrlToClipboard,
 } = useReplayRecorder();
 
 const showShareModal = ref(false);
@@ -373,50 +401,66 @@ const recordOnDestroyed = ref(true);
 
 // Load preferences from localStorage on mount
 onMounted(() => {
-  const savedNothing = localStorage.getItem('record_nothing');
-  const savedFoil = localStorage.getItem('record_foil');
-  const savedDestroyed = localStorage.getItem('record_destroyed');
-  
-  if (savedNothing !== null) recordOnNothing.value = savedNothing === 'true';
-  if (savedFoil !== null) recordOnFoil.value = savedFoil === 'true';
-  if (savedDestroyed !== null) recordOnDestroyed.value = savedDestroyed === 'true';
+  const savedNothing = localStorage.getItem("record_nothing");
+  const savedFoil = localStorage.getItem("record_foil");
+  const savedDestroyed = localStorage.getItem("record_destroyed");
+
+  if (savedNothing !== null) recordOnNothing.value = savedNothing === "true";
+  if (savedFoil !== null) recordOnFoil.value = savedFoil === "true";
+  if (savedDestroyed !== null)
+    recordOnDestroyed.value = savedDestroyed === "true";
 });
 
 // Watch and save preferences to localStorage
-watch(recordOnNothing, (val) => localStorage.setItem('record_nothing', String(val)));
-watch(recordOnFoil, (val) => localStorage.setItem('record_foil', String(val)));
-watch(recordOnDestroyed, (val) => localStorage.setItem('record_destroyed', String(val)));
+watch(recordOnNothing, (val) =>
+  localStorage.setItem("record_nothing", String(val))
+);
+watch(recordOnFoil, (val) => localStorage.setItem("record_foil", String(val)));
+watch(recordOnDestroyed, (val) =>
+  localStorage.setItem("record_destroyed", String(val))
+);
 
 // Check if recording should happen for a given outcome
-const shouldRecordOutcome = (outcome: 'nothing' | 'foil' | 'destroyed'): boolean => {
+const shouldRecordOutcome = (
+  outcome: "nothing" | "foil" | "destroyed"
+): boolean => {
   switch (outcome) {
-    case 'nothing': return recordOnNothing.value;
-    case 'foil': return recordOnFoil.value;
-    case 'destroyed': return recordOnDestroyed.value;
-    default: return false;
+    case "nothing":
+      return recordOnNothing.value;
+    case "foil":
+      return recordOnFoil.value;
+    case "destroyed":
+      return recordOnDestroyed.value;
+    default:
+      return false;
   }
 };
 
 // Set user info for recorder when user changes
-watch(user, (newUser) => {
-  setUser(newUser.name, newUser.avatar);
-}, { immediate: true });
+watch(
+  user,
+  (newUser) => {
+    setUser(newUser.name, newUser.avatar);
+  },
+  { immediate: true }
+);
 
 const startAutoRecording = () => {
   // Check if any recording is enabled
-  if (!recordOnNothing.value && !recordOnFoil.value && !recordOnDestroyed.value) return;
-  
+  if (!recordOnNothing.value && !recordOnFoil.value && !recordOnDestroyed.value)
+    return;
+
   const card = displayCard.value;
   if (!card || !isCardOnAltar.value) return;
-  
+
   armRecording({
     cardId: card.id,
     variation: selectedVariation.value,
     uid: card.uid,
     tier: card.tier,
-    foil: isCardFoil(card)
+    foil: isCardFoil(card),
   });
-  
+
   startRecording();
 };
 
@@ -431,24 +475,24 @@ const handleCopyUrl = async () => {
 };
 
 const forcedOutcomeOptions = [
-  { value: 'random', label: '🎲 Aléatoire (défaut)' },
-  { value: 'nothing', label: '😐 Rien ne se passe' },
-  { value: 'foil', label: '✨ Transformation Foil' },
-  { value: 'destroyed', label: '💀 Destruction' },
+  { value: "random", label: "🎲 Aléatoire (défaut)" },
+  { value: "nothing", label: "😐 Rien ne se passe" },
+  { value: "foil", label: "✨ Transformation Foil" },
+  { value: "destroyed", label: "💀 Destruction" },
 ];
 
 // Simulate Vaal outcome (will be server-side later)
 const simulateVaalOutcome = (): VaalOutcome => {
   // If a forced outcome is set, use it
-  if (forcedOutcome.value !== 'random') {
+  if (forcedOutcome.value !== "random") {
     return forcedOutcome.value;
   }
-  
+
   const rand = Math.random();
   // 50% nothing, 30% foil, 20% destroyed
-  if (rand < 0.5) return 'nothing';
-  if (rand < 0.8) return 'foil';
-  return 'destroyed';
+  if (rand < 0.5) return "nothing";
+  if (rand < 0.8) return "foil";
+  return "destroyed";
 };
 
 // Transform card to foil instantly with dramatic effect
@@ -456,13 +500,15 @@ const transformToFoil = async () => {
   if (!altarCardRef.value || !displayCard.value) return;
 
   isAnimating.value = true;
-  
+
   // Find the card in the local collection and update it
-  const cardIndex = localCollection.value.findIndex(c => c.uid === displayCard.value!.uid);
+  const cardIndex = localCollection.value.findIndex(
+    (c) => c.uid === displayCard.value!.uid
+  );
   if (cardIndex !== -1) {
     localCollection.value[cardIndex].foil = true;
   }
-  
+
   // Phase 1: Build up glow
   gsap.to(altarCardRef.value, {
     filter: "brightness(1.8) saturate(1.5)",
@@ -470,9 +516,9 @@ const transformToFoil = async () => {
     duration: 0.2,
     ease: "power2.in",
   });
-  
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
+
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
   // Phase 2: Bright flash - this is when the transformation happens visually
   gsap.to(altarCardRef.value, {
     filter: "brightness(3) saturate(2)",
@@ -480,9 +526,9 @@ const transformToFoil = async () => {
     duration: 0.1,
     ease: "power2.out",
   });
-  
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
   // Phase 3: Settle back with the new foil appearance
   gsap.to(altarCardRef.value, {
     filter: "brightness(1) saturate(1)",
@@ -490,10 +536,10 @@ const transformToFoil = async () => {
     duration: 0.4,
     ease: "power2.out",
   });
-  
-  await new Promise(resolve => setTimeout(resolve, 400));
+
+  await new Promise((resolve) => setTimeout(resolve, 400));
   isAnimating.value = false;
-  
+
   // Re-capture snapshot with the new foil appearance
   captureCardSnapshot();
 };
@@ -504,26 +550,36 @@ const REPETITION_COUNT = 2;
 const cardSnapshot = ref<HTMLCanvasElement | null>(null);
 const imageSnapshot = ref<HTMLCanvasElement | null>(null);
 const isCapturingSnapshot = ref(false);
-const capturedImageDimensions = ref<{ width: number; height: number } | null>(null);
-const capturedCardDimensions = ref<{ width: number; height: number } | null>(null);
+const capturedImageDimensions = ref<{ width: number; height: number } | null>(
+  null
+);
+const capturedCardDimensions = ref<{ width: number; height: number } | null>(
+  null
+);
 
 const findCardImageElement = (): HTMLElement | null => {
   if (!cardFrontRef.value) return null;
-  return cardFrontRef.value.querySelector('.game-card__image-wrapper') as HTMLElement | null;
+  return cardFrontRef.value.querySelector(
+    ".game-card__image-wrapper"
+  ) as HTMLElement | null;
 };
 
-const loadImageToCanvas = (imgUrl: string, targetWidth?: number, targetHeight?: number): Promise<HTMLCanvasElement | null> => {
+const loadImageToCanvas = (
+  imgUrl: string,
+  targetWidth?: number,
+  targetHeight?: number
+): Promise<HTMLCanvasElement | null> => {
   return new Promise((resolve) => {
     const img = new Image();
-    
+
     img.onload = () => {
       const width = targetWidth || img.naturalWidth;
       const height = targetHeight || img.naturalHeight;
-      
-      const canvas = document.createElement('canvas');
+
+      const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.drawImage(img, 0, 0, width, height);
         resolve(canvas);
@@ -531,7 +587,7 @@ const loadImageToCanvas = (imgUrl: string, targetWidth?: number, targetHeight?: 
         resolve(null);
       }
     };
-    
+
     img.onerror = () => resolve(null);
     img.src = `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
   });
@@ -540,37 +596,47 @@ const loadImageToCanvas = (imgUrl: string, targetWidth?: number, targetHeight?: 
 // Capture both the image and the full card as canvas snapshots
 const captureCardSnapshot = async () => {
   if (!cardFrontRef.value || isCapturingSnapshot.value) return;
-  
+
   isCapturingSnapshot.value = true;
-  
+
   try {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 800));
     if (!cardFrontRef.value) {
       isCapturingSnapshot.value = false;
       return;
     }
-    
-    const imgElement = cardFrontRef.value.querySelector('.game-card__image') as HTMLImageElement;
+
+    const imgElement = cardFrontRef.value.querySelector(
+      ".game-card__image"
+    ) as HTMLImageElement;
     const imageWrapperElement = findCardImageElement();
-    
+
     if (imgElement && imgElement.src && imageWrapperElement) {
       const wrapperRect = imageWrapperElement.getBoundingClientRect();
       const naturalRatio = imgElement.naturalWidth / imgElement.naturalHeight;
       const wrapperRatio = wrapperRect.width / wrapperRect.height;
-      
-      const displaySize = naturalRatio > wrapperRatio 
-        ? wrapperRect.width 
-        : wrapperRect.height * naturalRatio;
-      
+
+      const displaySize =
+        naturalRatio > wrapperRatio
+          ? wrapperRect.width
+          : wrapperRect.height * naturalRatio;
+
       const targetSize = Math.round(displaySize);
-      const directCanvas = await loadImageToCanvas(imgElement.src, targetSize, targetSize);
-      
+      const directCanvas = await loadImageToCanvas(
+        imgElement.src,
+        targetSize,
+        targetSize
+      );
+
       if (directCanvas && canvasHasContent(directCanvas)) {
         imageSnapshot.value = directCanvas;
-        capturedImageDimensions.value = { width: targetSize, height: targetSize };
+        capturedImageDimensions.value = {
+          width: targetSize,
+          height: targetSize,
+        };
       }
     }
-    
+
     const cardRect = cardFrontRef.value.getBoundingClientRect();
     const canvas = await html2canvas(cardFrontRef.value, {
       backgroundColor: null,
@@ -580,13 +646,16 @@ const captureCardSnapshot = async () => {
       allowTaint: true,
       imageTimeout: 10000,
     });
-    
+
     cardSnapshot.value = canvas;
-    capturedCardDimensions.value = { width: cardRect.width, height: cardRect.height };
+    capturedCardDimensions.value = {
+      width: cardRect.width,
+      height: cardRect.height,
+    };
   } catch (error) {
     cardSnapshot.value = null;
   }
-  
+
   isCapturingSnapshot.value = false;
 };
 
@@ -600,27 +669,35 @@ const canvasHasContent = (canvas: HTMLCanvasElement): boolean => {
   return false;
 };
 
-const generateDisintegrationFrames = (canvas: HTMLCanvasElement, count: number): HTMLCanvasElement[] => {
+const generateDisintegrationFrames = (
+  canvas: HTMLCanvasElement,
+  count: number
+): HTMLCanvasElement[] => {
   const { width, height } = canvas;
   const ctx = canvas.getContext("2d");
   if (!ctx) return [];
-  
+
   const originalData = ctx.getImageData(0, 0, width, height);
-  const imageDatas = [...Array(count)].map(() => ctx.createImageData(width, height));
-  
+  const imageDatas = [...Array(count)].map(() =>
+    ctx.createImageData(width, height)
+  );
+
   for (let x = 0; x < width; ++x) {
     for (let y = 0; y < height; ++y) {
       for (let i = 0; i < REPETITION_COUNT; ++i) {
-        const dataIndex = Math.floor(count * (Math.random() + 2 * x / width) / 3);
+        const dataIndex = Math.floor(
+          (count * (Math.random() + (2 * x) / width)) / 3
+        );
         const pixelIndex = (y * width + x) * 4;
         for (let offset = 0; offset < 4; ++offset) {
-          imageDatas[dataIndex].data[pixelIndex + offset] = originalData.data[pixelIndex + offset];
+          imageDatas[dataIndex].data[pixelIndex + offset] =
+            originalData.data[pixelIndex + offset];
         }
       }
     }
   }
-  
-  return imageDatas.map(data => {
+
+  return imageDatas.map((data) => {
     const newCanvas = document.createElement("canvas");
     newCanvas.width = width;
     newCanvas.height = height;
@@ -630,11 +707,13 @@ const generateDisintegrationFrames = (canvas: HTMLCanvasElement, count: number):
 };
 
 const cleanupAfterDestruction = (destroyedCardUid: number) => {
-  const cardIndex = localCollection.value.findIndex(c => c.uid === destroyedCardUid);
+  const cardIndex = localCollection.value.findIndex(
+    (c) => c.uid === destroyedCardUid
+  );
   if (cardIndex !== -1) {
     localCollection.value.splice(cardIndex, 1);
   }
-  
+
   cardSnapshot.value = null;
   imageSnapshot.value = null;
   capturedImageDimensions.value = null;
@@ -645,7 +724,7 @@ const cleanupAfterDestruction = (destroyedCardUid: number) => {
   isCardFlipped.value = false;
   selectedCardId.value = "";
   isAnimating.value = false;
-  
+
   if (altarCardRef.value) {
     gsap.set(altarCardRef.value, {
       x: 0,
@@ -660,11 +739,11 @@ const cleanupAfterDestruction = (destroyedCardUid: number) => {
 };
 
 const createDisintegrationEffect = (
-  canvas: HTMLCanvasElement, 
+  canvas: HTMLCanvasElement,
   container: HTMLElement,
   options: {
     frameCount?: number;
-    direction?: 'up' | 'out';
+    direction?: "up" | "out";
     duration?: number;
     delayMultiplier?: number;
     targetWidth?: number;
@@ -673,17 +752,17 @@ const createDisintegrationEffect = (
 ): Promise<HTMLCanvasElement[]> => {
   const {
     frameCount = DISINTEGRATION_FRAMES,
-    direction = 'out',
+    direction = "out",
     duration = 1.2,
     delayMultiplier = 1.5,
     targetWidth,
-    targetHeight
+    targetHeight,
   } = options;
-  
+
   const displayWidth = targetWidth || canvas.width;
   const displayHeight = targetHeight || canvas.height;
   const frames = generateDisintegrationFrames(canvas, frameCount);
-  
+
   frames.forEach((frame) => {
     frame.style.cssText = `
       position: absolute;
@@ -696,21 +775,23 @@ const createDisintegrationEffect = (
     `;
     container.appendChild(frame);
   });
-  
+
   return new Promise((resolve) => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         frames.forEach((frame, i) => {
           frame.style.transition = `transform ${duration}s ease-out, opacity ${duration}s ease-out`;
-          frame.style.transitionDelay = `${(delayMultiplier * i / frames.length)}s`;
+          frame.style.transitionDelay = `${
+            (delayMultiplier * i) / frames.length
+          }s`;
         });
-        
+
         requestAnimationFrame(() => {
-          frames.forEach(frame => {
+          frames.forEach((frame) => {
             const randomAngle = 2 * Math.PI * (Math.random() - 0.5);
             let translateX: number, translateY: number;
-            
-            if (direction === 'up') {
+
+            if (direction === "up") {
               translateX = (Math.random() - 0.5) * 120;
               translateY = -100 - Math.random() * 150;
             } else {
@@ -718,7 +799,7 @@ const createDisintegrationEffect = (
               translateX = distance * Math.cos(randomAngle);
               translateY = distance * Math.sin(randomAngle) - 30;
             }
-            
+
             frame.style.transform = `
               rotate(${25 * (Math.random() - 0.5)}deg) 
               translate(${translateX}px, ${translateY}px)
@@ -726,7 +807,7 @@ const createDisintegrationEffect = (
             `;
             frame.style.opacity = "0";
           });
-          
+
           resolve(frames);
         });
       });
@@ -739,9 +820,9 @@ const destroyCard = async () => {
 
   isAnimating.value = true;
   isCardBeingDestroyed.value = true;
-  
+
   const destroyedCardUid = displayCard.value.uid;
-  
+
   const shakeTl = gsap.timeline();
   for (let i = 0; i < 6; i++) {
     shakeTl.to(altarCardRef.value, {
@@ -751,37 +832,44 @@ const destroyCard = async () => {
     });
   }
   shakeTl.to(altarCardRef.value, { x: 0, duration: 0.03 });
-  
+
   gsap.to(altarCardRef.value, {
     filter: "brightness(1.5) sepia(0.4) saturate(1.2)",
     duration: 0.25,
   });
-  
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
   // Start fading out the altar as disintegration begins
   isAltarActive.value = false;
-  
+
   const cardSlot = altarCardRef.value.parentElement;
   if (!cardSlot) {
     cleanupAfterDestruction(destroyedCardUid);
     return;
   }
-  
+
   try {
     const containers: HTMLElement[] = [];
     const imageElement = findCardImageElement();
-    const hasImageSnapshot = imageSnapshot.value && canvasHasContent(imageSnapshot.value);
-    
+    const hasImageSnapshot =
+      imageSnapshot.value && canvasHasContent(imageSnapshot.value);
+
     if (hasImageSnapshot && imageElement && altarCardRef.value) {
-      const imgTag = imageElement.querySelector('.game-card__image') as HTMLImageElement | null;
+      const imgTag = imageElement.querySelector(
+        ".game-card__image"
+      ) as HTMLImageElement | null;
       const imgRect = imgTag?.getBoundingClientRect();
       const actualWidth = imgRect?.width || imageElement.clientWidth;
       const actualHeight = imgRect?.height || imageElement.clientHeight;
       const altarRect = altarCardRef.value.getBoundingClientRect();
-      const relativeTop = imgRect ? (imgRect.top - altarRect.top) : (imageElement.getBoundingClientRect().top - altarRect.top);
-      const relativeLeft = imgRect ? (imgRect.left - altarRect.left) : (imageElement.getBoundingClientRect().left - altarRect.left);
-      
+      const relativeTop = imgRect
+        ? imgRect.top - altarRect.top
+        : imageElement.getBoundingClientRect().top - altarRect.top;
+      const relativeLeft = imgRect
+        ? imgRect.left - altarRect.left
+        : imageElement.getBoundingClientRect().left - altarRect.left;
+
       const imgContainer = document.createElement("div");
       imgContainer.className = "disintegration-container";
       imgContainer.style.cssText = `
@@ -794,25 +882,25 @@ const destroyCard = async () => {
         z-index: 101;
         overflow: visible;
       `;
-      
+
       altarCardRef.value.appendChild(imgContainer);
       containers.push(imgContainer);
-      
+
       await createDisintegrationEffect(imageSnapshot.value!, imgContainer, {
         frameCount: 48,
-        direction: 'up',
+        direction: "up",
         duration: 0.8,
         delayMultiplier: 0.4,
         targetWidth: actualWidth,
-        targetHeight: actualHeight
+        targetHeight: actualHeight,
       });
-      
-      if (imgTag) imgTag.style.opacity = '0';
-      
+
+      if (imgTag) imgTag.style.opacity = "0";
+
       // Wait for image disintegration to finish (duration + max delay)
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
     }
-    
+
     let cardCanvas = cardSnapshot.value;
     if (!cardCanvas && cardFrontRef.value) {
       try {
@@ -825,10 +913,11 @@ const destroyCard = async () => {
         });
       } catch (e) {}
     }
-    
+
     if (cardCanvas && altarCardRef.value && capturedCardDimensions.value) {
-      const { width: cardWidth, height: cardHeight } = capturedCardDimensions.value;
-      
+      const { width: cardWidth, height: cardHeight } =
+        capturedCardDimensions.value;
+
       const cardContainer = document.createElement("div");
       cardContainer.className = "disintegration-container";
       cardContainer.style.cssText = `
@@ -841,30 +930,29 @@ const destroyCard = async () => {
         z-index: 100;
         overflow: visible;
       `;
-      
+
       cardSlot.appendChild(cardContainer);
       containers.push(cardContainer);
-      
+
       gsap.set(altarCardRef.value, { opacity: 0 });
-      
+
       await createDisintegrationEffect(cardCanvas, cardContainer, {
         frameCount: 64,
-        direction: 'out',
+        direction: "out",
         duration: 0.9,
         delayMultiplier: 0.7,
         targetWidth: cardWidth,
-        targetHeight: cardHeight
+        targetHeight: cardHeight,
       });
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    containers.forEach(c => c.remove());
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    containers.forEach((c) => c.remove());
   } catch (error) {
     gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  
+
   cleanupAfterDestruction(destroyedCardUid);
 };
 
@@ -885,19 +973,19 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
       cancelRecording();
     }
   }
-  
+
   switch (outcome) {
-    case 'nothing':
+    case "nothing":
       // Nothing happens - just a brief flash to indicate the orb was consumed
       await showNothingEffect();
       break;
-      
-    case 'foil':
+
+    case "foil":
       // Transform to foil instantly
       await transformToFoil();
       break;
-      
-    case 'destroyed':
+
+    case "destroyed":
       // Destroy the card
       await destroyCard();
       break;
@@ -907,9 +995,9 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
 // Effect when nothing happens
 const showNothingEffect = async () => {
   if (!altarCardRef.value) return;
-  
+
   isAnimating.value = true;
-  
+
   // Brief disappointed flash
   gsap.to(altarCardRef.value, {
     filter: "brightness(1.3) saturate(0.8)",
@@ -923,20 +1011,20 @@ const showNothingEffect = async () => {
       });
     },
   });
-  
-  await new Promise(resolve => setTimeout(resolve, 400));
+
+  await new Promise((resolve) => setTimeout(resolve, 400));
   isAnimating.value = false;
 };
 
 // Card is thrown/ejected towards a random direction with spin
 const ejectCard = async () => {
   if (!altarCardRef.value) return;
-  
+
   isCardAnimatingOut.value = true;
   isAltarActive.value = false;
-  
+
   const exit = getRandomExitPoint();
-  
+
   await new Promise<void>((resolve) => {
     gsap.to(altarCardRef.value, {
       x: exit.x,
@@ -950,7 +1038,7 @@ const ejectCard = async () => {
       },
     });
   });
-  
+
   isCardOnAltar.value = false;
   isCardFlipped.value = false;
 };
@@ -961,7 +1049,7 @@ const removeCardFromAltar = async () => {
 
   isAnimating.value = true;
   await ejectCard();
-  
+
   selectedCardId.value = "";
   isAnimating.value = false;
 };
@@ -986,19 +1074,21 @@ let currentY = 0;
 // ==========================================
 // HEARTBEAT EFFECT - Using shared composable
 // ==========================================
-const isAnimatingRef = computed(() => isAnimating.value || !isCardOnAltar.value);
+const isAnimatingRef = computed(
+  () => isAnimating.value || !isCardOnAltar.value
+);
 
 const {
   heartbeatIntensity,
   isOrbOverCard,
   createHeartbeatStyles,
   updateHeartbeat,
-  resetEffects: resetHeartbeatEffects
+  resetEffects: resetHeartbeatEffects,
 } = useAltarEffects({
   cardRef: altarCardRef,
   isActive: isDraggingOrb,
   isDestroying: isCardBeingDestroyed,
-  autoWatch: false // We call updateHeartbeat manually in onDragOrb
+  autoWatch: false, // We call updateHeartbeat manually in onDragOrb
 });
 
 // Create heartbeat styles with additional animation check
@@ -1012,13 +1102,21 @@ const setOrbRef = (el: HTMLElement | null, index: number) => {
 };
 
 const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
-  if (vaalOrbs.value <= 0 || !isCardOnAltar.value || isAnimating.value || isReturningOrb.value) return;
+  // Cannot use Vaal Orb on already foil cards
+  if (
+    vaalOrbs.value <= 0 ||
+    !isCardOnAltar.value ||
+    isAnimating.value ||
+    isReturningOrb.value ||
+    isCurrentCardFoil.value
+  )
+    return;
 
   event.preventDefault();
-  
+
   // Auto-start recording if enabled
   startAutoRecording();
-  
+
   // Get the origin position of the orb element
   const orbElement = orbRefs.value[index];
   if (orbElement) {
@@ -1034,13 +1132,13 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
   currentX = clientX;
   currentY = clientY;
-  
+
   // Record initial position relative to card center
   if (isRecording.value && altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
     const cardCenter = {
       x: cardRect.left + cardRect.width / 2,
-      y: cardRect.top + cardRect.height / 2
+      y: cardRect.top + cardRect.height / 2,
     };
     recordPosition(clientX, clientY, cardCenter);
   }
@@ -1072,7 +1170,7 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
 
   const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
   const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
-  
+
   currentX = clientX;
   currentY = clientY;
 
@@ -1092,16 +1190,16 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
       clientY <= cardRect.bottom;
     isOrbOverCard.value = isOver;
   }
-  
+
   // Update heartbeat intensity based on proximity
   updateHeartbeat(clientX, clientY);
-  
+
   // Record position for replay relative to card center
   if (isRecording.value && altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
     const cardCenter = {
       x: cardRect.left + cardRect.width / 2,
-      y: cardRect.top + cardRect.height / 2
+      y: cardRect.top + cardRect.height / 2,
     };
     recordPosition(clientX, clientY, cardCenter);
   }
@@ -1129,12 +1227,12 @@ const endDragOrb = async () => {
         });
       });
     }
-    
+
     vaalOrbs.value--;
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
     resetHeartbeatEffects(); // Reset heartbeat and isOrbOverCard
-    
+
     // Apply Vaal outcome instantly
     const outcome = simulateVaalOutcome();
     await handleVaalOutcome(outcome);
@@ -1143,11 +1241,11 @@ const endDragOrb = async () => {
     if (isRecording.value) {
       cancelRecording();
     }
-    
+
     // Return to origin with smooth GSAP animation directly on DOM element
     isReturningOrb.value = true;
     resetHeartbeatEffects(); // Reset heartbeat when returning
-    
+
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
         gsap.to(floatingOrbRef.value, {
@@ -1159,7 +1257,7 @@ const endDragOrb = async () => {
           onComplete: resolve,
         });
       });
-      
+
       // Quick fade out at origin
       await new Promise<void>((resolve) => {
         gsap.to(floatingOrbRef.value, {
@@ -1171,7 +1269,7 @@ const endDragOrb = async () => {
         });
       });
     }
-    
+
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
     resetHeartbeatEffects();
@@ -1221,7 +1319,7 @@ const endDragOrb = async () => {
         <div class="altar-header">
           <RunicHeader
             title="Autel (Demo)"
-            subtitle="Vaal or no balls, Exile."  
+            subtitle="Vaal or no balls, Exile."
           />
         </div>
 
@@ -1276,7 +1374,7 @@ const endDragOrb = async () => {
         <!-- Altar area -->
         <div ref="altarAreaRef" class="altar-area">
           <!-- The altar platform -->
-          <div 
+          <div
             class="altar-platform"
             :class="altarClasses"
             :style="altarThemeStyles"
@@ -1311,22 +1409,28 @@ const endDragOrb = async () => {
                 v-if="displayCard && isCardOnAltar"
                 ref="altarCardRef"
                 class="altar-card"
-                :class="{ 
+                :class="{
                   'altar-card--flipped': isCardFlipped,
-                  'altar-card--animating': isCardAnimatingIn || isCardAnimatingOut,
-                  'altar-card--heartbeat': !isCardAnimatingIn && !isCardAnimatingOut && !isCardBeingDestroyed && !isAnimating,
-                  'altar-card--panicking': isDraggingOrb && !isCardAnimatingIn && !isCardAnimatingOut,
+                  'altar-card--animating':
+                    isCardAnimatingIn || isCardAnimatingOut,
+                  'altar-card--heartbeat':
+                    !isCardAnimatingIn &&
+                    !isCardAnimatingOut &&
+                    !isCardBeingDestroyed &&
+                    !isAnimating,
+                  'altar-card--panicking':
+                    isDraggingOrb && !isCardAnimatingIn && !isCardAnimatingOut,
                   'altar-card--destroying': isCardBeingDestroyed,
                 }"
                 :style="heartbeatStyles"
               >
                 <!-- Front face - GameCard with full interactivity -->
-                <div ref="cardFrontRef" class="altar-card__face altar-card__face--front">
+                <div
+                  ref="cardFrontRef"
+                  class="altar-card__face altar-card__face--front"
+                >
                   <div class="altar-card__game-card-wrapper">
-                    <GameCard
-                      :card="displayCard"
-                      :owned="true"
-                    />
+                    <GameCard :card="displayCard" :owned="true" />
                   </div>
                 </div>
 
@@ -1350,14 +1454,15 @@ const endDragOrb = async () => {
                     </div>
                     <div class="card-back__decoration">
                       <div class="card-back__line card-back__line--top"></div>
-                      <div class="card-back__line card-back__line--bottom"></div>
+                      <div
+                        class="card-back__line card-back__line--bottom"
+                      ></div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
-            </div>
+          </div>
         </div>
 
         <!-- Vaal Orbs inventory -->
@@ -1366,12 +1471,14 @@ const endDragOrb = async () => {
           <RunicBox padding="sm" class="vaal-toolbar-box">
             <div class="vaal-toolbar">
               <div class="vaal-toolbar__status">
-                <span 
-                  v-if="isRecording" 
+                <span
+                  v-if="isRecording"
                   class="vaal-toolbar__recording-indicator"
                   title="Enregistrement en cours..."
                 ></span>
-                <span v-if="isRecording" class="vaal-toolbar__recording-text">Enregistrement...</span>
+                <span v-if="isRecording" class="vaal-toolbar__recording-text"
+                  >Enregistrement...</span
+                >
               </div>
               <RunicButton
                 variant="ghost"
@@ -1394,7 +1501,14 @@ const endDragOrb = async () => {
                 <span class="vaal-orbs-count">{{ vaalOrbs }}</span>
               </h3>
               <p class="vaal-orbs-hint">
-                Glissez une Vaal Orb sur la carte pour la retourner
+                <template v-if="isCurrentCardFoil">
+                  <span class="vaal-orbs-hint--foil"
+                    >✦ Cette carte est déjà à son apogée</span
+                  >
+                </template>
+                <template v-else>
+                  Glissez une Vaal Orb sur la carte pour la corrompre
+                </template>
               </p>
             </div>
 
@@ -1405,7 +1519,11 @@ const endDragOrb = async () => {
                 :ref="(el) => setOrbRef(el as HTMLElement, index)"
                 class="vaal-orb"
                 :class="{
-                  'vaal-orb--disabled': !isCardOnAltar || isAnimating || isReturningOrb,
+                  'vaal-orb--disabled':
+                    !isCardOnAltar ||
+                    isAnimating ||
+                    isReturningOrb ||
+                    isCurrentCardFoil,
                   'vaal-orb--dragging': draggedOrbIndex === index,
                 }"
                 @mousedown="(e) => startDragOrb(e, index)"
@@ -1435,9 +1553,9 @@ const endDragOrb = async () => {
             v-if="isDraggingOrb"
             ref="floatingOrbRef"
             class="vaal-orb vaal-orb--floating"
-            :class="{ 
+            :class="{
               'vaal-orb--over-card': isOrbOverCard,
-              'vaal-orb--returning': isReturningOrb 
+              'vaal-orb--returning': isReturningOrb,
             }"
           >
             <img
@@ -1451,7 +1569,11 @@ const endDragOrb = async () => {
         <!-- Preferences Modal -->
         <Teleport to="body">
           <Transition name="modal">
-            <div v-if="showPreferencesModal" class="prefs-modal-overlay" @click.self="showPreferencesModal = false">
+            <div
+              v-if="showPreferencesModal"
+              class="prefs-modal-overlay"
+              @click.self="showPreferencesModal = false"
+            >
               <div class="prefs-modal">
                 <div class="prefs-modal__header">
                   <h3 class="prefs-modal__title">
@@ -1464,44 +1586,76 @@ const endDragOrb = async () => {
                     aria-label="Fermer"
                     @click="showPreferencesModal = false"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
-                
+
                 <div class="prefs-modal__content">
                   <!-- Recording Preferences Section -->
                   <div class="prefs-section">
-                    <h4 class="prefs-section__title">Enregistrement automatique</h4>
+                    <h4 class="prefs-section__title">
+                      Enregistrement automatique
+                    </h4>
                     <p class="prefs-section__hint">
-                      Sélectionne les résultats qui déclenchent un enregistrement
+                      Sélectionne les résultats qui déclenchent un
+                      enregistrement
                     </p>
-                    
+
                     <div class="prefs-toggles">
                       <div class="prefs-toggle">
-                        <span class="prefs-toggle__label">Rien ne s'est passé</span>
-                        <RunicRadio v-model="recordOnNothing" :toggle="true" size="sm" />
+                        <span class="prefs-toggle__label"
+                          >Rien ne s'est passé</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnNothing"
+                          :toggle="true"
+                          size="sm"
+                        />
                       </div>
-                      
+
                       <div class="prefs-toggle">
-                        <span class="prefs-toggle__label prefs-toggle__label--foil">Transformation en Foil</span>
-                        <RunicRadio v-model="recordOnFoil" :toggle="true" size="sm" />
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--foil"
+                          >Transformation en Foil</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnFoil"
+                          :toggle="true"
+                          size="sm"
+                        />
                       </div>
-                      
+
                       <div class="prefs-toggle">
-                        <span class="prefs-toggle__label prefs-toggle__label--destroyed">Destruction</span>
-                        <RunicRadio v-model="recordOnDestroyed" :toggle="true" size="sm" />
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--destroyed"
+                          >Destruction</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnDestroyed"
+                          :toggle="true"
+                          size="sm"
+                        />
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="prefs-divider"></div>
-                  
+
                   <!-- Admin/Debug Section -->
                   <div class="prefs-section">
                     <h4 class="prefs-section__title">Admin / Debug</h4>
-                    
+
                     <div class="prefs-field">
                       <RunicSelect
                         v-model="forcedOutcome"
@@ -1520,17 +1674,21 @@ const endDragOrb = async () => {
                         Ajuste le nombre de Vaal Orbs disponibles
                       </p>
                       <div class="prefs-field__number">
-                        <button 
+                        <button
                           class="prefs-field__btn"
                           :disabled="vaalOrbs <= 0"
                           @click="vaalOrbs = Math.max(0, vaalOrbs - 1)"
-                        >−</button>
+                        >
+                          −
+                        </button>
                         <span class="prefs-field__value">{{ vaalOrbs }}</span>
-                        <button 
+                        <button
                           class="prefs-field__btn"
                           :disabled="vaalOrbs >= 99"
                           @click="vaalOrbs = Math.min(99, vaalOrbs + 1)"
-                        >+</button>
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1543,7 +1701,11 @@ const endDragOrb = async () => {
         <!-- Share Replay Modal -->
         <Teleport to="body">
           <Transition name="modal">
-            <div v-if="showShareModal && generatedUrl" class="prefs-modal-overlay" @click.self="showShareModal = false">
+            <div
+              v-if="showShareModal && generatedUrl"
+              class="prefs-modal-overlay"
+              @click.self="showShareModal = false"
+            >
               <div class="prefs-modal share-modal">
                 <div class="prefs-modal__header">
                   <h3 class="prefs-modal__title">
@@ -1556,22 +1718,32 @@ const endDragOrb = async () => {
                     aria-label="Fermer"
                     @click="showShareModal = false"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
-                
+
                 <div class="prefs-modal__content">
                   <p class="share-modal__text">
-                    Ta session a été enregistrée. Partage ce lien pour que d'autres puissent voir ta Vaal Orb !
+                    Ta session a été enregistrée. Partage ce lien pour que
+                    d'autres puissent voir ta Vaal Orb !
                   </p>
-                  
+
                   <div class="share-modal__url">
-                    <input 
-                      type="text" 
-                      :value="generatedUrl" 
-                      readonly 
+                    <input
+                      type="text"
+                      :value="generatedUrl"
+                      readonly
                       class="share-modal__input"
                       @click="($event.target as HTMLInputElement).select()"
                     />
@@ -1580,12 +1752,16 @@ const endDragOrb = async () => {
                       size="sm"
                       @click="handleCopyUrl"
                     >
-                      {{ urlCopied ? '✓ Copié !' : 'Copier' }}
+                      {{ urlCopied ? "✓ Copié !" : "Copier" }}
                     </RunicButton>
                   </div>
-                  
+
                   <div class="share-modal__preview">
-                    <NuxtLink :to="generatedUrl" target="_blank" class="share-modal__link">
+                    <NuxtLink
+                      :to="generatedUrl"
+                      target="_blank"
+                      class="share-modal__link"
+                    >
                       Voir le replay →
                     </NuxtLink>
                   </div>
@@ -1662,7 +1838,7 @@ const endDragOrb = async () => {
     flex: 1;
     max-width: 280px;
   }
-  
+
   .selector-field--action {
     flex: 0 0 auto;
     width: auto;
@@ -1700,7 +1876,7 @@ const endDragOrb = async () => {
 .altar-platform {
   --altar-accent: #3a3530;
   --altar-rune-color: rgba(60, 55, 50, 0.3);
-  
+
   position: relative;
   width: 320px;
   height: 400px;
@@ -1716,16 +1892,18 @@ const endDragOrb = async () => {
       rgba(18, 16, 14, 0.8) 50%,
       rgba(10, 9, 8, 0.95) 100%
     ),
-    linear-gradient(180deg, rgba(20, 18, 15, 0.9) 0%, rgba(12, 10, 8, 0.95) 100%);
+    linear-gradient(
+      180deg,
+      rgba(20, 18, 15, 0.9) 0%,
+      rgba(12, 10, 8, 0.95) 100%
+    );
 
   border-radius: 50%;
-  
+
   /* Dormant - no glow, just shadow */
-  box-shadow: 
-    inset 0 8px 30px rgba(0, 0, 0, 0.8),
-    inset 0 -4px 20px rgba(40, 35, 30, 0.08),
-    0 15px 40px rgba(0, 0, 0, 0.5);
-    
+  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.8),
+    inset 0 -4px 20px rgba(40, 35, 30, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5);
+
   transition: box-shadow 0.6s ease, background 0.6s ease;
 }
 
@@ -1737,10 +1915,8 @@ const endDragOrb = async () => {
 .altar-platform--active.altar-platform--t0 {
   --altar-accent: #c9a227;
   --altar-rune-color: rgba(201, 162, 39, 0.6);
-  box-shadow: 
-    inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(109, 90, 42, 0.1),
-    0 15px 40px rgba(0, 0, 0, 0.5),
+  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(109, 90, 42, 0.1), 0 15px 40px rgba(0, 0, 0, 0.5),
     0 0 40px rgba(201, 162, 39, 0.08);
 }
 
@@ -1748,10 +1924,8 @@ const endDragOrb = async () => {
 .altar-platform--active.altar-platform--t1 {
   --altar-accent: #7a6a8a;
   --altar-rune-color: rgba(122, 106, 138, 0.6);
-  box-shadow: 
-    inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(58, 52, 69, 0.1),
-    0 15px 40px rgba(0, 0, 0, 0.5),
+  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(58, 52, 69, 0.1), 0 15px 40px rgba(0, 0, 0, 0.5),
     0 0 35px rgba(122, 106, 138, 0.06);
 }
 
@@ -1759,10 +1933,8 @@ const endDragOrb = async () => {
 .altar-platform--active.altar-platform--t2 {
   --altar-accent: #5a7080;
   --altar-rune-color: rgba(90, 112, 128, 0.6);
-  box-shadow: 
-    inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(58, 69, 80, 0.1),
-    0 15px 40px rgba(0, 0, 0, 0.5),
+  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(58, 69, 80, 0.1), 0 15px 40px rgba(0, 0, 0, 0.5),
     0 0 30px rgba(90, 112, 128, 0.05);
 }
 
@@ -1770,20 +1942,16 @@ const endDragOrb = async () => {
 .altar-platform--active.altar-platform--t3 {
   --altar-accent: #5a5a5d;
   --altar-rune-color: rgba(90, 90, 93, 0.5);
-  box-shadow: 
-    inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(42, 42, 45, 0.08),
-    0 15px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(42, 42, 45, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5);
 }
 
 /* Foil - Rainbow/Prismatic - Active */
 .altar-platform--active.altar-platform--foil {
   --altar-accent: #c0a0ff;
   --altar-rune-color: rgba(192, 160, 255, 0.7);
-  box-shadow: 
-    inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(180, 160, 220, 0.08),
-    0 15px 40px rgba(0, 0, 0, 0.5),
+  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    inset 0 -4px 20px rgba(180, 160, 220, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
     0 0 50px rgba(180, 160, 255, 0.1);
   animation: foilGlowSubtle 4s ease-in-out infinite;
 }
@@ -1799,11 +1967,11 @@ const endDragOrb = async () => {
   inset: 0;
   border-radius: inherit;
   background: radial-gradient(
-      ellipse at center,
-      rgba(50, 15, 15, 0.85) 0%,
-      rgba(30, 10, 10, 0.9) 50%,
-      rgba(15, 5, 5, 0.95) 100%
-    );
+    ellipse at center,
+    rgba(50, 15, 15, 0.85) 0%,
+    rgba(30, 10, 10, 0.9) 50%,
+    rgba(15, 5, 5, 0.95) 100%
+  );
   opacity: 0;
   transition: opacity 0.4s ease;
   pointer-events: none;
@@ -1853,7 +2021,8 @@ const endDragOrb = async () => {
 }
 
 @keyframes vaalGlowPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.7;
   }
@@ -1864,26 +2033,21 @@ const endDragOrb = async () => {
 }
 
 @keyframes foilGlowSubtle {
-  0%, 100% {
-    box-shadow: 
-      inset 0 8px 30px rgba(0, 0, 0, 0.7),
+  0%,
+  100% {
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
       inset 0 -4px 20px rgba(180, 160, 220, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5),
-      0 0 50px rgba(180, 160, 255, 0.1);
+      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(180, 160, 255, 0.1);
   }
   33% {
-    box-shadow: 
-      inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
       inset 0 -4px 20px rgba(220, 180, 180, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5),
-      0 0 50px rgba(255, 180, 200, 0.1);
+      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(255, 180, 200, 0.1);
   }
   66% {
-    box-shadow: 
-      inset 0 8px 30px rgba(0, 0, 0, 0.7),
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
       inset 0 -4px 20px rgba(160, 220, 180, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5),
-      0 0 50px rgba(160, 255, 200, 0.1);
+      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(160, 255, 200, 0.1);
   }
 }
 
@@ -1936,15 +2100,18 @@ const endDragOrb = async () => {
 
 /* Foil circles - animated colors (only when active) */
 .altar-platform--active.altar-platform--foil .altar-circle--outer {
-  animation: rotateCircle 60s linear infinite, foilCircle 4s ease-in-out infinite;
+  animation: rotateCircle 60s linear infinite,
+    foilCircle 4s ease-in-out infinite;
 }
 
 .altar-platform--active.altar-platform--foil .altar-circle--middle {
-  animation: rotateCircle 45s linear infinite reverse, foilCircle 4s ease-in-out infinite 0.5s;
+  animation: rotateCircle 45s linear infinite reverse,
+    foilCircle 4s ease-in-out infinite 0.5s;
 }
 
 .altar-platform--active.altar-platform--foil .altar-circle--inner {
-  animation: rotateCircle 30s linear infinite, foilCircle 4s ease-in-out infinite 1s;
+  animation: rotateCircle 30s linear infinite,
+    foilCircle 4s ease-in-out infinite 1s;
 }
 
 /* Vaal circles - color transitions smoothly, brightness pulses via filter */
@@ -1964,14 +2131,25 @@ const endDragOrb = async () => {
 }
 
 @keyframes foilCircle {
-  0%, 100% { border-color: rgba(180, 160, 220, 0.35); }
-  33% { border-color: rgba(220, 160, 180, 0.35); }
-  66% { border-color: rgba(160, 220, 200, 0.35); }
+  0%,
+  100% {
+    border-color: rgba(180, 160, 220, 0.35);
+  }
+  33% {
+    border-color: rgba(220, 160, 180, 0.35);
+  }
+  66% {
+    border-color: rgba(160, 220, 200, 0.35);
+  }
 }
 
 @keyframes rotateCircle {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================
@@ -1983,15 +2161,32 @@ const endDragOrb = async () => {
   color: rgba(50, 45, 40, 0.2);
   text-shadow: none;
   /* Smooth transitions for all visual properties */
-  transition: color 0.4s ease, text-shadow 0.4s ease, opacity 0.4s ease, transform 0.4s ease, filter 0.4s ease;
+  transition: color 0.4s ease, text-shadow 0.4s ease, opacity 0.4s ease,
+    transform 0.4s ease, filter 0.4s ease;
   opacity: 0.4;
   z-index: 2;
 }
 
-.altar-rune--n { top: 8%; left: 50%; transform: translateX(-50%); }
-.altar-rune--e { top: 50%; right: 8%; transform: translateY(-50%); }
-.altar-rune--s { bottom: 8%; left: 50%; transform: translateX(-50%); }
-.altar-rune--w { top: 50%; left: 8%; transform: translateY(-50%); }
+.altar-rune--n {
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.altar-rune--e {
+  top: 50%;
+  right: 8%;
+  transform: translateY(-50%);
+}
+.altar-rune--s {
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.altar-rune--w {
+  top: 50%;
+  left: 8%;
+  transform: translateY(-50%);
+}
 
 /* Active state - colored and glowing (base animation stays constant) */
 .altar-platform--active .altar-rune {
@@ -2001,32 +2196,46 @@ const endDragOrb = async () => {
   animation: pulseRune 3s ease-in-out infinite;
 }
 
-.altar-platform--active .altar-rune--n { animation-delay: 0s; }
-.altar-platform--active .altar-rune--e { animation-delay: 0.75s; }
-.altar-platform--active .altar-rune--s { animation-delay: 1.5s; }
-.altar-platform--active .altar-rune--w { animation-delay: 2.25s; }
+.altar-platform--active .altar-rune--n {
+  animation-delay: 0s;
+}
+.altar-platform--active .altar-rune--e {
+  animation-delay: 0.75s;
+}
+.altar-platform--active .altar-rune--s {
+  animation-delay: 1.5s;
+}
+.altar-platform--active .altar-rune--w {
+  animation-delay: 2.25s;
+}
 
 /* Vaal runes - enhanced glow via filter (transitions smoothly) */
 .altar-platform--active.altar-platform--vaal .altar-rune {
-  filter: drop-shadow(0 0 10px rgba(200, 50, 50, 0.6)) drop-shadow(0 0 20px rgba(180, 40, 40, 0.3));
+  filter: drop-shadow(0 0 10px rgba(200, 50, 50, 0.6))
+    drop-shadow(0 0 20px rgba(180, 40, 40, 0.3));
 }
 
-.altar-platform--active.altar-platform--vaal .altar-rune--n { 
-  transform: translateX(-50%) scale(1.15); 
+.altar-platform--active.altar-platform--vaal .altar-rune--n {
+  transform: translateX(-50%) scale(1.15);
 }
-.altar-platform--active.altar-platform--vaal .altar-rune--e { 
-  transform: translateY(-50%) scale(1.15); 
+.altar-platform--active.altar-platform--vaal .altar-rune--e {
+  transform: translateY(-50%) scale(1.15);
 }
-.altar-platform--active.altar-platform--vaal .altar-rune--s { 
-  transform: translateX(-50%) scale(1.15); 
+.altar-platform--active.altar-platform--vaal .altar-rune--s {
+  transform: translateX(-50%) scale(1.15);
 }
-.altar-platform--active.altar-platform--vaal .altar-rune--w { 
-  transform: translateY(-50%) scale(1.15); 
+.altar-platform--active.altar-platform--vaal .altar-rune--w {
+  transform: translateY(-50%) scale(1.15);
 }
 
 @keyframes pulseRune {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Foil runes - rainbow animation (only when active) */
@@ -2035,9 +2244,19 @@ const endDragOrb = async () => {
 }
 
 @keyframes foilRune {
-  0%, 100% { color: rgba(180, 160, 220, 0.7); text-shadow: 0 0 10px rgba(180, 160, 220, 0.3); }
-  33% { color: rgba(220, 160, 180, 0.7); text-shadow: 0 0 10px rgba(220, 160, 180, 0.3); }
-  66% { color: rgba(160, 220, 200, 0.7); text-shadow: 0 0 10px rgba(160, 220, 200, 0.3); }
+  0%,
+  100% {
+    color: rgba(180, 160, 220, 0.7);
+    text-shadow: 0 0 10px rgba(180, 160, 220, 0.3);
+  }
+  33% {
+    color: rgba(220, 160, 180, 0.7);
+    text-shadow: 0 0 10px rgba(220, 160, 180, 0.3);
+  }
+  66% {
+    color: rgba(160, 220, 200, 0.7);
+    text-shadow: 0 0 10px rgba(160, 220, 200, 0.3);
+  }
 }
 
 /* ==========================================
@@ -2051,14 +2270,14 @@ const endDragOrb = async () => {
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  
+
   /* Perspective for card flip only */
   perspective: 600px;
-  
+
   /* Allow card to overflow during animations */
   overflow: visible;
   z-index: 2;
-  
+
   /* Inset groove - dormant */
   background: linear-gradient(
     180deg,
@@ -2066,34 +2285,27 @@ const endDragOrb = async () => {
     rgba(12, 12, 14, 0.8) 50%,
     rgba(8, 8, 10, 0.9) 100%
   );
-  
-  box-shadow: 
-    inset 0 4px 15px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 10px rgba(40, 35, 30, 0.03),
-    0 2px 8px rgba(0, 0, 0, 0.3);
-  
+
+  box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.7),
+    inset 0 -2px 10px rgba(40, 35, 30, 0.03), 0 2px 8px rgba(0, 0, 0, 0.3);
+
   border: 1px solid rgba(40, 38, 35, 0.25);
-  
+
   /* Smooth transitions for Vaal theme change */
   transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
 }
 
 .altar-card-slot--active {
   border-color: color-mix(in srgb, var(--altar-accent) 35%, transparent);
-  box-shadow: 
-    inset 0 4px 15px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 10px rgba(40, 35, 30, 0.03),
-    0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 10px rgba(40, 35, 30, 0.03), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .altar-card-slot--highlight {
   border-color: rgba(200, 50, 50, 0.7);
-  box-shadow: 
-    inset 0 4px 15px rgba(0, 0, 0, 0.5),
-    inset 0 -2px 10px rgba(200, 50, 50, 0.15),
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 30px rgba(200, 50, 50, 0.35),
-    0 0 60px rgba(180, 40, 40, 0.2);
+  box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.5),
+    inset 0 -2px 10px rgba(200, 50, 50, 0.15), 0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(200, 50, 50, 0.35), 0 0 60px rgba(180, 40, 40, 0.2);
 }
 
 /* ==========================================
@@ -2114,8 +2326,15 @@ const endDragOrb = async () => {
 }
 
 @keyframes pulseIcon {
-  0%, 100% { transform: scale(1); opacity: 0.4; }
-  50% { transform: scale(1.05); opacity: 0.6; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.6;
+  }
 }
 
 .altar-empty__text {
@@ -2134,10 +2353,10 @@ const endDragOrb = async () => {
   height: 100%;
   transform-style: preserve-3d;
   will-change: transform;
-  
+
   /* Allow disintegration particles to escape */
   overflow: visible;
-  
+
   /* CSS variables for heartbeat effect */
   --heartbeat-speed: 2s;
   --heartbeat-scale: 1.005;
@@ -2173,7 +2392,8 @@ const endDragOrb = async () => {
 }
 
 @keyframes cardHeartbeat {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   15% {
@@ -2191,7 +2411,8 @@ const endDragOrb = async () => {
 }
 
 @keyframes cardHeartbeatPanic {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     filter: brightness(1);
   }
@@ -2214,7 +2435,8 @@ const endDragOrb = async () => {
 }
 
 @keyframes heartbeatGlow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(1);
   }
@@ -2262,7 +2484,8 @@ const endDragOrb = async () => {
 }
 
 @keyframes destructionGlow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.8;
     transform: scale(1);
   }
@@ -2414,10 +2637,22 @@ const endDragOrb = async () => {
   z-index: 2;
 }
 
-.card-back__rune--tl { top: 14px; left: 14px; }
-.card-back__rune--tr { top: 14px; right: 14px; }
-.card-back__rune--bl { bottom: 14px; left: 14px; }
-.card-back__rune--br { bottom: 14px; right: 14px; }
+.card-back__rune--tl {
+  top: 14px;
+  left: 14px;
+}
+.card-back__rune--tr {
+  top: 14px;
+  right: 14px;
+}
+.card-back__rune--bl {
+  bottom: 14px;
+  left: 14px;
+}
+.card-back__rune--br {
+  bottom: 14px;
+  right: 14px;
+}
 
 .card-back__logo-wrapper {
   position: absolute;
@@ -2456,9 +2691,12 @@ const endDragOrb = async () => {
   );
 }
 
-.card-back__line--top { top: 45px; }
-.card-back__line--bottom { bottom: 45px; }
-
+.card-back__line--top {
+  top: 45px;
+}
+.card-back__line--bottom {
+  bottom: 45px;
+}
 
 /* ==========================================
    VAAL ORBS SECTION
@@ -2510,8 +2748,15 @@ const endDragOrb = async () => {
 }
 
 @keyframes recording-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
 }
 
 .vaal-settings-btn {
@@ -2565,7 +2810,11 @@ const endDragOrb = async () => {
   min-width: 28px;
   height: 28px;
   padding: 0 8px;
-  background: linear-gradient(180deg, rgba(175, 96, 37, 0.2) 0%, rgba(175, 96, 37, 0.1) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(175, 96, 37, 0.2) 0%,
+    rgba(175, 96, 37, 0.1) 100%
+  );
   border: 1px solid rgba(175, 96, 37, 0.4);
   border-radius: 14px;
   font-size: 0.875rem;
@@ -2577,6 +2826,12 @@ const endDragOrb = async () => {
   font-size: 0.875rem;
   font-style: italic;
   color: rgba(140, 130, 120, 0.6);
+}
+
+.vaal-orbs-hint--foil {
+  color: rgba(255, 215, 100, 0.7);
+  font-style: normal;
+  font-weight: 500;
 }
 
 /* ==========================================
@@ -2640,8 +2895,8 @@ const endDragOrb = async () => {
 
 .vaal-orb:not(.vaal-orb--disabled):hover {
   transform: scale(1.2);
-  filter: drop-shadow(0 0 12px rgba(180, 50, 50, 0.7)) 
-          drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 0 12px rgba(180, 50, 50, 0.7))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
 }
 
 .vaal-orb__image {
@@ -2662,8 +2917,8 @@ const endDragOrb = async () => {
   z-index: 10000;
   pointer-events: none;
   will-change: transform, left, top;
-  filter: drop-shadow(0 0 15px rgba(180, 50, 50, 0.6)) 
-          drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 0 15px rgba(180, 50, 50, 0.6))
+    drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
 }
 
 .vaal-orb--floating .vaal-orb__image {
@@ -2672,8 +2927,8 @@ const endDragOrb = async () => {
 }
 
 .vaal-orb--returning {
-  filter: drop-shadow(0 0 8px rgba(160, 50, 50, 0.4)) 
-          drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 8px rgba(160, 50, 50, 0.4))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
 
 .vaal-orb--returning .vaal-orb__image {
@@ -2681,9 +2936,9 @@ const endDragOrb = async () => {
 }
 
 .vaal-orb--over-card {
-  filter: drop-shadow(0 0 25px rgba(200, 50, 50, 0.8)) 
-          drop-shadow(0 0 50px rgba(180, 40, 40, 0.5))
-          drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 0 25px rgba(200, 50, 50, 0.8))
+    drop-shadow(0 0 50px rgba(180, 40, 40, 0.5))
+    drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7));
 }
 
 .vaal-orb--over-card .vaal-orb__image {
@@ -2692,7 +2947,8 @@ const endDragOrb = async () => {
 }
 
 @keyframes pulseOrb {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1.3);
   }
   50% {
@@ -2726,11 +2982,8 @@ const endDragOrb = async () => {
   border-radius: 8px;
   width: 100%;
   max-width: 420px;
-  box-shadow: 
-    0 25px 60px rgba(0, 0, 0, 0.8),
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(80, 75, 70, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(80, 75, 70, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .prefs-modal__header {
@@ -2817,7 +3070,12 @@ const endDragOrb = async () => {
 
 .prefs-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(60, 55, 50, 0.4), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(60, 55, 50, 0.4),
+    transparent
+  );
   margin: 0.5rem 0;
 }
 
@@ -2993,8 +3251,15 @@ const endDragOrb = async () => {
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
 }
 
 /* ==========================================
@@ -3077,4 +3342,3 @@ const endDragOrb = async () => {
   }
 }
 </style>
-
