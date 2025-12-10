@@ -1,9 +1,7 @@
 import { ref, computed } from 'vue';
 import type { DecodedMousePosition } from '~/types/replay';
 import type { Database, ReplayInsert } from '~/types/database';
-
-// Throttle interval for recording mouse positions (20fps is sufficient for smooth replay)
-const SAMPLE_INTERVAL = 50;
+import { RECORDING } from '~/constants/timing';
 
 export function useReplayRecorder() {
   // Get Supabase client - may be null if not configured
@@ -74,7 +72,7 @@ export function useReplayRecorder() {
     const now = Date.now() - recordStartTime.value;
     
     // Throttle: skip if not enough time has passed since last sample
-    if (now - lastSampleTime < SAMPLE_INTERVAL) return;
+    if (now - lastSampleTime < RECORDING.SAMPLE_INTERVAL) return;
     lastSampleTime = now;
     
     // Store the offset from the card center (in pixels)

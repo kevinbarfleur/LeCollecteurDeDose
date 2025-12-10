@@ -1,4 +1,5 @@
 import { ref, computed, watch, type Ref } from 'vue';
+import { HEARTBEAT } from '~/constants/timing';
 
 export interface AltarEffectsOptions {
   cardRef: Ref<HTMLElement | null>;
@@ -49,17 +50,13 @@ export function useAltarEffects(options: AltarEffectsOptions) {
     const dy = y - cardCenterY;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // Distance thresholds
-    const maxDistance = 400; // Beyond this = base intensity
-    const minDistance = 50;  // At or below this = max intensity
-    
-    if (distance <= minDistance) {
+    if (distance <= HEARTBEAT.MIN_DISTANCE) {
       heartbeatIntensity.value = 1; // MAX PANIC!
-    } else if (distance >= maxDistance) {
+    } else if (distance >= HEARTBEAT.MAX_DISTANCE) {
       heartbeatIntensity.value = 0.2; // Just aware something is coming
     } else {
       // Linear interpolation - closer = more intense
-      const normalizedDistance = (distance - minDistance) / (maxDistance - minDistance);
+      const normalizedDistance = (distance - HEARTBEAT.MIN_DISTANCE) / (HEARTBEAT.MAX_DISTANCE - HEARTBEAT.MIN_DISTANCE);
       heartbeatIntensity.value = 1 - normalizedDistance * 0.8; // 0.2 to 1 range
     }
     
@@ -90,20 +87,15 @@ export function useAltarEffects(options: AltarEffectsOptions) {
       
       if (destroying || additionalDisabled) return {};
       
-      // Base heartbeat when card is on altar
-      const baseSpeed = 2; // seconds
-      const panicSpeed = 0.25; // seconds at max panic
-      
       // Calculate speed based on intensity (higher intensity = faster)
       const speed = isActive.value 
-        ? baseSpeed - (heartbeatIntensity.value * (baseSpeed - panicSpeed))
-        : baseSpeed;
+        ? HEARTBEAT.BASE_SPEED - (heartbeatIntensity.value * (HEARTBEAT.BASE_SPEED - HEARTBEAT.PANIC_SPEED))
+        : HEARTBEAT.BASE_SPEED;
       
       // Calculate scale intensity (subtle when calm, dramatic when panicking)
-      const baseScale = 1.005;
       const panicScale = isActive.value 
-        ? 1.01 + (heartbeatIntensity.value * 0.04) // Up to 1.05 scale at max panic
-        : baseScale;
+        ? HEARTBEAT.BASE_SCALE + (heartbeatIntensity.value * (HEARTBEAT.MAX_PANIC_SCALE - HEARTBEAT.BASE_SCALE))
+        : HEARTBEAT.BASE_SCALE;
       
       return {
         '--heartbeat-speed': `${speed}s`,
