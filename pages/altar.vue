@@ -323,6 +323,7 @@ const {
   resetForNewRecording,
   clearError,
   copyUrlToClipboard,
+  logActivityOnly,
 } = useReplayRecorder();
 
 const showShareModal = ref(false);
@@ -708,6 +709,7 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
 
   // Handle recording AFTER the outcome so we have the result info
   if (shouldRecord) {
+    // Full recording - will save replay AND activity log (with replay link)
     stopRecording(outcome, resultCardId);
     lastRecordedOutcome.value = outcome;
     urlCopied.value = false;
@@ -717,9 +719,21 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
     setTimeout(() => {
       showShareModal.value = true;
     }, 1200);
-  } else if (isRecording.value) {
-    // Cancel recording if this outcome shouldn't be recorded
-    cancelRecording();
+  } else {
+    // No replay recorded - but still log the activity for the real-time feed
+    const card = displayCard.value;
+    if (card) {
+      logActivityOnly(
+        { cardId: card.id, tier: card.tier },
+        outcome,
+        resultCardId
+      );
+    }
+    
+    // Cancel any in-progress recording if outcome wasn't selected for recording
+    if (isRecording.value) {
+      cancelRecording();
+    }
   }
 
   // Force reset aura to dormant state after any Vaal outcome

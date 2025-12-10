@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import type { DecodedMousePosition } from '~/types/replay';
 import type { VaalOutcome } from '~/types/vaalOutcome';
-import type { Database, ReplayInsert } from '~/types/database';
+import type { Database, ReplayInsert, ActivityLogInsert } from '~/types/database';
 import { RECORDING } from '~/constants/timing';
 
 export function useReplayRecorder() {
@@ -186,6 +186,9 @@ export function useReplayRecorder() {
       const url = `${window.location.origin}/replay/${data.id}`;
       generatedUrl.value = url;
       
+      // Also insert into activity_logs for real-time feed (fire and forget)
+      await saveActivityLog();
+      
       return url;
     } catch (e) {
       console.error('Error saving replay:', e);
@@ -193,6 +196,34 @@ export function useReplayRecorder() {
       return null;
     } finally {
       isSaving.value = false;
+    }
+  };
+
+  // Save a lightweight activity log entry for real-time feed
+  const saveActivityLog = async () => {
+    if (!supabase || !cardData.value || !recordedOutcome.value) return;
+
+    try {
+      const activityLogInsert: ActivityLogInsert = {
+        username: username.value.trim(),
+        user_avatar: userAvatar.value || null,
+        card_id: cardData.value.cardId,
+        card_tier: cardData.value.tier,
+        outcome: recordedOutcome.value,
+        result_card_id: resultCardId.value,
+        replay_id: replayId.value, // Link to the replay if available
+      };
+
+      const { error } = await supabase
+        .from('activity_logs')
+        .insert(activityLogInsert);
+
+      if (error) {
+        // Log but don't fail - activity logs are non-critical
+        console.warn('Failed to save activity log:', error);
+      }
+    } catch (e) {
+      console.warn('Error saving activity log:', e);
     }
   };
 
@@ -204,6 +235,39 @@ export function useReplayRecorder() {
     generatedUrl.value = null;
     replayId.value = null;
     saveError.value = null;
+  };
+
+  // Log an activity without a replay (for when user preferences skip recording)
+  // This is a standalone function that doesn't depend on recording state
+  const logActivityOnly = async (
+    card: { cardId: string; tier: string },
+    outcome: VaalOutcome,
+    newCardId?: string
+  ) => {
+    if (!supabase) return;
+    if (!username.value.trim()) return;
+
+    try {
+      const activityLogInsert: ActivityLogInsert = {
+        username: username.value.trim(),
+        user_avatar: userAvatar.value || null,
+        card_id: card.cardId,
+        card_tier: card.tier,
+        outcome: outcome,
+        result_card_id: newCardId || null,
+        replay_id: null, // No replay for this log
+      };
+
+      const { error } = await supabase
+        .from('activity_logs')
+        .insert(activityLogInsert);
+
+      if (error) {
+        console.warn('Failed to save activity log:', error);
+      }
+    } catch (e) {
+      console.warn('Error saving activity log:', e);
+    }
   };
 
   // Reset state to allow a new recording without clearing user info
@@ -253,6 +317,7 @@ export function useReplayRecorder() {
     cancelRecording,
     resetForNewRecording,
     clearError,
-    copyUrlToClipboard
+    copyUrlToClipboard,
+    logActivityOnly,
   };
 }
