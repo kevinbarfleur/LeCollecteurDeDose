@@ -327,7 +327,6 @@ const showShareModal = ref(false);
 const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
 const lastRecordedOutcome = ref<VaalOutcome | null>(null);
-const pendingShareModal = ref(false); // Flag to show modal when URL is ready
 
 // Close share modal and reset recording state to allow new recordings
 const closeShareModal = () => {
@@ -402,14 +401,6 @@ watch(
   },
   { immediate: true }
 );
-
-// Show share modal when URL is generated (after successful save)
-watch(generatedUrl, (newUrl) => {
-  if (newUrl && pendingShareModal.value) {
-    showShareModal.value = true;
-    pendingShareModal.value = false;
-  }
-});
 
 const startAutoRecording = () => {
   // Check if any recording is enabled
@@ -717,8 +708,13 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   if (shouldRecord) {
     stopRecording(outcome, resultCardId);
     lastRecordedOutcome.value = outcome;
-    pendingShareModal.value = true;
     urlCopied.value = false;
+
+    // Wait a moment after the animation completes so user can see the result
+    // before showing the share modal
+    setTimeout(() => {
+      showShareModal.value = true;
+    }, 1200);
   } else if (isRecording.value) {
     // Cancel recording if this outcome shouldn't be recorded
     cancelRecording();
@@ -858,6 +854,11 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
     return;
 
   event.preventDefault();
+
+  // Close share modal if present (to allow new recording)
+  if (showShareModal.value) {
+    closeShareModal();
+  }
 
   // Auto-start recording if enabled
   startAutoRecording();
@@ -1491,28 +1492,27 @@ const endDragOrb = async () => {
           </Transition>
         </Teleport>
 
-        <!-- Share Replay Modal -->
+        <!-- Share Replay Panel - Slides up from bottom -->
         <Teleport to="body">
-          <Transition name="modal">
+          <Transition name="share-slide">
             <div
-              v-if="showShareModal && generatedUrl"
-              class="prefs-modal-overlay"
-              @click.self="closeShareModal"
+              v-if="showShareModal"
+              class="share-panel-container"
+              :class="`share-panel--${shareModalContent.theme}`"
             >
-              <div
-                class="prefs-modal share-modal"
-                :class="`share-modal--${shareModalContent.theme}`"
-              >
-                <div class="prefs-modal__header">
-                  <h3 class="prefs-modal__title">
-                    <span class="prefs-modal__icon">{{
+              <div class="share-panel">
+                <div class="share-panel__header">
+                  <div class="share-panel__title-row">
+                    <span class="share-panel__icon">{{
                       shareModalContent.icon
                     }}</span>
-                    {{ shareModalContent.title }}
-                  </h3>
+                    <h3 class="share-panel__title">
+                      {{ shareModalContent.title }}
+                    </h3>
+                  </div>
                   <button
                     type="button"
-                    class="prefs-modal__close"
+                    class="share-panel__close"
                     aria-label="Fermer"
                     @click="closeShareModal"
                   >
@@ -1531,17 +1531,15 @@ const endDragOrb = async () => {
                   </button>
                 </div>
 
-                <div class="prefs-modal__content">
-                  <p class="share-modal__text">
-                    {{ shareModalContent.text }}
-                  </p>
+                <p class="share-panel__text">{{ shareModalContent.text }}</p>
 
-                  <div class="share-modal__url">
+                <div class="share-panel__url">
+                  <template v-if="generatedUrl">
                     <input
                       type="text"
                       :value="generatedUrl"
                       readonly
-                      class="share-modal__input"
+                      class="share-panel__input"
                       @click="($event.target as HTMLInputElement).select()"
                     />
                     <RunicButton
@@ -1549,19 +1547,25 @@ const endDragOrb = async () => {
                       size="sm"
                       @click="handleCopyUrl"
                     >
-                      {{ urlCopied ? "✓ Copié !" : "Copier" }}
+                      {{ urlCopied ? "✓ Copié" : "Copier" }}
                     </RunicButton>
-                  </div>
+                  </template>
+                  <template v-else>
+                    <div class="share-panel__input share-panel__input--loading">
+                      <span>Génération du lien...</span>
+                      <span class="share-panel__spinner"></span>
+                    </div>
+                  </template>
+                </div>
 
-                  <div class="share-modal__preview">
-                    <NuxtLink
-                      :to="generatedUrl"
-                      target="_blank"
-                      class="share-modal__link"
-                    >
-                      {{ shareModalContent.linkText }}
-                    </NuxtLink>
-                  </div>
+                <div v-if="generatedUrl" class="share-panel__actions">
+                  <NuxtLink
+                    :to="generatedUrl"
+                    target="_blank"
+                    class="share-panel__link"
+                  >
+                    {{ shareModalContent.linkText }} →
+                  </NuxtLink>
                 </div>
               </div>
             </div>
@@ -3175,95 +3179,232 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   SHARE MODAL
+   SHARE PANEL - Notification banner style
    ========================================== */
-.share-modal {
-  max-width: 500px;
+.share-panel-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  padding: 0 1rem;
+  pointer-events: none;
 }
 
-.share-modal__text {
-  color: rgba(200, 180, 160, 0.9);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin-bottom: 0.5rem;
+.share-panel {
+  pointer-events: auto;
+  max-width: 400px;
+  margin: 0 auto;
+  position: relative;
+
+  /* Dark runic background */
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 22, 0.98) 0%,
+    rgba(12, 12, 15, 0.99) 50%,
+    rgba(14, 14, 18, 0.98) 100%
+  );
+
+  /* Sharp runic border */
+  border: 1px solid rgba(60, 55, 50, 0.5);
+  border-radius: 4px;
+
+  /* Strong shadow for floating effect */
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7), 0 4px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(80, 75, 70, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
-.share-modal__url {
+/* Runic corner decorations */
+.share-panel::before,
+.share-panel::after {
+  content: "✧";
+  position: absolute;
+  font-size: 0.6rem;
+  color: rgba(120, 110, 100, 0.4);
+  pointer-events: none;
+}
+
+.share-panel::before {
+  top: 6px;
+  left: 8px;
+}
+
+.share-panel::after {
+  top: 6px;
+  right: 8px;
+}
+
+.share-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid rgba(60, 55, 50, 0.25);
+}
+
+.share-panel__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.share-panel__icon {
+  font-size: 1rem;
+}
+
+.share-panel__title {
+  font-family: "Cinzel", serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.share-panel__close {
+  background: transparent;
+  border: none;
+  color: rgba(150, 140, 130, 0.5);
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.share-panel__close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.share-panel__close:hover {
+  color: var(--color-text);
+}
+
+.share-panel__text {
+  color: rgba(180, 170, 160, 0.85);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0.75rem 1rem 0;
+}
+
+.share-panel__url {
   display: flex;
   gap: 0.5rem;
   align-items: stretch;
+  padding: 0.75rem 1rem;
 }
 
-.share-modal__input {
+.share-panel__input {
   flex: 1;
-  background: rgba(20, 18, 16, 0.8);
-  border: 1px solid rgba(60, 55, 50, 0.5);
-  border-radius: 4px;
-  padding: 0.5rem 0.75rem;
+  background: rgba(10, 10, 12, 0.6);
+  border: 1px solid rgba(50, 48, 45, 0.5);
+  border-radius: 2px;
+  padding: 0.5rem 0.625rem;
   color: var(--color-text);
   font-family: monospace;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.share-modal__input:focus {
+.share-panel__input:focus {
   outline: none;
   border-color: var(--color-primary);
 }
 
-.share-modal__preview {
-  margin-top: 1rem;
+.share-panel__input--loading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: rgba(150, 145, 140, 0.5);
+  font-style: italic;
+  font-family: inherit;
+}
+
+.share-panel__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(150, 145, 140, 0.2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.share-panel__actions {
+  padding: 0 1rem 0.875rem;
   text-align: center;
 }
 
-.share-modal__link {
+.share-panel__link {
   color: var(--color-primary);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
   transition: color 0.2s;
 }
 
-.share-modal__link:hover {
+.share-panel__link:hover {
   color: var(--color-primary-light);
-  text-decoration: underline;
 }
 
-/* Share Modal Themes */
-.share-modal--destroyed .prefs-modal__title {
+/* Share Panel Slide Animation */
+.share-slide-enter-active,
+.share-slide-leave-active {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+.share-slide-enter-from,
+.share-slide-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.share-slide-enter-to,
+.share-slide-leave-from {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Share Panel Themes */
+.share-panel--destroyed .share-panel {
+  border-color: rgba(180, 50, 50, 0.35);
+}
+
+.share-panel--destroyed .share-panel__title {
   color: #c83232;
 }
 
-.share-modal--destroyed .prefs-modal__icon {
-  animation: skullShake 0.5s ease-in-out infinite;
+.share-panel--destroyed .share-panel__text {
+  color: rgba(200, 120, 120, 0.8);
 }
 
-.share-modal--destroyed .share-modal__text {
-  color: rgba(200, 120, 120, 0.9);
-}
-
-.share-modal--destroyed .share-modal__link {
+.share-panel--destroyed .share-panel__link {
   color: #c83232;
 }
 
-.share-modal--destroyed .share-modal__link:hover {
-  color: #ff5555;
+.share-panel--destroyed .share-panel::before,
+.share-panel--destroyed .share-panel::after {
+  color: rgba(200, 50, 50, 0.4);
 }
 
-@keyframes skullShake {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-5deg);
-  }
-  75% {
-    transform: rotate(5deg);
-  }
+.share-panel--foil .share-panel {
+  border-color: rgba(160, 140, 200, 0.35);
 }
 
-.share-modal--foil .prefs-modal__title {
+.share-panel--foil .share-panel__title {
   background: linear-gradient(90deg, #c0a0ff, #ffa0c0, #a0ffc0, #a0c0ff);
   background-size: 300% 100%;
   -webkit-background-clip: text;
@@ -3272,20 +3413,17 @@ const endDragOrb = async () => {
   animation: foilTextShimmer 3s linear infinite;
 }
 
-.share-modal--foil .prefs-modal__icon {
-  animation: foilIconPulse 1s ease-in-out infinite;
+.share-panel--foil .share-panel__text {
+  color: rgba(190, 170, 210, 0.85);
 }
 
-.share-modal--foil .share-modal__text {
-  color: rgba(200, 180, 220, 0.95);
-}
-
-.share-modal--foil .share-modal__link {
+.share-panel--foil .share-panel__link {
   color: #c0a0ff;
 }
 
-.share-modal--foil .share-modal__link:hover {
-  color: #e0c0ff;
+.share-panel--foil .share-panel::before,
+.share-panel--foil .share-panel::after {
+  color: rgba(192, 160, 255, 0.5);
 }
 
 @keyframes foilTextShimmer {
@@ -3297,92 +3435,61 @@ const endDragOrb = async () => {
   }
 }
 
-@keyframes foilIconPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    filter: brightness(1);
-  }
-  50% {
-    transform: scale(1.2);
-    filter: brightness(1.3);
-  }
+.share-panel--nothing .share-panel__title {
+  color: rgba(140, 135, 130, 0.75);
 }
 
-.share-modal--nothing .prefs-modal__title {
-  color: rgba(150, 140, 130, 0.8);
-}
-
-.share-modal--nothing .share-modal__text {
-  color: rgba(150, 140, 130, 0.7);
+.share-panel--nothing .share-panel__text {
+  color: rgba(140, 135, 130, 0.6);
   font-style: italic;
 }
 
-.share-modal--nothing .share-modal__link {
-  color: rgba(150, 140, 130, 0.6);
+.share-panel--nothing .share-panel__link {
+  color: rgba(140, 135, 130, 0.5);
 }
 
-/* Transform Theme - Blue/Cyan mystical */
-.share-modal--transform .prefs-modal__title {
+/* Transform Theme */
+.share-panel--transform .share-panel {
+  border-color: rgba(80, 160, 200, 0.35);
+}
+
+.share-panel--transform .share-panel__title {
   color: #50b0e0;
 }
 
-.share-modal--transform .prefs-modal__icon {
-  animation: transformSpin 1s ease-in-out infinite;
+.share-panel--transform .share-panel__text {
+  color: rgba(100, 170, 200, 0.8);
 }
 
-.share-modal--transform .share-modal__text {
-  color: rgba(100, 180, 220, 0.9);
-}
-
-.share-modal--transform .share-modal__link {
+.share-panel--transform .share-panel__link {
   color: #50b0e0;
 }
 
-.share-modal--transform .share-modal__link:hover {
-  color: #80d0ff;
+.share-panel--transform .share-panel::before,
+.share-panel--transform .share-panel::after {
+  color: rgba(80, 176, 224, 0.5);
 }
 
-@keyframes transformSpin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+/* Duplicate Theme */
+.share-panel--duplicate .share-panel {
+  border-color: rgba(80, 200, 150, 0.35);
 }
 
-/* Duplicate Theme - Green/Teal miracle */
-.share-modal--duplicate .prefs-modal__title {
+.share-panel--duplicate .share-panel__title {
   color: #50e0a0;
 }
 
-.share-modal--duplicate .prefs-modal__icon {
-  animation: duplicatePulse 0.6s ease-in-out infinite;
+.share-panel--duplicate .share-panel__text {
+  color: rgba(100, 200, 160, 0.85);
 }
 
-.share-modal--duplicate .share-modal__text {
-  color: rgba(100, 220, 180, 0.95);
-}
-
-.share-modal--duplicate .share-modal__link {
+.share-panel--duplicate .share-panel__link {
   color: #50e0a0;
 }
 
-.share-modal--duplicate .share-modal__link:hover {
-  color: #80ffc0;
-}
-
-@keyframes duplicatePulse {
-  0%,
-  100% {
-    transform: scale(1);
-    text-shadow: 0 0 0 transparent;
-  }
-  50% {
-    transform: scale(1.3);
-    text-shadow: 0 0 10px rgba(80, 224, 160, 0.5);
-  }
+.share-panel--duplicate .share-panel::before,
+.share-panel--duplicate .share-panel::after {
+  color: rgba(80, 224, 160, 0.5);
 }
 
 /* ==========================================

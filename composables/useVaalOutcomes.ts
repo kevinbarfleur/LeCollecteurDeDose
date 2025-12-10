@@ -197,7 +197,14 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     // Apply tier-colored glow as box-shadow
     const glowShadow = `0 0 20px ${tierColors.glow}, 0 0 40px ${tierColors.glow}`;
     
-    // Phase 1: Heartbeat vibration effect (multiple quick pulses)
+    // Create the new card early (keeping foil status if original was foil)
+    const newCard: Card = {
+      ...newCardTemplate,
+      uid: `${newCardTemplate.id}-${Date.now()}`,
+      foil: isCardFoil(currentCard),
+    };
+    
+    // Phase 1: Heartbeat vibration effect with synchronized transformation
     const timeline = gsap.timeline();
     
     // First heartbeat pulse - systole (contract)
@@ -205,28 +212,15 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       scale: 0.92,
       x: -3,
       boxShadow: glowShadow,
-      duration: 0.08,
+      duration: 0.1,
       ease: 'power2.in',
     });
     // Diastole (expand)
     timeline.to(cardElement, {
       scale: 1.06,
       x: 3,
-      duration: 0.1,
+      duration: 0.12,
       ease: 'power2.out',
-    });
-    // Small vibration
-    timeline.to(cardElement, {
-      scale: 0.95,
-      x: -2,
-      duration: 0.06,
-      ease: 'power1.inOut',
-    });
-    timeline.to(cardElement, {
-      scale: 1.03,
-      x: 2,
-      duration: 0.08,
-      ease: 'power1.inOut',
     });
     
     // Second heartbeat - stronger
@@ -234,7 +228,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       scale: 0.88,
       x: -4,
       filter: 'brightness(1.2)',
-      duration: 0.08,
+      duration: 0.1,
       ease: 'power2.in',
     });
     timeline.to(cardElement, {
@@ -244,96 +238,60 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       duration: 0.12,
       ease: 'power2.out',
     });
-    timeline.to(cardElement, {
-      scale: 0.93,
-      x: -3,
-      duration: 0.06,
-      ease: 'power1.inOut',
-    });
-    timeline.to(cardElement, {
-      scale: 1.05,
-      x: 2,
-      duration: 0.08,
-      ease: 'power1.inOut',
-    });
     
-    // Third heartbeat - building to climax
+    // Third heartbeat - building to climax (contract)
     timeline.to(cardElement, {
-      scale: 0.85,
+      scale: 0.82,
       x: -5,
-      filter: 'brightness(1.6)',
-      boxShadow: `0 0 35px ${tierColors.glow}, 0 0 60px ${tierColors.glow}`,
+      filter: 'brightness(1.8)',
+      boxShadow: `0 0 40px ${tierColors.glow}, 0 0 70px ${tierColors.glow}`,
       duration: 0.1,
       ease: 'power2.in',
     });
+    
+    // TRANSFORMATION happens at the PEAK of the final heartbeat
+    // Maximum expansion with flash - card transforms HERE
     timeline.to(cardElement, {
-      scale: 1.15,
-      x: 5,
-      filter: 'brightness(1.8)',
-      duration: 0.12,
+      scale: 1.25,
+      x: 0,
+      filter: 'brightness(3) blur(4px)',
+      boxShadow: `0 0 60px ${tierColors.glow}, 0 0 100px ${tierColors.glow}`,
+      duration: 0.08,
       ease: 'power2.out',
+      onComplete: () => {
+        // Update collection
+        const cardIndex = localCollection.value.findIndex(
+          (c) => c.uid === currentCard.uid
+        );
+        if (cardIndex !== -1) {
+          localCollection.value[cardIndex] = newCard;
+        }
+        // Notify callback to update displayed card AT the peak
+        if (onCardTransformed) {
+          onCardTransformed(currentCard, newCard);
+        }
+      },
     });
     
-    await timeline.then();
-    
-    // Phase 2: "POF" - Quick zoom out with fade
-    gsap.to(cardElement, {
-      scale: 0.6,
-      opacity: 0,
-      filter: 'brightness(2.5) blur(8px)',
-      boxShadow: `0 0 50px ${tierColors.glow}, 0 0 80px ${tierColors.glow}`,
-      duration: 0.15,
+    // Quick contraction after the flash (new card visible)
+    timeline.to(cardElement, {
+      scale: 0.95,
+      filter: 'brightness(1.5) blur(0px)',
+      boxShadow: `0 0 30px ${tierColors.glow}`,
+      duration: 0.1,
       ease: 'power2.in',
     });
     
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    
-    // Create the new card (keeping foil status if original was foil)
-    const newCard: Card = {
-      ...newCardTemplate,
-      uid: `${newCardTemplate.id}-${Date.now()}`,
-      foil: isCardFoil(currentCard),
-    };
-    
-    // Update local collection - remove old, add new
-    const cardIndex = localCollection.value.findIndex(
-      (c) => c.uid === currentCard.uid
-    );
-    if (cardIndex !== -1) {
-      localCollection.value[cardIndex] = newCard;
-    }
-    
-    // Notify callback to update displayed card BEFORE revealing
-    if (onCardTransformed) {
-      onCardTransformed(currentCard, newCard);
-    }
-    
-    // Brief pause while card is invisible
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    
-    // Phase 3: Reveal new card - fade in with zoom
-    gsap.to(cardElement, {
-      scale: 1.08,
-      opacity: 1,
-      filter: 'brightness(1.3) blur(0px)',
-      boxShadow: `0 0 30px ${tierColors.glow}`,
-      duration: 0.25,
-      ease: 'power2.out',
-    });
-    
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    
-    // Phase 4: Settle to normal
-    gsap.to(cardElement, {
+    // Settle to normal with a gentle bounce
+    timeline.to(cardElement, {
       scale: 1,
-      x: 0,
       filter: 'brightness(1)',
       boxShadow: 'none',
-      duration: 0.3,
-      ease: 'elastic.out(1, 0.6)',
+      duration: 0.35,
+      ease: 'elastic.out(1, 0.5)',
     });
     
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await timeline.then();
     
     isAnimating.value = false;
 
