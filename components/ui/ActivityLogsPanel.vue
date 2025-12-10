@@ -150,63 +150,69 @@ const getOutcomeClass = (outcome: string): string => {
             <li
               v-for="log in logs"
               :key="log.id"
-              class="activity-item"
+              class="log-entry"
             >
-              <!-- Avatar -->
-              <div class="activity-item__avatar">
-                <img
-                  v-if="log.user_avatar"
-                  :src="log.user_avatar"
-                  :alt="log.username"
-                  class="activity-item__avatar-img"
-                />
-                <span v-else class="activity-item__avatar-placeholder">
-                  {{ log.username.charAt(0).toUpperCase() }}
-                </span>
-              </div>
-
-              <!-- Content -->
-              <div class="activity-item__content">
-                <div class="activity-item__header">
-                  <span class="activity-item__username">{{ log.username }}</span>
-                  <span class="activity-item__time">{{ formatRelativeTime(log.created_at) }}</span>
+              <RunicBox padding="none" class="log-entry__box">
+                <!-- Thin header strip with outcome -->
+                <div class="log-entry__header" :class="getOutcomeClass(log.outcome)">
+                  <span class="log-entry__header-rune">◆</span>
+                  <span class="log-entry__header-emoji">{{ getOutcomeEmoji(log.outcome) }}</span>
+                  <span class="log-entry__header-title">{{ getOutcomeLabel(log.outcome) }}</span>
+                  <span class="log-entry__header-rune">◆</span>
                 </div>
 
-                <div class="activity-item__card">
-                  <span class="activity-item__tier" :class="getTierClass(log.card_tier)">
-                    {{ log.card_tier }}
-                  </span>
-                  <span class="activity-item__card-name">{{ getCardName(log.card_id) }}</span>
-                  <template v-if="log.outcome === 'transform' && log.result_card_id">
-                    <span class="activity-item__arrow">→</span>
-                    <span class="activity-item__card-name">{{ getCardName(log.result_card_id) }}</span>
-                  </template>
-                </div>
-                
-                <!-- Outcome & Replay Row -->
-                <div class="activity-item__footer">
-                  <!-- Outcome Box -->
-                  <div class="outcome-box" :class="getOutcomeClass(log.outcome)">
-                    <span class="outcome-box__rune outcome-box__rune--left">◆</span>
-                    <span class="outcome-box__emoji">{{ getOutcomeEmoji(log.outcome) }}</span>
-                    <span class="outcome-box__label">{{ getOutcomeLabel(log.outcome) }}</span>
-                    <span class="outcome-box__rune outcome-box__rune--right">◆</span>
+                <!-- Content section -->
+                <div class="log-entry__content">
+                  <!-- Card info row -->
+                  <div class="log-entry__card-row">
+                    <span class="log-entry__tier" :class="getTierClass(log.card_tier)">
+                      {{ log.card_tier }}
+                    </span>
+                    <span class="log-entry__card-name">{{ getCardName(log.card_id) }}</span>
+                    <template v-if="log.outcome === 'transform' && log.result_card_id">
+                      <span class="log-entry__arrow">→</span>
+                      <span class="log-entry__card-name">{{ getCardName(log.result_card_id) }}</span>
+                    </template>
                   </div>
-                  
-                  <!-- Replay Link -->
-                  <NuxtLink
-                    v-if="log.replay_id"
-                    :to="`/replay/${log.replay_id}`"
-                    class="replay-link"
-                    :title="t('activityLogs.watchReplay')"
-                  >
-                    <svg class="replay-link__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none" />
-                    </svg>
-                    <span class="replay-link__text">{{ t('activityLogs.replay') }}</span>
-                  </NuxtLink>
+
+                  <!-- User row -->
+                  <div class="log-entry__user-row">
+                    <div class="log-entry__avatar">
+                      <img
+                        v-if="log.user_avatar"
+                        :src="log.user_avatar"
+                        :alt="log.username"
+                        class="log-entry__avatar-img"
+                      />
+                      <span v-else class="log-entry__avatar-placeholder">
+                        {{ log.username.charAt(0).toUpperCase() }}
+                      </span>
+                    </div>
+                    <span class="log-entry__username">{{ log.username }}</span>
+                  </div>
+
+                  <!-- Footer row: timestamp + play button -->
+                  <div class="log-entry__footer-row">
+                    <span class="log-entry__time">{{ formatRelativeTime(log.created_at) }}</span>
+                    
+                  <!-- Play button using RunicButton component (opens in new tab) -->
+                  <div class="log-entry__play-wrapper">
+                    <RunicButton
+                      v-if="log.replay_id"
+                      :href="`/replay/${log.replay_id}`"
+                      :external="true"
+                      icon="play"
+                      size="sm"
+                      variant="primary"
+                      rune-left=""
+                      rune-right=""
+                      class="log-entry__play-btn"
+                      :title="t('activityLogs.watchReplay')"
+                    />
+                  </div>
+                  </div>
                 </div>
-              </div>
+              </RunicBox>
             </li>
           </TransitionGroup>
         </div>
@@ -626,7 +632,7 @@ const getOutcomeClass = (outcome: string): string => {
 .activity-panel__content {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .activity-panel__content::-webkit-scrollbar {
@@ -689,399 +695,280 @@ const getOutcomeClass = (outcome: string): string => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.5rem;
 }
 
-/* Activity Item */
-.activity-item {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  
-  background: linear-gradient(
-    135deg,
-    rgba(20, 20, 24, 0.6) 0%,
-    rgba(16, 16, 19, 0.7) 100%
-  );
-  
-  border-radius: 4px;
-  border: 1px solid rgba(50, 48, 45, 0.4);
-  
-  box-shadow: 
-    inset 0 1px 0 rgba(80, 75, 70, 0.05),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  
-  transition: all 0.2s ease;
+/* ==========================================
+   LOG ENTRY - RunicBox based design
+   ========================================== */
+.log-entry {
+  list-style: none;
 }
 
-.activity-item:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(25, 25, 30, 0.7) 0%,
-    rgba(20, 20, 24, 0.8) 100%
-  );
-  border-color: rgba(70, 65, 60, 0.5);
-}
-
-
-/* Avatar */
-.activity-item__avatar {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
+.log-entry__box {
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(60, 55, 50, 0.4);
 }
 
-.activity-item__avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.activity-item__avatar-placeholder {
-  width: 100%;
-  height: 100%;
+/* Thin header strip with outcome */
+.log-entry__header {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cinzel', serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(140, 130, 120, 0.6);
-  background: rgba(30, 28, 26, 0.8);
-}
-
-/* Content */
-.activity-item__content {
-  flex: 1;
-  min-width: 0;
-}
-
-.activity-item__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid rgba(50, 48, 45, 0.4);
 }
 
-.activity-item__username {
+.log-entry__header-rune {
+  font-size: 0.3125rem;
+  opacity: 0.4;
+}
+
+.log-entry__header-emoji {
+  font-size: 0.875rem;
+}
+
+.log-entry__header-title {
   font-family: 'Cinzel', serif;
-  font-weight: 600;
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
-  color: rgba(200, 195, 190, 0.9);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.activity-item__time {
-  font-family: 'Crimson Text', serif;
-  font-size: 0.6875rem;
-  color: rgba(100, 95, 90, 0.6);
-  white-space: nowrap;
+/* Content section */
+.log-entry__content {
+  padding: 0.5rem 0.75rem 0.625rem;
 }
 
-.activity-item__card {
+/* Card row */
+.log-entry__card-row {
   display: flex;
   align-items: center;
   gap: 0.375rem;
   flex-wrap: wrap;
-  margin-bottom: 0.125rem;
+  margin-bottom: 0.375rem;
 }
 
-.activity-item__tier {
+.log-entry__tier {
   font-family: 'Cinzel', serif;
-  font-size: 0.5625rem;
-  font-weight: 600;
+  font-size: 0.5rem;
+  font-weight: 700;
   padding: 0.125rem 0.375rem;
   border-radius: 2px;
   letter-spacing: 0.05em;
 }
 
-.activity-item__tier.tier-t0 {
+.log-entry__tier.tier-t0 {
   background: rgba(109, 90, 42, 0.4);
   color: #c9a227;
   border: 1px solid rgba(201, 162, 39, 0.3);
 }
 
-.activity-item__tier.tier-t1 {
+.log-entry__tier.tier-t1 {
   background: rgba(58, 52, 69, 0.4);
-  color: #7a6a8a;
+  color: #9a8aaa;
   border: 1px solid rgba(122, 106, 138, 0.3);
 }
 
-.activity-item__tier.tier-t2 {
+.log-entry__tier.tier-t2 {
   background: rgba(58, 69, 80, 0.4);
-  color: #5a7080;
+  color: #7a90a0;
   border: 1px solid rgba(90, 112, 128, 0.3);
 }
 
-.activity-item__tier.tier-t3 {
-  background: rgba(42, 42, 45, 0.4);
-  color: #5a5a5d;
+.log-entry__tier.tier-t3 {
+  background: rgba(50, 50, 53, 0.4);
+  color: #7a7a7d;
   border: 1px solid rgba(90, 90, 93, 0.3);
 }
 
-.activity-item__card-name {
+.log-entry__card-name {
   font-family: 'Crimson Text', serif;
-  font-size: 0.75rem;
-  color: rgba(180, 175, 170, 0.9);
+  font-size: 0.8125rem;
+  color: rgba(200, 195, 190, 0.95);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.activity-item__arrow {
-  color: rgba(100, 95, 90, 0.5);
+.log-entry__arrow {
+  color: rgba(140, 135, 130, 0.6);
   font-size: 0.75rem;
+  font-weight: 600;
 }
 
-/* Footer row with outcome and replay link */
-.activity-item__footer {
+/* User row */
+.log-entry__user-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.375rem;
-  flex-wrap: wrap;
-}
-
-/* Replay Link Button */
-.replay-link {
-  display: inline-flex;
-  align-items: center;
   gap: 0.375rem;
-  padding: 0.3125rem 0.625rem;
-  
-  font-family: 'Cinzel', serif;
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  text-decoration: none;
-  
-  color: rgba(175, 96, 37, 0.8);
-  
-  background: linear-gradient(
-    180deg,
-    rgba(30, 25, 20, 0.9) 0%,
-    rgba(20, 18, 15, 0.95) 100%
-  );
-  
-  border: 1px solid rgba(175, 96, 37, 0.35);
-  border-radius: 3px;
-  
-  box-shadow: 
-    inset 0 1px 0 rgba(175, 96, 37, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  
-  transition: all 0.2s ease;
+  margin-bottom: 0.375rem;
 }
 
-.replay-link::before {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  border: 1px solid rgba(175, 96, 37, 0.08);
-  border-radius: 2px;
-  pointer-events: none;
-}
-
-.replay-link:hover {
-  color: #c97a3a;
-  border-color: rgba(175, 96, 37, 0.6);
-  background: linear-gradient(
-    180deg,
-    rgba(40, 32, 25, 0.95) 0%,
-    rgba(28, 24, 20, 0.98) 100%
-  );
-  box-shadow: 
-    inset 0 1px 0 rgba(175, 96, 37, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 0 12px rgba(175, 96, 37, 0.2);
-}
-
-.replay-link__icon {
-  width: 10px;
-  height: 10px;
+.log-entry__avatar {
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(60, 55, 50, 0.3);
 }
 
-.replay-link__text {
-  white-space: nowrap;
+.log-entry__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.log-entry__avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: rgba(140, 130, 120, 0.6);
+  background: rgba(30, 28, 26, 0.8);
+}
+
+.log-entry__username {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: rgba(160, 155, 150, 0.85);
+}
+
+/* Footer row - timestamp + play button */
+.log-entry__footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.375rem;
+  border-top: 1px solid rgba(50, 48, 45, 0.25);
+}
+
+.log-entry__time {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.8125rem;
+  color: rgba(150, 145, 140, 0.85);
+}
+
+/* Play button wrapper - fixed width to keep consistent layout */
+.log-entry__play-wrapper {
+  width: 40px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Customize RunicButton for compact display */
+.log-entry__play-btn {
+  padding: 0.375rem 0.5rem !important;
+  min-width: unset !important;
+}
+
+.log-entry__play-btn :deep(.runic-button__text) {
+  display: none;
 }
 
 /* ==========================================
-   OUTCOME BOX - Runic styled result box
+   OUTCOME THEMES - Subtle header colors
    ========================================== */
-.outcome-box {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  
-  border-radius: 3px;
-  
-  /* Default dark stone background */
+
+/* Destroyed - Subtle blood red */
+.log-entry__header.outcome-destroyed {
   background: linear-gradient(
     180deg,
-    rgba(25, 25, 28, 0.9) 0%,
-    rgba(18, 18, 20, 0.95) 100%
+    rgba(60, 20, 20, 0.5) 0%,
+    rgba(40, 15, 15, 0.3) 100%
   );
-  
-  border: 1px solid rgba(60, 55, 50, 0.5);
-  
-  box-shadow: 
-    inset 0 1px 0 rgba(80, 75, 70, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.3);
+  border-bottom-color: rgba(140, 50, 50, 0.3);
 }
 
-.outcome-box::before {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  border: 1px solid rgba(80, 65, 50, 0.12);
-  border-radius: 2px;
-  pointer-events: none;
-}
-
-.outcome-box__rune {
-  font-size: 0.375rem;
-  opacity: 0.5;
-  transition: opacity 0.2s ease;
-}
-
-.outcome-box__emoji {
-  font-size: 0.875rem;
-}
-
-.outcome-box__label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* Destroyed - Blood red */
-.outcome-box.outcome-destroyed {
-  background: linear-gradient(
-    180deg,
-    rgba(50, 20, 20, 0.95) 0%,
-    rgba(35, 12, 12, 0.98) 100%
-  );
-  border-color: rgba(180, 60, 60, 0.5);
-}
-
-.outcome-box.outcome-destroyed::before {
-  border-color: rgba(180, 60, 60, 0.15);
-}
-
-.outcome-box.outcome-destroyed .outcome-box__label {
+.log-entry__header.outcome-destroyed .log-entry__header-title {
   color: #c45050;
-  text-shadow: 0 0 10px rgba(180, 60, 60, 0.4);
 }
 
-.outcome-box.outcome-destroyed .outcome-box__rune {
-  color: rgba(180, 60, 60, 0.6);
+.log-entry__header.outcome-destroyed .log-entry__header-rune {
+  color: rgba(180, 70, 70, 0.5);
 }
 
-/* Foil - Gold / Amber */
-.outcome-box.outcome-foil {
+/* Foil - Subtle gold */
+.log-entry__header.outcome-foil {
   background: linear-gradient(
     180deg,
-    rgba(45, 38, 20, 0.95) 0%,
-    rgba(30, 25, 12, 0.98) 100%
+    rgba(60, 50, 20, 0.5) 0%,
+    rgba(40, 35, 15, 0.3) 100%
   );
-  border-color: rgba(201, 162, 39, 0.5);
+  border-bottom-color: rgba(160, 130, 40, 0.3);
 }
 
-.outcome-box.outcome-foil::before {
-  border-color: rgba(201, 162, 39, 0.15);
-}
-
-.outcome-box.outcome-foil .outcome-box__label {
+.log-entry__header.outcome-foil .log-entry__header-title {
   color: #c9a227;
-  text-shadow: 0 0 10px rgba(201, 162, 39, 0.4);
 }
 
-.outcome-box.outcome-foil .outcome-box__rune {
-  color: rgba(201, 162, 39, 0.6);
+.log-entry__header.outcome-foil .log-entry__header-rune {
+  color: rgba(180, 145, 40, 0.5);
 }
 
-/* Transform - Purple / Amethyst */
-.outcome-box.outcome-transform {
+/* Transform - Subtle purple */
+.log-entry__header.outcome-transform {
   background: linear-gradient(
     180deg,
-    rgba(35, 25, 45, 0.95) 0%,
-    rgba(22, 15, 30, 0.98) 100%
+    rgba(45, 30, 60, 0.5) 0%,
+    rgba(30, 20, 40, 0.3) 100%
   );
-  border-color: rgba(130, 90, 160, 0.5);
+  border-bottom-color: rgba(100, 70, 130, 0.3);
 }
 
-.outcome-box.outcome-transform::before {
-  border-color: rgba(130, 90, 160, 0.15);
-}
-
-.outcome-box.outcome-transform .outcome-box__label {
+.log-entry__header.outcome-transform .log-entry__header-title {
   color: #9a70b8;
-  text-shadow: 0 0 10px rgba(130, 90, 160, 0.4);
 }
 
-.outcome-box.outcome-transform .outcome-box__rune {
-  color: rgba(130, 90, 160, 0.6);
+.log-entry__header.outcome-transform .log-entry__header-rune {
+  color: rgba(130, 90, 160, 0.5);
 }
 
-/* Duplicate - Emerald green */
-.outcome-box.outcome-duplicate {
+/* Duplicate - Subtle green */
+.log-entry__header.outcome-duplicate {
   background: linear-gradient(
     180deg,
-    rgba(20, 40, 25, 0.95) 0%,
-    rgba(12, 28, 15, 0.98) 100%
+    rgba(25, 50, 30, 0.5) 0%,
+    rgba(15, 35, 20, 0.3) 100%
   );
-  border-color: rgba(80, 140, 90, 0.5);
+  border-bottom-color: rgba(70, 120, 80, 0.3);
 }
 
-.outcome-box.outcome-duplicate::before {
-  border-color: rgba(80, 140, 90, 0.15);
-}
-
-.outcome-box.outcome-duplicate .outcome-box__label {
+.log-entry__header.outcome-duplicate .log-entry__header-title {
   color: #5a9a65;
-  text-shadow: 0 0 10px rgba(80, 140, 90, 0.4);
 }
 
-.outcome-box.outcome-duplicate .outcome-box__rune {
-  color: rgba(80, 140, 90, 0.6);
+.log-entry__header.outcome-duplicate .log-entry__header-rune {
+  color: rgba(80, 140, 90, 0.5);
 }
 
-/* Nothing - Muted grey */
-.outcome-box.outcome-nothing {
+/* Nothing - Subtle grey */
+.log-entry__header.outcome-nothing {
   background: linear-gradient(
     180deg,
-    rgba(28, 28, 30, 0.9) 0%,
-    rgba(20, 20, 22, 0.95) 100%
+    rgba(35, 35, 38, 0.4) 0%,
+    rgba(25, 25, 28, 0.2) 100%
   );
-  border-color: rgba(80, 78, 75, 0.4);
+  border-bottom-color: rgba(70, 68, 65, 0.25);
 }
 
-.outcome-box.outcome-nothing::before {
-  border-color: rgba(80, 78, 75, 0.1);
+.log-entry__header.outcome-nothing .log-entry__header-title {
+  color: rgba(140, 135, 130, 0.8);
 }
 
-.outcome-box.outcome-nothing .outcome-box__label {
-  color: rgba(130, 125, 120, 0.8);
-  text-shadow: none;
-}
-
-.outcome-box.outcome-nothing .outcome-box__rune {
+.log-entry__header.outcome-nothing .log-entry__header-rune {
   color: rgba(100, 95, 90, 0.4);
 }
 

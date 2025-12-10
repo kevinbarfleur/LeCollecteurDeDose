@@ -16,7 +16,8 @@ interface Props {
     | "document"
     | "settings"
     | "close"
-    | "record";
+    | "record"
+    | "play";
   runeLeft?: string;
   runeRight?: string;
   disabled?: boolean;
@@ -218,6 +219,14 @@ const handleClick = (event: MouseEvent) => {
       fill="currentColor"
     >
       <circle cx="12" cy="12" r="8" />
+    </svg>
+    <svg
+      v-else-if="icon === 'play'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <polygon points="6 4 20 12 6 20 6 4" />
     </svg>
 
     <!-- Left Rune (only if no icon) -->
