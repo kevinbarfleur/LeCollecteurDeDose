@@ -4,12 +4,18 @@ import type { Card, CardTier, CardVariation } from "~/types/card";
 import { VARIATION_CONFIG, TIER_CONFIG, getCardVariation, isCardFoil } from "~/types/card";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
+import { useReplayRecorder } from "~/composables/useReplayRecorder";
 
 const { t } = useI18n();
 
 useHead({ title: "Autel - Le Collecteur de Dose" });
 
-const { loggedIn } = useUserSession();
+const { loggedIn, user: authUser } = useUserSession();
+
+const user = computed(() => ({
+  name: authUser.value?.displayName || "Guest",
+  avatar: authUser.value?.avatar || "https://static-cdn.jtvnw.net/jtv_user_pictures/default-profile_image-300x300.png",
+}));
 
 // ==========================================
 // USER DATA - Vaal Orbs & Collection (Local Session Copy)
@@ -332,6 +338,51 @@ const isCardBeingDestroyed = ref(false);
 // Admin/Debug settings
 const showAdminModal = ref(false);
 const forcedOutcome = ref<ForcedOutcome>('random');
+
+// Replay Recording
+const {
+  isRecording,
+  isRecordingArmed,
+  generatedUrl,
+  setUser,
+  armRecording,
+  startRecording,
+  recordPosition,
+  stopRecording,
+  cancelRecording,
+  copyUrlToClipboard
+} = useReplayRecorder();
+
+const showShareModal = ref(false);
+const urlCopied = ref(false);
+
+// Set user info for recorder when user changes
+watch(user, (newUser) => {
+  setUser(newUser.name, newUser.avatar);
+}, { immediate: true });
+
+const armRecordingForCurrentCard = () => {
+  const card = displayCard.value;
+  if (!card || !isCardOnAltar.value) return;
+  
+  armRecording({
+    cardId: card.id,
+    variation: selectedVariation.value,
+    uid: card.uid,
+    tier: card.tier,
+    foil: isCardFoil(card)
+  });
+};
+
+const handleCopyUrl = async () => {
+  const success = await copyUrlToClipboard();
+  if (success) {
+    urlCopied.value = true;
+    setTimeout(() => {
+      urlCopied.value = false;
+    }, 2000);
+  }
+};
 
 const forcedOutcomeOptions = [
   { value: 'random', label: '🎲 Aléatoire (défaut)' },
@@ -774,6 +825,15 @@ const destroyCard = async () => {
 // Flip card to back (first part of Vaal ritual)
 // Handle Vaal outcome - instant result
 const handleVaalOutcome = async (outcome: VaalOutcome) => {
+  // Stop recording and capture outcome
+  if (isRecording.value) {
+    stopRecording(outcome);
+    // Show share modal after 2 seconds (when recording finishes)
+    setTimeout(() => {
+      showShareModal.value = true;
+      urlCopied.value = false;
+    }, 2100);
+  }
   
   switch (outcome) {
     case 'nothing':
@@ -949,6 +1009,11 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
 
   event.preventDefault();
   
+  // Start recording if armed
+  if (isRecordingArmed.value) {
+    startRecording();
+  }
+  
   // Get the origin position of the orb element
   const orbElement = orbRefs.value[index];
   if (orbElement) {
@@ -964,6 +1029,11 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
   currentX = clientX;
   currentY = clientY;
+  
+  // Record initial position
+  if (isRecording.value) {
+    recordPosition(clientX, clientY);
+  }
 
   // Wait for floating orb to be rendered, then set initial position
   nextTick(() => {
@@ -1015,6 +1085,11 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   
   // Update heartbeat intensity based on proximity
   updateHeartbeatIntensity(clientX, clientY);
+  
+  // Record position for replay (sampling handled in composable)
+  if (isRecording.value) {
+    recordPosition(clientX, clientY);
+  }
 };
 
 const endDragOrb = async () => {
@@ -1050,6 +1125,11 @@ const endDragOrb = async () => {
     const outcome = simulateVaalOutcome();
     await handleVaalOutcome(outcome);
   } else {
+    // Cancel recording if orb not dropped on card
+    if (isRecording.value) {
+      cancelRecording();
+    }
+    
     // Return to origin with smooth GSAP animation directly on DOM element
     isReturningOrb.value = true;
     heartbeatIntensity.value = 0; // Reset heartbeat when returning
@@ -1269,17 +1349,37 @@ const endDragOrb = async () => {
         <!-- Vaal Orbs inventory -->
         <div class="vaal-orbs-section">
           <RunicBox padding="md" class="vaal-orbs-box">
-            <!-- Admin settings button (top right) -->
-            <RunicButton
-              variant="ghost"
-              size="sm"
-              icon="settings"
-              class="vaal-admin-btn"
-              title="Admin / Debug"
-              @click="showAdminModal = true"
-            >
-              <span class="sr-only">Admin</span>
-            </RunicButton>
+            <!-- Top right buttons -->
+            <div class="vaal-toolbar">
+              <!-- Record button -->
+              <RunicButton
+                variant="ghost"
+                size="sm"
+                icon="record"
+                class="vaal-record-btn"
+                :class="{ 
+                  'vaal-record-btn--armed': isRecordingArmed,
+                  'vaal-record-btn--recording': isRecording 
+                }"
+                :title="isRecording ? 'Enregistrement...' : isRecordingArmed ? 'En attente...' : 'Enregistrer'"
+                :disabled="!isCardOnAltar || isAnimating || (isRecordingArmed || isRecording)"
+                @click="armRecordingForCurrentCard"
+              >
+                <span class="sr-only">Record</span>
+              </RunicButton>
+
+              <!-- Admin settings button -->
+              <RunicButton
+                variant="ghost"
+                size="sm"
+                icon="settings"
+                class="vaal-admin-btn"
+                title="Admin / Debug"
+                @click="showAdminModal = true"
+              >
+                <span class="sr-only">Admin</span>
+              </RunicButton>
+            </div>
 
             <div class="vaal-orbs-header">
               <h3 class="vaal-orbs-title">
@@ -1404,6 +1504,57 @@ const endDragOrb = async () => {
                         {{ forcedOutcome === 'random' ? 'Non' : 'Oui' }}
                       </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
+
+        <!-- Share Replay Modal -->
+        <Teleport to="body">
+          <Transition name="modal">
+            <div v-if="showShareModal && generatedUrl" class="admin-modal-overlay" @click.self="showShareModal = false">
+              <div class="admin-modal share-modal">
+                <div class="admin-modal__header">
+                  <h3 class="admin-modal__title">
+                    <span class="admin-modal__icon">🎬</span>
+                    Session enregistrée !
+                  </h3>
+                  <RunicButton
+                    variant="ghost"
+                    size="sm"
+                    icon="close"
+                    @click="showShareModal = false"
+                  />
+                </div>
+                
+                <div class="admin-modal__content">
+                  <p class="share-modal__text">
+                    Ta session a été enregistrée. Partage ce lien pour que d'autres puissent voir ta Vaal Orb !
+                  </p>
+                  
+                  <div class="share-modal__url">
+                    <input 
+                      type="text" 
+                      :value="generatedUrl" 
+                      readonly 
+                      class="share-modal__input"
+                      @click="($event.target as HTMLInputElement).select()"
+                    />
+                    <RunicButton
+                      variant="primary"
+                      size="sm"
+                      @click="handleCopyUrl"
+                    >
+                      {{ urlCopied ? '✓ Copié !' : 'Copier' }}
+                    </RunicButton>
+                  </div>
+                  
+                  <div class="share-modal__preview">
+                    <NuxtLink :to="generatedUrl" target="_blank" class="share-modal__link">
+                      Voir le replay →
+                    </NuxtLink>
                   </div>
                 </div>
               </div>
@@ -2289,16 +2440,47 @@ const endDragOrb = async () => {
   position: relative;
 }
 
-.vaal-admin-btn {
+.vaal-toolbar {
   position: absolute !important;
   top: 10px;
   right: 10px;
   z-index: 10;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.vaal-admin-btn,
+.vaal-record-btn {
   padding: 0.5rem !important;
 }
 
-.vaal-admin-btn :deep(.runic-button__text) {
+.vaal-admin-btn :deep(.runic-button__text),
+.vaal-record-btn :deep(.runic-button__text) {
   display: none;
+}
+
+.vaal-record-btn--armed {
+  background: rgba(255, 193, 7, 0.2) !important;
+  border-color: rgba(255, 193, 7, 0.5) !important;
+}
+
+.vaal-record-btn--armed :deep(.runic-button__icon--record) {
+  color: #ffc107 !important;
+  animation: pulse-record 1.5s ease-in-out infinite;
+}
+
+.vaal-record-btn--recording {
+  background: rgba(229, 57, 53, 0.2) !important;
+  border-color: rgba(229, 57, 53, 0.5) !important;
+}
+
+.vaal-record-btn--recording :deep(.runic-button__icon--record) {
+  animation: pulse-record 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse-record {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
 }
 
 .sr-only {
@@ -2675,6 +2857,115 @@ const endDragOrb = async () => {
 .modal-leave-to .admin-modal {
   transform: scale(0.95) translateY(-10px);
   opacity: 0;
+}
+
+/* ==========================================
+   RECORD STATUS
+   ========================================== */
+.admin-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(60, 55, 50, 0.5), transparent);
+  margin: 0.5rem 0;
+}
+
+.admin-field__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.record-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: rgba(30, 28, 26, 0.8);
+}
+
+.record-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.record-status--armed {
+  color: var(--color-warning);
+}
+
+.record-status--armed .record-status__dot {
+  background: var(--color-warning);
+}
+
+.record-status--recording {
+  color: var(--color-error);
+}
+
+.record-status--recording .record-status__dot {
+  background: var(--color-error);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ==========================================
+   SHARE MODAL
+   ========================================== */
+.share-modal {
+  max-width: 500px;
+}
+
+.share-modal__text {
+  color: rgba(200, 180, 160, 0.9);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.share-modal__url {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.share-modal__input {
+  flex: 1;
+  background: rgba(20, 18, 16, 0.8);
+  border: 1px solid rgba(60, 55, 50, 0.5);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text);
+  font-family: monospace;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.share-modal__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.share-modal__preview {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.share-modal__link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.share-modal__link:hover {
+  color: var(--color-primary-light);
+  text-decoration: underline;
 }
 
 /* ==========================================

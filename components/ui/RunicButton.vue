@@ -5,7 +5,7 @@ interface Props {
   external?: boolean;
   variant?: "primary" | "secondary" | "ghost" | "twitch" | "youtube" | "danger";
   size?: "sm" | "md" | "lg";
-  icon?: "twitch" | "youtube" | "collection" | "catalogue" | "arrow-right" | "external" | "logout" | "document" | "settings" | "close";
+  icon?: "twitch" | "youtube" | "collection" | "catalogue" | "arrow-right" | "external" | "logout" | "document" | "settings" | "close" | "record";
   runeLeft?: string;
   runeRight?: string;
   disabled?: boolean;
@@ -93,6 +93,9 @@ const handleClick = (event: MouseEvent) => {
     </svg>
     <svg v-else-if="icon === 'close'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+    <svg v-else-if="icon === 'record'" class="runic-button__icon runic-button__icon--record" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="12" r="8" />
     </svg>
 
     <!-- Left Rune (only if no icon) -->
@@ -407,6 +410,19 @@ const handleClick = (event: MouseEvent) => {
 
 .runic-button:hover .runic-button__icon {
   transform: scale(1.1);
+}
+
+.runic-button__icon--record {
+  color: #e53935;
+}
+
+.runic-button--recording .runic-button__icon--record {
+  animation: pulse-record 1s ease-in-out infinite;
+}
+
+@keyframes pulse-record {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
 }
 
 /* ==========================================
