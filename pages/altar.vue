@@ -1571,13 +1571,30 @@ const endDragOrb = async () => {
                   v-if="generatedUrl && !saveError"
                   class="share-panel__actions"
                 >
-                  <NuxtLink
-                    :to="generatedUrl"
+                  <a
+                    :href="generatedUrl"
                     target="_blank"
-                    class="share-panel__link"
+                    rel="noopener noreferrer"
+                    class="share-btn"
+                    :class="shareModalContent.buttonClass"
                   >
-                    {{ shareModalContent.linkText }} →
-                  </NuxtLink>
+                    <span class="share-btn__text">{{
+                      shareModalContent.linkText
+                    }}</span>
+                    <svg
+                      class="share-btn__icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
                 </div>
               </div>
             </div>
@@ -3356,20 +3373,201 @@ const endDragOrb = async () => {
 }
 
 .share-panel__actions {
-  padding: 0 1rem 0.875rem;
-  text-align: center;
+  padding: 0.75rem 1rem 1rem;
+  display: flex;
+  justify-content: center;
 }
 
-.share-panel__link {
-  color: var(--color-primary);
+/* ==========================================
+   THEMED SHARE BUTTONS
+   ========================================== */
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-family: "Cinzel", serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   text-decoration: none;
-  font-size: 0.8rem;
-  letter-spacing: 0.02em;
-  transition: color 0.2s;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.share-panel__link:hover {
-  color: var(--color-primary-light);
+.share-btn::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.share-btn__text {
+  position: relative;
+  z-index: 1;
+}
+
+.share-btn__icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.share-btn:hover .share-btn__icon {
+  transform: translate(2px, -2px);
+}
+
+/* Default - Gold */
+.share-btn--default {
+  color: #c9a227;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 25, 20, 0.95) 0%,
+    rgba(15, 12, 10, 0.98) 100%
+  );
+  border: 1px solid rgba(100, 80, 60, 0.4);
+  box-shadow: inset 0 1px 0 rgba(100, 80, 60, 0.2), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--default:hover {
+  color: #e0c060;
+  border-color: rgba(150, 120, 80, 0.5);
+  box-shadow: inset 0 1px 0 rgba(150, 120, 80, 0.3),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(201, 162, 39, 0.15);
+}
+
+/* Nothing - Muted/Grey */
+.share-btn--nothing {
+  color: rgba(140, 135, 130, 0.8);
+  background: linear-gradient(
+    180deg,
+    rgba(25, 24, 23, 0.95) 0%,
+    rgba(15, 14, 13, 0.98) 100%
+  );
+  border: 1px solid rgba(70, 65, 60, 0.35);
+  box-shadow: inset 0 1px 0 rgba(70, 65, 60, 0.15), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.share-btn--nothing:hover {
+  color: rgba(170, 165, 160, 0.9);
+  border-color: rgba(90, 85, 80, 0.45);
+}
+
+/* Destroyed - Red/Blood */
+.share-btn--destroyed {
+  color: #c83232;
+  background: linear-gradient(
+    180deg,
+    rgba(35, 15, 15, 0.95) 0%,
+    rgba(20, 8, 8, 0.98) 100%
+  );
+  border: 1px solid rgba(180, 50, 50, 0.35);
+  box-shadow: inset 0 1px 0 rgba(180, 50, 50, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--destroyed:hover {
+  color: #e55050;
+  border-color: rgba(200, 60, 60, 0.5);
+  box-shadow: inset 0 1px 0 rgba(200, 60, 60, 0.25),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(200, 50, 50, 0.2);
+}
+
+/* Foil - Prismatic/Holographic */
+.share-btn--foil {
+  color: #e0d0f0;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 25, 35, 0.95) 0%,
+    rgba(15, 12, 18, 0.98) 100%
+  );
+  border: 1px solid rgba(160, 140, 200, 0.4);
+  box-shadow: inset 0 1px 0 rgba(200, 180, 255, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.share-btn--foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(192, 160, 255, 0.15) 0%,
+    rgba(255, 160, 192, 0.15) 25%,
+    rgba(160, 255, 192, 0.15) 50%,
+    rgba(160, 192, 255, 0.15) 75%,
+    rgba(192, 160, 255, 0.15) 100%
+  );
+  background-size: 400% 400%;
+  animation: foilShimmer 4s linear infinite;
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+.share-btn--foil:hover {
+  color: #fff;
+  border-color: rgba(192, 160, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 25px rgba(192, 160, 255, 0.25),
+    0 0 40px rgba(255, 160, 192, 0.15);
+}
+
+@keyframes foilShimmer {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 400% 400%;
+  }
+}
+
+/* Transform - Blue/Cyan mystical */
+.share-btn--transform {
+  color: #50b0e0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 25, 35, 0.95) 0%,
+    rgba(8, 15, 22, 0.98) 100%
+  );
+  border: 1px solid rgba(80, 160, 200, 0.35);
+  box-shadow: inset 0 1px 0 rgba(80, 176, 224, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--transform:hover {
+  color: #80d0ff;
+  border-color: rgba(100, 180, 220, 0.5);
+  box-shadow: inset 0 1px 0 rgba(100, 180, 220, 0.25),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(80, 176, 224, 0.2);
+}
+
+/* Duplicate - Green/Teal miracle */
+.share-btn--duplicate {
+  color: #50e0a0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 30, 25, 0.95) 0%,
+    rgba(8, 18, 14, 0.98) 100%
+  );
+  border: 1px solid rgba(80, 200, 150, 0.35);
+  box-shadow: inset 0 1px 0 rgba(80, 224, 160, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--duplicate:hover {
+  color: #80ffc0;
+  border-color: rgba(100, 220, 170, 0.5);
+  box-shadow: inset 0 1px 0 rgba(100, 220, 170, 0.25),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(80, 224, 160, 0.2);
 }
 
 /* Error state */

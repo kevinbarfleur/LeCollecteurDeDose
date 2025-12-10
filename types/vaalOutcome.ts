@@ -33,6 +33,7 @@ export interface VaalOutcomeConfig {
     text: string;
     linkText: string;
     theme: string;
+    buttonClass: string; // CSS class for themed button
   };
   
   // For forced outcome selector
@@ -55,8 +56,9 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
       icon: '😐',
       title: 'Rien ne s\'est passé...',
       text: 'La Vaal Orb a été absorbée sans effet. Pas très excitant, mais tu peux quand même partager ce moment de suspense.',
-      linkText: 'Voir le non-événement →',
+      linkText: 'Voir le non-événement',
       theme: 'nothing',
+      buttonClass: 'share-btn--nothing',
     },
   },
   
@@ -70,8 +72,9 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
       icon: '✨',
       title: 'Transformation légendaire !',
       text: 'La corruption Vaal a béni ta carte d\'un éclat prismatique. Partage ce moment de gloire avec le monde !',
-      linkText: 'Admirer le chef-d\'œuvre →',
+      linkText: 'Admirer le chef-d\'œuvre',
       theme: 'foil',
+      buttonClass: 'share-btn--foil',
     },
   },
   
@@ -85,8 +88,9 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
       icon: '💀',
       title: 'Destruction immortalisée',
       text: 'Ta carte a été réduite en cendres par la corruption Vaal. Partage ce désastre pour que tous puissent contempler ta chute.',
-      linkText: 'Revivre le cauchemar →',
+      linkText: 'Revivre le cauchemar',
       theme: 'destroyed',
+      buttonClass: 'share-btn--destroyed',
     },
   },
   
@@ -100,8 +104,9 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
       icon: '🔄',
       title: 'Métamorphose Vaal !',
       text: 'La corruption a transformé ta carte en une autre du même tier. Le destin est capricieux... Partage cette mutation !',
-      linkText: 'Découvrir la transformation →',
+      linkText: 'Découvrir la transformation',
       theme: 'transform',
+      buttonClass: 'share-btn--transform',
     },
   },
   
@@ -115,8 +120,9 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
       icon: '👯',
       title: 'Duplication miraculeuse !',
       text: 'La Vaal Orb a créé une copie parfaite de ta carte ! Un événement extrêmement rare. Montre au monde cette bénédiction !',
-      linkText: 'Voir le miracle →',
+      linkText: 'Voir le miracle',
       theme: 'duplicate',
+      buttonClass: 'share-btn--duplicate',
     },
   },
 };
@@ -183,6 +189,7 @@ export function getShareModalContent(outcome: VaalOutcome | null) {
       text: 'Ta session a été enregistrée. Partage ce lien pour que d\'autres puissent voir ta Vaal Orb !',
       linkText: 'Voir le replay →',
       theme: 'default',
+      buttonClass: 'share-btn--default',
     };
   }
   
