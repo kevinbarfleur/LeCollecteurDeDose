@@ -57,11 +57,25 @@ withDefaults(defineProps<Props>(), {
 }
 
 .runic-box--padding-none { padding: 0; }
-.runic-box--padding-sm { padding: 1rem 1.5rem; }
-.runic-box--padding-md { padding: 1.5rem 2rem; }
-.runic-box--padding-lg { padding: 2.5rem 3rem; }
+.runic-box--padding-sm { padding: 0.75rem 1rem; }
+.runic-box--padding-md { padding: 1rem 1.25rem; }
+.runic-box--padding-lg { padding: 1.5rem 1.75rem; }
 
-.runic-box--centered { text-align: center; }
+@media (min-width: 640px) {
+  .runic-box--padding-sm { padding: 1rem 1.5rem; }
+  .runic-box--padding-md { padding: 1.5rem 2rem; }
+  .runic-box--padding-lg { padding: 2.5rem 3rem; }
+}
+
+.runic-box--centered { 
+  text-align: center;
+}
+
+.runic-box--centered .runic-box__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
 .runic-box--attached {
   border-radius: 0 0 6px 6px;

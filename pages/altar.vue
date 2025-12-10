@@ -14,7 +14,7 @@ import { useAltarEffects } from "~/composables/useAltarEffects";
 
 const { t } = useI18n();
 
-useHead({ title: "Autel - Le Collecteur de Dose" });
+useHead({ title: t("meta.altar.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
 
@@ -1295,10 +1295,10 @@ const endDragOrb = async () => {
             />
           </div>
           <h1 class="font-display text-2xl text-poe-text mb-3">
-            Connexion requise
+            {{ t("altar.auth.title") }}
           </h1>
           <p class="font-body text-poe-text-dim mb-8 leading-relaxed">
-            Connectez-vous avec Twitch pour accéder à l'Autel.
+            {{ t("altar.auth.description") }}
           </p>
           <RunicButton
             href="/auth/twitch"
@@ -1308,7 +1308,7 @@ const endDragOrb = async () => {
             rune-left="✦"
             rune-right="✦"
           >
-            Se connecter avec Twitch
+            {{ t("altar.auth.button") }}
           </RunicButton>
         </RunicBox>
       </div>
@@ -1318,8 +1318,8 @@ const endDragOrb = async () => {
         <!-- Header + Card selector -->
         <div class="altar-selector-section">
           <RunicHeader
-            title="Autel (Demo)"
-            subtitle="Vaal or no balls, Exile."
+            :title="t('altar.title')"
+            :subtitle="t('altar.subtitle')"
             attached
           />
           <RunicBox padding="md" attached>

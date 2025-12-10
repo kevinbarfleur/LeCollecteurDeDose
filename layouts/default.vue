@@ -118,43 +118,12 @@ const showLegalModal = ref(false);
   position: sticky;
   top: 0;
   z-index: 50;
-  background: linear-gradient(
-    180deg,
-    rgba(14, 14, 16, 0.98) 0%,
-    rgba(10, 10, 12, 0.95) 50%,
-    rgba(8, 8, 10, 0.98) 100%
-  );
-  box-shadow: inset 0 -4px 12px rgba(0, 0, 0, 0.6),
-    inset 0 2px 4px rgba(50, 45, 40, 0.04), 0 4px 16px rgba(0, 0, 0, 0.5),
-    0 1px 0 rgba(50, 45, 40, 0.15);
-  border-bottom: 1px solid rgba(55, 50, 45, 0.3);
-}
-
-.app-header::before {
-  content: "";
-  position: absolute;
-  bottom: 8px;
-  left: 12px;
-  width: 25px;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    rgba(175, 96, 37, 0.35),
-    rgba(80, 70, 55, 0.15),
-    transparent
-  );
-  pointer-events: none;
-}
-
-.app-header::after {
-  content: "";
-  position: absolute;
-  bottom: 8px;
-  right: 12px;
-  width: 20px;
-  height: 1px;
-  background: linear-gradient(to left, rgba(80, 70, 55, 0.25), transparent);
-  pointer-events: none;
+  background: rgba(12, 12, 14, 0.98);
+  box-shadow: 
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 4px 20px rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid rgba(50, 45, 40, 0.25);
 }
 
 .app-header__logo {
@@ -300,78 +269,22 @@ const showLegalModal = ref(false);
   pointer-events: none;
   z-index: 1;
   border-radius: 6px;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.98) 0%,
-    rgba(12, 12, 14, 0.95) 30%,
-    rgba(10, 10, 12, 0.96) 70%,
-    rgba(6, 6, 8, 0.99) 100%
-  );
-  box-shadow: inset 0 6px 20px rgba(0, 0, 0, 0.8),
-    inset 0 2px 4px rgba(0, 0, 0, 0.9), inset 0 -2px 6px rgba(50, 45, 40, 0.06),
-    inset 4px 0 12px rgba(0, 0, 0, 0.5), inset -4px 0 12px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(35, 33, 30, 0.6);
-  border-top-color: rgba(25, 23, 20, 0.7);
-  border-bottom-color: rgba(55, 50, 45, 0.25);
-}
-
-.page-backdrop::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  background: radial-gradient(
-      ellipse at 20% 15%,
-      rgba(50, 45, 38, 0.025) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 80% 85%,
-      rgba(35, 30, 25, 0.03) 0%,
-      transparent 40%
-    );
-  pointer-events: none;
+  background: rgba(10, 10, 12, 0.97);
+  box-shadow: 
+    inset 0 2px 8px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.015),
+    inset 0 1px 0 rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(35, 33, 30, 0.4);
 }
 
 .app-footer {
   position: relative;
   z-index: 10;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.98) 0%,
-    rgba(10, 10, 12, 0.95) 50%,
-    rgba(12, 12, 14, 0.98) 100%
-  );
-  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 4px rgba(50, 45, 40, 0.04), 0 -2px 12px rgba(0, 0, 0, 0.4);
-  border-top: 1px solid rgba(35, 33, 30, 0.5);
-}
-
-.app-footer::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  left: 12px;
-  width: 18px;
-  height: 1px;
-  background: linear-gradient(to right, rgba(80, 70, 55, 0.2), transparent);
-  pointer-events: none;
-}
-
-.app-footer::after {
-  content: "";
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  width: 28px;
-  height: 1px;
-  background: linear-gradient(
-    to left,
-    rgba(175, 96, 37, 0.3),
-    rgba(80, 70, 55, 0.12),
-    transparent
-  );
-  pointer-events: none;
+  background: rgba(10, 10, 12, 0.98);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 -4px 16px rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(40, 38, 35, 0.35);
 }
 
 /* Footer Disclaimer */

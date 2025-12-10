@@ -50,7 +50,21 @@
     "search": {
       "placeholder": "Fouille dans les ténèbres..."
     },
-    "empty": "Aucune carte ne correspond à votre recherche"
+    "empty": "Aucune carte ne correspond à votre recherche",
+    "auth": {
+      "title": "Prouve ton existence",
+      "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
+      "button": "Invoquer Twitch"
+    }
+  },
+  "altar": {
+    "title": "L'Autel de Corruption",
+    "subtitle": "Vaal or no balls, exile.",
+    "auth": {
+      "title": "Prouve ton existence",
+      "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
+      "button": "Invoquer Twitch"
+    }
   },
   "collection": {
     "title": "Ma Collection",
