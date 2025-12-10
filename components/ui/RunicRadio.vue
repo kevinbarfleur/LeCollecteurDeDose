@@ -44,7 +44,9 @@ const internalValue = computed(() => {
 
 // Find the index of the selected option
 const selectedIndex = computed(() => {
-  return effectiveOptions.value.findIndex((opt) => opt.value === internalValue.value);
+  return effectiveOptions.value.findIndex(
+    (opt) => opt.value === internalValue.value
+  );
 });
 
 // Calculate the position of the slider
@@ -52,7 +54,7 @@ const sliderStyle = computed(() => {
   const index = selectedIndex.value;
   const count = effectiveOptions.value.length;
   if (index === -1) return { left: "0%", width: `${100 / count}%` };
-  
+
   return {
     left: `${(index / count) * 100}%`,
     width: `${100 / count}%`,
@@ -84,15 +86,12 @@ const handleToggleClick = () => {
 <template>
   <div
     class="runic-radio"
-    :class="[
-      `runic-radio--${size}`,
-      { 'runic-radio--toggle': toggle }
-    ]"
+    :class="[`runic-radio--${size}`, { 'runic-radio--toggle': toggle }]"
     :role="toggle ? 'switch' : 'radiogroup'"
     :aria-checked="toggle ? (modelValue as boolean) : undefined"
   >
     <!-- The carved groove/crevice background -->
-    <div 
+    <div
       class="runic-radio__groove"
       :class="{ 'runic-radio__groove--clickable': toggle }"
       @click="handleToggleClick"
@@ -108,11 +107,13 @@ const handleToggleClick = () => {
         class="runic-radio__option"
         :class="[
           { 'runic-radio__option--selected': internalValue === option.value },
-          option.color ? `runic-radio__option--${option.color}` : ''
+          option.color ? `runic-radio__option--${option.color}` : '',
         ]"
         @click.stop="!toggle && selectOption(option.value)"
       >
-        <span v-if="!toggle" class="runic-radio__label">{{ option.label }}</span>
+        <span v-if="!toggle" class="runic-radio__label">{{
+          option.label
+        }}</span>
       </button>
 
       <!-- The sliding selector that moves between options -->
@@ -154,19 +155,17 @@ const handleToggleClick = () => {
     rgba(8, 8, 10, 0.95) 100%
   );
   border-radius: 4px;
-  
+
   /* Inner shadow to create depth - the carved effect */
-  box-shadow: 
-    inset 0 3px 8px rgba(0, 0, 0, 0.8),
-    inset 0 1px 2px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 1px rgba(60, 55, 50, 0.1),
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.8),
+    inset 0 1px 2px rgba(0, 0, 0, 0.9), inset 0 -1px 1px rgba(60, 55, 50, 0.1),
     0 1px 0 rgba(40, 35, 30, 0.3);
-  
+
   /* Outer border - worn stone edge */
   border: 1px solid rgba(30, 28, 25, 0.8);
   border-top-color: rgba(20, 18, 15, 0.9);
   border-bottom-color: rgba(50, 45, 40, 0.4);
-  
+
   overflow: hidden;
 }
 
@@ -177,18 +176,14 @@ const handleToggleClick = () => {
 }
 
 .runic-radio__groove--clickable:hover {
-  box-shadow: 
-    inset 0 3px 8px rgba(0, 0, 0, 0.8),
-    inset 0 1px 2px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 1px rgba(60, 55, 50, 0.15),
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.8),
+    inset 0 1px 2px rgba(0, 0, 0, 0.9), inset 0 -1px 1px rgba(60, 55, 50, 0.15),
     0 1px 0 rgba(40, 35, 30, 0.4);
 }
 
 .runic-radio__groove--clickable:active {
-  box-shadow: 
-    inset 0 4px 10px rgba(0, 0, 0, 0.9),
-    inset 0 2px 3px rgba(0, 0, 0, 0.95),
-    inset 0 -1px 1px rgba(60, 55, 50, 0.08),
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.9),
+    inset 0 2px 3px rgba(0, 0, 0, 0.95), inset 0 -1px 1px rgba(60, 55, 50, 0.08),
     0 1px 0 rgba(40, 35, 30, 0.2);
 }
 
@@ -197,14 +192,13 @@ const handleToggleClick = () => {
   content: "";
   position: absolute;
   inset: 0;
-  background: 
-    repeating-linear-gradient(
-      90deg,
-      transparent 0px,
-      transparent 2px,
-      rgba(0, 0, 0, 0.05) 2px,
-      rgba(0, 0, 0, 0.05) 3px
-    );
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.05) 2px,
+    rgba(0, 0, 0, 0.05) 3px
+  );
   pointer-events: none;
   opacity: 0.5;
 }
@@ -230,13 +224,11 @@ const handleToggleClick = () => {
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  
+
   /* Engraved text effect - carved into stone */
   color: rgba(60, 58, 55, 0.7);
-  text-shadow: 
-    0 1px 0 rgba(30, 28, 25, 0.8),
-    0 -1px 0 rgba(80, 75, 70, 0.15);
-  
+  text-shadow: 0 1px 0 rgba(30, 28, 25, 0.8), 0 -1px 0 rgba(80, 75, 70, 0.15);
+
   transition: all 0.3s ease;
 }
 
@@ -259,7 +251,7 @@ const handleToggleClick = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   /* The raised stone tablet look */
   background: linear-gradient(
     180deg,
@@ -267,26 +259,21 @@ const handleToggleClick = () => {
     rgba(30, 27, 23, 0.98) 50%,
     rgba(25, 22, 18, 0.95) 100%
   );
-  
+
   border-radius: 3px;
-  
+
   /* Raised effect with lighting */
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(80, 70, 60, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-  
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(80, 70, 60, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+
   border: 1px solid rgba(60, 55, 45, 0.5);
   border-top-color: rgba(80, 70, 60, 0.4);
   border-bottom-color: rgba(30, 25, 20, 0.6);
-  
+
   /* Smooth sliding animation */
-  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              background 0.3s ease,
-              border-color 0.3s ease,
-              box-shadow 0.3s ease;
-  
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease,
+    border-color 0.3s ease, box-shadow 0.3s ease;
+
   z-index: 2;
   pointer-events: none;
 }
@@ -323,7 +310,8 @@ const handleToggleClick = () => {
 }
 
 .runic-radio__slider--default .runic-radio__slider-label,
-.runic-radio__slider:not([class*="--t"]):not([class*="--all"]) .runic-radio__slider-label {
+.runic-radio__slider:not([class*="--t"]):not([class*="--all"])
+  .runic-radio__slider-label {
   color: #c97a3a;
   text-shadow: 0 0 10px rgba(175, 96, 37, 0.3);
 }
@@ -331,11 +319,8 @@ const handleToggleClick = () => {
 /* T0 - Gold */
 .runic-radio__slider--t0 {
   border-color: rgba(201, 162, 39, 0.5);
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    0 0 15px rgba(201, 162, 39, 0.15),
-    inset 0 1px 0 rgba(201, 162, 39, 0.2),
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(201, 162, 39, 0.15), inset 0 1px 0 rgba(201, 162, 39, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -347,11 +332,8 @@ const handleToggleClick = () => {
 /* T1 - Purple/Amethyst */
 .runic-radio__slider--t1 {
   border-color: rgba(122, 106, 138, 0.5);
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    0 0 15px rgba(122, 106, 138, 0.15),
-    inset 0 1px 0 rgba(122, 106, 138, 0.2),
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(122, 106, 138, 0.15), inset 0 1px 0 rgba(122, 106, 138, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -363,11 +345,8 @@ const handleToggleClick = () => {
 /* T2 - Blue/Steel */
 .runic-radio__slider--t2 {
   border-color: rgba(90, 112, 128, 0.5);
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    0 0 15px rgba(90, 112, 128, 0.15),
-    inset 0 1px 0 rgba(90, 112, 128, 0.2),
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(90, 112, 128, 0.15), inset 0 1px 0 rgba(90, 112, 128, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -379,11 +358,8 @@ const handleToggleClick = () => {
 /* T3 - Gray/Iron */
 .runic-radio__slider--t3 {
   border-color: rgba(80, 80, 85, 0.5);
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(90, 90, 95, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(90, 90, 95, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .runic-radio__slider--t3 .runic-radio__slider-label {
@@ -406,21 +382,21 @@ const handleToggleClick = () => {
 
 .runic-radio--sm .runic-radio__label,
 .runic-radio--sm .runic-radio__slider-label {
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
 }
 
 @media (min-width: 640px) {
   .runic-radio--sm .runic-radio__groove {
     min-height: 38px;
   }
-  
+
   .runic-radio--sm .runic-radio__option {
     padding: 0.5rem 1.25rem;
   }
-  
+
   .runic-radio--sm .runic-radio__label,
   .runic-radio--sm .runic-radio__slider-label {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -435,21 +411,21 @@ const handleToggleClick = () => {
 
 .runic-radio--md .runic-radio__label,
 .runic-radio--md .runic-radio__slider-label {
-  font-size: 0.6875rem;
+  font-size: 0.875rem;
 }
 
 @media (min-width: 640px) {
   .runic-radio--md .runic-radio__groove {
     min-height: 46px;
   }
-  
+
   .runic-radio--md .runic-radio__option {
     padding: 0.625rem 1.5rem;
   }
-  
+
   .runic-radio--md .runic-radio__label,
   .runic-radio--md .runic-radio__slider-label {
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
   }
 }
 
@@ -464,21 +440,21 @@ const handleToggleClick = () => {
 
 .runic-radio--lg .runic-radio__label,
 .runic-radio--lg .runic-radio__slider-label {
-  font-size: 0.75rem;
+  font-size: 0.9375rem;
 }
 
 @media (min-width: 640px) {
   .runic-radio--lg .runic-radio__groove {
     min-height: 54px;
   }
-  
+
   .runic-radio--lg .runic-radio__option {
     padding: 0.75rem 1.75rem;
   }
-  
+
   .runic-radio--lg .runic-radio__label,
   .runic-radio--lg .runic-radio__slider-label {
-    font-size: 0.9375rem;
+    font-size: 1.0625rem;
   }
 }
 
@@ -535,11 +511,8 @@ const handleToggleClick = () => {
     rgba(14, 13, 11, 0.95) 100%
   );
   border-color: rgba(35, 33, 30, 0.4);
-  box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 1px 4px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(40, 38, 35, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(40, 38, 35, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* On state in toggle mode - subtle glow */
@@ -551,16 +524,14 @@ const handleToggleClick = () => {
     rgba(35, 31, 26, 0.95) 100%
   );
   border-color: rgba(175, 96, 37, 0.4);
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    0 0 8px rgba(175, 96, 37, 0.15),
-    inset 0 1px 0 rgba(175, 96, 37, 0.2),
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 8px rgba(175, 96, 37, 0.15), inset 0 1px 0 rgba(175, 96, 37, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* Inner highlight for on state */
-.runic-radio--toggle .runic-radio__slider:not(.runic-radio__slider--off)::before {
+.runic-radio--toggle
+  .runic-radio__slider:not(.runic-radio__slider--off)::before {
   border-color: rgba(175, 96, 37, 0.2);
   border-bottom-color: transparent;
   border-right-color: transparent;
@@ -579,21 +550,15 @@ const handleToggleClick = () => {
 
 /* Subtle pulse animation on the slider when it moves */
 @keyframes slider-glow {
-  0%, 100% {
-    box-shadow: 
-      0 1px 3px rgba(0, 0, 0, 0.5),
-      0 2px 6px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(80, 70, 60, 0.3),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  0%,
+  100% {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(80, 70, 60, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
   }
   50% {
-    box-shadow: 
-      0 1px 3px rgba(0, 0, 0, 0.5),
-      0 2px 8px rgba(0, 0, 0, 0.4),
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4),
       0 0 15px var(--glow-color, rgba(201, 162, 39, 0.2)),
-      inset 0 1px 0 rgba(80, 70, 60, 0.4),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+      inset 0 1px 0 rgba(80, 70, 60, 0.4), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
   }
 }
 </style>
-

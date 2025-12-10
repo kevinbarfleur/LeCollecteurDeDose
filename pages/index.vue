@@ -377,7 +377,7 @@ onMounted(() => {
 .hero-title__accent {
   display: block;
   font-family: "Crimson Text", serif;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-style: italic;
   color: #af6025;
   text-shadow: 0 2px 10px rgba(175, 96, 37, 0.3);
@@ -386,14 +386,14 @@ onMounted(() => {
 @media (min-width: 768px) {
   .hero-title__accent {
     display: inline;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     margin-left: 0.5rem;
   }
 }
 
 .hero-description {
   font-family: "Crimson Text", serif;
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1.7;
   color: #9a9a9a;
   max-width: 500px;
@@ -401,14 +401,14 @@ onMounted(() => {
 
 @media (min-width: 768px) {
   .hero-description {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     max-width: none;
   }
 }
 
 @media (min-width: 1024px) {
   .hero-description {
-    font-size: 1.125rem;
+    font-size: 1.3125rem;
   }
 }
 

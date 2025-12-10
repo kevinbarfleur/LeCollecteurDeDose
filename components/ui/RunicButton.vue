@@ -5,7 +5,18 @@ interface Props {
   external?: boolean;
   variant?: "primary" | "secondary" | "ghost" | "twitch" | "youtube" | "danger";
   size?: "sm" | "md" | "lg";
-  icon?: "twitch" | "youtube" | "collection" | "catalogue" | "arrow-right" | "external" | "logout" | "document" | "settings" | "close" | "record";
+  icon?:
+    | "twitch"
+    | "youtube"
+    | "collection"
+    | "catalogue"
+    | "arrow-right"
+    | "external"
+    | "logout"
+    | "document"
+    | "settings"
+    | "close"
+    | "record";
   runeLeft?: string;
   runeRight?: string;
   disabled?: boolean;
@@ -58,48 +69,162 @@ const handleClick = (event: MouseEvent) => {
       `runic-button--${variant}`,
       `runic-button--${size}`,
       { 'runic-button--disabled': disabled },
-      { 'runic-button--has-icon': icon }
+      { 'runic-button--has-icon': icon },
     ]"
     @click="handleClick"
   >
     <!-- Icon -->
-    <svg v-if="icon === 'twitch'" class="runic-button__icon" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+    <svg
+      v-if="icon === 'twitch'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path
+        d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"
+      />
     </svg>
-    <svg v-else-if="icon === 'youtube'" class="runic-button__icon" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    <svg
+      v-else-if="icon === 'youtube'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path
+        d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+      />
     </svg>
-    <svg v-else-if="icon === 'collection'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+    <svg
+      v-else-if="icon === 'collection'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+      />
     </svg>
-    <svg v-else-if="icon === 'catalogue'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+    <svg
+      v-else-if="icon === 'catalogue'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+      />
     </svg>
-    <svg v-else-if="icon === 'arrow-right'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+    <svg
+      v-else-if="icon === 'arrow-right'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M14 5l7 7m0 0l-7 7m7-7H3"
+      />
     </svg>
-    <svg v-else-if="icon === 'external'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+    <svg
+      v-else-if="icon === 'external'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+      />
     </svg>
-    <svg v-else-if="icon === 'logout'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+    <svg
+      v-else-if="icon === 'logout'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+      />
     </svg>
-    <svg v-else-if="icon === 'document'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    <svg
+      v-else-if="icon === 'document'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
     </svg>
-    <svg v-else-if="icon === 'settings'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <svg
+      v-else-if="icon === 'settings'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+      />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      />
     </svg>
-    <svg v-else-if="icon === 'close'" class="runic-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+    <svg
+      v-else-if="icon === 'close'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+      />
     </svg>
-    <svg v-else-if="icon === 'record'" class="runic-button__icon runic-button__icon--record" viewBox="0 0 24 24" fill="currentColor">
+    <svg
+      v-else-if="icon === 'record'"
+      class="runic-button__icon runic-button__icon--record"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
       <circle cx="12" cy="12" r="8" />
     </svg>
 
     <!-- Left Rune (only if no icon) -->
-    <span v-if="runeLeft && !icon" class="runic-button__rune runic-button__rune--left">
+    <span
+      v-if="runeLeft && !icon"
+      class="runic-button__rune runic-button__rune--left"
+    >
       {{ runeLeft }}
     </span>
 
@@ -109,7 +234,10 @@ const handleClick = (event: MouseEvent) => {
     </span>
 
     <!-- Right Rune -->
-    <span v-if="runeRight && !icon" class="runic-button__rune runic-button__rune--right">
+    <span
+      v-if="runeRight && !icon"
+      class="runic-button__rune runic-button__rune--right"
+    >
       {{ runeRight }}
     </span>
   </component>
@@ -150,19 +278,19 @@ const handleClick = (event: MouseEvent) => {
    ========================================== */
 .runic-button--sm {
   padding: 0.625rem 1.25rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   gap: 0.75rem;
 }
 
 .runic-button--md {
   padding: 0.875rem 2rem;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   gap: 1rem;
 }
 
 .runic-button--lg {
   padding: 1rem 2.5rem;
-  font-size: 1rem;
+  font-size: 1.0625rem;
   gap: 1.25rem;
 }
 
@@ -177,8 +305,7 @@ const handleClick = (event: MouseEvent) => {
     rgba(15, 12, 10, 0.98) 100%
   );
   border: 1px solid rgba(100, 80, 60, 0.4);
-  box-shadow: inset 0 1px 0 rgba(100, 80, 60, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 0 rgba(100, 80, 60, 0.2), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .runic-button--primary:hover {
@@ -207,8 +334,7 @@ const handleClick = (event: MouseEvent) => {
     rgba(12, 10, 8, 0.95) 100%
   );
   border: 1px solid rgba(70, 60, 50, 0.3);
-  box-shadow: inset 0 1px 0 rgba(70, 60, 50, 0.15),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(70, 60, 50, 0.15), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .runic-button--secondary:hover {
@@ -322,8 +448,7 @@ const handleClick = (event: MouseEvent) => {
     rgba(20, 8, 8, 0.98) 100%
   );
   border: 1px solid rgba(239, 68, 68, 0.25);
-  box-shadow: inset 0 1px 0 rgba(239, 68, 68, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 0 rgba(239, 68, 68, 0.1), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .runic-button--danger:hover {
@@ -421,8 +546,15 @@ const handleClick = (event: MouseEvent) => {
 }
 
 @keyframes pulse-record {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
 }
 
 /* ==========================================
@@ -449,42 +581,41 @@ const handleClick = (event: MouseEvent) => {
 @media (max-width: 640px) {
   .runic-button--sm {
     padding: 0.5rem 0.875rem;
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
     gap: 0.5rem;
   }
-  
+
   .runic-button--md {
     padding: 0.625rem 1.25rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     gap: 0.75rem;
   }
-  
+
   .runic-button--lg {
     padding: 0.75rem 1.5rem;
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     gap: 0.875rem;
   }
-  
+
   .runic-button--sm .runic-button__icon {
     width: 12px;
     height: 12px;
   }
-  
+
   .runic-button--md .runic-button__icon,
   .runic-button__icon {
     width: 14px;
     height: 14px;
   }
-  
+
   .runic-button--lg .runic-button__icon {
     width: 16px;
     height: 16px;
   }
-  
+
   /* Hide runes on mobile for cleaner look */
   .runic-button__rune {
     display: none;
   }
 }
 </style>
-

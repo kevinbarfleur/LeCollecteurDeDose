@@ -1321,7 +1321,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
 
 .detail__type {
   font-family: "Cinzel", serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #8a8a8a;
   text-transform: uppercase;
@@ -1336,7 +1336,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
 
 .detail__rarity {
   font-family: "Crimson Text", serif;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--tier-glow, #7a7a7a);
   font-style: italic;
 }
@@ -1387,7 +1387,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
 .detail__flavour p {
   font-family: "Crimson Text", serif;
   font-style: italic;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   color: #888888;
   margin: 0;
@@ -1396,7 +1396,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
 
 .detail__no-flavour {
   color: #4a4a4a;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ==========================================
@@ -1481,14 +1481,14 @@ const showOverlay = computed(() => animationState.value !== "idle");
 
 .detail__collector-number {
   font-family: "Crimson Text", serif;
-  font-size: 13px;
+  font-size: 14px;
   color: #5a5a5a;
   letter-spacing: 0.02em;
 }
 
 .detail__wiki-link {
   font-family: "Cinzel", serif;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: #7a6a5a;
   text-decoration: none;
@@ -1519,7 +1519,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
 
 .detail__weight {
   font-family: "Cinzel", serif;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--tier-glow, #5a5a5a);
   letter-spacing: 0.02em;
 }

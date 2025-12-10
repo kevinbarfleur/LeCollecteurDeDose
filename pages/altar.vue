@@ -2642,7 +2642,7 @@ const endDragOrb = async () => {
 
 .vaal-header__subtitle {
   font-family: "Crimson Text", serif;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-style: italic;
   color: rgba(140, 130, 120, 0.7);
   margin: 0;
@@ -2778,7 +2778,7 @@ const endDragOrb = async () => {
 
 .vaal-orbs-empty__text {
   font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   font-style: italic;
 }
 
@@ -2970,7 +2970,7 @@ const endDragOrb = async () => {
 
 .prefs-section__title {
   font-family: "Cinzel", serif;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -2980,7 +2980,7 @@ const endDragOrb = async () => {
 
 .prefs-section__hint {
   font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   color: rgba(140, 130, 120, 0.7);
   margin: 0 0 0.5rem;
 }
@@ -3015,7 +3015,7 @@ const endDragOrb = async () => {
 
 .prefs-toggle__label {
   font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: rgba(200, 190, 180, 0.85);
 }
 
@@ -3038,7 +3038,7 @@ const endDragOrb = async () => {
 /* Experimental Notice */
 .prefs-experimental-notice {
   font-family: "Crimson Text", serif;
-  font-size: 0.9rem;
+  font-size: 1.0625rem;
   font-style: italic;
   color: rgba(200, 170, 90, 0.9);
   background: rgba(200, 160, 80, 0.12);
@@ -3064,7 +3064,7 @@ const endDragOrb = async () => {
 
 .prefs-field__label {
   font-family: "Cinzel", serif;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -3073,7 +3073,7 @@ const endDragOrb = async () => {
 
 .prefs-field__hint {
   font-family: "Crimson Text", serif;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-style: italic;
   color: rgba(140, 130, 120, 0.6);
   margin: 0;
@@ -3166,7 +3166,7 @@ const endDragOrb = async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: 1rem;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
   background: rgba(30, 28, 26, 0.8);
@@ -3283,7 +3283,7 @@ const endDragOrb = async () => {
 
 .share-panel__title {
   font-family: "Cinzel", serif;
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3316,7 +3316,7 @@ const endDragOrb = async () => {
 
 .share-panel__text {
   color: rgba(180, 170, 160, 0.85);
-  font-size: 0.8rem;
+  font-size: 1rem;
   line-height: 1.4;
   margin: 0;
   padding: 0.75rem 1rem 0;
@@ -3337,7 +3337,7 @@ const endDragOrb = async () => {
   padding: 0.5rem 0.625rem;
   color: var(--color-text);
   font-family: monospace;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -3387,7 +3387,7 @@ const endDragOrb = async () => {
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
   font-family: "Cinzel", serif;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3589,7 +3589,7 @@ const endDragOrb = async () => {
 
 .share-panel__error-text {
   color: rgba(220, 150, 150, 0.9);
-  font-size: 0.8rem;
+  font-size: 1rem;
 }
 
 /* Share Panel Slide Animation */

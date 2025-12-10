@@ -52,44 +52,47 @@ const displayText = computed(() => {
   if (selectedValues.value.length === 0) {
     return props.placeholder;
   }
-  
+
   if (props.multiple) {
     if (selectedValues.value.length === 1) {
-      const opt = props.options.find(o => o.value === selectedValues.value[0]);
+      const opt = props.options.find(
+        (o) => o.value === selectedValues.value[0]
+      );
       return opt?.label || selectedValues.value[0];
     }
     return `${selectedValues.value.length} sélectionnés`;
   }
-  
-  const opt = props.options.find(o => o.value === props.modelValue);
+
+  const opt = props.options.find((o) => o.value === props.modelValue);
   return opt?.label || props.placeholder;
 });
 
 // Filter and sort options: selected first, then filtered by search
 const processedOptions = computed(() => {
   let opts = [...props.options];
-  
+
   // Filter by search query
   if (props.searchable && searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    opts = opts.filter(opt => 
-      opt.label.toLowerCase().includes(query) ||
-      opt.value.toLowerCase().includes(query)
+    opts = opts.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(query) ||
+        opt.value.toLowerCase().includes(query)
     );
   }
-  
+
   // Sort: selected options first (pinned at top)
   if (props.multiple) {
     opts.sort((a, b) => {
       const aSelected = selectedValues.value.includes(a.value);
       const bSelected = selectedValues.value.includes(b.value);
-      
+
       if (aSelected && !bSelected) return -1;
       if (!aSelected && bSelected) return 1;
       return 0;
     });
   }
-  
+
   return opts;
 });
 
@@ -99,14 +102,17 @@ const isSelected = (value: string) => selectedValues.value.includes(value);
 // Calculate item height for max-height calculation
 const itemHeight = computed(() => {
   switch (props.size) {
-    case "sm": return 48;
-    case "lg": return 64;
-    default: return 56;
+    case "sm":
+      return 48;
+    case "lg":
+      return 64;
+    default:
+      return 56;
   }
 });
 
 // Account for search input height
-const searchInputHeight = computed(() => props.searchable ? 52 : 0);
+const searchInputHeight = computed(() => (props.searchable ? 52 : 0));
 
 const maxDropdownHeight = computed(() => {
   return props.maxVisibleItems * itemHeight.value + 8 + searchInputHeight.value;
@@ -114,17 +120,20 @@ const maxDropdownHeight = computed(() => {
 
 const updateDropdownPosition = () => {
   if (!triggerRef.value) return;
-  
+
   const rect = triggerRef.value.getBoundingClientRect();
   const viewportHeight = window.innerHeight;
   const spaceBelow = viewportHeight - rect.bottom;
   const spaceAbove = rect.top;
-  
+
   // Determine if dropdown should open above or below
-  const openAbove = spaceBelow < maxDropdownHeight.value && spaceAbove > spaceBelow;
-  
+  const openAbove =
+    spaceBelow < maxDropdownHeight.value && spaceAbove > spaceBelow;
+
   dropdownPosition.value = {
-    top: openAbove ? rect.top - Math.min(maxDropdownHeight.value, spaceAbove - 10) : rect.bottom + 4,
+    top: openAbove
+      ? rect.top - Math.min(maxDropdownHeight.value, spaceAbove - 10)
+      : rect.bottom + 4,
     left: rect.left,
     width: rect.width,
   };
@@ -136,7 +145,7 @@ const toggleDropdown = () => {
     searchQuery.value = "";
   }
   isOpen.value = !isOpen.value;
-  
+
   // Focus search input when opening
   if (isOpen.value && props.searchable) {
     nextTick(() => {
@@ -150,13 +159,13 @@ const selectOption = (value: string) => {
     // Toggle selection for multiple mode
     const newValues = [...selectedValues.value];
     const index = newValues.indexOf(value);
-    
+
     if (index === -1) {
       newValues.push(value);
     } else {
       newValues.splice(index, 1);
     }
-    
+
     emit("update:modelValue", newValues);
     // Keep dropdown open in multiple mode
   } else {
@@ -176,8 +185,12 @@ const clearAll = () => {
 // Close dropdown when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as Node;
-  if (selectRef.value && !selectRef.value.contains(target) && 
-      dropdownRef.value && !dropdownRef.value.contains(target)) {
+  if (
+    selectRef.value &&
+    !selectRef.value.contains(target) &&
+    dropdownRef.value &&
+    !dropdownRef.value.contains(target)
+  ) {
     isOpen.value = false;
   }
 };
@@ -207,12 +220,12 @@ onUnmounted(() => {
     ref="selectRef"
     class="runic-select"
     :class="[
-      `runic-select--${size}`, 
-      { 
+      `runic-select--${size}`,
+      {
         'runic-select--open': isOpen,
         'runic-select--multiple': multiple,
-        'runic-select--has-selection': selectedValues.length > 0
-      }
+        'runic-select--has-selection': selectedValues.length > 0,
+      },
     ]"
   >
     <!-- Label -->
@@ -236,10 +249,10 @@ onUnmounted(() => {
       <span class="runic-select__value">
         {{ displayText }}
       </span>
-      
+
       <!-- Selection count badge for multiple -->
-      <span 
-        v-if="multiple && selectedValues.length > 0" 
+      <span
+        v-if="multiple && selectedValues.length > 0"
         class="runic-select__badge"
       >
         {{ selectedValues.length }}
@@ -252,8 +265,17 @@ onUnmounted(() => {
         class="runic-select__clear"
         @click.stop="clearAll"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
       </button>
 
@@ -285,7 +307,7 @@ onUnmounted(() => {
           class="runic-select__dropdown"
           :class="[
             `runic-select__dropdown--${size}`,
-            { 'runic-select__dropdown--searchable': searchable }
+            { 'runic-select__dropdown--searchable': searchable },
           ]"
           :style="{
             position: 'fixed',
@@ -297,8 +319,18 @@ onUnmounted(() => {
         >
           <!-- Search input -->
           <div v-if="searchable" class="runic-select__search">
-            <svg class="runic-select__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <svg
+              class="runic-select__search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
             <input
               ref="searchInputRef"
@@ -314,15 +346,27 @@ onUnmounted(() => {
               class="runic-select__search-clear"
               @click.stop="searchQuery = ''"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
 
           <div class="runic-select__dropdown-inner">
             <!-- Empty state -->
-            <div v-if="processedOptions.length === 0" class="runic-select__empty">
+            <div
+              v-if="processedOptions.length === 0"
+              class="runic-select__empty"
+            >
               Aucun résultat
             </div>
 
@@ -332,28 +376,47 @@ onUnmounted(() => {
               :key="option.value"
               type="button"
               class="runic-select__option"
-              :class="{ 
+              :class="{
                 'runic-select__option--selected': isSelected(option.value),
-                'runic-select__option--pinned': multiple && isSelected(option.value)
+                'runic-select__option--pinned':
+                  multiple && isSelected(option.value),
               }"
               @click="selectOption(option.value)"
             >
               <!-- Checkbox for multiple mode -->
               <span v-if="multiple" class="runic-select__checkbox">
-                <svg v-if="isSelected(option.value)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                <svg
+                  v-if="isSelected(option.value)"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </span>
 
               <span class="runic-select__option-content">
-                <span class="runic-select__option-label">{{ option.label }}</span>
-                <span v-if="option.description" class="runic-select__option-desc">
+                <span class="runic-select__option-label">{{
+                  option.label
+                }}</span>
+                <span
+                  v-if="option.description"
+                  class="runic-select__option-desc"
+                >
                   {{ option.description }}
                 </span>
               </span>
 
               <!-- Count badge -->
-              <span v-if="option.count !== undefined" class="runic-select__option-count">
+              <span
+                v-if="option.count !== undefined"
+                class="runic-select__option-count"
+              >
                 {{ option.count }}
               </span>
 
@@ -396,7 +459,7 @@ onUnmounted(() => {
   display: block;
   margin-bottom: 0.5rem;
   font-family: "Cinzel", serif;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -427,8 +490,8 @@ onUnmounted(() => {
 
   /* Deep inset shadow */
   box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.8),
-    inset 0 1px 3px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 1px rgba(60, 55, 50, 0.08), 0 1px 0 rgba(45, 40, 35, 0.3);
+    inset 0 1px 3px rgba(0, 0, 0, 0.9), inset 0 -1px 1px rgba(60, 55, 50, 0.08),
+    0 1px 0 rgba(45, 40, 35, 0.3);
 
   /* Worn stone border */
   border: 1px solid rgba(35, 32, 28, 0.8);
@@ -443,9 +506,8 @@ onUnmounted(() => {
 .runic-select--open .runic-select__trigger {
   border-color: rgba(175, 96, 37, 0.4);
   box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.8),
-    inset 0 1px 3px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 1px rgba(175, 96, 37, 0.1), 0 0 15px rgba(175, 96, 37, 0.1),
-    0 1px 0 rgba(45, 40, 35, 0.3);
+    inset 0 1px 3px rgba(0, 0, 0, 0.9), inset 0 -1px 1px rgba(175, 96, 37, 0.1),
+    0 0 15px rgba(175, 96, 37, 0.1), 0 1px 0 rgba(45, 40, 35, 0.3);
 }
 
 /* ==========================================
@@ -559,7 +621,12 @@ onUnmounted(() => {
   transform: translateX(-50%);
   width: 0%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(175, 96, 37, 0.6), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(175, 96, 37, 0.6),
+    transparent
+  );
   transition: width 0.4s ease;
 }
 
@@ -570,7 +637,12 @@ onUnmounted(() => {
 
 .runic-select--has-selection .runic-select__glow {
   width: 40%;
-  background: linear-gradient(90deg, transparent, rgba(175, 96, 37, 0.4), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(175, 96, 37, 0.4),
+    transparent
+  );
 }
 
 /* ==========================================
@@ -588,11 +660,8 @@ onUnmounted(() => {
 
   border-radius: 4px;
   border: 1px solid rgba(60, 55, 50, 0.5);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.7), 
-    0 6px 16px rgba(0, 0, 0, 0.5),
-    0 0 1px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 rgba(80, 75, 70, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 6px 16px rgba(0, 0, 0, 0.5),
+    0 0 1px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(80, 75, 70, 0.15);
 
   display: flex;
   flex-direction: column;
@@ -625,7 +694,7 @@ onUnmounted(() => {
   border: none;
   outline: none;
   font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: #c8c8c8;
 }
 
@@ -695,6 +764,7 @@ onUnmounted(() => {
   padding: 1rem;
   text-align: center;
   font-family: "Crimson Text", serif;
+  font-size: 1.0625rem;
   font-style: italic;
   color: rgba(140, 130, 120, 0.6);
 }
@@ -720,8 +790,7 @@ onUnmounted(() => {
 /* Hover: runic borders */
 .runic-select__option:hover {
   border-color: rgba(175, 135, 80, 0.3);
-  box-shadow: 
-    inset 0 0 0 1px rgba(175, 135, 80, 0.1),
+  box-shadow: inset 0 0 0 1px rgba(175, 135, 80, 0.1),
     0 0 8px rgba(175, 135, 80, 0.05);
 }
 
@@ -747,26 +816,24 @@ onUnmounted(() => {
 
 /* Selected: subtle dashed pattern background */
 .runic-select__option--selected {
-  background: 
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 4px,
-      rgba(175, 135, 80, 0.06) 4px,
-      rgba(175, 135, 80, 0.06) 8px
-    );
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(175, 135, 80, 0.06) 4px,
+    rgba(175, 135, 80, 0.06) 8px
+  );
   border-color: rgba(175, 135, 80, 0.2);
 }
 
 .runic-select__option--selected:hover {
-  background: 
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 4px,
-      rgba(175, 135, 80, 0.08) 4px,
-      rgba(175, 135, 80, 0.08) 8px
-    );
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(175, 135, 80, 0.08) 4px,
+    rgba(175, 135, 80, 0.08) 8px
+  );
   border-color: rgba(175, 135, 80, 0.35);
 }
 
@@ -830,7 +897,7 @@ onUnmounted(() => {
 
 .runic-select__option-desc {
   font-family: "Crimson Text", serif;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   color: rgba(140, 130, 120, 0.6);
   margin-top: 2px;
   font-style: italic;
@@ -940,7 +1007,7 @@ onUnmounted(() => {
 }
 
 .runic-select__dropdown--sm .runic-select__option-desc {
-  font-size: 0.75rem;
+  font-size: 0.9375rem;
 }
 
 .runic-select__dropdown--lg .runic-select__option {
