@@ -43,10 +43,15 @@ onMounted(() => {
   localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
 });
 
-// Cancel recording if user leaves the page
+// Cleanup on unmount
 onBeforeUnmount(() => {
+  // Cancel any active recording
   if (isRecording.value) {
     cancelRecording();
+  }
+  // Remove global earthquake class
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.remove("earthquake-global");
   }
 });
 
@@ -767,6 +772,11 @@ const {
   createHeartbeatStyles,
   updateHeartbeat,
   resetEffects: resetHeartbeatEffects,
+  // Earthquake effect styles
+  earthquakeHeaderStyles,
+  earthquakeVaalStyles,
+  earthquakeBodyStyles,
+  getEarthquakeClasses,
 } = useAltarEffects({
   cardRef: altarCardRef,
   isActive: isDraggingOrb,
@@ -776,6 +786,24 @@ const {
 
 // Create heartbeat styles with additional animation check
 const heartbeatStyles = createHeartbeatStyles(isAnimatingRef);
+
+// Computed classes for earthquake effect on different UI sections
+const headerEarthquakeClasses = computed(() => getEarthquakeClasses("header"));
+const vaalSectionEarthquakeClasses = computed(() =>
+  getEarthquakeClasses("vaalSection")
+);
+const bodyEarthquakeClasses = computed(() => getEarthquakeClasses("body"));
+
+// Global earthquake effect on html element (affects header, footer, entire page)
+watch(isOrbOverCard, (isOver) => {
+  if (typeof document !== "undefined") {
+    if (isOver) {
+      document.documentElement.classList.add("earthquake-global");
+    } else {
+      document.documentElement.classList.remove("earthquake-global");
+    }
+  }
+});
 
 // Set orb ref
 const setOrbRef = (el: HTMLElement | null, index: number) => {
@@ -997,9 +1025,18 @@ const endDragOrb = async () => {
       </div>
 
       <!-- Main altar content -->
-      <div v-if="loggedIn" class="altar-page">
+      <div
+        v-if="loggedIn"
+        class="altar-page"
+        :class="bodyEarthquakeClasses"
+        :style="earthquakeBodyStyles"
+      >
         <!-- Header + Card selector -->
-        <div class="altar-selector-section">
+        <div
+          class="altar-selector-section"
+          :class="headerEarthquakeClasses"
+          :style="earthquakeHeaderStyles"
+        >
           <RunicHeader
             :title="t('altar.title')"
             :subtitle="t('altar.subtitle')"
@@ -1142,7 +1179,11 @@ const endDragOrb = async () => {
         </div>
 
         <!-- Vaal Orbs inventory -->
-        <div class="vaal-orbs-section">
+        <div
+          class="vaal-orbs-section"
+          :class="vaalSectionEarthquakeClasses"
+          :style="earthquakeVaalStyles"
+        >
           <!-- Header with actions -->
           <div class="vaal-header-wrapper">
             <div class="vaal-header">

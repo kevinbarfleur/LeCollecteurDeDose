@@ -559,3 +559,146 @@
   object-fit: contain;
 }
 
+/* ==========================================
+   EARTHQUAKE EFFECT - Global chaos when Vaal over card
+   ========================================== */
+
+/* Base earthquake animation - each section uses its own CSS variables */
+.earthquake-active {
+  animation: earthquakeShake var(--earthquake-speed, 0.15s) ease-in-out infinite;
+}
+
+/* Different keyframes for each section to create desynchronized chaos */
+@keyframes earthquakeShake {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: 
+      translate(var(--earthquake-translate-x, 2px), calc(var(--earthquake-translate-y, 1px) * -1)) 
+      scale(var(--earthquake-scale, 1.005));
+  }
+  50% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 2px) * -0.5), var(--earthquake-translate-y, 1px)) 
+      scale(1);
+  }
+  75% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 2px) * -1), calc(var(--earthquake-translate-y, 1px) * -0.5)) 
+      scale(var(--earthquake-scale, 1.005));
+  }
+}
+
+/* Header section - fast, nervous shake */
+.earthquake-header {
+  animation: earthquakeHeader var(--earthquake-speed, 0.15s) ease-in-out infinite;
+}
+
+@keyframes earthquakeHeader {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    filter: brightness(1);
+  }
+  20% {
+    transform: 
+      translate(var(--earthquake-translate-x, 2px), calc(var(--earthquake-translate-y, 1px) * -1)) 
+      scale(var(--earthquake-scale, 1.008));
+    filter: brightness(1.02);
+  }
+  40% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 2px) * -1.2), var(--earthquake-translate-y, 1px)) 
+      scale(1);
+  }
+  60% {
+    transform: 
+      translate(var(--earthquake-translate-x, 2px), calc(var(--earthquake-translate-y, 1px) * 0.5)) 
+      scale(var(--earthquake-scale, 1.008));
+    filter: brightness(1.03);
+  }
+  80% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 2px) * -0.8), calc(var(--earthquake-translate-y, 1px) * -1)) 
+      scale(1);
+  }
+}
+
+/* Vaal section - slightly different rhythm */
+.earthquake-vaalSection {
+  animation: earthquakeVaal var(--earthquake-speed, 0.12s) ease-in-out infinite;
+}
+
+@keyframes earthquakeVaal {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  15% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 1.5px) * -1), var(--earthquake-translate-y, 1.5px)) 
+      scale(var(--earthquake-scale, 1.006));
+  }
+  35% {
+    transform: 
+      translate(var(--earthquake-translate-x, 1.5px), calc(var(--earthquake-translate-y, 1.5px) * -1)) 
+      scale(1);
+    filter: brightness(1.05) drop-shadow(0 0 4px rgba(200, 50, 50, 0.3));
+  }
+  55% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 1.5px) * 0.5), var(--earthquake-translate-y, 1.5px)) 
+      scale(var(--earthquake-scale, 1.006));
+  }
+  75% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 1.5px) * -0.7), calc(var(--earthquake-translate-y, 1.5px) * -0.5)) 
+      scale(1);
+    filter: brightness(1.02);
+  }
+}
+
+/* Body background - slow, subtle rumble */
+.earthquake-body {
+  animation: earthquakeBody var(--earthquake-speed, 0.2s) ease-in-out infinite;
+}
+
+@keyframes earthquakeBody {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  30% {
+    transform: 
+      translate(var(--earthquake-translate-x, 1px), calc(var(--earthquake-translate-y, 0.5px) * -1)) 
+      scale(var(--earthquake-scale, 1.003));
+  }
+  70% {
+    transform: 
+      translate(calc(var(--earthquake-translate-x, 1px) * -1), var(--earthquake-translate-y, 0.5px)) 
+      scale(var(--earthquake-scale, 1.003));
+  }
+}
+
+/* Global body earthquake - applied to html element for full page shake */
+html.earthquake-global {
+  animation: earthquakeGlobal 0.18s ease-in-out infinite;
+}
+
+@keyframes earthquakeGlobal {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(1.5px, -1px);
+  }
+  40% {
+    transform: translate(-1px, 1.5px);
+  }
+  60% {
+    transform: translate(1px, 0.5px);
+  }
+  80% {
+    transform: translate(-1.5px, -0.5px);
+  }
+}
+

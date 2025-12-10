@@ -1,5 +1,5 @@
 import { ref, computed, watch, type Ref } from 'vue';
-import { HEARTBEAT } from '~/constants/timing';
+import { HEARTBEAT, EARTHQUAKE } from '~/constants/timing';
 
 export interface AltarEffectsOptions {
   cardRef: Ref<HTMLElement | null>;
@@ -142,19 +142,81 @@ export function useAltarEffects(options: AltarEffectsOptions) {
     isOrbOverCard.value = false;
   };
   
+  // ==========================================
+  // EARTHQUAKE EFFECT - Global chaos when orb over card
+  // ==========================================
+  
+  /**
+   * Creates earthquake CSS variables for a specific UI section
+   * Each section has different timing for chaotic feel
+   */
+  type EarthquakeSection = 'header' | 'vaalSection' | 'body';
+  
+  const getEarthquakeConfig = (section: EarthquakeSection) => {
+    switch (section) {
+      case 'header':
+        return EARTHQUAKE.HEADER;
+      case 'vaalSection':
+        return EARTHQUAKE.VAAL_SECTION;
+      case 'body':
+        return EARTHQUAKE.BODY;
+    }
+  };
+  
+  /**
+   * Computed styles for earthquake effect on a specific section
+   * Only active when orb is over card (isOrbOverCard)
+   */
+  const createEarthquakeStyles = (section: EarthquakeSection) => {
+    return computed(() => {
+      if (!isOrbOverCard.value) return {};
+      
+      const config = getEarthquakeConfig(section);
+      
+      return {
+        '--earthquake-speed': `${config.SPEED}s`,
+        '--earthquake-scale': config.SCALE,
+        '--earthquake-translate-x': `${config.TRANSLATE_X}px`,
+        '--earthquake-translate-y': `${config.TRANSLATE_Y}px`,
+      };
+    });
+  };
+  
+  /**
+   * Returns classes for earthquake effect
+   */
+  const getEarthquakeClasses = (section: EarthquakeSection) => {
+    return {
+      'earthquake-active': isOrbOverCard.value,
+      [`earthquake-${section}`]: isOrbOverCard.value,
+    };
+  };
+  
+  // Pre-computed earthquake styles for common sections
+  const earthquakeHeaderStyles = createEarthquakeStyles('header');
+  const earthquakeVaalStyles = createEarthquakeStyles('vaalSection');
+  const earthquakeBodyStyles = createEarthquakeStyles('body');
+  
   return {
     // State
     heartbeatIntensity,
     isOrbOverCard,
     
-    // Computed
+    // Computed - Card heartbeat
     heartbeatStyles,
     createHeartbeatStyles,
+    
+    // Computed - Earthquake effect
+    earthquakeHeaderStyles,
+    earthquakeVaalStyles,
+    earthquakeBodyStyles,
+    createEarthquakeStyles,
     
     // Methods
     updateHeartbeat,
     getCardClasses,
     getAltarClasses,
+    getEarthquakeClasses,
     resetEffects,
   };
 }
