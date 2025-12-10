@@ -1,39 +1,42 @@
 <script setup lang="ts">
-import { useFoilEffect, type FoilEffectType } from '~/composables/useFoilEffect'
+import {
+  useFoilEffect,
+  type FoilEffectType,
+} from "~/composables/useFoilEffect";
 
 const props = defineProps<{
-  modelValue: boolean
-}>()
+  modelValue: boolean;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-}>()
+  "update:modelValue": [value: boolean];
+}>();
 
-const { selectedFoilEffect, setFoilEffect, foilEffects } = useFoilEffect()
+const { selectedFoilEffect, setFoilEffect, foilEffects } = useFoilEffect();
 
 // Update when select changes - directly use the composable
 const handleEffectChange = (value: string) => {
-  setFoilEffect(value as FoilEffectType)
-}
+  setFoilEffect(value as FoilEffectType);
+};
 
 const closeModal = () => {
-  emit('update:modelValue', false)
-}
+  emit("update:modelValue", false);
+};
 
 // Close on escape key
 const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    closeModal()
+  if (e.key === "Escape") {
+    closeModal();
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
+  document.addEventListener("keydown", handleKeydown);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-})
+  document.removeEventListener("keydown", handleKeydown);
+});
 </script>
 
 <template>
@@ -58,8 +61,17 @@ onUnmounted(() => {
               aria-label="Fermer"
               @click="closeModal"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -70,7 +82,8 @@ onUnmounted(() => {
             <div class="settings-modal__section">
               <h3 class="settings-modal__section-title">Effet Holographique</h3>
               <p class="settings-modal__section-desc">
-                Choisissez le style d'effet foil appliqué à vos cartes brillantes.
+                Choisissez le style d'effet foil appliqué à vos cartes
+                brillantes.
               </p>
 
               <RunicSelect
@@ -90,8 +103,10 @@ onUnmounted(() => {
             <!-- Info Section -->
             <div class="settings-modal__section settings-modal__section--info">
               <p class="settings-modal__info-text">
-                Les effets holographiques s'appliquent aux cartes avec la variation <strong>Foil</strong>.
-                Certains effets utilisent des couleurs arc-en-ciel, d'autres sont adaptés aux couleurs de rareté.
+                Les effets holographiques s'appliquent aux cartes avec la
+                variation <strong>Foil</strong>. Certains effets utilisent des
+                couleurs arc-en-ciel, d'autres sont adaptés aux couleurs de
+                rareté.
               </p>
             </div>
           </div>
@@ -153,11 +168,8 @@ onUnmounted(() => {
   border-radius: 8px;
   border: 1px solid rgba(60, 55, 50, 0.4);
 
-  box-shadow:
-    0 25px 60px rgba(0, 0, 0, 0.8),
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(80, 75, 70, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(80, 75, 70, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* Custom scrollbar */
@@ -257,7 +269,7 @@ onUnmounted(() => {
 .settings-modal__section-desc {
   margin: 0 0 1rem 0;
   font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   color: rgba(140, 130, 120, 0.7);
   line-height: 1.5;
 }
@@ -305,7 +317,7 @@ onUnmounted(() => {
 .settings-modal__info-text {
   margin: 0;
   font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   color: rgba(120, 115, 110, 0.8);
   line-height: 1.6;
   font-style: italic;
@@ -381,4 +393,3 @@ onUnmounted(() => {
   }
 }
 </style>
-

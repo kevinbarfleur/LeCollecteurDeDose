@@ -194,7 +194,7 @@ useHead({
 .about-hero__accent {
   display: block;
   font-family: "Cormorant Garamond", serif;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-style: italic;
   font-weight: 400;
   color: #c97a3a;
@@ -203,13 +203,13 @@ useHead({
 
 @media (min-width: 768px) {
   .about-hero__accent {
-    font-size: 2rem;
+    font-size: 2.25rem;
   }
 }
 
 .about-hero__subtitle {
   font-family: "Cormorant Garamond", serif;
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-style: italic;
   color: rgba(160, 150, 135, 0.8);
   margin: 1rem 0 0;
@@ -218,7 +218,7 @@ useHead({
 
 @media (min-width: 768px) {
   .about-hero__subtitle {
-    font-size: 1.25rem;
+    font-size: 1.4375rem;
   }
 }
 
@@ -231,11 +231,11 @@ useHead({
 
 .about-section__description {
   font-family: "Cormorant Garamond", serif;
-  font-size: 1.0625rem;
+  font-size: 1.25rem;
   font-style: italic;
   color: rgba(160, 150, 135, 0.85);
   margin: 0;
-  max-width: 280px;
+  max-width: 320px;
   line-height: 1.6;
 }
 

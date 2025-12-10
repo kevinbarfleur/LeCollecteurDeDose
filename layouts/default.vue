@@ -110,6 +110,9 @@ const showLegalModal = ref(false);
 
     <!-- Legal Modal -->
     <LegalModal v-model="showLegalModal" />
+    
+    <!-- Activity Logs Panel -->
+    <ActivityLogsPanel />
   </div>
 </template>
 

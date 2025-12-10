@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          id: string
+          username: string
+          user_avatar: string | null
+          card_id: string
+          card_tier: string
+          outcome: string
+          result_card_id: string | null
+          replay_id: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          username: string
+          user_avatar?: string | null
+          card_id: string
+          card_tier: string
+          outcome: string
+          result_card_id?: string | null
+          replay_id?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          username?: string
+          user_avatar?: string | null
+          card_id?: string
+          card_tier?: string
+          outcome?: string
+          result_card_id?: string | null
+          replay_id?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       replays: {
         Row: {
           card_foil: boolean | null
@@ -20,6 +56,7 @@ export type Database = {
           id: string
           mouse_positions: Json
           outcome: string
+          result_card_id: string | null
           user_avatar: string | null
           username: string
           views: number | null
@@ -34,6 +71,7 @@ export type Database = {
           id?: string
           mouse_positions: Json
           outcome: string
+          result_card_id?: string | null
           user_avatar?: string | null
           username: string
           views?: number | null
@@ -48,6 +86,7 @@ export type Database = {
           id?: string
           mouse_positions?: Json
           outcome?: string
+          result_card_id?: string | null
           user_avatar?: string | null
           username?: string
           views?: number | null
@@ -72,4 +111,7 @@ export type Database = {
 
 export type Replay = Database['public']['Tables']['replays']['Row']
 export type ReplayInsert = Database['public']['Tables']['replays']['Insert']
+
+export type ActivityLog = Database['public']['Tables']['activity_logs']['Row']
+export type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
 

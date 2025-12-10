@@ -58,7 +58,7 @@
     }
   },
   "altar": {
-    "title": "L'Autel de Corruption",
+    "title": "L'Autel (Playground)",
     "subtitle": "Vaal or no balls, exile.",
     "auth": {
       "title": "Prouve ton existence",
@@ -125,6 +125,18 @@
   "footer": {
     "disclaimer": "Fansite non officiel — Non affilié à Grinding Gear Games",
     "legal_link": "Mentions légales"
+  },
+  "activityLogs": {
+    "title": "Activité des Exilés",
+    "toggleLabel": "Voir l'activité",
+    "empty": "Aucune activité récente. Les exilés dorment...",
+    "connected": "Connecté en temps réel",
+    "disconnected": "Déconnecté",
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {n} min",
+    "hoursAgo": "Il y a {n}h",
+    "replay": "Voir",
+    "watchReplay": "Regarder le replay"
   },
   "legal": {
     "title": "Mentions Légales",

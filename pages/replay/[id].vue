@@ -1,10 +1,27 @@
 <script setup lang="ts">
 import { useReplayPlayer } from "~/composables/useReplayPlayer";
 import { useAltarEffects } from "~/composables/useAltarEffects";
+import { useAltarAura } from "~/composables/useAltarAura";
+import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 import { getCardById } from "~/data/mockCards";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
+import type { CardTier } from "~/types/card";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
+
+// Tier-based colors for animations (consistent with useVaalOutcomes)
+const TIER_COLORS = {
+  T0: { primary: '#c9a227', secondary: '#f5d76e', glow: 'rgba(201, 162, 39, 0.8)' },
+  T1: { primary: '#7a6a8a', secondary: '#a294b0', glow: 'rgba(122, 106, 138, 0.7)' },
+  T2: { primary: '#5a7080', secondary: '#8aa0b0', glow: 'rgba(90, 112, 128, 0.6)' },
+  T3: { primary: '#5a5a5d', secondary: '#7a7a7d', glow: 'rgba(90, 90, 93, 0.5)' },
+} as const;
+
+const getTierColors = (tier?: string) => {
+  if (!tier) return TIER_COLORS.T3;
+  const key = tier.toUpperCase() as keyof typeof TIER_COLORS;
+  return TIER_COLORS[key] || TIER_COLORS.T3;
+};
 
 useHead({ title: "Replay - Le Collecteur de Dose" });
 
@@ -20,6 +37,7 @@ const {
   userAvatar,
   cardInfo,
   outcome,
+  resultCardId,
   views,
   createdAt,
   error: playerError,
@@ -33,6 +51,7 @@ const altarCardRef = ref<HTMLElement | null>(null);
 const cardFrontRef = ref<HTMLElement | null>(null);
 const cardSlotRef = ref<HTMLElement | null>(null);
 const vaalOrbRef = ref<HTMLElement | null>(null);
+const altarPlatformRef = ref<HTMLElement | null>(null);
 
 const isLoaded = ref(false);
 const hasError = ref(false);
@@ -47,7 +66,12 @@ const {
   heartbeatStyles,
   getAltarClasses,
   getCardClasses,
-  resetEffects
+  resetEffects,
+  // Earthquake effect styles
+  earthquakeHeaderStyles,
+  earthquakeVaalStyles,
+  earthquakeBodyStyles,
+  getEarthquakeClasses,
 } = useAltarEffects({
   cardRef: altarCardRef,
   cursorX,
@@ -56,13 +80,45 @@ const {
   isDestroying: isCardBeingDestroyed
 });
 
-const DISINTEGRATION_FRAMES = 64;
-const REPETITION_COUNT = 2;
-const cardSnapshot = ref<HTMLCanvasElement | null>(null);
-const imageSnapshot = ref<HTMLCanvasElement | null>(null);
-const isCapturingSnapshot = ref(false);
-const capturedImageDimensions = ref<{ width: number; height: number } | null>(null);
-const capturedCardDimensions = ref<{ width: number; height: number } | null>(null);
+// Computed classes for earthquake effect on different UI sections
+const headerEarthquakeClasses = computed(() => getEarthquakeClasses("header"));
+const outcomeEarthquakeClasses = computed(() => getEarthquakeClasses("vaalSection"));
+const bodyEarthquakeClasses = computed(() => getEarthquakeClasses("body"));
+
+// Global earthquake effect on html element (affects header, footer, entire page)
+watch(isOrbOverCard, (isOver) => {
+  if (typeof document !== "undefined") {
+    if (isOver) {
+      document.documentElement.classList.add("earthquake-global");
+    } else {
+      document.documentElement.classList.remove("earthquake-global");
+    }
+  }
+});
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.remove("earthquake-global");
+  }
+});
+
+// Use shared disintegration effect composable
+const {
+  cardSnapshot,
+  imageSnapshot,
+  capturedImageDimensions,
+  capturedCardDimensions,
+  canvasHasContent,
+  createDisintegrationEffect,
+  findCardImageElement: findCardImageElementBase,
+  captureCardSnapshot: captureCardSnapshotBase,
+  clearSnapshots,
+} = useDisintegrationEffect();
+
+// Wrapper to use the composable with our ref
+const findCardImageElement = () => findCardImageElementBase(cardFrontRef);
+const captureCardSnapshot = () => captureCardSnapshotBase(cardFrontRef);
 
 const tierConfig = computed(() => {
   if (!cardData.value) return TIER_CONFIG.T3;
@@ -83,6 +139,15 @@ const altarClasses = computed(() => getAltarClasses(
 // Card classes using the shared function
 const cardClasses = computed(() => getCardClasses(isLoaded.value, false));
 
+// Altar Aura Effect - outer glow, rays, and particles
+useAltarAura({
+  containerRef: altarPlatformRef,
+  isActive: isLoaded,
+  isVaalMode: isOrbOverCard,
+  tier: computed(() => cardData.value?.tier),
+  isFoil: isCurrentCardFoil,
+});
+
 const formattedDate = computed(() => {
   if (!createdAt.value) return '';
   return new Date(createdAt.value).toLocaleDateString('fr-FR', {
@@ -93,203 +158,6 @@ const formattedDate = computed(() => {
     minute: '2-digit'
   });
 });
-
-const findCardImageElement = (): HTMLElement | null => {
-  if (!cardFrontRef.value) return null;
-  return cardFrontRef.value.querySelector('.game-card__image-wrapper') as HTMLElement | null;
-};
-
-const loadImageToCanvas = (imgUrl: string, targetWidth?: number, targetHeight?: number): Promise<HTMLCanvasElement | null> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    
-    img.onload = () => {
-      const width = targetWidth || img.naturalWidth;
-      const height = targetHeight || img.naturalHeight;
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas);
-      } else {
-        resolve(null);
-      }
-    };
-    
-    img.onerror = () => resolve(null);
-    img.src = `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
-  });
-};
-
-const canvasHasContent = (canvas: HTMLCanvasElement): boolean => {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return false;
-  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] > 0) return true;
-  }
-  return false;
-};
-
-const generateDisintegrationFrames = (canvas: HTMLCanvasElement, count: number): HTMLCanvasElement[] => {
-  const { width, height } = canvas;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return [];
-  
-  const originalData = ctx.getImageData(0, 0, width, height);
-  const imageDatas = [...Array(count)].map(() => ctx.createImageData(width, height));
-  
-  for (let x = 0; x < width; ++x) {
-    for (let y = 0; y < height; ++y) {
-      for (let i = 0; i < REPETITION_COUNT; ++i) {
-        const dataIndex = Math.floor(count * (Math.random() + 2 * x / width) / 3);
-        const pixelIndex = (y * width + x) * 4;
-        for (let offset = 0; offset < 4; ++offset) {
-          imageDatas[dataIndex].data[pixelIndex + offset] = originalData.data[pixelIndex + offset];
-        }
-      }
-    }
-  }
-  
-  return imageDatas.map(data => {
-    const newCanvas = document.createElement("canvas");
-    newCanvas.width = width;
-    newCanvas.height = height;
-    newCanvas.getContext("2d")?.putImageData(data, 0, 0);
-    return newCanvas;
-  });
-};
-
-const createDisintegrationEffect = (
-  canvas: HTMLCanvasElement, 
-  container: HTMLElement,
-  options: {
-    frameCount?: number;
-    direction?: 'up' | 'out';
-    duration?: number;
-    delayMultiplier?: number;
-    targetWidth?: number;
-    targetHeight?: number;
-  } = {}
-): Promise<HTMLCanvasElement[]> => {
-  const {
-    frameCount = DISINTEGRATION_FRAMES,
-    direction = 'out',
-    duration = 1.2,
-    delayMultiplier = 1.5,
-    targetWidth,
-    targetHeight
-  } = options;
-  
-  const displayWidth = targetWidth || canvas.width;
-  const displayHeight = targetHeight || canvas.height;
-  const frames = generateDisintegrationFrames(canvas, frameCount);
-  
-  frames.forEach((frame) => {
-    frame.style.cssText = `
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: ${displayWidth}px;
-      height: ${displayHeight}px;
-      opacity: 1;
-      transform: rotate(0deg) translate(0px, 0px);
-    `;
-    container.appendChild(frame);
-  });
-  
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        frames.forEach((frame, i) => {
-          frame.style.transition = `transform ${duration}s ease-out, opacity ${duration}s ease-out`;
-          frame.style.transitionDelay = `${(delayMultiplier * i / frames.length)}s`;
-        });
-        
-        requestAnimationFrame(() => {
-          frames.forEach(frame => {
-            const randomAngle = 2 * Math.PI * (Math.random() - 0.5);
-            let translateX: number, translateY: number;
-            
-            if (direction === 'up') {
-              translateX = (Math.random() - 0.5) * 120;
-              translateY = -100 - Math.random() * 150;
-            } else {
-              const distance = 80 + Math.random() * 60;
-              translateX = distance * Math.cos(randomAngle);
-              translateY = distance * Math.sin(randomAngle) - 30;
-            }
-            
-            frame.style.transform = `
-              rotate(${25 * (Math.random() - 0.5)}deg) 
-              translate(${translateX}px, ${translateY}px)
-              rotate(${20 * (Math.random() - 0.5)}deg)
-            `;
-            frame.style.opacity = "0";
-          });
-          
-          resolve(frames);
-        });
-      });
-    });
-  });
-};
-
-const captureCardSnapshot = async () => {
-  if (!cardFrontRef.value || isCapturingSnapshot.value) return;
-  
-  isCapturingSnapshot.value = true;
-  
-  try {
-    // Wait for images to fully load and render - same timing as altar.vue
-    await new Promise(resolve => setTimeout(resolve, 800));
-    if (!cardFrontRef.value) {
-      isCapturingSnapshot.value = false;
-      return;
-    }
-    
-    const imgElement = cardFrontRef.value.querySelector('.game-card__image') as HTMLImageElement;
-    const imageWrapperElement = findCardImageElement();
-    
-    if (imgElement && imgElement.src && imageWrapperElement) {
-      const wrapperRect = imageWrapperElement.getBoundingClientRect();
-      const naturalRatio = imgElement.naturalWidth / imgElement.naturalHeight;
-      const wrapperRatio = wrapperRect.width / wrapperRect.height;
-      
-      const displaySize = naturalRatio > wrapperRatio 
-        ? wrapperRect.width 
-        : wrapperRect.height * naturalRatio;
-      
-      const targetSize = Math.round(displaySize);
-      const directCanvas = await loadImageToCanvas(imgElement.src, targetSize, targetSize);
-      
-      if (directCanvas && canvasHasContent(directCanvas)) {
-        imageSnapshot.value = directCanvas;
-        capturedImageDimensions.value = { width: targetSize, height: targetSize };
-      }
-    }
-    
-    const cardRect = cardFrontRef.value.getBoundingClientRect();
-    const canvas = await html2canvas(cardFrontRef.value, {
-      backgroundColor: null,
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      imageTimeout: 10000,
-    });
-    
-    cardSnapshot.value = canvas;
-    capturedCardDimensions.value = { width: cardRect.width, height: cardRect.height };
-  } catch (error) {
-    cardSnapshot.value = null;
-  }
-  
-  isCapturingSnapshot.value = false;
-};
 
 onMounted(async () => {
   const replayId = route.params.id as string;
@@ -379,6 +247,14 @@ const triggerOutcome = async () => {
     case 'destroyed':
       await destroyCardEffect();
       break;
+      
+    case 'transform':
+      await showTransformEffect();
+      break;
+      
+    case 'duplicate':
+      await showDuplicateEffect();
+      break;
   }
   
   setTimeout(() => {
@@ -408,9 +284,13 @@ const showNothingEffect = async () => {
 const transformToFoilEffect = async () => {
   if (!altarCardRef.value) return;
   
+  const tierColors = getTierColors(cardInfo.value?.tier);
+  const glowShadow = `0 0 30px ${tierColors.glow}, 0 0 60px ${tierColors.glow}`;
+  
   gsap.to(altarCardRef.value, {
     filter: "brightness(1.8) saturate(1.5)",
     scale: 1.05,
+    boxShadow: glowShadow,
     duration: 0.2,
     ease: "power2.in",
   });
@@ -420,6 +300,7 @@ const transformToFoilEffect = async () => {
   gsap.to(altarCardRef.value, {
     filter: "brightness(3) saturate(2)",
     scale: 1.1,
+    boxShadow: `0 0 50px ${tierColors.glow}, 0 0 90px ${tierColors.glow}`,
     duration: 0.1,
     ease: "power2.out",
   });
@@ -433,6 +314,7 @@ const transformToFoilEffect = async () => {
   gsap.to(altarCardRef.value, {
     filter: "brightness(1) saturate(1)",
     scale: 1,
+    boxShadow: 'none',
     duration: 0.4,
     ease: "power2.out",
   });
@@ -566,6 +448,378 @@ const destroyCardEffect = async () => {
   }
 };
 
+// Helper to preload an image
+const preloadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
+// Helper to find all image elements in the card
+const findCardImages = (element: HTMLElement): HTMLImageElement[] => {
+  return Array.from(element.querySelectorAll('img.game-card__image, img.detail__image'));
+};
+
+// Transform effect - heartbeat vibration with synchronized transformation at peak
+const showTransformEffect = async () => {
+  if (!altarCardRef.value) return;
+  
+  const tierColors = getTierColors(cardInfo.value?.tier);
+  const glowShadow = `0 0 20px ${tierColors.glow}, 0 0 40px ${tierColors.glow}`;
+  const cardElement = altarCardRef.value;
+  
+  // IMPORTANT: Disable CSS animations that conflict with GSAP transforms
+  cardElement.classList.remove('altar-card--heartbeat', 'altar-card--panicking');
+  cardElement.style.animation = 'none';
+  
+  // Get the new card data and PRELOAD its image BEFORE animation
+  let newCard: ReturnType<typeof getCardById> | null = null;
+  let newImageUrl: string | null = null;
+  
+  if (resultCardId.value) {
+    newCard = getCardById(resultCardId.value);
+    if (newCard?.gameData?.img) {
+      newImageUrl = newCard.gameData.img;
+      try {
+        await preloadImage(newImageUrl);
+      } catch (e) {
+        console.warn('Failed to preload transform card image, continuing anyway');
+      }
+    }
+  }
+  
+  // Find all image elements to swap them directly at peak
+  const cardImages = findCardImages(cardElement);
+  
+  // Phase 1: Heartbeat vibration effect with synchronized transformation
+  const timeline = gsap.timeline();
+  
+  // First heartbeat pulse - systole (contract)
+  timeline.to(cardElement, {
+    scale: 0.92,
+    x: -3,
+    boxShadow: glowShadow,
+    duration: 0.1,
+    ease: 'power2.in',
+  });
+  // Diastole (expand)
+  timeline.to(cardElement, {
+    scale: 1.06,
+    x: 3,
+    duration: 0.12,
+    ease: 'power2.out',
+  });
+  
+  // Second heartbeat - stronger
+  timeline.to(cardElement, {
+    scale: 0.88,
+    x: -4,
+    filter: 'brightness(1.2)',
+    duration: 0.1,
+    ease: 'power2.in',
+  });
+  timeline.to(cardElement, {
+    scale: 1.1,
+    x: 4,
+    filter: 'brightness(1.4)',
+    duration: 0.12,
+    ease: 'power2.out',
+  });
+  
+  // Third heartbeat - building to climax (contract)
+  timeline.to(cardElement, {
+    scale: 0.82,
+    x: -5,
+    filter: 'brightness(1.8)',
+    boxShadow: `0 0 40px ${tierColors.glow}, 0 0 70px ${tierColors.glow}`,
+    duration: 0.1,
+    ease: 'power2.in',
+  });
+  
+  // TRANSFORMATION happens at the PEAK of the final heartbeat
+  // Maximum expansion with flash - card transforms HERE
+  timeline.to(cardElement, {
+    scale: 1.25,
+    x: 0,
+    filter: 'brightness(3) blur(4px)',
+    boxShadow: `0 0 60px ${tierColors.glow}, 0 0 100px ${tierColors.glow}`,
+    duration: 0.08,
+    ease: 'power2.out',
+    onComplete: () => {
+      // INSTANT image swap in DOM at peak brightness (hidden by blur/brightness)
+      if (newImageUrl) {
+        cardImages.forEach(img => {
+          img.src = newImageUrl!;
+        });
+      }
+      
+      // Update the reactive card data
+      if (newCard) {
+        cardData.value = {
+          ...newCard,
+          foil: cardInfo.value?.foil || false
+        };
+      }
+    },
+  });
+  
+  // Quick contraction after the flash (new card visible)
+  timeline.to(cardElement, {
+    scale: 0.95,
+    filter: 'brightness(1.5) blur(0px)',
+    boxShadow: `0 0 30px ${tierColors.glow}`,
+    duration: 0.1,
+    ease: 'power2.in',
+  });
+  
+  // Settle to normal with a gentle bounce
+  timeline.to(cardElement, {
+    scale: 1,
+    filter: 'brightness(1)',
+    boxShadow: 'none',
+    duration: 0.35,
+    ease: 'elastic.out(1, 0.5)',
+  });
+  
+  await timeline.then();
+};
+
+// Duplicate effect - clone appears on top, then both translate apart side by side
+const showDuplicateEffect = async () => {
+  if (!altarCardRef.value || !cardSlotRef.value) return;
+  
+  const tierColors = getTierColors(cardInfo.value?.tier);
+  const glowShadow = `0 0 25px ${tierColors.glow}, 0 0 50px ${tierColors.glow}`;
+  const cardElement = altarCardRef.value;
+  const cardSlot = cardSlotRef.value;
+  
+  // IMPORTANT: Disable CSS animations that conflict with GSAP transforms
+  cardElement.classList.remove('altar-card--heartbeat', 'altar-card--panicking');
+  cardElement.style.animation = 'none';
+  
+  const cardRect = cardElement.getBoundingClientRect();
+  const cardWidth = cardRect.width;
+  
+  // Temporarily allow overflow on parent containers for the animation
+  const replayContent = document.querySelector('.replay-content') as HTMLElement;
+  const replayStage = document.querySelector('.replay-stage') as HTMLElement;
+  const altarPlatform = altarPlatformRef.value;
+  
+  const originalOverflows: { el: HTMLElement; overflow: string }[] = [];
+  [replayContent, replayStage, altarPlatform, cardSlot].forEach(el => {
+    if (el) {
+      originalOverflows.push({ el, overflow: el.style.overflow });
+      el.style.overflow = 'visible';
+    }
+  });
+  
+  // Phase 1: Energy gathering - heartbeat-like pulses
+  const timeline = gsap.timeline();
+  
+  timeline.to(cardElement, {
+    scale: 0.95,
+    filter: 'brightness(1.2)',
+    boxShadow: glowShadow,
+    duration: 0.1,
+    ease: 'power2.in',
+  });
+  timeline.to(cardElement, {
+    scale: 1.08,
+    filter: 'brightness(1.5)',
+    duration: 0.12,
+    ease: 'power2.out',
+  });
+  timeline.to(cardElement, {
+    scale: 0.92,
+    filter: 'brightness(1.3)',
+    duration: 0.08,
+    ease: 'power2.in',
+  });
+  timeline.to(cardElement, {
+    scale: 1.12,
+    filter: 'brightness(1.8)',
+    boxShadow: `0 0 40px ${tierColors.glow}, 0 0 70px ${tierColors.glow}`,
+    duration: 0.15,
+    ease: 'power2.out',
+  });
+  
+  await timeline.then();
+  
+  // Phase 2: Create clone using the pre-captured snapshot (avoids scoped CSS issues)
+  const cloneElement = document.createElement('div');
+  cloneElement.id = 'duplicate-clone-replay';
+  cloneElement.style.cssText = `
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    width: ${cardRect.width}px;
+    height: ${cardRect.height}px;
+    top: ${cardRect.top}px;
+    left: ${cardRect.left}px;
+    margin: 0;
+    box-shadow: ${glowShadow};
+    border-radius: 8px;
+    overflow: hidden;
+  `;
+  
+  // Deep clone with inline styles - preserves appearance outside scoped CSS
+  const cloneWithStyles = (element: HTMLElement): HTMLElement => {
+    const clone = element.cloneNode(false) as HTMLElement;
+    
+    // Copy computed styles as inline styles
+    const computed = window.getComputedStyle(element);
+    const importantStyles = [
+      'width', 'height', 'padding', 'margin', 'border', 'border-radius',
+      'background', 'background-color', 'background-image', 'background-size',
+      'color', 'font-size', 'font-family', 'font-weight', 'text-align',
+      'display', 'flex-direction', 'align-items', 'justify-content', 'gap',
+      'position', 'top', 'left', 'right', 'bottom',
+      'overflow', 'opacity', 'box-shadow', 'transform'
+    ];
+    
+    importantStyles.forEach(prop => {
+      const value = computed.getPropertyValue(prop);
+      if (value && value !== 'none' && value !== 'auto' && value !== 'normal') {
+        clone.style.setProperty(prop, value);
+      }
+    });
+    
+    // Handle images specially - copy src directly
+    if (element.tagName === 'IMG') {
+      const imgEl = element as HTMLImageElement;
+      const imgClone = clone as HTMLImageElement;
+      imgClone.src = imgEl.src;
+      imgClone.style.width = computed.width;
+      imgClone.style.height = computed.height;
+      imgClone.style.objectFit = computed.objectFit || 'cover';
+    }
+    
+    // Recursively clone children
+    element.childNodes.forEach(child => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        clone.appendChild(cloneWithStyles(child as HTMLElement));
+      } else if (child.nodeType === Node.TEXT_NODE) {
+        clone.appendChild(child.cloneNode(true));
+      }
+    });
+    
+    return clone;
+  };
+  
+  // Clone the card with all styles preserved
+  if (cardFrontRef.value) {
+    try {
+      const cardClone = cloneWithStyles(cardFrontRef.value);
+      cardClone.style.width = '100%';
+      cardClone.style.height = '100%';
+      cardClone.style.transform = 'none';
+      cardClone.style.animation = 'none';
+      cloneElement.appendChild(cardClone);
+    } catch (e) {
+      console.error('Clone failed:', e);
+      cloneElement.style.background = `linear-gradient(135deg, ${tierColors.primary}, ${tierColors.secondary})`;
+    }
+  } else {
+    cloneElement.style.background = `linear-gradient(135deg, ${tierColors.primary}, ${tierColors.secondary})`;
+  }
+  
+  document.body.appendChild(cloneElement);
+  const clone = cloneElement;
+  
+  // Initialize clone with GSAP (hidden and scaled)
+  gsap.set(clone, {
+    opacity: 0,
+    scale: 1.12,
+  });
+  
+  // Flash effect for "split" - both cards flash together
+  gsap.to(cardElement, {
+    scale: 1.2,
+    filter: 'brightness(2.5)',
+    duration: 0.1,
+    ease: 'power2.out',
+  });
+  
+  // Make clone visible at same moment
+  gsap.to(clone, {
+    opacity: 1,
+    scale: 1.2,
+    duration: 0.1,
+    ease: 'power2.out',
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Calculate translation distance (half card width + small gap)
+  const translateDistance = (cardWidth / 2) + 12;
+  
+  // Phase 3: Both cards translate apart - original left, clone right
+  const splitTimeline = gsap.timeline();
+  
+  // Original card translates left using transform
+  splitTimeline.to(cardElement, {
+    x: -translateDistance,
+    scale: 1,
+    filter: 'brightness(1)',
+    boxShadow: glowShadow,
+    duration: 0.4,
+    ease: 'power2.out',
+  }, 0);
+  
+  // Clone translates right
+  splitTimeline.to(clone, {
+    x: translateDistance,
+    scale: 1,
+    filter: 'brightness(1)',
+    duration: 0.4,
+    ease: 'power2.out',
+  }, 0);
+  
+  await splitTimeline.then();
+  
+  // Phase 4: Hold position - show both cards side by side for 2 seconds
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // Phase 5: Clone (duplicate) exits to the right, original returns to center
+  const exitTimeline = gsap.timeline();
+  
+  // Clone flies off to the right
+  exitTimeline.to(clone, {
+    x: window.innerWidth,
+    opacity: 0,
+    scale: 0.7,
+    rotation: 20,
+    duration: 0.6,
+    ease: 'power2.in',
+  });
+  
+  // Original card returns to center position
+  exitTimeline.to(cardElement, {
+    x: 0,
+    boxShadow: 'none',
+    duration: 0.5,
+    ease: 'power2.out',
+  }, 0.15);
+  
+  await exitTimeline.then();
+  
+  // Cleanup clone
+  clone.remove();
+  
+  // Restore overflow on parent containers
+  originalOverflows.forEach(({ el, overflow }) => {
+    el.style.overflow = overflow;
+  });
+  
+  // Ensure card is fully reset
+  gsap.set(cardElement, {
+    clearProps: 'all',
+  });
+};
+
 const restartReplay = () => {
   window.location.reload();
 };
@@ -579,6 +833,8 @@ const outcomeText = computed(() => {
     case 'nothing': return 'Rien ne s\'est passé';
     case 'foil': return 'Transformation en Foil !';
     case 'destroyed': return 'Carte détruite...';
+    case 'transform': return 'Carte transformée !';
+    case 'duplicate': return 'Duplication miraculeuse !';
     default: return '';
   }
 });
@@ -588,16 +844,35 @@ const outcomeClass = computed(() => {
     case 'nothing': return 'outcome--nothing';
     case 'foil': return 'outcome--foil';
     case 'destroyed': return 'outcome--destroyed';
+    case 'transform': return 'outcome--transform';
+    case 'duplicate': return 'outcome--duplicate';
     default: return '';
   }
 });
 
+// Get the appropriate card name based on outcome
+// For transform: show the NEW card name
+// For others: show the original card name
 const getCardName = () => {
   if (!cardInfo.value) return '';
+  
+  // For transformation, show the transformed (new) card name
+  if (outcome.value === 'transform' && resultCardId.value) {
+    const newCard = getCardById(resultCardId.value);
+    return newCard?.name || resultCardId.value;
+  }
+  
+  // For all other outcomes, show the original card name
   const card = getCardById(cardInfo.value.id);
   return card?.name || cardInfo.value.id;
 };
 
+// Get original card name (for showing "before" state)
+const getOriginalCardName = () => {
+  if (!cardInfo.value) return '';
+  const card = getCardById(cardInfo.value.id);
+  return card?.name || cardInfo.value.id;
+};
 
 const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   if (!cardInfo.value?.tier) return 'default';
@@ -634,9 +909,19 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
       </div>
       
       <!-- Replay Content -->
-      <div v-else-if="isLoaded" class="replay-content">
+      <div 
+        v-else-if="isLoaded" 
+        class="replay-content"
+        :class="bodyEarthquakeClasses"
+        :style="earthquakeBodyStyles"
+      >
         <!-- Compact Header -->
-        <RunicBox padding="sm" class="replay-header-box">
+        <RunicBox 
+          padding="sm" 
+          class="replay-header-box"
+          :class="headerEarthquakeClasses"
+          :style="earthquakeHeaderStyles"
+        >
           <div class="replay-header">
             <div class="replay-header__user">
               <img 
@@ -662,6 +947,7 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
         <!-- Main Stage -->
         <main class="replay-stage">
           <div 
+            ref="altarPlatformRef"
             class="altar-platform"
             :class="altarClasses"
           >
@@ -698,7 +984,13 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
         
         <!-- Outcome Panel -->
         <Transition name="outcome">
-          <RunicBox v-if="showOutcome" padding="md" class="replay-outcome-box" :class="outcomeClass">
+          <RunicBox 
+            v-if="showOutcome" 
+            padding="md" 
+            class="replay-outcome-box" 
+            :class="[outcomeClass, outcomeEarthquakeClasses]"
+            :style="earthquakeVaalStyles"
+          >
             <div class="replay-outcome">
               <div class="replay-outcome__badge">
                 <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-outcome__badge-img" />
@@ -708,14 +1000,26 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
                 <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
                 
                 <div class="replay-outcome__card">
-                  <div class="replay-outcome__card-info">
-                    <span class="replay-outcome__card-name">{{ getCardName() }}</span>
-                    <RunicNumber 
-                      :value="cardInfo?.tier || ''" 
-                      :color="getTierColor()"
-                      size="sm"
-                    />
-                  </div>
+                  <!-- For transform: show before → after -->
+                  <template v-if="outcome === 'transform' && resultCardId">
+                    <div class="replay-outcome__transform">
+                      <span class="replay-outcome__card-name replay-outcome__card-name--old">{{ getOriginalCardName() }}</span>
+                      <span class="replay-outcome__transform-arrow">→</span>
+                      <span class="replay-outcome__card-name replay-outcome__card-name--new">{{ getCardName() }}</span>
+                    </div>
+                  </template>
+                  
+                  <!-- For other outcomes: show single card -->
+                  <template v-else>
+                    <div class="replay-outcome__card-info">
+                      <span class="replay-outcome__card-name">{{ getCardName() }}</span>
+                      <RunicNumber 
+                        :value="cardInfo?.tier || ''" 
+                        :color="getTierColor()"
+                        size="sm"
+                      />
+                    </div>
+                  </template>
                 </div>
               </div>
               
@@ -731,28 +1035,29 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
           </RunicBox>
         </Transition>
         
-        <!-- Animated Cursor with Vaal Orb -->
-        <div 
-          v-if="isPlaying"
-          ref="vaalOrbRef"
-          class="replay-cursor"
-          :style="{
-            left: `${cursorX}px`,
-            top: `${cursorY}px`
-          }"
-        >
-          <div class="replay-cursor__tag">
-            <img 
-              v-if="userAvatar" 
-              :src="userAvatar" 
-              :alt="username" 
-              class="replay-cursor__tag-avatar"
-            />
-            <span class="replay-cursor__tag-name">{{ username }}</span>
-          </div>
-          <div class="replay-cursor__orb">
-            <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-cursor__orb-img" />
-          </div>
+      </div>
+      
+      <!-- Animated Cursor with Vaal Orb - OUTSIDE replay-content to avoid earthquake transform interference -->
+      <div 
+        v-if="isPlaying && isLoaded"
+        ref="vaalOrbRef"
+        class="replay-cursor"
+        :style="{
+          left: `${cursorX}px`,
+          top: `${cursorY}px`
+        }"
+      >
+        <div class="replay-cursor__tag">
+          <img 
+            v-if="userAvatar" 
+            :src="userAvatar" 
+            :alt="username" 
+            class="replay-cursor__tag-avatar"
+          />
+          <span class="replay-cursor__tag-name">{{ username }}</span>
+        </div>
+        <div class="replay-cursor__orb">
+          <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-cursor__orb-img" />
         </div>
       </div>
     </div>
@@ -762,9 +1067,11 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 <style scoped>
 /* ===== PAGE LAYOUT ===== */
 .replay-page {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 500px; /* Ensures minimum visibility */
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .replay-state {
@@ -777,13 +1084,15 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 
 .replay-content {
   flex: 1;
+  min-height: 0; /* Important for flex shrinking */
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
-  gap: 1.5rem;
+  gap: 1rem;
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
+  overflow: hidden;
 }
 
 /* ===== LOADING STATE ===== */
@@ -896,10 +1205,10 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 /* ===== STAGE ===== */
 .replay-stage {
   flex: 1;
+  min-height: 0; /* Allow shrinking */
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 450px;
 }
 
 /* ALTAR PLATFORM */
@@ -908,12 +1217,14 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   --altar-rune-color: rgba(60, 55, 50, 0.3);
   
   position: relative;
-  width: 320px;
-  height: 400px;
+  width: min(320px, 90vw);
+  height: min(400px, 100%);
+  aspect-ratio: 320 / 400;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: visible;
+  flex-shrink: 1;
 
   background: radial-gradient(
       ellipse at center,
@@ -1001,32 +1312,30 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   z-index: 0;
 }
 
+/* Vaal glow - now handled by the aura system for cleaner layering */
 .altar-platform::after {
   content: "";
   position: absolute;
-  inset: -20px;
+  inset: -10px;
   border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(200, 50, 50, 0.3) 0%,
-    rgba(180, 40, 40, 0.15) 40%,
-    transparent 70%
-  );
+  background: transparent;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease, box-shadow 0.4s ease;
   pointer-events: none;
   z-index: -1;
-  animation: vaalGlowPulse 0.6s ease-in-out infinite;
-  animation-play-state: paused;
 }
 
 .altar-platform--active.altar-platform--vaal::before {
   opacity: 1;
 }
 
+/* Vaal inner glow only - outer glow is handled by the aura system */
 .altar-platform--active.altar-platform--vaal::after {
   opacity: 1;
-  animation-play-state: running;
+  box-shadow: 
+    inset 0 0 30px rgba(200, 50, 50, 0.3),
+    inset 0 0 60px rgba(150, 30, 30, 0.2);
+  animation: vaalInnerGlow 0.6s ease-in-out infinite;
 }
 
 .altar-platform--active.altar-platform--vaal {
@@ -1034,9 +1343,17 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   --altar-rune-color: rgba(200, 50, 50, 0.8);
 }
 
-@keyframes vaalGlowPulse {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.08); opacity: 1; }
+@keyframes vaalInnerGlow {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 30px rgba(200, 50, 50, 0.3),
+      inset 0 0 60px rgba(150, 30, 30, 0.2);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 40px rgba(220, 60, 60, 0.4),
+      inset 0 0 80px rgba(180, 40, 40, 0.25);
+  }
 }
 
 @keyframes foilGlowSubtle {
@@ -1315,6 +1632,31 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   color: rgba(200, 180, 160, 0.85);
 }
 
+/* Transform display: before → after */
+.replay-outcome__transform {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.replay-outcome__card-name--old {
+  color: rgba(150, 140, 130, 0.6);
+  font-size: 0.85rem;
+}
+
+.replay-outcome__transform-arrow {
+  color: #50b0e0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.replay-outcome__card-name--new {
+  color: #50b0e0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .replay-outcome__actions {
   display: flex;
   gap: 0.625rem;
@@ -1355,6 +1697,29 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 
 .outcome--destroyed .replay-outcome__card-img {
   filter: grayscale(0.7) opacity(0.6);
+}
+
+/* Transform Outcome */
+.outcome--transform .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(80, 176, 224, 0.7)) brightness(1.1);
+}
+
+.outcome--transform .replay-outcome__title {
+  color: #50b0e0;
+}
+
+/* Duplicate Outcome */
+.outcome--duplicate .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(80, 224, 160, 0.7)) brightness(1.2);
+}
+
+.outcome--duplicate .replay-outcome__title {
+  color: #50e0a0;
+}
+
+.outcome--duplicate .replay-outcome__card-visual {
+  border-color: rgba(80, 224, 160, 0.3);
+  box-shadow: 0 0 12px rgba(80, 224, 160, 0.3);
 }
 
 /* ===== CURSOR ===== */

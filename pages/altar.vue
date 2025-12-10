@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
+import { TIER_CONFIG, isCardFoil } from "~/types/card";
+import type { VaalOutcome } from "~/types/vaalOutcome";
 import {
-  VARIATION_CONFIG,
-  TIER_CONFIG,
-  getCardVariation,
-  isCardFoil,
-} from "~/types/card";
+  rollVaalOutcome,
+  getShareModalContent,
+  getForcedOutcomeOptions,
+} from "~/types/vaalOutcome";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
 import { useAltarEffects } from "~/composables/useAltarEffects";
+import { useAltarAura } from "~/composables/useAltarAura";
+import { useVaalOutcomes } from "~/composables/useVaalOutcomes";
+import {
+  useCardGrouping,
+  type CardGroupWithVariations,
+  type VariationGroup,
+} from "~/composables/useCardGrouping";
+import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 
 const { t } = useI18n();
 
@@ -42,10 +51,15 @@ onMounted(() => {
   localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
 });
 
-// Cancel recording if user leaves the page
+// Cleanup on unmount
 onBeforeUnmount(() => {
+  // Cancel any active recording
   if (isRecording.value) {
     cancelRecording();
+  }
+  // Remove global earthquake class
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.remove("earthquake-global");
   }
 });
 
@@ -56,96 +70,9 @@ const collection = computed(() => localCollection.value);
 // CARD GROUPING WITH VARIATIONS
 // ==========================================
 
-interface VariationGroup {
-  variation: CardVariation;
-  cards: Card[];
-  count: number;
-}
-
-interface CardGroupWithVariations {
-  cardId: string;
-  name: string;
-  tier: CardTier;
-  itemClass: string;
-  cards: Card[];
-  count: number;
-  variations: VariationGroup[];
-  hasMultipleVariations: boolean;
-}
-
-const groupedCards = computed(() => {
-  const groups = new Map<string, CardGroupWithVariations>();
-
-  collection.value.forEach((card) => {
-    const variation: CardVariation = getCardVariation(card);
-    const existing = groups.get(card.id);
-
-    if (existing) {
-      existing.cards.push(card);
-      existing.count++;
-
-      const existingVariation = existing.variations.find(
-        (v) => v.variation === variation
-      );
-      if (existingVariation) {
-        existingVariation.cards.push(card);
-        existingVariation.count++;
-      } else {
-        existing.variations.push({
-          variation,
-          cards: [card],
-          count: 1,
-        });
-      }
-    } else {
-      groups.set(card.id, {
-        cardId: card.id,
-        name: card.name,
-        tier: card.tier,
-        itemClass: card.itemClass,
-        cards: [card],
-        count: 1,
-        variations: [
-          {
-            variation,
-            cards: [card],
-            count: 1,
-          },
-        ],
-        hasMultipleVariations: false,
-      });
-    }
-  });
-
-  // Sort variations and update hasMultipleVariations flag
-  groups.forEach((group) => {
-    group.variations.sort(
-      (a, b) =>
-        VARIATION_CONFIG[a.variation].priority -
-        VARIATION_CONFIG[b.variation].priority
-    );
-    group.hasMultipleVariations = group.variations.length > 1;
-  });
-
-  // Sort by tier then name
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
-  return Array.from(groups.values()).sort((a, b) => {
-    if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-      return tierOrder[a.tier] - tierOrder[b.tier];
-    }
-    return a.name.localeCompare(b.name);
-  });
+const { groupedCards, cardOptions } = useCardGrouping(collection, {
+  sortByNameWithinTier: true,
 });
-
-// Card selector options
-const cardOptions = computed(() =>
-  groupedCards.value.map((group) => ({
-    value: group.cardId,
-    label: group.name,
-    description: `${group.itemClass} • ${group.tier}`,
-    count: group.count,
-  }))
-);
 
 // ==========================================
 // ALTAR STATE
@@ -157,6 +84,7 @@ const isCardFlipped = ref(false);
 const isCardOnAltar = ref(false);
 const isAltarActive = ref(false); // Visual state - fades out smoothly
 const isAnimating = ref(false);
+const isTransformingCard = ref(false); // Flag to prevent fly-in animation during transform
 
 // Get the selected card group
 const selectedCardGroup = computed(() =>
@@ -202,12 +130,6 @@ const currentTierConfig = computed(() => {
   return TIER_CONFIG[displayCard.value.tier as CardTier];
 });
 
-// Altar theme styles based on card (CSS variables applied via classes now)
-const altarThemeStyles = computed(() => {
-  // CSS classes handle the theming, this is kept for potential custom overrides
-  return {};
-});
-
 // Altar classes based on card
 const altarClasses = computed(() => ({
   "altar-platform--t0": displayCard.value?.tier === "T0",
@@ -225,6 +147,17 @@ watch(selectedCardId, async (newId, oldId) => {
     const group = groupedCards.value.find((g) => g.cardId === newId);
     if (group && group.variations.length > 0) {
       selectedVariation.value = group.variations[0].variation;
+    }
+
+    // If this is a transformation, the card is already on altar - just update visually
+    if (isTransformingCard.value) {
+      isTransformingCard.value = false;
+      // Card is already in place, just clear snapshots for new appearance
+      cardSnapshot.value = null;
+      imageSnapshot.value = null;
+      capturedImageDimensions.value = null;
+      capturedCardDimensions.value = null;
+      return;
     }
 
     // Clear snapshots and dimensions when changing cards
@@ -365,7 +298,6 @@ const placeCardOnAltar = async () => {
 // ==========================================
 // VAAL ORB OUTCOMES
 // ==========================================
-type VaalOutcome = "nothing" | "foil" | "destroyed";
 type ForcedOutcome = "random" | VaalOutcome;
 
 // State for destruction animation
@@ -379,6 +311,7 @@ const {
   isRecording,
   isRecordingArmed,
   isSaving,
+  saveError,
   generatedUrl,
   replayId,
   setUser,
@@ -387,28 +320,47 @@ const {
   recordPosition,
   stopRecording,
   cancelRecording,
+  resetForNewRecording,
+  clearError,
   copyUrlToClipboard,
+  logActivityOnly,
 } = useReplayRecorder();
 
 const showShareModal = ref(false);
 const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
+const lastRecordedOutcome = ref<VaalOutcome | null>(null);
+
+// Close share modal and reset recording state to allow new recordings
+const closeShareModal = () => {
+  showShareModal.value = false;
+  // Reset recording state so user can immediately start a new recording
+  resetForNewRecording();
+};
 
 // Record preferences - saved in localStorage
 const recordOnNothing = ref(false);
 const recordOnFoil = ref(true);
 const recordOnDestroyed = ref(true);
+const recordOnTransform = ref(false);
+const recordOnDuplicate = ref(true);
 
 // Load preferences from localStorage on mount
 onMounted(() => {
   const savedNothing = localStorage.getItem("record_nothing");
   const savedFoil = localStorage.getItem("record_foil");
   const savedDestroyed = localStorage.getItem("record_destroyed");
+  const savedTransform = localStorage.getItem("record_transform");
+  const savedDuplicate = localStorage.getItem("record_duplicate");
 
   if (savedNothing !== null) recordOnNothing.value = savedNothing === "true";
   if (savedFoil !== null) recordOnFoil.value = savedFoil === "true";
   if (savedDestroyed !== null)
     recordOnDestroyed.value = savedDestroyed === "true";
+  if (savedTransform !== null)
+    recordOnTransform.value = savedTransform === "true";
+  if (savedDuplicate !== null)
+    recordOnDuplicate.value = savedDuplicate === "true";
 });
 
 // Watch and save preferences to localStorage
@@ -419,11 +371,15 @@ watch(recordOnFoil, (val) => localStorage.setItem("record_foil", String(val)));
 watch(recordOnDestroyed, (val) =>
   localStorage.setItem("record_destroyed", String(val))
 );
+watch(recordOnTransform, (val) =>
+  localStorage.setItem("record_transform", String(val))
+);
+watch(recordOnDuplicate, (val) =>
+  localStorage.setItem("record_duplicate", String(val))
+);
 
 // Check if recording should happen for a given outcome
-const shouldRecordOutcome = (
-  outcome: "nothing" | "foil" | "destroyed"
-): boolean => {
+const shouldRecordOutcome = (outcome: VaalOutcome): boolean => {
   switch (outcome) {
     case "nothing":
       return recordOnNothing.value;
@@ -431,6 +387,10 @@ const shouldRecordOutcome = (
       return recordOnFoil.value;
     case "destroyed":
       return recordOnDestroyed.value;
+    case "transform":
+      return recordOnTransform.value;
+    case "duplicate":
+      return recordOnDuplicate.value;
     default:
       return false;
   }
@@ -447,8 +407,14 @@ watch(
 
 const startAutoRecording = () => {
   // Check if any recording is enabled
-  if (!recordOnNothing.value && !recordOnFoil.value && !recordOnDestroyed.value)
-    return;
+  const anyRecordingEnabled =
+    recordOnNothing.value ||
+    recordOnFoil.value ||
+    recordOnDestroyed.value ||
+    recordOnTransform.value ||
+    recordOnDuplicate.value;
+
+  if (!anyRecordingEnabled) return;
 
   const card = displayCard.value;
   if (!card || !isCardOnAltar.value) return;
@@ -474,237 +440,79 @@ const handleCopyUrl = async () => {
   }
 };
 
-const forcedOutcomeOptions = [
-  { value: "random", label: "🎲 Aléatoire (défaut)" },
-  { value: "nothing", label: "😐 Rien ne se passe" },
-  { value: "foil", label: "✨ Transformation Foil" },
-  { value: "destroyed", label: "💀 Destruction" },
-];
+// Share modal content based on outcome (centralized configuration)
+const shareModalContent = computed(() =>
+  getShareModalContent(lastRecordedOutcome.value)
+);
+
+// Use centralized outcome options
+const forcedOutcomeOptions = getForcedOutcomeOptions();
 
 // Simulate Vaal outcome (will be server-side later)
 const simulateVaalOutcome = (): VaalOutcome => {
   // If a forced outcome is set, use it
   if (forcedOutcome.value !== "random") {
-    return forcedOutcome.value;
+    return forcedOutcome.value as VaalOutcome;
   }
 
-  const rand = Math.random();
-  // 50% nothing, 30% foil, 20% destroyed
-  if (rand < 0.5) return "nothing";
-  if (rand < 0.8) return "foil";
-  return "destroyed";
+  // Use centralized probability-based roll
+  return rollVaalOutcome();
 };
 
-// Transform card to foil instantly with dramatic effect
-const transformToFoil = async () => {
-  if (!altarCardRef.value || !displayCard.value) return;
+// Use shared disintegration effect composable
+const {
+  cardSnapshot,
+  imageSnapshot,
+  capturedImageDimensions,
+  capturedCardDimensions,
+  canvasHasContent,
+  createDisintegrationEffect,
+  findCardImageElement: findCardImageElementBase,
+  captureCardSnapshot: captureCardSnapshotBase,
+  clearSnapshots,
+} = useDisintegrationEffect();
 
-  isAnimating.value = true;
+// Wrapper to use the composable with our ref
+const findCardImageElement = () => findCardImageElementBase(cardFrontRef);
+const captureCardSnapshot = () => captureCardSnapshotBase(cardFrontRef);
 
-  // Find the card in the local collection and update it
-  const cardIndex = localCollection.value.findIndex(
-    (c) => c.uid === displayCard.value!.uid
-  );
-  if (cardIndex !== -1) {
-    localCollection.value[cardIndex].foil = true;
-  }
-
-  // Phase 1: Build up glow
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1.8) saturate(1.5)",
-    scale: 1.05,
-    duration: 0.2,
-    ease: "power2.in",
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  // Phase 2: Bright flash - this is when the transformation happens visually
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(3) saturate(2)",
-    scale: 1.1,
-    duration: 0.1,
-    ease: "power2.out",
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Phase 3: Settle back with the new foil appearance
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1) saturate(1)",
-    scale: 1,
-    duration: 0.4,
-    ease: "power2.out",
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  isAnimating.value = false;
-
-  // Re-capture snapshot with the new foil appearance
-  captureCardSnapshot();
-};
-
-const DISINTEGRATION_FRAMES = 64;
-const REPETITION_COUNT = 2;
-
-const cardSnapshot = ref<HTMLCanvasElement | null>(null);
-const imageSnapshot = ref<HTMLCanvasElement | null>(null);
-const isCapturingSnapshot = ref(false);
-const capturedImageDimensions = ref<{ width: number; height: number } | null>(
-  null
-);
-const capturedCardDimensions = ref<{ width: number; height: number } | null>(
-  null
-);
-
-const findCardImageElement = (): HTMLElement | null => {
-  if (!cardFrontRef.value) return null;
-  return cardFrontRef.value.querySelector(
-    ".game-card__image-wrapper"
-  ) as HTMLElement | null;
-};
-
-const loadImageToCanvas = (
-  imgUrl: string,
-  targetWidth?: number,
-  targetHeight?: number
-): Promise<HTMLCanvasElement | null> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-
-    img.onload = () => {
-      const width = targetWidth || img.naturalWidth;
-      const height = targetHeight || img.naturalHeight;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas);
+// Vaal Outcomes composable for modular animations
+const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
+  useVaalOutcomes({
+    cardRef: altarCardRef,
+    cardFrontRef,
+    displayCard,
+    localCollection,
+    isAnimating,
+    onCardUpdate: (updatedCard) => {
+      // Called when card is updated (e.g., foil transformation)
+      // Update selectedVariation to match the new foil state so displayCard stays valid
+      if (updatedCard.foil) {
+        selectedVariation.value = "foil";
+      }
+      // Re-capture snapshot with new appearance
+      nextTick(() => captureCardSnapshot());
+    },
+    onCardTransformed: (oldCard, newCard) => {
+      // Set flag to prevent fly-in animation - card morphs in place
+      isTransformingCard.value = true;
+      // Update the display card to show the new card
+      // Keep foil variation if the new card is foil (transformation preserves foil status)
+      if (newCard.foil) {
+        selectedVariation.value = "foil";
       } else {
-        resolve(null);
+        selectedVariation.value = "standard";
       }
-    };
-
-    img.onerror = () => resolve(null);
-    img.src = `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
+      selectedCardId.value = newCard.id;
+      // Re-capture snapshot for new card appearance
+      nextTick(() => captureCardSnapshot());
+    },
+    onCardDuplicated: (originalCard, newCard) => {
+      // Card is already added to collection by the composable
+      // Re-capture snapshot
+      nextTick(() => captureCardSnapshot());
+    },
   });
-};
-
-// Capture both the image and the full card as canvas snapshots
-const captureCardSnapshot = async () => {
-  if (!cardFrontRef.value || isCapturingSnapshot.value) return;
-
-  isCapturingSnapshot.value = true;
-
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    if (!cardFrontRef.value) {
-      isCapturingSnapshot.value = false;
-      return;
-    }
-
-    const imgElement = cardFrontRef.value.querySelector(
-      ".game-card__image"
-    ) as HTMLImageElement;
-    const imageWrapperElement = findCardImageElement();
-
-    if (imgElement && imgElement.src && imageWrapperElement) {
-      const wrapperRect = imageWrapperElement.getBoundingClientRect();
-      const naturalRatio = imgElement.naturalWidth / imgElement.naturalHeight;
-      const wrapperRatio = wrapperRect.width / wrapperRect.height;
-
-      const displaySize =
-        naturalRatio > wrapperRatio
-          ? wrapperRect.width
-          : wrapperRect.height * naturalRatio;
-
-      const targetSize = Math.round(displaySize);
-      const directCanvas = await loadImageToCanvas(
-        imgElement.src,
-        targetSize,
-        targetSize
-      );
-
-      if (directCanvas && canvasHasContent(directCanvas)) {
-        imageSnapshot.value = directCanvas;
-        capturedImageDimensions.value = {
-          width: targetSize,
-          height: targetSize,
-        };
-      }
-    }
-
-    const cardRect = cardFrontRef.value.getBoundingClientRect();
-    const canvas = await html2canvas(cardFrontRef.value, {
-      backgroundColor: null,
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      imageTimeout: 10000,
-    });
-
-    cardSnapshot.value = canvas;
-    capturedCardDimensions.value = {
-      width: cardRect.width,
-      height: cardRect.height,
-    };
-  } catch (error) {
-    cardSnapshot.value = null;
-  }
-
-  isCapturingSnapshot.value = false;
-};
-
-const canvasHasContent = (canvas: HTMLCanvasElement): boolean => {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return false;
-  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] > 0) return true;
-  }
-  return false;
-};
-
-const generateDisintegrationFrames = (
-  canvas: HTMLCanvasElement,
-  count: number
-): HTMLCanvasElement[] => {
-  const { width, height } = canvas;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return [];
-
-  const originalData = ctx.getImageData(0, 0, width, height);
-  const imageDatas = [...Array(count)].map(() =>
-    ctx.createImageData(width, height)
-  );
-
-  for (let x = 0; x < width; ++x) {
-    for (let y = 0; y < height; ++y) {
-      for (let i = 0; i < REPETITION_COUNT; ++i) {
-        const dataIndex = Math.floor(
-          (count * (Math.random() + (2 * x) / width)) / 3
-        );
-        const pixelIndex = (y * width + x) * 4;
-        for (let offset = 0; offset < 4; ++offset) {
-          imageDatas[dataIndex].data[pixelIndex + offset] =
-            originalData.data[pixelIndex + offset];
-        }
-      }
-    }
-  }
-
-  return imageDatas.map((data) => {
-    const newCanvas = document.createElement("canvas");
-    newCanvas.width = width;
-    newCanvas.height = height;
-    newCanvas.getContext("2d")?.putImageData(data, 0, 0);
-    return newCanvas;
-  });
-};
 
 const cleanupAfterDestruction = (destroyedCardUid: number) => {
   const cardIndex = localCollection.value.findIndex(
@@ -714,10 +522,7 @@ const cleanupAfterDestruction = (destroyedCardUid: number) => {
     localCollection.value.splice(cardIndex, 1);
   }
 
-  cardSnapshot.value = null;
-  imageSnapshot.value = null;
-  capturedImageDimensions.value = null;
-  capturedCardDimensions.value = null;
+  clearSnapshots();
   isCardBeingDestroyed.value = false;
   isCardOnAltar.value = false;
   isAltarActive.value = false;
@@ -736,83 +541,6 @@ const cleanupAfterDestruction = (destroyedCardUid: number) => {
       filter: "none",
     });
   }
-};
-
-const createDisintegrationEffect = (
-  canvas: HTMLCanvasElement,
-  container: HTMLElement,
-  options: {
-    frameCount?: number;
-    direction?: "up" | "out";
-    duration?: number;
-    delayMultiplier?: number;
-    targetWidth?: number;
-    targetHeight?: number;
-  } = {}
-): Promise<HTMLCanvasElement[]> => {
-  const {
-    frameCount = DISINTEGRATION_FRAMES,
-    direction = "out",
-    duration = 1.2,
-    delayMultiplier = 1.5,
-    targetWidth,
-    targetHeight,
-  } = options;
-
-  const displayWidth = targetWidth || canvas.width;
-  const displayHeight = targetHeight || canvas.height;
-  const frames = generateDisintegrationFrames(canvas, frameCount);
-
-  frames.forEach((frame) => {
-    frame.style.cssText = `
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: ${displayWidth}px;
-      height: ${displayHeight}px;
-      opacity: 1;
-      transform: rotate(0deg) translate(0px, 0px);
-    `;
-    container.appendChild(frame);
-  });
-
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        frames.forEach((frame, i) => {
-          frame.style.transition = `transform ${duration}s ease-out, opacity ${duration}s ease-out`;
-          frame.style.transitionDelay = `${
-            (delayMultiplier * i) / frames.length
-          }s`;
-        });
-
-        requestAnimationFrame(() => {
-          frames.forEach((frame) => {
-            const randomAngle = 2 * Math.PI * (Math.random() - 0.5);
-            let translateX: number, translateY: number;
-
-            if (direction === "up") {
-              translateX = (Math.random() - 0.5) * 120;
-              translateY = -100 - Math.random() * 150;
-            } else {
-              const distance = 80 + Math.random() * 60;
-              translateX = distance * Math.cos(randomAngle);
-              translateY = distance * Math.sin(randomAngle) - 30;
-            }
-
-            frame.style.transform = `
-              rotate(${25 * (Math.random() - 0.5)}deg) 
-              translate(${translateX}px, ${translateY}px)
-              rotate(${20 * (Math.random() - 0.5)}deg)
-            `;
-            frame.style.opacity = "0";
-          });
-
-          resolve(frames);
-        });
-      });
-    });
-  });
 };
 
 const destroyCard = async () => {
@@ -959,61 +687,74 @@ const destroyCard = async () => {
 // Flip card to back (first part of Vaal ritual)
 // Handle Vaal outcome - instant result
 const handleVaalOutcome = async (outcome: VaalOutcome) => {
-  // Handle recording based on outcome preferences
-  if (isRecording.value) {
-    if (shouldRecordOutcome(outcome)) {
-      stopRecording(outcome);
-      // Show share modal after 2 seconds (when recording finishes)
-      setTimeout(() => {
-        showShareModal.value = true;
-        urlCopied.value = false;
-      }, 2100);
-    } else {
-      // Cancel recording for outcomes that shouldn't be recorded
+  // IMPORTANT: Capture card data BEFORE animation starts
+  // After animation, displayCard may have changed (foil, transform, etc.)
+  const cardBeforeAnimation = displayCard.value;
+  if (!cardBeforeAnimation) {
+    console.warn("handleVaalOutcome called without a card on altar");
+    return;
+  }
+  
+  const capturedCardData = {
+    cardId: cardBeforeAnimation.id,
+    tier: cardBeforeAnimation.tier,
+  };
+
+  const shouldRecord = isRecording.value && shouldRecordOutcome(outcome);
+  let resultCardId: string | undefined;
+
+  // Execute the outcome animation first (for outcomes that produce a result)
+  switch (outcome) {
+    case "nothing":
+      await executeNothing();
+      break;
+
+    case "foil":
+      await executeFoil();
+      break;
+
+    case "destroyed":
+      await destroyCard();
+      break;
+
+    case "transform":
+      // Transform returns the new card - capture it for the replay
+      const transformResult = await executeTransform();
+      if (transformResult.newCard) {
+        resultCardId = transformResult.newCard.id;
+      }
+      break;
+
+    case "duplicate":
+      await executeDuplicate();
+      break;
+  }
+
+  // Handle recording AFTER the outcome so we have the result info
+  if (shouldRecord) {
+    // Full recording - will save replay AND activity log (with replay link)
+    stopRecording(outcome, resultCardId);
+    lastRecordedOutcome.value = outcome;
+    urlCopied.value = false;
+
+    // Wait a moment after the animation completes so user can see the result
+    // before showing the share modal
+    setTimeout(() => {
+      showShareModal.value = true;
+    }, 1200);
+  } else {
+    // No replay recorded - but still log the activity for the real-time feed
+    // Use captured card data from BEFORE the animation
+    logActivityOnly(capturedCardData, outcome, resultCardId);
+    
+    // Cancel any in-progress recording if outcome wasn't selected for recording
+    if (isRecording.value) {
       cancelRecording();
     }
   }
 
-  switch (outcome) {
-    case "nothing":
-      // Nothing happens - just a brief flash to indicate the orb was consumed
-      await showNothingEffect();
-      break;
-
-    case "foil":
-      // Transform to foil instantly
-      await transformToFoil();
-      break;
-
-    case "destroyed":
-      // Destroy the card
-      await destroyCard();
-      break;
-  }
-};
-
-// Effect when nothing happens
-const showNothingEffect = async () => {
-  if (!altarCardRef.value) return;
-
-  isAnimating.value = true;
-
-  // Brief disappointed flash
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1.3) saturate(0.8)",
-    duration: 0.15,
-    ease: "power2.out",
-    onComplete: () => {
-      gsap.to(altarCardRef.value, {
-        filter: "brightness(1) saturate(1)",
-        duration: 0.3,
-        ease: "power2.out",
-      });
-    },
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  isAnimating.value = false;
+  // Force reset aura to dormant state after any Vaal outcome
+  resetAura();
 };
 
 // Card is thrown/ejected towards a random direction with spin
@@ -1062,6 +803,7 @@ const isDraggingOrb = ref(false);
 const isReturningOrb = ref(false);
 const draggedOrbIndex = ref<number | null>(null);
 const altarAreaRef = ref<HTMLElement | null>(null);
+const altarPlatformRef = ref<HTMLElement | null>(null);
 const floatingOrbRef = ref<HTMLElement | null>(null);
 const orbRefs = ref<HTMLElement[]>([]);
 
@@ -1070,6 +812,9 @@ let originX = 0;
 let originY = 0;
 let currentX = 0;
 let currentY = 0;
+// Store click offset from orb center to prevent jump on drag start
+let clickOffsetX = 0;
+let clickOffsetY = 0;
 
 // ==========================================
 // HEARTBEAT EFFECT - Using shared composable
@@ -1084,6 +829,11 @@ const {
   createHeartbeatStyles,
   updateHeartbeat,
   resetEffects: resetHeartbeatEffects,
+  // Earthquake effect styles
+  earthquakeHeaderStyles,
+  earthquakeVaalStyles,
+  earthquakeBodyStyles,
+  getEarthquakeClasses,
 } = useAltarEffects({
   cardRef: altarCardRef,
   isActive: isDraggingOrb,
@@ -1093,6 +843,33 @@ const {
 
 // Create heartbeat styles with additional animation check
 const heartbeatStyles = createHeartbeatStyles(isAnimatingRef);
+
+// Computed classes for earthquake effect on different UI sections
+const headerEarthquakeClasses = computed(() => getEarthquakeClasses("header"));
+const vaalSectionEarthquakeClasses = computed(() =>
+  getEarthquakeClasses("vaalSection")
+);
+const bodyEarthquakeClasses = computed(() => getEarthquakeClasses("body"));
+
+// Global earthquake effect on html element (affects header, footer, entire page)
+watch(isOrbOverCard, (isOver) => {
+  if (typeof document !== "undefined") {
+    if (isOver) {
+      document.documentElement.classList.add("earthquake-global");
+    } else {
+      document.documentElement.classList.remove("earthquake-global");
+    }
+  }
+});
+
+// Altar Aura Effect - outer glow, rays, and particles
+const { auraContainer, resetAura } = useAltarAura({
+  containerRef: altarPlatformRef,
+  isActive: isAltarActive,
+  isVaalMode: isOrbOverCard,
+  tier: computed(() => displayCard.value?.tier),
+  isFoil: isCurrentCardFoil,
+});
 
 // Set orb ref
 const setOrbRef = (el: HTMLElement | null, index: number) => {
@@ -1114,8 +891,16 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
 
   event.preventDefault();
 
+  // Close share modal if present (to allow new recording)
+  if (showShareModal.value) {
+    closeShareModal();
+  }
+
   // Auto-start recording if enabled
   startAutoRecording();
+
+  const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
+  const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
 
   // Get the origin position of the orb element
   const orbElement = orbRefs.value[index];
@@ -1123,13 +908,15 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
     const rect = orbElement.getBoundingClientRect();
     originX = rect.left + rect.width / 2;
     originY = rect.top + rect.height / 2;
+    
+    // Calculate click offset from orb center to prevent jump
+    clickOffsetX = clientX - originX;
+    clickOffsetY = clientY - originY;
   }
 
   isDraggingOrb.value = true;
   draggedOrbIndex.value = index;
 
-  const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
-  const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
   currentX = clientX;
   currentY = clientY;
 
@@ -1144,11 +931,17 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   }
 
   // Wait for floating orb to be rendered, then set initial position
+  // Position the floating orb so that the click point stays at the same visual position
   nextTick(() => {
     if (floatingOrbRef.value) {
+      // Position orb center at (clientX - clickOffsetX, clientY - clickOffsetY)
+      // This keeps the orb visually in the same place as the original
+      const orbCenterX = clientX - clickOffsetX;
+      const orbCenterY = clientY - clickOffsetY;
+
       gsap.set(floatingOrbRef.value, {
-        left: clientX,
-        top: clientY,
+        left: orbCenterX,
+        top: orbCenterY,
         xPercent: -50,
         yPercent: -50,
       });
@@ -1174,25 +967,31 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   currentX = clientX;
   currentY = clientY;
 
+  // Calculate orb center position by applying click offset
+  const orbCenterX = clientX - clickOffsetX;
+  const orbCenterY = clientY - clickOffsetY;
+
   // Instant position update using GSAP set (no animation)
+  // Apply click offset to keep orb visually attached to click point
   gsap.set(floatingOrbRef.value, {
-    left: clientX,
-    top: clientY,
+    left: orbCenterX,
+    top: orbCenterY,
   });
 
-  // Check if orb is over the card
+  // Check if orb is over the card (use orb center, not mouse position)
   if (altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
     const isOver =
-      clientX >= cardRect.left &&
-      clientX <= cardRect.right &&
-      clientY >= cardRect.top &&
-      clientY <= cardRect.bottom;
+      orbCenterX >= cardRect.left &&
+      orbCenterX <= cardRect.right &&
+      orbCenterY >= cardRect.top &&
+      orbCenterY <= cardRect.bottom;
+    
     isOrbOverCard.value = isOver;
   }
 
-  // Update heartbeat intensity based on proximity
-  updateHeartbeat(clientX, clientY);
+  // Update heartbeat intensity based on proximity (use orb center)
+  updateHeartbeat(orbCenterX, orbCenterY);
 
   // Record position for replay relative to card center
   if (isRecording.value && altarCardRef.value) {
@@ -1201,7 +1000,7 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
       x: cardRect.left + cardRect.width / 2,
       y: cardRect.top + cardRect.height / 2,
     };
-    recordPosition(clientX, clientY, cardCenter);
+    recordPosition(orbCenterX, orbCenterY, cardCenter);
   }
 };
 
@@ -1314,9 +1113,18 @@ const endDragOrb = async () => {
       </div>
 
       <!-- Main altar content -->
-      <div v-if="loggedIn" class="altar-page">
+      <div
+        v-if="loggedIn"
+        class="altar-page"
+        :class="bodyEarthquakeClasses"
+        :style="earthquakeBodyStyles"
+      >
         <!-- Header + Card selector -->
-        <div class="altar-selector-section">
+        <div
+          class="altar-selector-section"
+          :class="headerEarthquakeClasses"
+          :style="earthquakeHeaderStyles"
+        >
           <RunicHeader
             :title="t('altar.title')"
             :subtitle="t('altar.subtitle')"
@@ -1372,9 +1180,9 @@ const endDragOrb = async () => {
         <div ref="altarAreaRef" class="altar-area">
           <!-- The altar platform -->
           <div
+            ref="altarPlatformRef"
             class="altar-platform"
             :class="altarClasses"
-            :style="altarThemeStyles"
           >
             <!-- Runic circles decoration -->
             <div class="altar-circle altar-circle--outer"></div>
@@ -1463,7 +1271,11 @@ const endDragOrb = async () => {
         </div>
 
         <!-- Vaal Orbs inventory -->
-        <div class="vaal-orbs-section">
+        <div
+          class="vaal-orbs-section"
+          :class="vaalSectionEarthquakeClasses"
+          :style="earthquakeVaalStyles"
+        >
           <!-- Header with actions -->
           <div class="vaal-header-wrapper">
             <div class="vaal-header">
@@ -1652,6 +1464,36 @@ const endDragOrb = async () => {
                           size="sm"
                         />
                       </div>
+
+                      <div class="prefs-toggle">
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--transform"
+                          >Transformation</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnTransform"
+                          :toggle="true"
+                          size="sm"
+                        />
+                      </div>
+
+                      <div class="prefs-toggle">
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--duplicate"
+                          >Duplication</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnDuplicate"
+                          :toggle="true"
+                          size="sm"
+                        />
+                      </div>
+
+                      <p class="prefs-experimental-notice">
+                        Le système <strong>Vaal</strong> est en cours
+                        d'exploration et de tests. Les effets, probabilités et
+                        animations sont sujets à modification.
+                      </p>
                     </div>
                   </div>
 
@@ -1703,25 +1545,29 @@ const endDragOrb = async () => {
           </Transition>
         </Teleport>
 
-        <!-- Share Replay Modal -->
+        <!-- Share Replay Panel - Slides up from bottom -->
         <Teleport to="body">
-          <Transition name="modal">
+          <Transition name="share-slide">
             <div
-              v-if="showShareModal && generatedUrl"
-              class="prefs-modal-overlay"
-              @click.self="showShareModal = false"
+              v-if="showShareModal"
+              class="share-panel-container"
+              :class="`share-panel--${shareModalContent.theme}`"
             >
-              <div class="prefs-modal share-modal">
-                <div class="prefs-modal__header">
-                  <h3 class="prefs-modal__title">
-                    <span class="prefs-modal__icon">🎬</span>
-                    Session enregistrée !
-                  </h3>
+              <div class="share-panel">
+                <div class="share-panel__header">
+                  <div class="share-panel__title-row">
+                    <span class="share-panel__icon">{{
+                      shareModalContent.icon
+                    }}</span>
+                    <h3 class="share-panel__title">
+                      {{ shareModalContent.title }}
+                    </h3>
+                  </div>
                   <button
                     type="button"
-                    class="prefs-modal__close"
+                    class="share-panel__close"
                     aria-label="Fermer"
-                    @click="showShareModal = false"
+                    @click="closeShareModal"
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -1738,18 +1584,22 @@ const endDragOrb = async () => {
                   </button>
                 </div>
 
-                <div class="prefs-modal__content">
-                  <p class="share-modal__text">
-                    Ta session a été enregistrée. Partage ce lien pour que
-                    d'autres puissent voir ta Vaal Orb !
-                  </p>
+                <p class="share-panel__text">{{ shareModalContent.text }}</p>
 
-                  <div class="share-modal__url">
+                <!-- Error state -->
+                <div v-if="saveError" class="share-panel__error">
+                  <span class="share-panel__error-icon">⚠</span>
+                  <span class="share-panel__error-text">{{ saveError }}</span>
+                </div>
+
+                <!-- URL state -->
+                <div v-else class="share-panel__url">
+                  <template v-if="generatedUrl">
                     <input
                       type="text"
                       :value="generatedUrl"
                       readonly
-                      class="share-modal__input"
+                      class="share-panel__input"
                       @click="($event.target as HTMLInputElement).select()"
                     />
                     <RunicButton
@@ -1757,19 +1607,45 @@ const endDragOrb = async () => {
                       size="sm"
                       @click="handleCopyUrl"
                     >
-                      {{ urlCopied ? "✓ Copié !" : "Copier" }}
+                      {{ urlCopied ? "✓ Copié" : "Copier" }}
                     </RunicButton>
-                  </div>
+                  </template>
+                  <template v-else>
+                    <div class="share-panel__input share-panel__input--loading">
+                      <span>Génération du lien...</span>
+                      <span class="share-panel__spinner"></span>
+                    </div>
+                  </template>
+                </div>
 
-                  <div class="share-modal__preview">
-                    <NuxtLink
-                      :to="generatedUrl"
-                      target="_blank"
-                      class="share-modal__link"
+                <div
+                  v-if="generatedUrl && !saveError"
+                  class="share-panel__actions"
+                >
+                  <a
+                    :href="generatedUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="share-btn"
+                    :class="shareModalContent.buttonClass"
+                  >
+                    <span class="share-btn__text">{{
+                      shareModalContent.linkText
+                    }}</span>
+                    <svg
+                      class="share-btn__icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
                     >
-                      Voir le replay →
-                    </NuxtLink>
-                  </div>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
                 </div>
               </div>
             </div>
@@ -2817,7 +2693,7 @@ const endDragOrb = async () => {
 
 .vaal-header__subtitle {
   font-family: "Crimson Text", serif;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-style: italic;
   color: rgba(140, 130, 120, 0.7);
   margin: 0;
@@ -2953,7 +2829,7 @@ const endDragOrb = async () => {
 
 .vaal-orbs-empty__text {
   font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   font-style: italic;
 }
 
@@ -3145,7 +3021,7 @@ const endDragOrb = async () => {
 
 .prefs-section__title {
   font-family: "Cinzel", serif;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -3155,7 +3031,7 @@ const endDragOrb = async () => {
 
 .prefs-section__hint {
   font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
+  font-size: 1.0625rem;
   color: rgba(140, 130, 120, 0.7);
   margin: 0 0 0.5rem;
 }
@@ -3190,7 +3066,7 @@ const endDragOrb = async () => {
 
 .prefs-toggle__label {
   font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: rgba(200, 190, 180, 0.85);
 }
 
@@ -3202,6 +3078,34 @@ const endDragOrb = async () => {
   color: #e05050;
 }
 
+.prefs-toggle__label--transform {
+  color: #50b0e0;
+}
+
+.prefs-toggle__label--duplicate {
+  color: #50e0a0;
+}
+
+/* Experimental Notice */
+.prefs-experimental-notice {
+  font-family: "Crimson Text", serif;
+  font-size: 1.0625rem;
+  font-style: italic;
+  color: rgba(200, 170, 90, 0.9);
+  background: rgba(200, 160, 80, 0.12);
+  border: 1px solid rgba(200, 160, 80, 0.25);
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  margin: 1rem 0 0 0;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.prefs-experimental-notice strong {
+  color: rgba(230, 200, 100, 1);
+  font-weight: 700;
+}
+
 /* Preferences Fields (Admin section) */
 .prefs-field {
   display: flex;
@@ -3211,7 +3115,7 @@ const endDragOrb = async () => {
 
 .prefs-field__label {
   font-family: "Cinzel", serif;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -3220,7 +3124,7 @@ const endDragOrb = async () => {
 
 .prefs-field__hint {
   font-family: "Crimson Text", serif;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-style: italic;
   color: rgba(140, 130, 120, 0.6);
   margin: 0;
@@ -3313,7 +3217,7 @@ const endDragOrb = async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: 1rem;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
   background: rgba(30, 28, 26, 0.8);
@@ -3355,58 +3259,520 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   SHARE MODAL
+   SHARE PANEL - Notification banner style
    ========================================== */
-.share-modal {
-  max-width: 500px;
+.share-panel-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  padding: 0 1rem;
+  pointer-events: none;
 }
 
-.share-modal__text {
-  color: rgba(200, 180, 160, 0.9);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin-bottom: 0.5rem;
+.share-panel {
+  pointer-events: auto;
+  max-width: 400px;
+  margin: 0 auto;
+  position: relative;
+
+  /* Dark runic background */
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 22, 0.98) 0%,
+    rgba(12, 12, 15, 0.99) 50%,
+    rgba(14, 14, 18, 0.98) 100%
+  );
+
+  /* Sharp runic border */
+  border: 1px solid rgba(60, 55, 50, 0.5);
+  border-radius: 4px;
+
+  /* Strong shadow for floating effect */
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7), 0 4px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(80, 75, 70, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
-.share-modal__url {
+/* Runic corner decorations */
+.share-panel::before,
+.share-panel::after {
+  content: "✧";
+  position: absolute;
+  font-size: 0.6rem;
+  color: rgba(120, 110, 100, 0.4);
+  pointer-events: none;
+}
+
+.share-panel::before {
+  top: 6px;
+  left: 8px;
+}
+
+.share-panel::after {
+  top: 6px;
+  right: 8px;
+}
+
+.share-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid rgba(60, 55, 50, 0.25);
+}
+
+.share-panel__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.share-panel__icon {
+  font-size: 1rem;
+}
+
+.share-panel__title {
+  font-family: "Cinzel", serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.share-panel__close {
+  background: transparent;
+  border: none;
+  color: rgba(150, 140, 130, 0.5);
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.share-panel__close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.share-panel__close:hover {
+  color: var(--color-text);
+}
+
+.share-panel__text {
+  color: rgba(180, 170, 160, 0.85);
+  font-size: 1rem;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0.75rem 1rem 0;
+}
+
+.share-panel__url {
   display: flex;
   gap: 0.5rem;
   align-items: stretch;
+  padding: 0.75rem 1rem;
 }
 
-.share-modal__input {
+.share-panel__input {
   flex: 1;
-  background: rgba(20, 18, 16, 0.8);
-  border: 1px solid rgba(60, 55, 50, 0.5);
-  border-radius: 4px;
-  padding: 0.5rem 0.75rem;
+  background: rgba(10, 10, 12, 0.6);
+  border: 1px solid rgba(50, 48, 45, 0.5);
+  border-radius: 2px;
+  padding: 0.5rem 0.625rem;
   color: var(--color-text);
   font-family: monospace;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.share-modal__input:focus {
+.share-panel__input:focus {
   outline: none;
   border-color: var(--color-primary);
 }
 
-.share-modal__preview {
-  margin-top: 1rem;
-  text-align: center;
+.share-panel__input--loading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: rgba(150, 145, 140, 0.5);
+  font-style: italic;
+  font-family: inherit;
 }
 
-.share-modal__link {
-  color: var(--color-primary);
+.share-panel__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(150, 145, 140, 0.2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.share-panel__actions {
+  padding: 0.75rem 1rem 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* ==========================================
+   THEMED SHARE BUTTONS
+   ========================================== */
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-family: "Cinzel", serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   text-decoration: none;
-  font-size: 0.9rem;
-  transition: color 0.2s;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.share-modal__link:hover {
-  color: var(--color-primary-light);
-  text-decoration: underline;
+.share-btn::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.share-btn__text {
+  position: relative;
+  z-index: 1;
+}
+
+.share-btn__icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.share-btn:hover .share-btn__icon {
+  transform: translate(2px, -2px);
+}
+
+/* Default - Gold */
+.share-btn--default {
+  color: #c9a227;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 25, 20, 0.95) 0%,
+    rgba(15, 12, 10, 0.98) 100%
+  );
+  border: 1px solid rgba(100, 80, 60, 0.4);
+  box-shadow: inset 0 1px 0 rgba(100, 80, 60, 0.2), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--default:hover {
+  color: #e0c060;
+  border-color: rgba(150, 120, 80, 0.5);
+  box-shadow: inset 0 1px 0 rgba(150, 120, 80, 0.3),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(201, 162, 39, 0.15);
+}
+
+/* Nothing - Muted/Grey */
+.share-btn--nothing {
+  color: rgba(140, 135, 130, 0.8);
+  background: linear-gradient(
+    180deg,
+    rgba(25, 24, 23, 0.95) 0%,
+    rgba(15, 14, 13, 0.98) 100%
+  );
+  border: 1px solid rgba(70, 65, 60, 0.35);
+  box-shadow: inset 0 1px 0 rgba(70, 65, 60, 0.15), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.share-btn--nothing:hover {
+  color: rgba(170, 165, 160, 0.9);
+  border-color: rgba(90, 85, 80, 0.45);
+}
+
+/* Destroyed - Red/Blood */
+.share-btn--destroyed {
+  color: #c83232;
+  background: linear-gradient(
+    180deg,
+    rgba(35, 15, 15, 0.95) 0%,
+    rgba(20, 8, 8, 0.98) 100%
+  );
+  border: 1px solid rgba(180, 50, 50, 0.35);
+  box-shadow: inset 0 1px 0 rgba(180, 50, 50, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--destroyed:hover {
+  color: #e55050;
+  border-color: rgba(200, 60, 60, 0.5);
+  box-shadow: inset 0 1px 0 rgba(200, 60, 60, 0.25),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(200, 50, 50, 0.2);
+}
+
+/* Foil - Prismatic/Holographic */
+.share-btn--foil {
+  color: #e0d0f0;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 25, 35, 0.95) 0%,
+    rgba(15, 12, 18, 0.98) 100%
+  );
+  border: 1px solid rgba(160, 140, 200, 0.4);
+  box-shadow: inset 0 1px 0 rgba(200, 180, 255, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.share-btn--foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(192, 160, 255, 0.15) 0%,
+    rgba(255, 160, 192, 0.15) 25%,
+    rgba(160, 255, 192, 0.15) 50%,
+    rgba(160, 192, 255, 0.15) 75%,
+    rgba(192, 160, 255, 0.15) 100%
+  );
+  background-size: 400% 400%;
+  animation: foilShimmer 4s linear infinite;
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+.share-btn--foil:hover {
+  color: #fff;
+  border-color: rgba(192, 160, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 25px rgba(192, 160, 255, 0.25),
+    0 0 40px rgba(255, 160, 192, 0.15);
+}
+
+@keyframes foilShimmer {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 400% 400%;
+  }
+}
+
+/* Transform - Blue/Cyan mystical */
+.share-btn--transform {
+  color: #50b0e0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 25, 35, 0.95) 0%,
+    rgba(8, 15, 22, 0.98) 100%
+  );
+  border: 1px solid rgba(80, 160, 200, 0.35);
+  box-shadow: inset 0 1px 0 rgba(80, 176, 224, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--transform:hover {
+  color: #80d0ff;
+  border-color: rgba(100, 180, 220, 0.5);
+  box-shadow: inset 0 1px 0 rgba(100, 180, 220, 0.25),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(80, 176, 224, 0.2);
+}
+
+/* Duplicate - Green/Teal miracle */
+.share-btn--duplicate {
+  color: #50e0a0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 30, 25, 0.95) 0%,
+    rgba(8, 18, 14, 0.98) 100%
+  );
+  border: 1px solid rgba(80, 200, 150, 0.35);
+  box-shadow: inset 0 1px 0 rgba(80, 224, 160, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.share-btn--duplicate:hover {
+  color: #80ffc0;
+  border-color: rgba(100, 220, 170, 0.5);
+  box-shadow: inset 0 1px 0 rgba(100, 220, 170, 0.25),
+    0 4px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(80, 224, 160, 0.2);
+}
+
+/* Error state */
+.share-panel__error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(180, 50, 50, 0.15);
+  border: 1px solid rgba(180, 50, 50, 0.3);
+  border-radius: 2px;
+  margin: 0.75rem 1rem;
+}
+
+.share-panel__error-icon {
+  color: #c83232;
+  font-size: 1rem;
+}
+
+.share-panel__error-text {
+  color: rgba(220, 150, 150, 0.9);
+  font-size: 1rem;
+}
+
+/* Share Panel Slide Animation */
+.share-slide-enter-active,
+.share-slide-leave-active {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+.share-slide-enter-from,
+.share-slide-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.share-slide-enter-to,
+.share-slide-leave-from {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Share Panel Themes */
+.share-panel--destroyed .share-panel {
+  border-color: rgba(180, 50, 50, 0.35);
+}
+
+.share-panel--destroyed .share-panel__title {
+  color: #c83232;
+}
+
+.share-panel--destroyed .share-panel__text {
+  color: rgba(200, 120, 120, 0.8);
+}
+
+.share-panel--destroyed .share-panel__link {
+  color: #c83232;
+}
+
+.share-panel--destroyed .share-panel::before,
+.share-panel--destroyed .share-panel::after {
+  color: rgba(200, 50, 50, 0.4);
+}
+
+.share-panel--foil .share-panel {
+  border-color: rgba(160, 140, 200, 0.35);
+}
+
+.share-panel--foil .share-panel__title {
+  background: linear-gradient(90deg, #c0a0ff, #ffa0c0, #a0ffc0, #a0c0ff);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: foilTextShimmer 3s linear infinite;
+}
+
+.share-panel--foil .share-panel__text {
+  color: rgba(190, 170, 210, 0.85);
+}
+
+.share-panel--foil .share-panel__link {
+  color: #c0a0ff;
+}
+
+.share-panel--foil .share-panel::before,
+.share-panel--foil .share-panel::after {
+  color: rgba(192, 160, 255, 0.5);
+}
+
+@keyframes foilTextShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+.share-panel--nothing .share-panel__title {
+  color: rgba(140, 135, 130, 0.75);
+}
+
+.share-panel--nothing .share-panel__text {
+  color: rgba(140, 135, 130, 0.6);
+  font-style: italic;
+}
+
+.share-panel--nothing .share-panel__link {
+  color: rgba(140, 135, 130, 0.5);
+}
+
+/* Transform Theme */
+.share-panel--transform .share-panel {
+  border-color: rgba(80, 160, 200, 0.35);
+}
+
+.share-panel--transform .share-panel__title {
+  color: #50b0e0;
+}
+
+.share-panel--transform .share-panel__text {
+  color: rgba(100, 170, 200, 0.8);
+}
+
+.share-panel--transform .share-panel__link {
+  color: #50b0e0;
+}
+
+.share-panel--transform .share-panel::before,
+.share-panel--transform .share-panel::after {
+  color: rgba(80, 176, 224, 0.5);
+}
+
+/* Duplicate Theme */
+.share-panel--duplicate .share-panel {
+  border-color: rgba(80, 200, 150, 0.35);
+}
+
+.share-panel--duplicate .share-panel__title {
+  color: #50e0a0;
+}
+
+.share-panel--duplicate .share-panel__text {
+  color: rgba(100, 200, 160, 0.85);
+}
+
+.share-panel--duplicate .share-panel__link {
+  color: #50e0a0;
+}
+
+.share-panel--duplicate .share-panel::before,
+.share-panel--duplicate .share-panel::after {
+  color: rgba(80, 224, 160, 0.5);
 }
 
 /* ==========================================

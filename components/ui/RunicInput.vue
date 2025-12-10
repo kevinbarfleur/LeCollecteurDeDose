@@ -30,7 +30,9 @@ const clearValue = () => {
   inputRef.value?.focus();
 };
 
-const showClear = computed(() => props.clearable && props.modelValue.length > 0);
+const showClear = computed(
+  () => props.clearable && props.modelValue.length > 0
+);
 
 const focus = () => {
   inputRef.value?.focus();
@@ -44,10 +46,10 @@ defineExpose({ focus });
     class="runic-input"
     :class="[
       `runic-input--${size}`,
-      { 
+      {
         'runic-input--has-icon': icon !== 'none',
-        'runic-input--has-clear': showClear
-      }
+        'runic-input--has-clear': showClear,
+      },
     ]"
   >
     <!-- The carved groove container -->
@@ -57,15 +59,37 @@ defineExpose({ focus });
       <span class="runic-input__rune runic-input__rune--tr">◆</span>
       <span class="runic-input__rune runic-input__rune--bl">◆</span>
       <span class="runic-input__rune runic-input__rune--br">◆</span>
-      
+
       <!-- Icon -->
-      <svg v-if="icon === 'search'" class="runic-input__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <svg
+        v-if="icon === 'search'"
+        class="runic-input__icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
       </svg>
-      <svg v-else-if="icon === 'filter'" class="runic-input__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+      <svg
+        v-else-if="icon === 'filter'"
+        class="runic-input__icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+        />
       </svg>
-      
+
       <!-- Input field -->
       <input
         ref="inputRef"
@@ -84,11 +108,20 @@ defineExpose({ focus });
         @click="clearValue"
         aria-label="Effacer"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
       </button>
-      
+
       <!-- Inner glow line -->
       <div class="runic-input__glow"></div>
     </div>
@@ -114,7 +147,7 @@ defineExpose({ focus });
   display: flex;
   align-items: center;
   width: 100%;
-  
+
   /* Deep carved groove effect */
   background: linear-gradient(
     180deg,
@@ -122,33 +155,28 @@ defineExpose({ focus });
     rgba(14, 14, 16, 0.9) 40%,
     rgba(10, 10, 12, 0.95) 100%
   );
-  
+
   border-radius: 4px;
-  
+
   /* Deep inset shadow */
-  box-shadow: 
-    inset 0 3px 10px rgba(0, 0, 0, 0.8),
-    inset 0 1px 3px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 1px rgba(60, 55, 50, 0.08),
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.8),
+    inset 0 1px 3px rgba(0, 0, 0, 0.9), inset 0 -1px 1px rgba(60, 55, 50, 0.08),
     0 1px 0 rgba(45, 40, 35, 0.3);
-  
+
   /* Worn stone border */
   border: 1px solid rgba(35, 32, 28, 0.8);
   border-top-color: rgba(25, 22, 18, 0.9);
   border-bottom-color: rgba(55, 50, 45, 0.35);
-  
+
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .runic-input__groove:focus-within {
   border-color: rgba(175, 96, 37, 0.4);
-  box-shadow: 
-    inset 0 3px 10px rgba(0, 0, 0, 0.8),
-    inset 0 1px 3px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 1px rgba(175, 96, 37, 0.1),
-    0 0 15px rgba(175, 96, 37, 0.1),
-    0 1px 0 rgba(45, 40, 35, 0.3);
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.8),
+    inset 0 1px 3px rgba(0, 0, 0, 0.9), inset 0 -1px 1px rgba(175, 96, 37, 0.1),
+    0 0 15px rgba(175, 96, 37, 0.1), 0 1px 0 rgba(45, 40, 35, 0.3);
 }
 
 /* ==========================================
@@ -163,10 +191,22 @@ defineExpose({ focus });
   z-index: 2;
 }
 
-.runic-input__rune--tl { top: 4px; left: 6px; }
-.runic-input__rune--tr { top: 4px; right: 6px; }
-.runic-input__rune--bl { bottom: 4px; left: 6px; }
-.runic-input__rune--br { bottom: 4px; right: 6px; }
+.runic-input__rune--tl {
+  top: 4px;
+  left: 6px;
+}
+.runic-input__rune--tr {
+  top: 4px;
+  right: 6px;
+}
+.runic-input__rune--bl {
+  bottom: 4px;
+  left: 6px;
+}
+.runic-input__rune--br {
+  bottom: 4px;
+  right: 6px;
+}
 
 .runic-input__groove:focus-within .runic-input__rune {
   color: rgba(175, 96, 37, 0.5);
@@ -199,7 +239,7 @@ defineExpose({ focus });
   outline: none;
   color: #c8c8c8;
   font-family: "Crimson Text", serif;
-  
+
   /* Engraved text style */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
@@ -278,7 +318,7 @@ defineExpose({ focus });
 
 .runic-input--sm .runic-input__field {
   padding: 0.5rem 1.25rem;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .runic-input--sm.runic-input--has-icon .runic-input__field {
@@ -316,7 +356,7 @@ defineExpose({ focus });
 
 .runic-input--md .runic-input__field {
   padding: 0.625rem 1.5rem;
-  font-size: 1rem;
+  font-size: 1.0625rem;
 }
 
 .runic-input--md.runic-input--has-icon .runic-input__field {
@@ -339,7 +379,7 @@ defineExpose({ focus });
 
 .runic-input--lg .runic-input__field {
   padding: 0.75rem 1.75rem;
-  font-size: 1.125rem;
+  font-size: 1.1875rem;
 }
 
 .runic-input--lg.runic-input--has-icon .runic-input__field {
@@ -379,42 +419,42 @@ defineExpose({ focus });
   .runic-input--sm .runic-input__groove {
     min-height: 34px;
   }
-  
+
   .runic-input--sm .runic-input__field {
     padding: 0.375rem 1rem;
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
   }
-  
+
   /* Medium */
   .runic-input--md .runic-input__groove {
     min-height: 40px;
   }
-  
+
   .runic-input--md .runic-input__field {
     padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
-  
+
   .runic-input--md .runic-input__icon {
     width: 16px;
     height: 16px;
     margin-left: 0.75rem;
   }
-  
+
   .runic-input--md.runic-input--has-icon .runic-input__field {
     padding-left: 0.625rem;
   }
-  
+
   /* Large */
   .runic-input--lg .runic-input__groove {
     min-height: 48px;
   }
-  
+
   .runic-input--lg .runic-input__field {
     padding: 0.625rem 1.25rem;
-    font-size: 1rem;
+    font-size: 1.0625rem;
   }
-  
+
   /* Hide corner runes on mobile */
   .runic-input__rune {
     display: none;

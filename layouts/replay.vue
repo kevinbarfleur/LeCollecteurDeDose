@@ -4,8 +4,8 @@ const showLegalModal = ref(false);
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col replay-layout">
-    <main class="flex-1 replay-content">
+  <div class="h-screen flex flex-col replay-layout">
+    <main class="flex-1 min-h-0 replay-content">
       <slot />
     </main>
 

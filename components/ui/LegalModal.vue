@@ -1,32 +1,32 @@
 <script setup lang="ts">
 const props = defineProps<{
-  modelValue: boolean
-}>()
+  modelValue: boolean;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-}>()
+  "update:modelValue": [value: boolean];
+}>();
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 const closeModal = () => {
-  emit('update:modelValue', false)
-}
+  emit("update:modelValue", false);
+};
 
 // Close on escape key
 const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    closeModal()
+  if (e.key === "Escape") {
+    closeModal();
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
+  document.addEventListener("keydown", handleKeydown);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-})
+  document.removeEventListener("keydown", handleKeydown);
+});
 </script>
 
 <template>
@@ -42,7 +42,7 @@ onUnmounted(() => {
           <div class="legal-modal__header">
             <h2 class="legal-modal__title">
               <span class="legal-modal__rune">⚖</span>
-              {{ t('legal.title') }}
+              {{ t("legal.title") }}
               <span class="legal-modal__rune">⚖</span>
             </h2>
             <button
@@ -51,8 +51,17 @@ onUnmounted(() => {
               :aria-label="t('legal.close')"
               @click="closeModal"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -61,8 +70,10 @@ onUnmounted(() => {
           <div class="legal-modal__body">
             <!-- Disclaimer Section -->
             <div class="legal-modal__section">
-              <h3 class="legal-modal__section-title">{{ t('legal.disclaimer.title') }}</h3>
-              <p class="legal-modal__text">{{ t('legal.disclaimer.text') }}</p>
+              <h3 class="legal-modal__section-title">
+                {{ t("legal.disclaimer.title") }}
+              </h3>
+              <p class="legal-modal__text">{{ t("legal.disclaimer.text") }}</p>
             </div>
 
             <!-- Divider -->
@@ -72,8 +83,10 @@ onUnmounted(() => {
 
             <!-- Trademarks Section -->
             <div class="legal-modal__section">
-              <h3 class="legal-modal__section-title">{{ t('legal.trademarks.title') }}</h3>
-              <p class="legal-modal__text">{{ t('legal.trademarks.text') }}</p>
+              <h3 class="legal-modal__section-title">
+                {{ t("legal.trademarks.title") }}
+              </h3>
+              <p class="legal-modal__text">{{ t("legal.trademarks.text") }}</p>
             </div>
 
             <!-- Divider -->
@@ -83,8 +96,10 @@ onUnmounted(() => {
 
             <!-- Liability Section -->
             <div class="legal-modal__section">
-              <h3 class="legal-modal__section-title">{{ t('legal.liability.title') }}</h3>
-              <p class="legal-modal__text">{{ t('legal.liability.text') }}</p>
+              <h3 class="legal-modal__section-title">
+                {{ t("legal.liability.title") }}
+              </h3>
+              <p class="legal-modal__text">{{ t("legal.liability.text") }}</p>
             </div>
 
             <!-- Divider -->
@@ -94,7 +109,9 @@ onUnmounted(() => {
 
             <!-- Links Section -->
             <div class="legal-modal__section">
-              <h3 class="legal-modal__section-title">{{ t('legal.links.title') }}</h3>
+              <h3 class="legal-modal__section-title">
+                {{ t("legal.links.title") }}
+              </h3>
               <div class="legal-modal__links">
                 <a
                   href="https://www.pathofexile.com/legal/terms-of-use-and-privacy-policy"
@@ -103,7 +120,7 @@ onUnmounted(() => {
                   class="legal-modal__link"
                 >
                   <span class="legal-modal__link-icon">→</span>
-                  {{ t('legal.links.poe_terms') }}
+                  {{ t("legal.links.poe_terms") }}
                 </a>
                 <a
                   href="https://www.pathofexile.com/"
@@ -112,7 +129,7 @@ onUnmounted(() => {
                   class="legal-modal__link"
                 >
                   <span class="legal-modal__link-icon">→</span>
-                  {{ t('legal.links.poe_site') }}
+                  {{ t("legal.links.poe_site") }}
                 </a>
                 <a
                   href="https://www.grindinggear.com/"
@@ -121,7 +138,7 @@ onUnmounted(() => {
                   class="legal-modal__link"
                 >
                   <span class="legal-modal__link-icon">→</span>
-                  {{ t('legal.links.ggg_site') }}
+                  {{ t("legal.links.ggg_site") }}
                 </a>
               </div>
             </div>
@@ -130,7 +147,7 @@ onUnmounted(() => {
           <!-- Footer -->
           <div class="legal-modal__footer">
             <RunicButton variant="secondary" size="sm" @click="closeModal">
-              {{ t('legal.close') }}
+              {{ t("legal.close") }}
             </RunicButton>
           </div>
         </div>
@@ -184,11 +201,8 @@ onUnmounted(() => {
   border-radius: 8px;
   border: 1px solid rgba(60, 55, 50, 0.4);
 
-  box-shadow:
-    0 25px 60px rgba(0, 0, 0, 0.8),
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(80, 75, 70, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(80, 75, 70, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* Custom scrollbar */
@@ -284,7 +298,7 @@ onUnmounted(() => {
 .legal-modal__text {
   margin: 0;
   font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   color: rgba(140, 130, 120, 0.85);
   line-height: 1.65;
 }
@@ -333,7 +347,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   color: #c97a3a;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -420,4 +434,3 @@ onUnmounted(() => {
   }
 }
 </style>
-

@@ -54,7 +54,8 @@ export function useReplayPlayer() {
       foil: replayData.value.card_foil || false
     };
   });
-  const outcome = computed(() => replayData.value?.outcome as 'nothing' | 'foil' | 'destroyed' | null);
+  const outcome = computed(() => replayData.value?.outcome as 'nothing' | 'foil' | 'destroyed' | 'transform' | 'duplicate' | null);
+  const resultCardId = computed(() => replayData.value?.result_card_id || null);
   const totalDuration = computed(() => {
     if (positions.value.length === 0) return 0;
     return positions.value[positions.value.length - 1].t;
@@ -160,8 +161,10 @@ export function useReplayPlayer() {
     isFinished.value = false;
     playbackStartTime.value = Date.now();
     
+    // The recording adds a fake final position 2000ms after the actual drop
+    // So we need to subtract 2000ms to get the actual drop time
     const dropTime = positions.value.length > 0 
-      ? positions.value[positions.value.length - 1].t - 1000 
+      ? positions.value[positions.value.length - 1].t - 2000 
       : 0;
     let dropTriggered = false;
 
@@ -232,6 +235,7 @@ export function useReplayPlayer() {
     userAvatar,
     cardInfo,
     outcome,
+    resultCardId,
     totalDuration,
     views,
     createdAt,

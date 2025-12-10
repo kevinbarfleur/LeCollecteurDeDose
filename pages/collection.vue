@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
-import type { Card, CardTier, CardVariation } from "~/types/card";
-import { VARIATION_CONFIG, getCardVariation } from "~/types/card";
+import type { Card, CardTier } from "~/types/card";
+import { useCardGrouping, type CardGroupWithVariations } from "~/composables/useCardGrouping";
+import { useCardSorting, type SortOption } from "~/composables/useCardSorting";
 
 const { t } = useI18n();
 
@@ -18,84 +19,8 @@ const user = computed(() => ({
 
 const collection = computed(() => mockUserCollection);
 
-// Interface for variation grouping
-interface VariationGroup {
-  variation: CardVariation;
-  cards: Card[];
-  count: number;
-}
-
-interface CardGroupWithVariations {
-  cardId: string;
-  name: string;
-  tier: CardTier;
-  itemClass: string;
-  cards: Card[];
-  count: number;
-  variations: VariationGroup[];
-  hasMultipleVariations: boolean;
-}
-
-const groupedCards = computed(() => {
-  const groups = new Map<string, CardGroupWithVariations>();
-
-  collection.value.forEach((card) => {
-    const variation: CardVariation = getCardVariation(card);
-    const existing = groups.get(card.id);
-
-    if (existing) {
-      existing.cards.push(card);
-      existing.count++;
-
-      // Update variation groups
-      const existingVariation = existing.variations.find(
-        (v) => v.variation === variation
-      );
-      if (existingVariation) {
-        existingVariation.cards.push(card);
-        existingVariation.count++;
-      } else {
-        existing.variations.push({
-          variation,
-          cards: [card],
-          count: 1,
-        });
-      }
-    } else {
-      groups.set(card.id, {
-        cardId: card.id,
-        name: card.name,
-        tier: card.tier,
-        itemClass: card.itemClass,
-        cards: [card],
-        count: 1,
-        variations: [
-          {
-            variation,
-            cards: [card],
-            count: 1,
-          },
-        ],
-        hasMultipleVariations: false,
-      });
-    }
-  });
-
-  // Sort variations by priority (foil first) and update hasMultipleVariations flag
-  groups.forEach((group) => {
-    group.variations.sort(
-      (a, b) =>
-        VARIATION_CONFIG[a.variation].priority -
-        VARIATION_CONFIG[b.variation].priority
-    );
-    group.hasMultipleVariations = group.variations.length > 1;
-  });
-
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
-  return Array.from(groups.values()).sort(
-    (a, b) => tierOrder[a.tier] - tierOrder[b.tier]
-  );
-});
+// Use shared card grouping composable
+const { groupedCards } = useCardGrouping(collection, { sortByNameWithinTier: false });
 
 const stats = computed(() => {
   const cards = collection.value;
@@ -116,101 +41,8 @@ const showDuplicates = usePersistedFilter("collection_duplicates", false);
 const selectedTier = usePersistedFilter<CardTier | "all">("collection_tier", "all");
 const selectedSort = usePersistedFilter("collection_sort", "rarity-asc");
 
-// Sort options
-type SortOption = "rarity-asc" | "rarity-desc" | "alpha-asc" | "alpha-desc" | "category-asc" | "category-desc";
-
-const sortOptions = [
-  { value: "rarity-asc", label: "Rareté ↑ (T0 → T3)" },
-  { value: "rarity-desc", label: "Rareté ↓ (T3 → T0)" },
-  { value: "alpha-asc", label: "Alphabétique (A → Z)" },
-  { value: "alpha-desc", label: "Alphabétique (Z → A)" },
-  { value: "category-asc", label: "Catégorie (A → Z)" },
-  { value: "category-desc", label: "Catégorie (Z → A)" },
-];
-
-// Sort function for cards
-const sortCards = (cards: Card[], sortType: SortOption): Card[] => {
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
-
-  return [...cards].sort((a, b) => {
-    switch (sortType) {
-      case "rarity-asc":
-        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-          return tierOrder[a.tier] - tierOrder[b.tier];
-        }
-        return a.name.localeCompare(b.name);
-
-      case "rarity-desc":
-        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-          return tierOrder[b.tier] - tierOrder[a.tier];
-        }
-        return a.name.localeCompare(b.name);
-
-      case "alpha-asc":
-        return a.name.localeCompare(b.name);
-
-      case "alpha-desc":
-        return b.name.localeCompare(a.name);
-
-      case "category-asc":
-        if (a.itemClass !== b.itemClass) {
-          return a.itemClass.localeCompare(b.itemClass);
-        }
-        return a.name.localeCompare(b.name);
-
-      case "category-desc":
-        if (a.itemClass !== b.itemClass) {
-          return b.itemClass.localeCompare(a.itemClass);
-        }
-        return a.name.localeCompare(b.name);
-
-      default:
-        return 0;
-    }
-  });
-};
-
-// Sort function for grouped cards
-const sortGroupedCards = (groups: CardGroupWithVariations[], sortType: SortOption): CardGroupWithVariations[] => {
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
-
-  return [...groups].sort((a, b) => {
-    switch (sortType) {
-      case "rarity-asc":
-        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-          return tierOrder[a.tier] - tierOrder[b.tier];
-        }
-        return a.name.localeCompare(b.name);
-
-      case "rarity-desc":
-        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-          return tierOrder[b.tier] - tierOrder[a.tier];
-        }
-        return a.name.localeCompare(b.name);
-
-      case "alpha-asc":
-        return a.name.localeCompare(b.name);
-
-      case "alpha-desc":
-        return b.name.localeCompare(a.name);
-
-      case "category-asc":
-        if (a.itemClass !== b.itemClass) {
-          return a.itemClass.localeCompare(b.itemClass);
-        }
-        return a.name.localeCompare(b.name);
-
-      case "category-desc":
-        if (a.itemClass !== b.itemClass) {
-          return b.itemClass.localeCompare(a.itemClass);
-        }
-        return a.name.localeCompare(b.name);
-
-      default:
-        return 0;
-    }
-  });
-};
+// Use shared sorting composable
+const { sortCards, sortGroupedCards, SORT_OPTIONS: sortOptions } = useCardSorting();
 
 // Extract unique categories from player's collection only (with count)
 const categoryOptions = computed(() => {

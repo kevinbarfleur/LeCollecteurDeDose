@@ -2,6 +2,7 @@
 import { allCards, mockUserCollection } from '~/data/mockCards'
 import type { Card, CardTier, CardVariation } from '~/types/card'
 import { TIER_CONFIG, VARIATION_CONFIG, getCardVariation } from '~/types/card'
+import { useCardSorting, type SortOption } from '~/composables/useCardSorting'
 
 const { t } = useI18n()
 
@@ -44,17 +45,8 @@ const selectedTier = usePersistedFilter<CardTier | 'all'>('catalogue_tier', 'all
 const selectedCategories = usePersistedFilter<string[]>('catalogue_categories', [])
 const selectedSort = usePersistedFilter('catalogue_sort', 'rarity-asc')
 
-// Sort options
-type SortOption = 'rarity-asc' | 'rarity-desc' | 'alpha-asc' | 'alpha-desc' | 'category-asc' | 'category-desc'
-
-const sortOptions = [
-  { value: 'rarity-asc', label: 'Rareté ↑ (T0 → T3)' },
-  { value: 'rarity-desc', label: 'Rareté ↓ (T3 → T0)' },
-  { value: 'alpha-asc', label: 'Alphabétique (A → Z)' },
-  { value: 'alpha-desc', label: 'Alphabétique (Z → A)' },
-  { value: 'category-asc', label: 'Catégorie (A → Z)' },
-  { value: 'category-desc', label: 'Catégorie (Z → A)' }
-]
+// Use shared sorting composable
+const { sortCards, SORT_OPTIONS: sortOptions } = useCardSorting()
 
 // Extract unique categories from all cards with count
 const categoryOptions = computed(() => {
@@ -85,50 +77,6 @@ const tierOptions = computed(() => [
   { value: 'T2', label: t('collection.tiers.t2'), color: 't2' },
   { value: 'T3', label: t('collection.tiers.t3'), color: 't3' }
 ])
-
-// Sort function
-const sortCards = (cards: Card[], sortType: SortOption): Card[] => {
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 }
-  
-  return [...cards].sort((a, b) => {
-    switch (sortType) {
-      case 'rarity-asc':
-        // T0 first (most rare)
-        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-          return tierOrder[a.tier] - tierOrder[b.tier]
-        }
-        return a.name.localeCompare(b.name)
-      
-      case 'rarity-desc':
-        // T3 first (most common)
-        if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-          return tierOrder[b.tier] - tierOrder[a.tier]
-        }
-        return a.name.localeCompare(b.name)
-      
-      case 'alpha-asc':
-        return a.name.localeCompare(b.name)
-      
-      case 'alpha-desc':
-        return b.name.localeCompare(a.name)
-      
-      case 'category-asc':
-        if (a.itemClass !== b.itemClass) {
-          return a.itemClass.localeCompare(b.itemClass)
-        }
-        return a.name.localeCompare(b.name)
-      
-      case 'category-desc':
-        if (a.itemClass !== b.itemClass) {
-          return b.itemClass.localeCompare(a.itemClass)
-        }
-        return a.name.localeCompare(b.name)
-      
-      default:
-        return 0
-    }
-  })
-}
 
 const filteredCards = computed(() => {
   let cards = allCards.map(card => {

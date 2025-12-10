@@ -1,4 +1,5 @@
 import { ref, computed, watch, type Ref } from 'vue';
+import { HEARTBEAT, EARTHQUAKE } from '~/constants/timing';
 
 export interface AltarEffectsOptions {
   cardRef: Ref<HTMLElement | null>;
@@ -49,26 +50,28 @@ export function useAltarEffects(options: AltarEffectsOptions) {
     const dy = y - cardCenterY;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // Distance thresholds
-    const maxDistance = 400; // Beyond this = base intensity
-    const minDistance = 50;  // At or below this = max intensity
-    
-    if (distance <= minDistance) {
+    if (distance <= HEARTBEAT.MIN_DISTANCE) {
       heartbeatIntensity.value = 1; // MAX PANIC!
-    } else if (distance >= maxDistance) {
+    } else if (distance >= HEARTBEAT.MAX_DISTANCE) {
       heartbeatIntensity.value = 0.2; // Just aware something is coming
     } else {
       // Linear interpolation - closer = more intense
-      const normalizedDistance = (distance - minDistance) / (maxDistance - minDistance);
+      const normalizedDistance = (distance - HEARTBEAT.MIN_DISTANCE) / (HEARTBEAT.MAX_DISTANCE - HEARTBEAT.MIN_DISTANCE);
       heartbeatIntensity.value = 1 - normalizedDistance * 0.8; // 0.2 to 1 range
     }
     
-    // Check if cursor is over the card
-    isOrbOverCard.value = 
-      x >= cardRect.left &&
-      x <= cardRect.right &&
-      y >= cardRect.top &&
-      y <= cardRect.bottom;
+    // Check if cursor is over the card with hysteresis to prevent flickering
+    // Use smaller bounds to enter, larger bounds to exit
+    const isCurrentlyOver = isOrbOverCard.value;
+    const buffer = isCurrentlyOver ? HEARTBEAT.ORB_OVER_BUFFER : 0;
+    
+    const isInside = 
+      x >= (cardRect.left - buffer) &&
+      x <= (cardRect.right + buffer) &&
+      y >= (cardRect.top - buffer) &&
+      y <= (cardRect.bottom + buffer);
+    
+    isOrbOverCard.value = isInside;
   };
   
   // Watch cursor position and update heartbeat automatically if refs provided
@@ -90,20 +93,15 @@ export function useAltarEffects(options: AltarEffectsOptions) {
       
       if (destroying || additionalDisabled) return {};
       
-      // Base heartbeat when card is on altar
-      const baseSpeed = 2; // seconds
-      const panicSpeed = 0.25; // seconds at max panic
-      
       // Calculate speed based on intensity (higher intensity = faster)
       const speed = isActive.value 
-        ? baseSpeed - (heartbeatIntensity.value * (baseSpeed - panicSpeed))
-        : baseSpeed;
+        ? HEARTBEAT.BASE_SPEED - (heartbeatIntensity.value * (HEARTBEAT.BASE_SPEED - HEARTBEAT.PANIC_SPEED))
+        : HEARTBEAT.BASE_SPEED;
       
       // Calculate scale intensity (subtle when calm, dramatic when panicking)
-      const baseScale = 1.005;
       const panicScale = isActive.value 
-        ? 1.01 + (heartbeatIntensity.value * 0.04) // Up to 1.05 scale at max panic
-        : baseScale;
+        ? HEARTBEAT.BASE_SCALE + (heartbeatIntensity.value * (HEARTBEAT.MAX_PANIC_SCALE - HEARTBEAT.BASE_SCALE))
+        : HEARTBEAT.BASE_SCALE;
       
       return {
         '--heartbeat-speed': `${speed}s`,
@@ -150,19 +148,81 @@ export function useAltarEffects(options: AltarEffectsOptions) {
     isOrbOverCard.value = false;
   };
   
+  // ==========================================
+  // EARTHQUAKE EFFECT - Global chaos when orb over card
+  // ==========================================
+  
+  /**
+   * Creates earthquake CSS variables for a specific UI section
+   * Each section has different timing for chaotic feel
+   */
+  type EarthquakeSection = 'header' | 'vaalSection' | 'body';
+  
+  const getEarthquakeConfig = (section: EarthquakeSection) => {
+    switch (section) {
+      case 'header':
+        return EARTHQUAKE.HEADER;
+      case 'vaalSection':
+        return EARTHQUAKE.VAAL_SECTION;
+      case 'body':
+        return EARTHQUAKE.BODY;
+    }
+  };
+  
+  /**
+   * Computed styles for earthquake effect on a specific section
+   * Only active when orb is over card (isOrbOverCard)
+   */
+  const createEarthquakeStyles = (section: EarthquakeSection) => {
+    return computed(() => {
+      if (!isOrbOverCard.value) return {};
+      
+      const config = getEarthquakeConfig(section);
+      
+      return {
+        '--earthquake-speed': `${config.SPEED}s`,
+        '--earthquake-scale': config.SCALE,
+        '--earthquake-translate-x': `${config.TRANSLATE_X}px`,
+        '--earthquake-translate-y': `${config.TRANSLATE_Y}px`,
+      };
+    });
+  };
+  
+  /**
+   * Returns classes for earthquake effect
+   */
+  const getEarthquakeClasses = (section: EarthquakeSection) => {
+    return {
+      'earthquake-active': isOrbOverCard.value,
+      [`earthquake-${section}`]: isOrbOverCard.value,
+    };
+  };
+  
+  // Pre-computed earthquake styles for common sections
+  const earthquakeHeaderStyles = createEarthquakeStyles('header');
+  const earthquakeVaalStyles = createEarthquakeStyles('vaalSection');
+  const earthquakeBodyStyles = createEarthquakeStyles('body');
+  
   return {
     // State
     heartbeatIntensity,
     isOrbOverCard,
     
-    // Computed
+    // Computed - Card heartbeat
     heartbeatStyles,
     createHeartbeatStyles,
+    
+    // Computed - Earthquake effect
+    earthquakeHeaderStyles,
+    earthquakeVaalStyles,
+    earthquakeBodyStyles,
+    createEarthquakeStyles,
     
     // Methods
     updateHeartbeat,
     getCardClasses,
     getAltarClasses,
+    getEarthquakeClasses,
     resetEffects,
   };
 }
