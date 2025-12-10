@@ -5,6 +5,7 @@ import { VARIATION_CONFIG, TIER_CONFIG, getCardVariation, isCardFoil } from "~/t
 import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
+import { useAltarEffects } from "~/composables/useAltarEffects";
 
 const { t } = useI18n();
 
@@ -972,7 +973,6 @@ const removeCardFromAltar = async () => {
 const isDraggingOrb = ref(false);
 const isReturningOrb = ref(false);
 const draggedOrbIndex = ref<number | null>(null);
-const isOrbOverCard = ref(false);
 const altarAreaRef = ref<HTMLElement | null>(null);
 const floatingOrbRef = ref<HTMLElement | null>(null);
 const orbRefs = ref<HTMLElement[]>([]);
@@ -984,68 +984,25 @@ let currentX = 0;
 let currentY = 0;
 
 // ==========================================
-// HEARTBEAT EFFECT - Card "panics" when orb approaches
+// HEARTBEAT EFFECT - Using shared composable
 // ==========================================
-const heartbeatIntensity = ref(0); // 0 = calm, 1 = max panic
+const isAnimatingRef = computed(() => isAnimating.value || !isCardOnAltar.value);
 
-// Calculate heartbeat intensity based on distance from orb to card center
-const updateHeartbeatIntensity = (orbX: number, orbY: number) => {
-  if (!altarCardRef.value) {
-    heartbeatIntensity.value = 0.3; // Base intensity when dragging but no card ref
-    return;
-  }
-  
-  const cardRect = altarCardRef.value.getBoundingClientRect();
-  const cardCenterX = cardRect.left + cardRect.width / 2;
-  const cardCenterY = cardRect.top + cardRect.height / 2;
-  
-  // Calculate distance from orb to card center
-  const dx = orbX - cardCenterX;
-  const dy = orbY - cardCenterY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  
-  // Max distance for intensity calculation (beyond this, base intensity)
-  const maxDistance = 400;
-  // Min distance (at or below this, max intensity)
-  const minDistance = 50;
-  
-  if (distance <= minDistance) {
-    heartbeatIntensity.value = 1; // MAX PANIC!
-  } else if (distance >= maxDistance) {
-    heartbeatIntensity.value = 0.2; // Just aware something is coming
-  } else {
-    // Linear interpolation - closer = more intense
-    const normalizedDistance = (distance - minDistance) / (maxDistance - minDistance);
-    heartbeatIntensity.value = 1 - normalizedDistance * 0.8; // 0.2 to 1 range
-  }
-};
-
-// Computed CSS variable for heartbeat animation
-const heartbeatStyles = computed(() => {
-  // Don't apply heartbeat styles during any animation
-  if (!isCardOnAltar.value || isAnimating.value || isCardBeingDestroyed.value) return {};
-  
-  // Base heartbeat when card is on altar
-  const baseSpeed = 2; // seconds
-  const panicSpeed = 0.25; // seconds at max panic
-  
-  // Calculate speed based on intensity (higher intensity = faster)
-  const speed = isDraggingOrb.value 
-    ? baseSpeed - (heartbeatIntensity.value * (baseSpeed - panicSpeed))
-    : baseSpeed;
-  
-  // Calculate scale intensity (subtle when calm, dramatic when panicking)
-  const baseScale = 1.005;
-  const panicScale = isDraggingOrb.value 
-    ? 1.01 + (heartbeatIntensity.value * 0.04) // Up to 1.05 scale at max panic
-    : baseScale;
-  
-  return {
-    '--heartbeat-speed': `${speed}s`,
-    '--heartbeat-scale': panicScale,
-    '--heartbeat-glow-intensity': isDraggingOrb.value ? heartbeatIntensity.value : 0.15,
-  };
+const {
+  heartbeatIntensity,
+  isOrbOverCard,
+  createHeartbeatStyles,
+  updateHeartbeat,
+  resetEffects: resetHeartbeatEffects
+} = useAltarEffects({
+  cardRef: altarCardRef,
+  isActive: isDraggingOrb,
+  isDestroying: isCardBeingDestroyed,
+  autoWatch: false // We call updateHeartbeat manually in onDragOrb
 });
+
+// Create heartbeat styles with additional animation check
+const heartbeatStyles = createHeartbeatStyles(isAnimatingRef);
 
 // Set orb ref
 const setOrbRef = (el: HTMLElement | null, index: number) => {
@@ -1132,7 +1089,7 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   }
   
   // Update heartbeat intensity based on proximity
-  updateHeartbeatIntensity(clientX, clientY);
+  updateHeartbeat(clientX, clientY);
   
   // Record position for replay
   if (isRecording.value) {
@@ -1166,8 +1123,7 @@ const endDragOrb = async () => {
     vaalOrbs.value--;
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
-    isOrbOverCard.value = false;
-    heartbeatIntensity.value = 0; // Reset heartbeat
+    resetHeartbeatEffects(); // Reset heartbeat and isOrbOverCard
     
     // Apply Vaal outcome instantly
     const outcome = simulateVaalOutcome();
@@ -1180,7 +1136,7 @@ const endDragOrb = async () => {
     
     // Return to origin with smooth GSAP animation directly on DOM element
     isReturningOrb.value = true;
-    heartbeatIntensity.value = 0; // Reset heartbeat when returning
+    resetHeartbeatEffects(); // Reset heartbeat when returning
     
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
@@ -1208,7 +1164,7 @@ const endDragOrb = async () => {
     
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
-    isOrbOverCard.value = false;
+    resetHeartbeatEffects();
     isReturningOrb.value = false;
   }
 };

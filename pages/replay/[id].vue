@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useReplayPlayer } from "~/composables/useReplayPlayer";
+import { useAltarEffects } from "~/composables/useAltarEffects";
 import { getCardById } from "~/data/mockCards";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
 import gsap from "gsap";
@@ -36,7 +37,23 @@ const isLoaded = ref(false);
 const hasError = ref(false);
 const showOutcome = ref(false);
 const cardData = ref<any>(null);
-const isOrbOverCard = ref(false);
+const isCardBeingDestroyed = ref(false);
+
+// Use shared altar effects composable
+const {
+  heartbeatIntensity,
+  isOrbOverCard,
+  heartbeatStyles,
+  getAltarClasses,
+  getCardClasses,
+  resetEffects
+} = useAltarEffects({
+  cardRef: altarCardRef,
+  cursorX,
+  cursorY,
+  isActive: isPlaying,
+  isDestroying: isCardBeingDestroyed
+});
 
 const DISINTEGRATION_FRAMES = 64;
 const REPETITION_COUNT = 2;
@@ -45,8 +62,6 @@ const imageSnapshot = ref<HTMLCanvasElement | null>(null);
 const isCapturingSnapshot = ref(false);
 const capturedImageDimensions = ref<{ width: number; height: number } | null>(null);
 const capturedCardDimensions = ref<{ width: number; height: number } | null>(null);
-const heartbeatIntensity = ref(0);
-const isCardBeingDestroyed = ref(false);
 
 const tierConfig = computed(() => {
   if (!cardData.value) return TIER_CONFIG.T3;
@@ -58,21 +73,14 @@ const isCurrentCardFoil = computed(() => {
   return isCardFoil(cardData.value);
 });
 
-const altarClasses = computed(() => ({
-  'altar-platform--t0': cardData.value?.tier === 'T0',
-  'altar-platform--t1': cardData.value?.tier === 'T1',
-  'altar-platform--t2': cardData.value?.tier === 'T2',
-  'altar-platform--t3': cardData.value?.tier === 'T3',
-  'altar-platform--foil': isCurrentCardFoil.value,
-  'altar-platform--active': isLoaded.value,
-  'altar-platform--vaal': isOrbOverCard.value,
-}));
+// Use the shared getAltarClasses function
+const altarClasses = computed(() => getAltarClasses(
+  { tier: cardData.value?.tier, foil: isCurrentCardFoil.value },
+  isLoaded.value
+));
 
-const heartbeatStyles = computed(() => ({
-  '--heartbeat-speed': `${Math.max(0.3, 1 - heartbeatIntensity.value * 0.7)}s`,
-  '--heartbeat-scale': `${1 + heartbeatIntensity.value * 0.03}`,
-  '--heartbeat-glow-intensity': `${heartbeatIntensity.value * 0.5}`,
-}));
+// Card classes using the shared function
+const cardClasses = computed(() => getCardClasses(isLoaded.value, false));
 
 const formattedDate = computed(() => {
   if (!createdAt.value) return '';
@@ -313,47 +321,10 @@ onMounted(async () => {
   }, 1500);
 });
 
-const updateHeartbeatFromCursor = () => {
-  if (!altarCardRef.value || !isPlaying.value) {
-    heartbeatIntensity.value = 0;
-    return;
-  }
-  
-  const cardRect = altarCardRef.value.getBoundingClientRect();
-  const cardCenterX = cardRect.left + cardRect.width / 2;
-  const cardCenterY = cardRect.top + cardRect.height / 2;
-  
-  const dx = cursorX.value - cardCenterX;
-  const dy = cursorY.value - cardCenterY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  
-  const maxDistance = 400;
-  const minDistance = 50;
-  
-  if (distance < minDistance) {
-    heartbeatIntensity.value = 1;
-    isOrbOverCard.value = true;
-  } else if (distance < maxDistance) {
-    heartbeatIntensity.value = 1 - (distance - minDistance) / (maxDistance - minDistance);
-    isOrbOverCard.value = cursorX.value >= cardRect.left && 
-                          cursorX.value <= cardRect.right &&
-                          cursorY.value >= cardRect.top && 
-                          cursorY.value <= cardRect.bottom;
-  } else {
-    heartbeatIntensity.value = 0;
-    isOrbOverCard.value = false;
-  }
-};
-
-watch([cursorX, cursorY], () => {
-  updateHeartbeatFromCursor();
-});
-
 const startReplay = async () => {
   showOutcome.value = false;
   isCardBeingDestroyed.value = false;
-  heartbeatIntensity.value = 0;
-  isOrbOverCard.value = false;
+  resetEffects();
   
   cardSnapshot.value = null;
   imageSnapshot.value = null;
@@ -378,7 +349,7 @@ const startReplay = async () => {
 const triggerOutcome = async () => {
   if (!outcome.value || !altarCardRef.value) return;
   
-  heartbeatIntensity.value = 0;
+  resetEffects();
   
   if (vaalOrbRef.value) {
     await new Promise<void>((resolve) => {
@@ -391,8 +362,6 @@ const triggerOutcome = async () => {
       });
     });
   }
-  
-  isOrbOverCard.value = false;
   
   switch (outcome.value) {
     case 'nothing':
@@ -706,11 +675,7 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
                 v-if="cardData"
                 ref="altarCardRef"
                 class="altar-card"
-                :class="{ 
-                  'altar-card--heartbeat': isPlaying && !isCardBeingDestroyed,
-                  'altar-card--panicking': heartbeatIntensity > 0,
-                  'altar-card--destroying': isCardBeingDestroyed,
-                }"
+                :class="cardClasses"
                 :style="heartbeatStyles"
               >
                 <div ref="cardFrontRef" class="altar-card__face altar-card__face--front">
