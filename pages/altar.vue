@@ -326,6 +326,7 @@ const showShareModal = ref(false);
 const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
 const lastRecordedOutcome = ref<VaalOutcome | null>(null);
+const pendingShareModal = ref(false); // Flag to show modal when URL is ready
 
 // Record preferences - saved in localStorage
 const recordOnNothing = ref(false);
@@ -393,6 +394,14 @@ watch(
   },
   { immediate: true }
 );
+
+// Show share modal when URL is generated (after successful save)
+watch(generatedUrl, (newUrl) => {
+  if (newUrl && pendingShareModal.value) {
+    showShareModal.value = true;
+    pendingShareModal.value = false;
+  }
+});
 
 const startAutoRecording = () => {
   // Check if any recording is enabled
@@ -666,51 +675,48 @@ const destroyCard = async () => {
 // Flip card to back (first part of Vaal ritual)
 // Handle Vaal outcome - instant result
 const handleVaalOutcome = async (outcome: VaalOutcome) => {
-  // Handle recording based on outcome preferences
-  if (isRecording.value) {
-    if (shouldRecordOutcome(outcome)) {
-      stopRecording(outcome);
-      lastRecordedOutcome.value = outcome;
-      // Show share modal after 2 seconds (when recording finishes)
-      setTimeout(() => {
-        showShareModal.value = true;
-        urlCopied.value = false;
-      }, 2100);
-    } else {
-      // Cancel recording for outcomes that shouldn't be recorded
-      cancelRecording();
-    }
-  }
+  const shouldRecord = isRecording.value && shouldRecordOutcome(outcome);
+  let resultCardId: string | undefined;
 
+  // Execute the outcome animation first (for outcomes that produce a result)
   switch (outcome) {
     case "nothing":
-      // Nothing happens - just a brief flash to indicate the orb was consumed
       await executeNothing();
       break;
 
     case "foil":
-      // Transform to foil instantly
       await executeFoil();
       break;
 
     case "destroyed":
-      // Destroy the card with disintegration effect
       await destroyCard();
       break;
 
     case "transform":
-      // Transform to another card of the same tier
-      await executeTransform();
+      // Transform returns the new card - capture it for the replay
+      const transformResult = await executeTransform();
+      if (transformResult.newCard) {
+        resultCardId = transformResult.newCard.id;
+      }
       break;
 
     case "duplicate":
-      // Create a duplicate of the card
       await executeDuplicate();
       break;
   }
 
+  // Handle recording AFTER the outcome so we have the result info
+  if (shouldRecord) {
+    stopRecording(outcome, resultCardId);
+    lastRecordedOutcome.value = outcome;
+    pendingShareModal.value = true;
+    urlCopied.value = false;
+  } else if (isRecording.value) {
+    // Cancel recording if this outcome shouldn't be recorded
+    cancelRecording();
+  }
+
   // Force reset aura to dormant state after any Vaal outcome
-  // This ensures no red glow remnants remain
   resetAura();
 };
 

@@ -22,6 +22,7 @@ export function useReplayRecorder() {
   const recordStartTime = ref(0);
   const cardData = ref<{ cardId: string; variation: string; uid: number; tier: string; foil: boolean } | null>(null);
   const recordedOutcome = ref<VaalOutcome | null>(null);
+  const resultCardId = ref<string | null>(null); // For transform outcomes - the card it became
   const generatedUrl = ref<string | null>(null);
   const replayId = ref<string | null>(null);
   
@@ -44,6 +45,7 @@ export function useReplayRecorder() {
     cardData.value = card;
     recordedPositions.value = [];
     recordedOutcome.value = null;
+    resultCardId.value = null;
     generatedUrl.value = null;
     replayId.value = null;
     
@@ -84,10 +86,11 @@ export function useReplayRecorder() {
     recordedPositions.value.push({ x, y, t: now });
   };
 
-  const stopRecording = async (outcome: VaalOutcome) => {
+  const stopRecording = async (outcome: VaalOutcome, newCardId?: string) => {
     if (!isRecording.value) return null;
     
     recordedOutcome.value = outcome;
+    resultCardId.value = newCardId || null;
 
     // Add final position to ensure the animation plays to completion
     const finalTime = Date.now() - recordStartTime.value + 2000;
@@ -127,6 +130,7 @@ export function useReplayRecorder() {
         card_foil: cardData.value.foil,
         mouse_positions: recordedPositions.value,
         outcome: recordedOutcome.value,
+        result_card_id: resultCardId.value,
       };
 
       const { data, error } = await supabase

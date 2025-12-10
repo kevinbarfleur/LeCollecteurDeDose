@@ -20,6 +20,7 @@ export type Database = {
           id: string
           mouse_positions: Json
           outcome: string
+          result_card_id: string | null
           user_avatar: string | null
           username: string
           views: number | null
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           mouse_positions: Json
           outcome: string
+          result_card_id?: string | null
           user_avatar?: string | null
           username: string
           views?: number | null
@@ -48,6 +50,7 @@ export type Database = {
           id?: string
           mouse_positions?: Json
           outcome?: string
+          result_card_id?: string | null
           user_avatar?: string | null
           username?: string
           views?: number | null

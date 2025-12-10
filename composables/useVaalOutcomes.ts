@@ -403,18 +403,24 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     // Phase 2: Create clone exactly on top of original
     const clone = cardElement.cloneNode(true) as HTMLElement;
     clone.id = 'duplicate-clone';
-    clone.style.position = 'fixed';
-    clone.style.zIndex = '9999';
-    clone.style.pointerEvents = 'none';
-    clone.style.width = `${cardRect.width}px`;
-    clone.style.height = `${cardRect.height}px`;
-    clone.style.top = `${cardRect.top}px`;
-    clone.style.left = `${cardRect.left}px`;
-    clone.style.opacity = '0';
-    clone.style.transform = 'scale(1.12)';
-    clone.style.boxShadow = glowShadow;
-    clone.style.margin = '0';
+    clone.style.cssText = `
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+      width: ${cardRect.width}px;
+      height: ${cardRect.height}px;
+      top: ${cardRect.top}px;
+      left: ${cardRect.left}px;
+      margin: 0;
+      box-shadow: ${glowShadow};
+    `;
     document.body.appendChild(clone);
+    
+    // Initialize clone with GSAP (hidden and scaled)
+    gsap.set(clone, {
+      opacity: 0,
+      scale: 1.12,
+    });
     
     // Flash effect for "split" - both cards flash together
     gsap.to(cardElement, {

@@ -37,6 +37,7 @@ const {
   userAvatar,
   cardInfo,
   outcome,
+  resultCardId,
   views,
   createdAt,
   error: playerError,
@@ -211,6 +212,7 @@ const startReplay = async () => {
   }
   
   await captureCardSnapshot();
+  console.log('[REPLAY] Card snapshot captured:', !!cardSnapshot.value);
   
   play(() => {
     triggerOutcome();
@@ -252,7 +254,9 @@ const triggerOutcome = async () => {
       break;
       
     case 'duplicate':
+      console.log('[REPLAY] Triggering duplicate effect');
       await showDuplicateEffect();
+      console.log('[REPLAY] Duplicate effect completed');
       break;
   }
   
@@ -455,6 +459,10 @@ const showTransformEffect = async () => {
   const glowShadow = `0 0 20px ${tierColors.glow}, 0 0 40px ${tierColors.glow}`;
   const cardElement = altarCardRef.value;
   
+  // IMPORTANT: Disable CSS animations that conflict with GSAP transforms
+  cardElement.classList.remove('altar-card--heartbeat', 'altar-card--panicking');
+  cardElement.style.animation = 'none';
+  
   // Phase 1: Heartbeat vibration effect (multiple quick pulses)
   const timeline = gsap.timeline();
   
@@ -546,7 +554,18 @@ const showTransformEffect = async () => {
   
   await new Promise(resolve => setTimeout(resolve, 150));
   
-  // Brief pause while card is invisible (in real play, card changes here)
+  // Update to the transformed card if we have the result card ID
+  if (resultCardId.value) {
+    const newCard = getCardById(resultCardId.value);
+    if (newCard) {
+      cardData.value = {
+        ...newCard,
+        foil: cardInfo.value?.foil || false
+      };
+    }
+  }
+  
+  // Brief pause while card is invisible
   await new Promise(resolve => setTimeout(resolve, 100));
   
   // Phase 3: Reveal new card - fade in with zoom
@@ -576,13 +595,41 @@ const showTransformEffect = async () => {
 
 // Duplicate effect - clone appears on top, then both translate apart side by side
 const showDuplicateEffect = async () => {
-  if (!altarCardRef.value) return;
+  console.log('[DUPLICATE] Starting effect', {
+    hasAltarCardRef: !!altarCardRef.value,
+    hasCardSlotRef: !!cardSlotRef.value,
+    hasCardSnapshot: !!cardSnapshot.value,
+  });
+  
+  if (!altarCardRef.value || !cardSlotRef.value) {
+    console.log('[DUPLICATE] Missing refs, aborting');
+    return;
+  }
   
   const tierColors = getTierColors(cardInfo.value?.tier);
   const glowShadow = `0 0 25px ${tierColors.glow}, 0 0 50px ${tierColors.glow}`;
   const cardElement = altarCardRef.value;
+  const cardSlot = cardSlotRef.value;
+  
+  // IMPORTANT: Disable CSS animations that conflict with GSAP transforms
+  cardElement.classList.remove('altar-card--heartbeat', 'altar-card--panicking');
+  cardElement.style.animation = 'none';
+  
   const cardRect = cardElement.getBoundingClientRect();
   const cardWidth = cardRect.width;
+  
+  // Temporarily allow overflow on parent containers for the animation
+  const replayContent = document.querySelector('.replay-content') as HTMLElement;
+  const replayStage = document.querySelector('.replay-stage') as HTMLElement;
+  const altarPlatform = altarPlatformRef.value;
+  
+  const originalOverflows: { el: HTMLElement; overflow: string }[] = [];
+  [replayContent, replayStage, altarPlatform, cardSlot].forEach(el => {
+    if (el) {
+      originalOverflows.push({ el, overflow: el.style.overflow });
+      el.style.overflow = 'visible';
+    }
+  });
   
   // Phase 1: Energy gathering - heartbeat-like pulses
   const timeline = gsap.timeline();
@@ -616,21 +663,93 @@ const showDuplicateEffect = async () => {
   
   await timeline.then();
   
-  // Phase 2: Create clone exactly on top of original
-  const clone = cardElement.cloneNode(true) as HTMLElement;
-  clone.id = 'duplicate-clone-replay';
-  clone.style.position = 'fixed';
-  clone.style.zIndex = '9999';
-  clone.style.pointerEvents = 'none';
-  clone.style.width = `${cardRect.width}px`;
-  clone.style.height = `${cardRect.height}px`;
-  clone.style.top = `${cardRect.top}px`;
-  clone.style.left = `${cardRect.left}px`;
-  clone.style.opacity = '0';
-  clone.style.transform = 'scale(1.12)';
-  clone.style.boxShadow = glowShadow;
-  clone.style.margin = '0';
-  document.body.appendChild(clone);
+  // Phase 2: Create clone using the pre-captured snapshot (avoids scoped CSS issues)
+  const cloneElement = document.createElement('div');
+  cloneElement.id = 'duplicate-clone-replay';
+  cloneElement.style.cssText = `
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    width: ${cardRect.width}px;
+    height: ${cardRect.height}px;
+    top: ${cardRect.top}px;
+    left: ${cardRect.left}px;
+    margin: 0;
+    box-shadow: ${glowShadow};
+    border-radius: 8px;
+    overflow: hidden;
+  `;
+  
+  // Deep clone with inline styles - preserves appearance outside scoped CSS
+  const cloneWithStyles = (element: HTMLElement): HTMLElement => {
+    const clone = element.cloneNode(false) as HTMLElement;
+    
+    // Copy computed styles as inline styles
+    const computed = window.getComputedStyle(element);
+    const importantStyles = [
+      'width', 'height', 'padding', 'margin', 'border', 'border-radius',
+      'background', 'background-color', 'background-image', 'background-size',
+      'color', 'font-size', 'font-family', 'font-weight', 'text-align',
+      'display', 'flex-direction', 'align-items', 'justify-content', 'gap',
+      'position', 'top', 'left', 'right', 'bottom',
+      'overflow', 'opacity', 'box-shadow', 'transform'
+    ];
+    
+    importantStyles.forEach(prop => {
+      const value = computed.getPropertyValue(prop);
+      if (value && value !== 'none' && value !== 'auto' && value !== 'normal') {
+        clone.style.setProperty(prop, value);
+      }
+    });
+    
+    // Handle images specially - copy src directly
+    if (element.tagName === 'IMG') {
+      const imgEl = element as HTMLImageElement;
+      const imgClone = clone as HTMLImageElement;
+      imgClone.src = imgEl.src;
+      imgClone.style.width = computed.width;
+      imgClone.style.height = computed.height;
+      imgClone.style.objectFit = computed.objectFit || 'cover';
+    }
+    
+    // Recursively clone children
+    element.childNodes.forEach(child => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        clone.appendChild(cloneWithStyles(child as HTMLElement));
+      } else if (child.nodeType === Node.TEXT_NODE) {
+        clone.appendChild(child.cloneNode(true));
+      }
+    });
+    
+    return clone;
+  };
+  
+  // Clone the card with all styles preserved
+  if (cardFrontRef.value) {
+    try {
+      const cardClone = cloneWithStyles(cardFrontRef.value);
+      cardClone.style.width = '100%';
+      cardClone.style.height = '100%';
+      cardClone.style.transform = 'none';
+      cardClone.style.animation = 'none';
+      cloneElement.appendChild(cardClone);
+      console.log('[DUPLICATE] Card cloned with inline styles');
+    } catch (e) {
+      console.error('[DUPLICATE] Clone failed:', e);
+      cloneElement.style.background = `linear-gradient(135deg, ${tierColors.primary}, ${tierColors.secondary})`;
+    }
+  } else {
+    cloneElement.style.background = `linear-gradient(135deg, ${tierColors.primary}, ${tierColors.secondary})`;
+  }
+  
+  document.body.appendChild(cloneElement);
+  const clone = cloneElement;
+  
+  // Initialize clone with GSAP (hidden and scaled)
+  gsap.set(clone, {
+    opacity: 0,
+    scale: 1.12,
+  });
   
   // Flash effect for "split" - both cards flash together
   gsap.to(cardElement, {
@@ -653,10 +772,17 @@ const showDuplicateEffect = async () => {
   // Calculate translation distance (half card width + small gap)
   const translateDistance = (cardWidth / 2) + 12;
   
+  console.log('[DUPLICATE] Phase 3: Split animation', {
+    translateDistance,
+    cardWidth,
+    cardRect: { top: cardRect.top, left: cardRect.left, width: cardRect.width, height: cardRect.height },
+    cloneInDOM: document.body.contains(clone),
+  });
+  
   // Phase 3: Both cards translate apart - original left, clone right
   const splitTimeline = gsap.timeline();
   
-  // Original card translates left
+  // Original card translates left using transform
   splitTimeline.to(cardElement, {
     x: -translateDistance,
     scale: 1,
@@ -706,9 +832,14 @@ const showDuplicateEffect = async () => {
   // Cleanup clone
   clone.remove();
   
+  // Restore overflow on parent containers
+  originalOverflows.forEach(({ el, overflow }) => {
+    el.style.overflow = overflow;
+  });
+  
   // Ensure card is fully reset
   gsap.set(cardElement, {
-    clearProps: 'filter,boxShadow',
+    clearProps: 'all',
   });
 };
 
@@ -1540,22 +1671,15 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 /* Transform Outcome */
 .outcome--transform .replay-outcome__badge-img {
   filter: drop-shadow(0 0 8px rgba(80, 176, 224, 0.7)) brightness(1.1);
-  animation: transformBadgeSpin 2s linear infinite;
 }
 
 .outcome--transform .replay-outcome__title {
   color: #50b0e0;
 }
 
-@keyframes transformBadgeSpin {
-  0% { transform: rotateY(0deg); }
-  100% { transform: rotateY(360deg); }
-}
-
 /* Duplicate Outcome */
 .outcome--duplicate .replay-outcome__badge-img {
   filter: drop-shadow(0 0 8px rgba(80, 224, 160, 0.7)) brightness(1.2);
-  animation: duplicateBadgePulse 0.8s ease-in-out infinite;
 }
 
 .outcome--duplicate .replay-outcome__title {
@@ -1565,17 +1689,6 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 .outcome--duplicate .replay-outcome__card-visual {
   border-color: rgba(80, 224, 160, 0.3);
   box-shadow: 0 0 12px rgba(80, 224, 160, 0.3);
-}
-
-@keyframes duplicateBadgePulse {
-  0%, 100% { 
-    transform: scale(1); 
-    filter: drop-shadow(0 0 8px rgba(80, 224, 160, 0.7)) brightness(1.2);
-  }
-  50% { 
-    transform: scale(1.15); 
-    filter: drop-shadow(0 0 15px rgba(80, 224, 160, 0.9)) brightness(1.4);
-  }
 }
 
 /* ===== CURSOR ===== */
