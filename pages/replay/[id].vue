@@ -5,8 +5,23 @@ import { useAltarAura } from "~/composables/useAltarAura";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 import { getCardById } from "~/data/mockCards";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
+import type { CardTier } from "~/types/card";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
+
+// Tier-based colors for animations (consistent with useVaalOutcomes)
+const TIER_COLORS = {
+  T0: { primary: '#c9a227', secondary: '#f5d76e', glow: 'rgba(201, 162, 39, 0.8)' },
+  T1: { primary: '#7a6a8a', secondary: '#a294b0', glow: 'rgba(122, 106, 138, 0.7)' },
+  T2: { primary: '#5a7080', secondary: '#8aa0b0', glow: 'rgba(90, 112, 128, 0.6)' },
+  T3: { primary: '#5a5a5d', secondary: '#7a7a7d', glow: 'rgba(90, 90, 93, 0.5)' },
+} as const;
+
+const getTierColors = (tier?: string) => {
+  if (!tier) return TIER_COLORS.T3;
+  const key = tier.toUpperCase() as keyof typeof TIER_COLORS;
+  return TIER_COLORS[key] || TIER_COLORS.T3;
+};
 
 useHead({ title: "Replay - Le Collecteur de Dose" });
 
@@ -231,6 +246,14 @@ const triggerOutcome = async () => {
     case 'destroyed':
       await destroyCardEffect();
       break;
+      
+    case 'transform':
+      await showTransformEffect();
+      break;
+      
+    case 'duplicate':
+      await showDuplicateEffect();
+      break;
   }
   
   setTimeout(() => {
@@ -260,9 +283,13 @@ const showNothingEffect = async () => {
 const transformToFoilEffect = async () => {
   if (!altarCardRef.value) return;
   
+  const tierColors = getTierColors(cardInfo.value?.tier);
+  const glowShadow = `0 0 30px ${tierColors.glow}, 0 0 60px ${tierColors.glow}`;
+  
   gsap.to(altarCardRef.value, {
     filter: "brightness(1.8) saturate(1.5)",
     scale: 1.05,
+    boxShadow: glowShadow,
     duration: 0.2,
     ease: "power2.in",
   });
@@ -272,6 +299,7 @@ const transformToFoilEffect = async () => {
   gsap.to(altarCardRef.value, {
     filter: "brightness(3) saturate(2)",
     scale: 1.1,
+    boxShadow: `0 0 50px ${tierColors.glow}, 0 0 90px ${tierColors.glow}`,
     duration: 0.1,
     ease: "power2.out",
   });
@@ -285,6 +313,7 @@ const transformToFoilEffect = async () => {
   gsap.to(altarCardRef.value, {
     filter: "brightness(1) saturate(1)",
     scale: 1,
+    boxShadow: 'none',
     duration: 0.4,
     ease: "power2.out",
   });
@@ -418,6 +447,271 @@ const destroyCardEffect = async () => {
   }
 };
 
+// Transform effect - heartbeat vibration + zoom/dezoom + pof + fade
+const showTransformEffect = async () => {
+  if (!altarCardRef.value) return;
+  
+  const tierColors = getTierColors(cardInfo.value?.tier);
+  const glowShadow = `0 0 20px ${tierColors.glow}, 0 0 40px ${tierColors.glow}`;
+  const cardElement = altarCardRef.value;
+  
+  // Phase 1: Heartbeat vibration effect (multiple quick pulses)
+  const timeline = gsap.timeline();
+  
+  // First heartbeat pulse - systole (contract)
+  timeline.to(cardElement, {
+    scale: 0.92,
+    x: -3,
+    boxShadow: glowShadow,
+    duration: 0.08,
+    ease: 'power2.in',
+  });
+  // Diastole (expand)
+  timeline.to(cardElement, {
+    scale: 1.06,
+    x: 3,
+    duration: 0.1,
+    ease: 'power2.out',
+  });
+  // Small vibration
+  timeline.to(cardElement, {
+    scale: 0.95,
+    x: -2,
+    duration: 0.06,
+    ease: 'power1.inOut',
+  });
+  timeline.to(cardElement, {
+    scale: 1.03,
+    x: 2,
+    duration: 0.08,
+    ease: 'power1.inOut',
+  });
+  
+  // Second heartbeat - stronger
+  timeline.to(cardElement, {
+    scale: 0.88,
+    x: -4,
+    filter: 'brightness(1.2)',
+    duration: 0.08,
+    ease: 'power2.in',
+  });
+  timeline.to(cardElement, {
+    scale: 1.1,
+    x: 4,
+    filter: 'brightness(1.4)',
+    duration: 0.12,
+    ease: 'power2.out',
+  });
+  timeline.to(cardElement, {
+    scale: 0.93,
+    x: -3,
+    duration: 0.06,
+    ease: 'power1.inOut',
+  });
+  timeline.to(cardElement, {
+    scale: 1.05,
+    x: 2,
+    duration: 0.08,
+    ease: 'power1.inOut',
+  });
+  
+  // Third heartbeat - building to climax
+  timeline.to(cardElement, {
+    scale: 0.85,
+    x: -5,
+    filter: 'brightness(1.6)',
+    boxShadow: `0 0 35px ${tierColors.glow}, 0 0 60px ${tierColors.glow}`,
+    duration: 0.1,
+    ease: 'power2.in',
+  });
+  timeline.to(cardElement, {
+    scale: 1.15,
+    x: 5,
+    filter: 'brightness(1.8)',
+    duration: 0.12,
+    ease: 'power2.out',
+  });
+  
+  await timeline.then();
+  
+  // Phase 2: "POF" - Quick zoom out with fade
+  gsap.to(cardElement, {
+    scale: 0.6,
+    opacity: 0,
+    filter: 'brightness(2.5) blur(8px)',
+    boxShadow: `0 0 50px ${tierColors.glow}, 0 0 80px ${tierColors.glow}`,
+    duration: 0.15,
+    ease: 'power2.in',
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 150));
+  
+  // Brief pause while card is invisible (in real play, card changes here)
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Phase 3: Reveal new card - fade in with zoom
+  gsap.to(cardElement, {
+    scale: 1.08,
+    opacity: 1,
+    filter: 'brightness(1.3) blur(0px)',
+    boxShadow: `0 0 30px ${tierColors.glow}`,
+    duration: 0.25,
+    ease: 'power2.out',
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 250));
+  
+  // Phase 4: Settle to normal
+  gsap.to(cardElement, {
+    scale: 1,
+    x: 0,
+    filter: 'brightness(1)',
+    boxShadow: 'none',
+    duration: 0.3,
+    ease: 'elastic.out(1, 0.6)',
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 300));
+};
+
+// Duplicate effect - clone appears on top, then both translate apart side by side
+const showDuplicateEffect = async () => {
+  if (!altarCardRef.value) return;
+  
+  const tierColors = getTierColors(cardInfo.value?.tier);
+  const glowShadow = `0 0 25px ${tierColors.glow}, 0 0 50px ${tierColors.glow}`;
+  const cardElement = altarCardRef.value;
+  const cardRect = cardElement.getBoundingClientRect();
+  const cardWidth = cardRect.width;
+  
+  // Phase 1: Energy gathering - heartbeat-like pulses
+  const timeline = gsap.timeline();
+  
+  timeline.to(cardElement, {
+    scale: 0.95,
+    filter: 'brightness(1.2)',
+    boxShadow: glowShadow,
+    duration: 0.1,
+    ease: 'power2.in',
+  });
+  timeline.to(cardElement, {
+    scale: 1.08,
+    filter: 'brightness(1.5)',
+    duration: 0.12,
+    ease: 'power2.out',
+  });
+  timeline.to(cardElement, {
+    scale: 0.92,
+    filter: 'brightness(1.3)',
+    duration: 0.08,
+    ease: 'power2.in',
+  });
+  timeline.to(cardElement, {
+    scale: 1.12,
+    filter: 'brightness(1.8)',
+    boxShadow: `0 0 40px ${tierColors.glow}, 0 0 70px ${tierColors.glow}`,
+    duration: 0.15,
+    ease: 'power2.out',
+  });
+  
+  await timeline.then();
+  
+  // Phase 2: Create clone exactly on top of original
+  const clone = cardElement.cloneNode(true) as HTMLElement;
+  clone.id = 'duplicate-clone-replay';
+  clone.style.position = 'fixed';
+  clone.style.zIndex = '9999';
+  clone.style.pointerEvents = 'none';
+  clone.style.width = `${cardRect.width}px`;
+  clone.style.height = `${cardRect.height}px`;
+  clone.style.top = `${cardRect.top}px`;
+  clone.style.left = `${cardRect.left}px`;
+  clone.style.opacity = '0';
+  clone.style.transform = 'scale(1.12)';
+  clone.style.boxShadow = glowShadow;
+  clone.style.margin = '0';
+  document.body.appendChild(clone);
+  
+  // Flash effect for "split" - both cards flash together
+  gsap.to(cardElement, {
+    scale: 1.2,
+    filter: 'brightness(2.5)',
+    duration: 0.1,
+    ease: 'power2.out',
+  });
+  
+  // Make clone visible at same moment
+  gsap.to(clone, {
+    opacity: 1,
+    scale: 1.2,
+    duration: 0.1,
+    ease: 'power2.out',
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Calculate translation distance (half card width + small gap)
+  const translateDistance = (cardWidth / 2) + 12;
+  
+  // Phase 3: Both cards translate apart - original left, clone right
+  const splitTimeline = gsap.timeline();
+  
+  // Original card translates left
+  splitTimeline.to(cardElement, {
+    x: -translateDistance,
+    scale: 1,
+    filter: 'brightness(1)',
+    boxShadow: glowShadow,
+    duration: 0.4,
+    ease: 'power2.out',
+  }, 0);
+  
+  // Clone translates right
+  splitTimeline.to(clone, {
+    x: translateDistance,
+    scale: 1,
+    filter: 'brightness(1)',
+    duration: 0.4,
+    ease: 'power2.out',
+  }, 0);
+  
+  await splitTimeline.then();
+  
+  // Phase 4: Hold position - show both cards side by side for 2 seconds
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // Phase 5: Clone (duplicate) exits to the right, original returns to center
+  const exitTimeline = gsap.timeline();
+  
+  // Clone flies off to the right
+  exitTimeline.to(clone, {
+    x: window.innerWidth,
+    opacity: 0,
+    scale: 0.7,
+    rotation: 20,
+    duration: 0.6,
+    ease: 'power2.in',
+  });
+  
+  // Original card returns to center position
+  exitTimeline.to(cardElement, {
+    x: 0,
+    boxShadow: 'none',
+    duration: 0.5,
+    ease: 'power2.out',
+  }, 0.15);
+  
+  await exitTimeline.then();
+  
+  // Cleanup clone
+  clone.remove();
+  
+  // Ensure card is fully reset
+  gsap.set(cardElement, {
+    clearProps: 'filter,boxShadow',
+  });
+};
+
 const restartReplay = () => {
   window.location.reload();
 };
@@ -431,6 +725,8 @@ const outcomeText = computed(() => {
     case 'nothing': return 'Rien ne s\'est passé';
     case 'foil': return 'Transformation en Foil !';
     case 'destroyed': return 'Carte détruite...';
+    case 'transform': return 'Métamorphose Vaal !';
+    case 'duplicate': return 'Duplication miraculeuse !';
     default: return '';
   }
 });
@@ -440,6 +736,8 @@ const outcomeClass = computed(() => {
     case 'nothing': return 'outcome--nothing';
     case 'foil': return 'outcome--foil';
     case 'destroyed': return 'outcome--destroyed';
+    case 'transform': return 'outcome--transform';
+    case 'duplicate': return 'outcome--duplicate';
     default: return '';
   }
 });
@@ -1237,6 +1535,47 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 
 .outcome--destroyed .replay-outcome__card-img {
   filter: grayscale(0.7) opacity(0.6);
+}
+
+/* Transform Outcome */
+.outcome--transform .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(80, 176, 224, 0.7)) brightness(1.1);
+  animation: transformBadgeSpin 2s linear infinite;
+}
+
+.outcome--transform .replay-outcome__title {
+  color: #50b0e0;
+}
+
+@keyframes transformBadgeSpin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+/* Duplicate Outcome */
+.outcome--duplicate .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(80, 224, 160, 0.7)) brightness(1.2);
+  animation: duplicateBadgePulse 0.8s ease-in-out infinite;
+}
+
+.outcome--duplicate .replay-outcome__title {
+  color: #50e0a0;
+}
+
+.outcome--duplicate .replay-outcome__card-visual {
+  border-color: rgba(80, 224, 160, 0.3);
+  box-shadow: 0 0 12px rgba(80, 224, 160, 0.3);
+}
+
+@keyframes duplicateBadgePulse {
+  0%, 100% { 
+    transform: scale(1); 
+    filter: drop-shadow(0 0 8px rgba(80, 224, 160, 0.7)) brightness(1.2);
+  }
+  50% { 
+    transform: scale(1.15); 
+    filter: drop-shadow(0 0 15px rgba(80, 224, 160, 0.9)) brightness(1.4);
+  }
 }
 
 /* ===== CURSOR ===== */

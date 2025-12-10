@@ -2,11 +2,18 @@
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
+import type { VaalOutcome } from "~/types/vaalOutcome";
+import {
+  rollVaalOutcome,
+  getShareModalContent,
+  getForcedOutcomeOptions,
+} from "~/types/vaalOutcome";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
 import { useAltarEffects } from "~/composables/useAltarEffects";
 import { useAltarAura } from "~/composables/useAltarAura";
+import { useVaalOutcomes } from "~/composables/useVaalOutcomes";
 import {
   useCardGrouping,
   type CardGroupWithVariations,
@@ -77,6 +84,7 @@ const isCardFlipped = ref(false);
 const isCardOnAltar = ref(false);
 const isAltarActive = ref(false); // Visual state - fades out smoothly
 const isAnimating = ref(false);
+const isTransformingCard = ref(false); // Flag to prevent fly-in animation during transform
 
 // Get the selected card group
 const selectedCardGroup = computed(() =>
@@ -139,6 +147,17 @@ watch(selectedCardId, async (newId, oldId) => {
     const group = groupedCards.value.find((g) => g.cardId === newId);
     if (group && group.variations.length > 0) {
       selectedVariation.value = group.variations[0].variation;
+    }
+
+    // If this is a transformation, the card is already on altar - just update visually
+    if (isTransformingCard.value) {
+      isTransformingCard.value = false;
+      // Card is already in place, just clear snapshots for new appearance
+      cardSnapshot.value = null;
+      imageSnapshot.value = null;
+      capturedImageDimensions.value = null;
+      capturedCardDimensions.value = null;
+      return;
     }
 
     // Clear snapshots and dimensions when changing cards
@@ -279,7 +298,6 @@ const placeCardOnAltar = async () => {
 // ==========================================
 // VAAL ORB OUTCOMES
 // ==========================================
-type VaalOutcome = "nothing" | "foil" | "destroyed";
 type ForcedOutcome = "random" | VaalOutcome;
 
 // State for destruction animation
@@ -313,17 +331,25 @@ const lastRecordedOutcome = ref<VaalOutcome | null>(null);
 const recordOnNothing = ref(false);
 const recordOnFoil = ref(true);
 const recordOnDestroyed = ref(true);
+const recordOnTransform = ref(true);
+const recordOnDuplicate = ref(true);
 
 // Load preferences from localStorage on mount
 onMounted(() => {
   const savedNothing = localStorage.getItem("record_nothing");
   const savedFoil = localStorage.getItem("record_foil");
   const savedDestroyed = localStorage.getItem("record_destroyed");
+  const savedTransform = localStorage.getItem("record_transform");
+  const savedDuplicate = localStorage.getItem("record_duplicate");
 
   if (savedNothing !== null) recordOnNothing.value = savedNothing === "true";
   if (savedFoil !== null) recordOnFoil.value = savedFoil === "true";
   if (savedDestroyed !== null)
     recordOnDestroyed.value = savedDestroyed === "true";
+  if (savedTransform !== null)
+    recordOnTransform.value = savedTransform === "true";
+  if (savedDuplicate !== null)
+    recordOnDuplicate.value = savedDuplicate === "true";
 });
 
 // Watch and save preferences to localStorage
@@ -334,11 +360,15 @@ watch(recordOnFoil, (val) => localStorage.setItem("record_foil", String(val)));
 watch(recordOnDestroyed, (val) =>
   localStorage.setItem("record_destroyed", String(val))
 );
+watch(recordOnTransform, (val) =>
+  localStorage.setItem("record_transform", String(val))
+);
+watch(recordOnDuplicate, (val) =>
+  localStorage.setItem("record_duplicate", String(val))
+);
 
 // Check if recording should happen for a given outcome
-const shouldRecordOutcome = (
-  outcome: "nothing" | "foil" | "destroyed"
-): boolean => {
+const shouldRecordOutcome = (outcome: VaalOutcome): boolean => {
   switch (outcome) {
     case "nothing":
       return recordOnNothing.value;
@@ -346,6 +376,10 @@ const shouldRecordOutcome = (
       return recordOnFoil.value;
     case "destroyed":
       return recordOnDestroyed.value;
+    case "transform":
+      return recordOnTransform.value;
+    case "duplicate":
+      return recordOnDuplicate.value;
     default:
       return false;
   }
@@ -362,8 +396,14 @@ watch(
 
 const startAutoRecording = () => {
   // Check if any recording is enabled
-  if (!recordOnNothing.value && !recordOnFoil.value && !recordOnDestroyed.value)
-    return;
+  const anyRecordingEnabled =
+    recordOnNothing.value ||
+    recordOnFoil.value ||
+    recordOnDestroyed.value ||
+    recordOnTransform.value ||
+    recordOnDuplicate.value;
+
+  if (!anyRecordingEnabled) return;
 
   const card = displayCard.value;
   if (!card || !isCardOnAltar.value) return;
@@ -389,112 +429,23 @@ const handleCopyUrl = async () => {
   }
 };
 
-// Share modal content based on outcome
-const shareModalContent = computed(() => {
-  switch (lastRecordedOutcome.value) {
-    case "destroyed":
-      return {
-        icon: "💀",
-        title: "Destruction immortalisée",
-        text: "Ta carte a été réduite en cendres par la corruption Vaal. Partage ce désastre pour que tous puissent contempler ta chute.",
-        linkText: "Revivre le cauchemar →",
-        theme: "destroyed",
-      };
-    case "foil":
-      return {
-        icon: "✨",
-        title: "Transformation légendaire !",
-        text: "La corruption Vaal a béni ta carte d'un éclat prismatique. Partage ce moment de gloire avec le monde !",
-        linkText: "Admirer le chef-d'œuvre →",
-        theme: "foil",
-      };
-    case "nothing":
-      return {
-        icon: "😐",
-        title: "Rien ne s'est passé...",
-        text: "La Vaal Orb a été absorbée sans effet. Pas très excitant, mais tu peux quand même partager ce moment de suspense.",
-        linkText: "Voir le non-événement →",
-        theme: "nothing",
-      };
-    default:
-      return {
-        icon: "🎬",
-        title: "Session enregistrée !",
-        text: "Ta session a été enregistrée. Partage ce lien pour que d'autres puissent voir ta Vaal Orb !",
-        linkText: "Voir le replay →",
-        theme: "default",
-      };
-  }
-});
+// Share modal content based on outcome (centralized configuration)
+const shareModalContent = computed(() =>
+  getShareModalContent(lastRecordedOutcome.value)
+);
 
-const forcedOutcomeOptions = [
-  { value: "random", label: "🎲 Aléatoire (défaut)" },
-  { value: "nothing", label: "😐 Rien ne se passe" },
-  { value: "foil", label: "✨ Transformation Foil" },
-  { value: "destroyed", label: "💀 Destruction" },
-];
+// Use centralized outcome options
+const forcedOutcomeOptions = getForcedOutcomeOptions();
 
 // Simulate Vaal outcome (will be server-side later)
 const simulateVaalOutcome = (): VaalOutcome => {
   // If a forced outcome is set, use it
   if (forcedOutcome.value !== "random") {
-    return forcedOutcome.value;
+    return forcedOutcome.value as VaalOutcome;
   }
 
-  const rand = Math.random();
-  // 50% nothing, 30% foil, 20% destroyed
-  if (rand < 0.5) return "nothing";
-  if (rand < 0.8) return "foil";
-  return "destroyed";
-};
-
-// Transform card to foil instantly with dramatic effect
-const transformToFoil = async () => {
-  if (!altarCardRef.value || !displayCard.value) return;
-
-  isAnimating.value = true;
-
-  // Find the card in the local collection and update it
-  const cardIndex = localCollection.value.findIndex(
-    (c) => c.uid === displayCard.value!.uid
-  );
-  if (cardIndex !== -1) {
-    localCollection.value[cardIndex].foil = true;
-  }
-
-  // Phase 1: Build up glow
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1.8) saturate(1.5)",
-    scale: 1.05,
-    duration: 0.2,
-    ease: "power2.in",
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  // Phase 2: Bright flash - this is when the transformation happens visually
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(3) saturate(2)",
-    scale: 1.1,
-    duration: 0.1,
-    ease: "power2.out",
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Phase 3: Settle back with the new foil appearance
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1) saturate(1)",
-    scale: 1,
-    duration: 0.4,
-    ease: "power2.out",
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  isAnimating.value = false;
-
-  // Re-capture snapshot with the new foil appearance
-  captureCardSnapshot();
+  // Use centralized probability-based roll
+  return rollVaalOutcome();
 };
 
 // Use shared disintegration effect composable
@@ -513,6 +464,34 @@ const {
 // Wrapper to use the composable with our ref
 const findCardImageElement = () => findCardImageElementBase(cardFrontRef);
 const captureCardSnapshot = () => captureCardSnapshotBase(cardFrontRef);
+
+// Vaal Outcomes composable for modular animations
+const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
+  useVaalOutcomes({
+    cardRef: altarCardRef,
+    cardFrontRef,
+    displayCard,
+    localCollection,
+    isAnimating,
+    onCardUpdate: (updatedCard) => {
+      // Called when card is updated (e.g., foil transformation)
+      // Re-capture snapshot with new appearance
+      nextTick(() => captureCardSnapshot());
+    },
+    onCardTransformed: (oldCard, newCard) => {
+      // Set flag to prevent fly-in animation - card morphs in place
+      isTransformingCard.value = true;
+      // Update the display card to show the new card
+      selectedCardId.value = newCard.id;
+      // Re-capture snapshot for new card appearance
+      nextTick(() => captureCardSnapshot());
+    },
+    onCardDuplicated: (originalCard, newCard) => {
+      // Card is already added to collection by the composable
+      // Re-capture snapshot
+      nextTick(() => captureCardSnapshot());
+    },
+  });
 
 const cleanupAfterDestruction = (destroyedCardUid: number) => {
   const cardIndex = localCollection.value.findIndex(
@@ -706,47 +685,33 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   switch (outcome) {
     case "nothing":
       // Nothing happens - just a brief flash to indicate the orb was consumed
-      await showNothingEffect();
+      await executeNothing();
       break;
 
     case "foil":
       // Transform to foil instantly
-      await transformToFoil();
+      await executeFoil();
       break;
 
     case "destroyed":
-      // Destroy the card
+      // Destroy the card with disintegration effect
       await destroyCard();
+      break;
+
+    case "transform":
+      // Transform to another card of the same tier
+      await executeTransform();
+      break;
+
+    case "duplicate":
+      // Create a duplicate of the card
+      await executeDuplicate();
       break;
   }
 
   // Force reset aura to dormant state after any Vaal outcome
   // This ensures no red glow remnants remain
   resetAura();
-};
-
-// Effect when nothing happens
-const showNothingEffect = async () => {
-  if (!altarCardRef.value) return;
-
-  isAnimating.value = true;
-
-  // Brief disappointed flash
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1.3) saturate(0.8)",
-    duration: 0.15,
-    ease: "power2.out",
-    onComplete: () => {
-      gsap.to(altarCardRef.value, {
-        filter: "brightness(1) saturate(1)",
-        duration: 0.3,
-        ease: "power2.out",
-      });
-    },
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  isAnimating.value = false;
 };
 
 // Card is thrown/ejected towards a random direction with spin
@@ -1427,6 +1392,30 @@ const endDragOrb = async () => {
                         >
                         <RunicRadio
                           v-model="recordOnDestroyed"
+                          :toggle="true"
+                          size="sm"
+                        />
+                      </div>
+
+                      <div class="prefs-toggle">
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--transform"
+                          >Transformation</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnTransform"
+                          :toggle="true"
+                          size="sm"
+                        />
+                      </div>
+
+                      <div class="prefs-toggle">
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--duplicate"
+                          >Duplication</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnDuplicate"
                           :toggle="true"
                           size="sm"
                         />
@@ -2985,6 +2974,14 @@ const endDragOrb = async () => {
   color: #e05050;
 }
 
+.prefs-toggle__label--transform {
+  color: #50b0e0;
+}
+
+.prefs-toggle__label--duplicate {
+  color: #50e0a0;
+}
+
 /* Preferences Fields (Admin section) */
 .prefs-field {
   display: flex;
@@ -3283,6 +3280,69 @@ const endDragOrb = async () => {
 
 .share-modal--nothing .share-modal__link {
   color: rgba(150, 140, 130, 0.6);
+}
+
+/* Transform Theme - Blue/Cyan mystical */
+.share-modal--transform .prefs-modal__title {
+  color: #50b0e0;
+}
+
+.share-modal--transform .prefs-modal__icon {
+  animation: transformSpin 1s ease-in-out infinite;
+}
+
+.share-modal--transform .share-modal__text {
+  color: rgba(100, 180, 220, 0.9);
+}
+
+.share-modal--transform .share-modal__link {
+  color: #50b0e0;
+}
+
+.share-modal--transform .share-modal__link:hover {
+  color: #80d0ff;
+}
+
+@keyframes transformSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Duplicate Theme - Green/Teal miracle */
+.share-modal--duplicate .prefs-modal__title {
+  color: #50e0a0;
+}
+
+.share-modal--duplicate .prefs-modal__icon {
+  animation: duplicatePulse 0.6s ease-in-out infinite;
+}
+
+.share-modal--duplicate .share-modal__text {
+  color: rgba(100, 220, 180, 0.95);
+}
+
+.share-modal--duplicate .share-modal__link {
+  color: #50e0a0;
+}
+
+.share-modal--duplicate .share-modal__link:hover {
+  color: #80ffc0;
+}
+
+@keyframes duplicatePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    transform: scale(1.3);
+    text-shadow: 0 0 10px rgba(80, 224, 160, 0.5);
+  }
 }
 
 /* ==========================================

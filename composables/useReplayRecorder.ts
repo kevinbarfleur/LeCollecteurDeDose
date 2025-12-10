@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import type { DecodedMousePosition } from '~/types/replay';
+import type { VaalOutcome } from '~/types/vaalOutcome';
 import type { Database, ReplayInsert } from '~/types/database';
 import { RECORDING } from '~/constants/timing';
 
@@ -83,7 +84,7 @@ export function useReplayRecorder() {
     recordedPositions.value.push({ x, y, t: now });
   };
 
-  const stopRecording = async (outcome: 'nothing' | 'foil' | 'destroyed') => {
+  const stopRecording = async (outcome: VaalOutcome) => {
     if (!isRecording.value) return null;
     
     recordedOutcome.value = outcome;

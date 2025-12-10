@@ -8,7 +8,12 @@ export interface DecodedMousePosition {
   t: number;  // Temps en ms
 }
 
-/**
- * Vaal orb outcome types
- */
-export type VaalOutcome = 'nothing' | 'foil' | 'destroyed';
+// Re-export VaalOutcome from centralized location
+export type { VaalOutcome } from './vaalOutcome';
+export { 
+  VAAL_OUTCOMES, 
+  getOutcomeConfig, 
+  rollVaalOutcome, 
+  getShareModalContent,
+  getForcedOutcomeOptions,
+} from './vaalOutcome';
