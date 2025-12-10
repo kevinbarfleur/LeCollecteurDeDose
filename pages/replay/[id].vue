@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useReplayPlayer } from "~/composables/useReplayPlayer";
 import { useAltarEffects } from "~/composables/useAltarEffects";
+import { useAltarAura } from "~/composables/useAltarAura";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 import { getCardById } from "~/data/mockCards";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
@@ -34,6 +35,7 @@ const altarCardRef = ref<HTMLElement | null>(null);
 const cardFrontRef = ref<HTMLElement | null>(null);
 const cardSlotRef = ref<HTMLElement | null>(null);
 const vaalOrbRef = ref<HTMLElement | null>(null);
+const altarPlatformRef = ref<HTMLElement | null>(null);
 
 const isLoaded = ref(false);
 const hasError = ref(false);
@@ -120,6 +122,15 @@ const altarClasses = computed(() => getAltarClasses(
 
 // Card classes using the shared function
 const cardClasses = computed(() => getCardClasses(isLoaded.value, false));
+
+// Altar Aura Effect - outer glow, rays, and particles
+useAltarAura({
+  containerRef: altarPlatformRef,
+  isActive: isLoaded,
+  isVaalMode: isOrbOverCard,
+  tier: computed(() => cardData.value?.tier),
+  isFoil: isCurrentCardFoil,
+});
 
 const formattedDate = computed(() => {
   if (!createdAt.value) return '';
@@ -513,6 +524,7 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
         <!-- Main Stage -->
         <main class="replay-stage">
           <div 
+            ref="altarPlatformRef"
             class="altar-platform"
             :class="altarClasses"
           >
@@ -865,32 +877,30 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   z-index: 0;
 }
 
+/* Vaal glow - now handled by the aura system for cleaner layering */
 .altar-platform::after {
   content: "";
   position: absolute;
-  inset: -20px;
+  inset: -10px;
   border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(200, 50, 50, 0.3) 0%,
-    rgba(180, 40, 40, 0.15) 40%,
-    transparent 70%
-  );
+  background: transparent;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease, box-shadow 0.4s ease;
   pointer-events: none;
   z-index: -1;
-  animation: vaalGlowPulse 0.6s ease-in-out infinite;
-  animation-play-state: paused;
 }
 
 .altar-platform--active.altar-platform--vaal::before {
   opacity: 1;
 }
 
+/* Vaal inner glow only - outer glow is handled by the aura system */
 .altar-platform--active.altar-platform--vaal::after {
   opacity: 1;
-  animation-play-state: running;
+  box-shadow: 
+    inset 0 0 30px rgba(200, 50, 50, 0.3),
+    inset 0 0 60px rgba(150, 30, 30, 0.2);
+  animation: vaalInnerGlow 0.6s ease-in-out infinite;
 }
 
 .altar-platform--active.altar-platform--vaal {
@@ -898,9 +908,17 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   --altar-rune-color: rgba(200, 50, 50, 0.8);
 }
 
-@keyframes vaalGlowPulse {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.08); opacity: 1; }
+@keyframes vaalInnerGlow {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 30px rgba(200, 50, 50, 0.3),
+      inset 0 0 60px rgba(150, 30, 30, 0.2);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 40px rgba(220, 60, 60, 0.4),
+      inset 0 0 80px rgba(180, 40, 40, 0.25);
+  }
 }
 
 @keyframes foilGlowSubtle {

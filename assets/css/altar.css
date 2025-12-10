@@ -112,34 +112,44 @@
   z-index: 0;
 }
 
-/* Vaal glow effect - separate layer for pulsing */
+/* Vaal glow effect - now handled by the aura system for cleaner layering */
 .altar-platform::after {
   content: "";
   position: absolute;
-  inset: -20px;
+  inset: -10px;
   border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(200, 50, 50, 0.3) 0%,
-    rgba(180, 40, 40, 0.15) 40%,
-    transparent 70%
-  );
+  background: transparent;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease, box-shadow 0.4s ease;
   pointer-events: none;
   z-index: -1;
-  animation: vaalGlowPulse 0.6s ease-in-out infinite;
-  animation-play-state: paused;
 }
 
-/* When Vaal is active, fade in the overlay and glow */
+/* When Vaal is active, fade in the overlay (aura handles the outer glow) */
 .altar-platform--active.altar-platform--vaal::before {
   opacity: 1;
 }
 
+/* Vaal inner glow only - outer glow is handled by the aura system */
 .altar-platform--active.altar-platform--vaal::after {
   opacity: 1;
-  animation-play-state: running;
+  box-shadow: 
+    inset 0 0 30px rgba(200, 50, 50, 0.3),
+    inset 0 0 60px rgba(150, 30, 30, 0.2);
+  animation: vaalInnerGlow 0.6s ease-in-out infinite;
+}
+
+@keyframes vaalInnerGlow {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 30px rgba(200, 50, 50, 0.3),
+      inset 0 0 60px rgba(150, 30, 30, 0.2);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 40px rgba(220, 60, 60, 0.4),
+      inset 0 0 80px rgba(180, 40, 40, 0.25);
+  }
 }
 
 /* Override CSS variables smoothly for elements that use them */
@@ -154,17 +164,7 @@
   --altar-rune-color: rgba(200, 50, 50, 0.8);
 }
 
-@keyframes vaalGlowPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-}
+/* vaalGlowPulse - removed, now handled by aura system */
 
 @keyframes foilGlowSubtle {
   0%,
@@ -700,5 +700,488 @@ html.earthquake-global {
   80% {
     transform: translate(-1.5px, -0.5px);
   }
+}
+
+/* ==========================================
+   ALTAR AURA SYSTEM
+   Outer glow effects that sit BEHIND the altar
+   ========================================== */
+
+.altar-aura {
+  --aura-primary: #5a5a5d;
+  --aura-glow: rgba(90, 90, 93, 0.4);
+  --aura-intensity: 0.6;
+  
+  position: absolute;
+  inset: -60px;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.altar-aura--active {
+  opacity: 1;
+}
+
+/* ==========================================
+   OUTER GLOW - Soft ambient light behind altar
+   ========================================== */
+.altar-aura__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    var(--aura-glow) 0%,
+    transparent 60%
+  );
+  opacity: calc(var(--aura-intensity) * 0.5);
+  filter: blur(20px);
+  transition: background 0.5s ease, opacity 0.5s ease;
+}
+
+.altar-aura--vaal .altar-aura__glow {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(200, 50, 50, 0.5) 0%,
+    rgba(150, 30, 30, 0.3) 30%,
+    transparent 60%
+  );
+  opacity: 0.8;
+  animation: vaalAuraGlowPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes vaalAuraGlowPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+/* ==========================================
+   RIM LIGHTING - Edge glow on altar perimeter
+   ========================================== */
+.altar-aura__rim {
+  position: absolute;
+  inset: 50px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid transparent;
+  box-shadow: 
+    0 0 15px var(--aura-glow),
+    0 0 30px var(--aura-glow),
+    inset 0 0 15px rgba(0, 0, 0, 0.3);
+  opacity: calc(var(--aura-intensity) * 0.6);
+  transition: box-shadow 0.5s ease, opacity 0.5s ease;
+}
+
+.altar-aura--vaal .altar-aura__rim {
+  box-shadow: 
+    0 0 20px rgba(200, 50, 50, 0.6),
+    0 0 40px rgba(180, 40, 40, 0.4),
+    0 0 60px rgba(150, 30, 30, 0.2),
+    inset 0 0 20px rgba(0, 0, 0, 0.3);
+  opacity: 0.9;
+  animation: vaalRimPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes vaalRimPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(200, 50, 50, 0.6),
+      0 0 40px rgba(180, 40, 40, 0.4),
+      0 0 60px rgba(150, 30, 30, 0.2),
+      inset 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(220, 60, 60, 0.8),
+      0 0 50px rgba(200, 50, 50, 0.5),
+      0 0 80px rgba(180, 40, 40, 0.3),
+      inset 0 0 25px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Foil rim - rainbow cycling */
+.altar-aura--foil .altar-aura__rim {
+  animation: foilRimCycle 4s linear infinite;
+}
+
+@keyframes foilRimCycle {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(192, 160, 255, 0.5),
+      0 0 40px rgba(180, 150, 240, 0.3);
+  }
+  25% {
+    box-shadow: 
+      0 0 20px rgba(255, 160, 192, 0.5),
+      0 0 40px rgba(240, 150, 180, 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 0 20px rgba(160, 255, 192, 0.5),
+      0 0 40px rgba(150, 240, 180, 0.3);
+  }
+  75% {
+    box-shadow: 
+      0 0 20px rgba(160, 192, 255, 0.5),
+      0 0 40px rgba(150, 180, 240, 0.3);
+  }
+}
+
+/* ==========================================
+   ENERGY RAYS - Premium ethereal light beams
+   ========================================== */
+.altar-aura__rays {
+  position: absolute;
+  inset: -40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.altar-aura__ray {
+  position: absolute;
+  width: 2px;
+  height: 100px;
+  transform-origin: center bottom;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-140px);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+/* Multi-layer ray structure for depth */
+.altar-aura__ray::before,
+.altar-aura__ray::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0;
+}
+
+/* Core bright center of the ray */
+.altar-aura__ray::before {
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(
+    to top,
+    var(--aura-primary, #888) 0%,
+    color-mix(in srgb, var(--aura-primary, #888) 60%, white) 20%,
+    transparent 85%
+  );
+  filter: blur(1px);
+}
+
+/* Soft outer glow of the ray */
+.altar-aura__ray::after {
+  width: 12px;
+  height: 90%;
+  background: linear-gradient(
+    to top,
+    var(--aura-glow) 0%,
+    color-mix(in srgb, var(--aura-glow) 30%, transparent) 40%,
+    transparent 80%
+  );
+  filter: blur(6px);
+  opacity: 0.6;
+}
+
+.altar-aura--active .altar-aura__ray {
+  opacity: calc(var(--aura-intensity) * 0.4);
+  animation: rayBreath 4s ease-in-out infinite;
+  animation-delay: var(--ray-delay, 0s);
+}
+
+/* ==========================================
+   RAY SIZE VARIANTS - For fluid distribution
+   ========================================== */
+
+/* Large rays - most prominent */
+.altar-aura__ray--large {
+  height: 110px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-145px);
+}
+
+.altar-aura__ray--large::before {
+  width: 3px;
+}
+
+.altar-aura__ray--large::after {
+  width: 16px;
+  opacity: 0.7;
+}
+
+.altar-aura--active .altar-aura__ray--large {
+  opacity: calc(var(--aura-intensity) * 0.55);
+  animation: rayBreathLarge 4.5s ease-in-out infinite;
+}
+
+@keyframes rayBreathLarge {
+  0%, 100% {
+    opacity: 0.2;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-145px) scaleY(0.9);
+  }
+  50% {
+    opacity: 0.5;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-150px) scaleY(1.15);
+  }
+}
+
+/* Medium rays */
+.altar-aura__ray--medium {
+  height: 85px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-138px);
+}
+
+.altar-aura__ray--medium::before {
+  width: 2px;
+}
+
+.altar-aura__ray--medium::after {
+  width: 12px;
+  opacity: 0.55;
+}
+
+.altar-aura--active .altar-aura__ray--medium {
+  opacity: calc(var(--aura-intensity) * 0.45);
+  animation: rayBreathMedium 3.8s ease-in-out infinite;
+}
+
+@keyframes rayBreathMedium {
+  0%, 100% {
+    opacity: 0.15;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-138px) scaleY(0.85);
+  }
+  50% {
+    opacity: 0.4;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-142px) scaleY(1.1);
+  }
+}
+
+/* Small rays */
+.altar-aura__ray--small {
+  height: 60px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-130px);
+}
+
+.altar-aura__ray--small::before {
+  width: 1.5px;
+}
+
+.altar-aura__ray--small::after {
+  width: 8px;
+  opacity: 0.4;
+}
+
+.altar-aura--active .altar-aura__ray--small {
+  opacity: calc(var(--aura-intensity) * 0.35);
+  animation: rayBreathSmall 3.5s ease-in-out infinite;
+}
+
+@keyframes rayBreathSmall {
+  0%, 100% {
+    opacity: 0.1;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-130px) scaleY(0.8);
+  }
+  50% {
+    opacity: 0.3;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-133px) scaleY(1.05);
+  }
+}
+
+/* Tiny rays - fill gaps, very subtle */
+.altar-aura__ray--tiny {
+  height: 40px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-125px);
+}
+
+.altar-aura__ray--tiny::before {
+  width: 1px;
+  filter: blur(0.5px);
+}
+
+.altar-aura__ray--tiny::after {
+  width: 5px;
+  opacity: 0.25;
+  filter: blur(4px);
+}
+
+.altar-aura--active .altar-aura__ray--tiny {
+  opacity: calc(var(--aura-intensity) * 0.25);
+  animation: rayBreathTiny 3s ease-in-out infinite;
+}
+
+@keyframes rayBreathTiny {
+  0%, 100% {
+    opacity: 0.05;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-125px) scaleY(0.75);
+  }
+  50% {
+    opacity: 0.2;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-127px) scaleY(1);
+  }
+}
+
+/* Subtle breathing animation */
+@keyframes rayBreath {
+  0%, 100% {
+    opacity: 0.15;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-140px) scaleY(0.85);
+  }
+  50% {
+    opacity: 0.4;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-145px) scaleY(1.1);
+  }
+}
+
+/* ==========================================
+   VAAL RAYS - Intense corruption energy
+   ========================================== */
+.altar-aura--vaal .altar-aura__ray {
+  opacity: 0.8;
+  animation: vaalRayFlicker 0.15s ease-in-out infinite, 
+             vaalRayPulse 0.6s ease-in-out infinite;
+}
+
+.altar-aura--vaal .altar-aura__ray::before {
+  background: linear-gradient(
+    to top,
+    rgba(255, 80, 80, 1) 0%,
+    rgba(255, 150, 150, 0.9) 15%,
+    rgba(200, 50, 50, 0.4) 50%,
+    transparent 85%
+  );
+  filter: blur(1px);
+  width: 3px;
+}
+
+.altar-aura--vaal .altar-aura__ray::after {
+  background: linear-gradient(
+    to top,
+    rgba(255, 60, 60, 0.8) 0%,
+    rgba(200, 40, 40, 0.5) 30%,
+    rgba(150, 20, 20, 0.2) 60%,
+    transparent 85%
+  );
+  filter: blur(8px);
+  width: 20px;
+  opacity: 0.9;
+}
+
+@keyframes vaalRayFlicker {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  25% {
+    filter: brightness(1.15);
+  }
+  75% {
+    filter: brightness(0.9);
+  }
+}
+
+@keyframes vaalRayPulse {
+  0%, 100% {
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-140px) scaleY(0.9) scaleX(1);
+  }
+  30% {
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-148px) scaleY(1.2) scaleX(1.3);
+  }
+  60% {
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-142px) scaleY(1.05) scaleX(0.9);
+  }
+}
+
+/* ==========================================
+   FOIL RAYS - Prismatic shimmer
+   ========================================== */
+.altar-aura--foil .altar-aura__ray {
+  animation: rayBreath 4s ease-in-out infinite,
+             foilRayShimmer 3s linear infinite;
+  animation-delay: var(--ray-delay, 0s), calc(var(--ray-delay, 0s) * 0.5);
+}
+
+.altar-aura--foil .altar-aura__ray::before {
+  animation: foilRayCore 3s linear infinite;
+  animation-delay: calc(var(--ray-delay, 0s) * 0.5);
+}
+
+.altar-aura--foil .altar-aura__ray::after {
+  animation: foilRayGlow 3s linear infinite;
+  animation-delay: calc(var(--ray-delay, 0s) * 0.5);
+}
+
+@keyframes foilRayShimmer {
+  0%, 100% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  33% {
+    filter: hue-rotate(60deg) brightness(1.1);
+  }
+  66% {
+    filter: hue-rotate(-60deg) brightness(1.05);
+  }
+}
+
+@keyframes foilRayCore {
+  0%, 100% {
+    background: linear-gradient(to top, rgba(192, 160, 255, 1) 0%, rgba(220, 200, 255, 0.6) 30%, transparent 85%);
+  }
+  33% {
+    background: linear-gradient(to top, rgba(255, 160, 192, 1) 0%, rgba(255, 200, 220, 0.6) 30%, transparent 85%);
+  }
+  66% {
+    background: linear-gradient(to top, rgba(160, 255, 200, 1) 0%, rgba(200, 255, 220, 0.6) 30%, transparent 85%);
+  }
+}
+
+@keyframes foilRayGlow {
+  0%, 100% {
+    background: linear-gradient(to top, rgba(192, 160, 255, 0.7) 0%, rgba(180, 150, 240, 0.3) 50%, transparent 80%);
+  }
+  33% {
+    background: linear-gradient(to top, rgba(255, 160, 192, 0.7) 0%, rgba(240, 150, 180, 0.3) 50%, transparent 80%);
+  }
+  66% {
+    background: linear-gradient(to top, rgba(160, 255, 200, 0.7) 0%, rgba(150, 240, 190, 0.3) 50%, transparent 80%);
+  }
+}
+
+/* ==========================================
+   PARTICLES - Floating embers for Vaal mode
+   ========================================== */
+.altar-aura__particles {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.altar-aura__particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 100, 80, 1) 0%,
+    rgba(200, 50, 50, 0.8) 40%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  box-shadow: 
+    0 0 6px rgba(255, 100, 80, 0.8),
+    0 0 12px rgba(200, 50, 50, 0.4);
+  pointer-events: none;
 }
 

@@ -6,6 +6,7 @@ import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
 import { useAltarEffects } from "~/composables/useAltarEffects";
+import { useAltarAura } from "~/composables/useAltarAura";
 import {
   useCardGrouping,
   type CardGroupWithVariations,
@@ -306,6 +307,7 @@ const {
 const showShareModal = ref(false);
 const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
+const lastRecordedOutcome = ref<VaalOutcome | null>(null);
 
 // Record preferences - saved in localStorage
 const recordOnNothing = ref(false);
@@ -386,6 +388,44 @@ const handleCopyUrl = async () => {
     }, 2000);
   }
 };
+
+// Share modal content based on outcome
+const shareModalContent = computed(() => {
+  switch (lastRecordedOutcome.value) {
+    case "destroyed":
+      return {
+        icon: "💀",
+        title: "Destruction immortalisée",
+        text: "Ta carte a été réduite en cendres par la corruption Vaal. Partage ce désastre pour que tous puissent contempler ta chute.",
+        linkText: "Revivre le cauchemar →",
+        theme: "destroyed",
+      };
+    case "foil":
+      return {
+        icon: "✨",
+        title: "Transformation légendaire !",
+        text: "La corruption Vaal a béni ta carte d'un éclat prismatique. Partage ce moment de gloire avec le monde !",
+        linkText: "Admirer le chef-d'œuvre →",
+        theme: "foil",
+      };
+    case "nothing":
+      return {
+        icon: "😐",
+        title: "Rien ne s'est passé...",
+        text: "La Vaal Orb a été absorbée sans effet. Pas très excitant, mais tu peux quand même partager ce moment de suspense.",
+        linkText: "Voir le non-événement →",
+        theme: "nothing",
+      };
+    default:
+      return {
+        icon: "🎬",
+        title: "Session enregistrée !",
+        text: "Ta session a été enregistrée. Partage ce lien pour que d'autres puissent voir ta Vaal Orb !",
+        linkText: "Voir le replay →",
+        theme: "default",
+      };
+  }
+});
 
 const forcedOutcomeOptions = [
   { value: "random", label: "🎲 Aléatoire (défaut)" },
@@ -651,6 +691,7 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   if (isRecording.value) {
     if (shouldRecordOutcome(outcome)) {
       stopRecording(outcome);
+      lastRecordedOutcome.value = outcome;
       // Show share modal after 2 seconds (when recording finishes)
       setTimeout(() => {
         showShareModal.value = true;
@@ -678,6 +719,10 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
       await destroyCard();
       break;
   }
+
+  // Force reset aura to dormant state after any Vaal outcome
+  // This ensures no red glow remnants remain
+  resetAura();
 };
 
 // Effect when nothing happens
@@ -750,6 +795,7 @@ const isDraggingOrb = ref(false);
 const isReturningOrb = ref(false);
 const draggedOrbIndex = ref<number | null>(null);
 const altarAreaRef = ref<HTMLElement | null>(null);
+const altarPlatformRef = ref<HTMLElement | null>(null);
 const floatingOrbRef = ref<HTMLElement | null>(null);
 const orbRefs = ref<HTMLElement[]>([]);
 
@@ -803,6 +849,15 @@ watch(isOrbOverCard, (isOver) => {
       document.documentElement.classList.remove("earthquake-global");
     }
   }
+});
+
+// Altar Aura Effect - outer glow, rays, and particles
+const { auraContainer, resetAura } = useAltarAura({
+  containerRef: altarPlatformRef,
+  isActive: isAltarActive,
+  isVaalMode: isOrbOverCard,
+  tier: computed(() => displayCard.value?.tier),
+  isFoil: isCurrentCardFoil,
 });
 
 // Set orb ref
@@ -1091,7 +1146,11 @@ const endDragOrb = async () => {
         <!-- Altar area -->
         <div ref="altarAreaRef" class="altar-area">
           <!-- The altar platform -->
-          <div class="altar-platform" :class="altarClasses">
+          <div
+            ref="altarPlatformRef"
+            class="altar-platform"
+            :class="altarClasses"
+          >
             <!-- Runic circles decoration -->
             <div class="altar-circle altar-circle--outer"></div>
             <div class="altar-circle altar-circle--middle"></div>
@@ -1431,11 +1490,16 @@ const endDragOrb = async () => {
               class="prefs-modal-overlay"
               @click.self="showShareModal = false"
             >
-              <div class="prefs-modal share-modal">
+              <div
+                class="prefs-modal share-modal"
+                :class="`share-modal--${shareModalContent.theme}`"
+              >
                 <div class="prefs-modal__header">
                   <h3 class="prefs-modal__title">
-                    <span class="prefs-modal__icon">🎬</span>
-                    Session enregistrée !
+                    <span class="prefs-modal__icon">{{
+                      shareModalContent.icon
+                    }}</span>
+                    {{ shareModalContent.title }}
                   </h3>
                   <button
                     type="button"
@@ -1460,8 +1524,7 @@ const endDragOrb = async () => {
 
                 <div class="prefs-modal__content">
                   <p class="share-modal__text">
-                    Ta session a été enregistrée. Partage ce lien pour que
-                    d'autres puissent voir ta Vaal Orb !
+                    {{ shareModalContent.text }}
                   </p>
 
                   <div class="share-modal__url">
@@ -1487,7 +1550,7 @@ const endDragOrb = async () => {
                       target="_blank"
                       class="share-modal__link"
                     >
-                      Voir le replay →
+                      {{ shareModalContent.linkText }}
                     </NuxtLink>
                   </div>
                 </div>
@@ -3127,6 +3190,99 @@ const endDragOrb = async () => {
 .share-modal__link:hover {
   color: var(--color-primary-light);
   text-decoration: underline;
+}
+
+/* Share Modal Themes */
+.share-modal--destroyed .prefs-modal__title {
+  color: #c83232;
+}
+
+.share-modal--destroyed .prefs-modal__icon {
+  animation: skullShake 0.5s ease-in-out infinite;
+}
+
+.share-modal--destroyed .share-modal__text {
+  color: rgba(200, 120, 120, 0.9);
+}
+
+.share-modal--destroyed .share-modal__link {
+  color: #c83232;
+}
+
+.share-modal--destroyed .share-modal__link:hover {
+  color: #ff5555;
+}
+
+@keyframes skullShake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+}
+
+.share-modal--foil .prefs-modal__title {
+  background: linear-gradient(90deg, #c0a0ff, #ffa0c0, #a0ffc0, #a0c0ff);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: foilTextShimmer 3s linear infinite;
+}
+
+.share-modal--foil .prefs-modal__icon {
+  animation: foilIconPulse 1s ease-in-out infinite;
+}
+
+.share-modal--foil .share-modal__text {
+  color: rgba(200, 180, 220, 0.95);
+}
+
+.share-modal--foil .share-modal__link {
+  color: #c0a0ff;
+}
+
+.share-modal--foil .share-modal__link:hover {
+  color: #e0c0ff;
+}
+
+@keyframes foilTextShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+@keyframes foilIconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.2);
+    filter: brightness(1.3);
+  }
+}
+
+.share-modal--nothing .prefs-modal__title {
+  color: rgba(150, 140, 130, 0.8);
+}
+
+.share-modal--nothing .share-modal__text {
+  color: rgba(150, 140, 130, 0.7);
+  font-style: italic;
+}
+
+.share-modal--nothing .share-modal__link {
+  color: rgba(150, 140, 130, 0.6);
 }
 
 /* ==========================================
