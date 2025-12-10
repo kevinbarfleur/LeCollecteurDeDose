@@ -15,11 +15,50 @@ const {
   closePanel,
 } = useActivityLogs();
 
+// Search and filter state
+const searchQuery = ref('');
+const selectedOutcome = ref('');
+
+// Outcome filter options
+const outcomeOptions = computed(() => [
+  { value: '', label: t('activityLogs.allOutcomes') },
+  { value: 'destroyed', label: VAAL_OUTCOMES.destroyed.label },
+  { value: 'foil', label: VAAL_OUTCOMES.foil.label },
+  { value: 'transform', label: VAAL_OUTCOMES.transform.label },
+  { value: 'duplicate', label: VAAL_OUTCOMES.duplicate.label },
+  { value: 'nothing', label: VAAL_OUTCOMES.nothing.label },
+]);
+
 // Get card name from ID
 const getCardName = (cardId: string): string => {
   const card = poeUniques.find((c: any) => c.id === cardId);
   return card?.name || cardId;
 };
+
+// Filtered logs based on search and outcome filter
+const filteredLogs = computed(() => {
+  let result = logs.value;
+  
+  // Filter by outcome
+  if (selectedOutcome.value) {
+    result = result.filter(log => log.outcome === selectedOutcome.value);
+  }
+  
+  // Filter by search query (player name or card name)
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    result = result.filter(log => {
+      const playerMatch = log.username.toLowerCase().includes(query);
+      const cardMatch = getCardName(log.card_id).toLowerCase().includes(query);
+      const resultCardMatch = log.result_card_id 
+        ? getCardName(log.result_card_id).toLowerCase().includes(query)
+        : false;
+      return playerMatch || cardMatch || resultCardMatch;
+    });
+  }
+  
+  return result;
+});
 
 // Get outcome config
 const getOutcomeEmoji = (outcome: string): string => {
@@ -133,22 +172,42 @@ const getOutcomeClass = (outcome: string): string => {
           <div class="activity-panel__header-edge"></div>
         </div>
 
+        <!-- Filters section -->
+        <div class="activity-panel__filters">
+          <RunicInput
+            v-model="searchQuery"
+            :placeholder="t('activityLogs.searchPlaceholder')"
+            icon="search"
+            size="sm"
+            class="activity-panel__search"
+          />
+          <RunicSelect
+            v-model="selectedOutcome"
+            :options="outcomeOptions"
+            :placeholder="t('activityLogs.allOutcomes')"
+            size="sm"
+            class="activity-panel__filter"
+          />
+        </div>
+
         <!-- Content -->
         <div class="activity-panel__content">
-          <template v-if="logs.length === 0">
+          <template v-if="filteredLogs.length === 0">
             <div class="activity-empty">
               <div class="activity-empty__icon-wrapper">
                 <span class="activity-empty__rune activity-empty__rune--left">◆</span>
-                <span class="activity-empty__icon">📜</span>
+                <span class="activity-empty__icon">{{ (searchQuery || selectedOutcome) ? '🔍' : '📜' }}</span>
                 <span class="activity-empty__rune activity-empty__rune--right">◆</span>
               </div>
-              <p class="activity-empty__text">{{ t('activityLogs.empty') }}</p>
+              <p class="activity-empty__text">
+                {{ (searchQuery || selectedOutcome) ? t('activityLogs.noResults') : t('activityLogs.empty') }}
+              </p>
             </div>
           </template>
 
           <TransitionGroup v-else name="log-item" tag="ul" class="activity-list">
             <li
-              v-for="log in logs"
+              v-for="log in filteredLogs"
               :key="log.id"
               class="log-entry"
             >
@@ -626,6 +685,24 @@ const getOutcomeClass = (outcome: string): string => {
     rgba(60, 55, 48, 0.4) 85%,
     transparent
   );
+}
+
+/* Filters section */
+.activity-panel__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(50, 45, 40, 0.3);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.activity-panel__search {
+  width: 100%;
+}
+
+.activity-panel__filter {
+  width: 100%;
 }
 
 /* Content */
