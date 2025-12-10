@@ -57,6 +57,7 @@ export const HEARTBEAT = {
   MAX_PANIC_SCALE: 1.05,
   MAX_DISTANCE: 400, // pixels - beyond this = base intensity
   MIN_DISTANCE: 50, // pixels - at or below this = max intensity
+  ORB_OVER_BUFFER: 15, // pixels - hysteresis buffer to prevent flickering at card edges
 } as const;
 
 /**

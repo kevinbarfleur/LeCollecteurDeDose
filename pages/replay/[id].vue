@@ -48,13 +48,41 @@ const {
   heartbeatStyles,
   getAltarClasses,
   getCardClasses,
-  resetEffects
+  resetEffects,
+  // Earthquake effect styles
+  earthquakeHeaderStyles,
+  earthquakeVaalStyles,
+  earthquakeBodyStyles,
+  getEarthquakeClasses,
 } = useAltarEffects({
   cardRef: altarCardRef,
   cursorX,
   cursorY,
   isActive: isPlaying,
   isDestroying: isCardBeingDestroyed
+});
+
+// Computed classes for earthquake effect on different UI sections
+const headerEarthquakeClasses = computed(() => getEarthquakeClasses("header"));
+const outcomeEarthquakeClasses = computed(() => getEarthquakeClasses("vaalSection"));
+const bodyEarthquakeClasses = computed(() => getEarthquakeClasses("body"));
+
+// Global earthquake effect on html element (affects header, footer, entire page)
+watch(isOrbOverCard, (isOver) => {
+  if (typeof document !== "undefined") {
+    if (isOver) {
+      document.documentElement.classList.add("earthquake-global");
+    } else {
+      document.documentElement.classList.remove("earthquake-global");
+    }
+  }
+});
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.remove("earthquake-global");
+  }
 });
 
 // Use shared disintegration effect composable
@@ -447,9 +475,19 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
       </div>
       
       <!-- Replay Content -->
-      <div v-else-if="isLoaded" class="replay-content">
+      <div 
+        v-else-if="isLoaded" 
+        class="replay-content"
+        :class="bodyEarthquakeClasses"
+        :style="earthquakeBodyStyles"
+      >
         <!-- Compact Header -->
-        <RunicBox padding="sm" class="replay-header-box">
+        <RunicBox 
+          padding="sm" 
+          class="replay-header-box"
+          :class="headerEarthquakeClasses"
+          :style="earthquakeHeaderStyles"
+        >
           <div class="replay-header">
             <div class="replay-header__user">
               <img 
@@ -511,7 +549,13 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
         
         <!-- Outcome Panel -->
         <Transition name="outcome">
-          <RunicBox v-if="showOutcome" padding="md" class="replay-outcome-box" :class="outcomeClass">
+          <RunicBox 
+            v-if="showOutcome" 
+            padding="md" 
+            class="replay-outcome-box" 
+            :class="[outcomeClass, outcomeEarthquakeClasses]"
+            :style="earthquakeVaalStyles"
+          >
             <div class="replay-outcome">
               <div class="replay-outcome__badge">
                 <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-outcome__badge-img" />
@@ -544,28 +588,29 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
           </RunicBox>
         </Transition>
         
-        <!-- Animated Cursor with Vaal Orb -->
-        <div 
-          v-if="isPlaying"
-          ref="vaalOrbRef"
-          class="replay-cursor"
-          :style="{
-            left: `${cursorX}px`,
-            top: `${cursorY}px`
-          }"
-        >
-          <div class="replay-cursor__tag">
-            <img 
-              v-if="userAvatar" 
-              :src="userAvatar" 
-              :alt="username" 
-              class="replay-cursor__tag-avatar"
-            />
-            <span class="replay-cursor__tag-name">{{ username }}</span>
-          </div>
-          <div class="replay-cursor__orb">
-            <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-cursor__orb-img" />
-          </div>
+      </div>
+      
+      <!-- Animated Cursor with Vaal Orb - OUTSIDE replay-content to avoid earthquake transform interference -->
+      <div 
+        v-if="isPlaying && isLoaded"
+        ref="vaalOrbRef"
+        class="replay-cursor"
+        :style="{
+          left: `${cursorX}px`,
+          top: `${cursorY}px`
+        }"
+      >
+        <div class="replay-cursor__tag">
+          <img 
+            v-if="userAvatar" 
+            :src="userAvatar" 
+            :alt="username" 
+            class="replay-cursor__tag-avatar"
+          />
+          <span class="replay-cursor__tag-name">{{ username }}</span>
+        </div>
+        <div class="replay-cursor__orb">
+          <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-cursor__orb-img" />
         </div>
       </div>
     </div>

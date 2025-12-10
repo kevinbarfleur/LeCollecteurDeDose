@@ -60,12 +60,18 @@ export function useAltarEffects(options: AltarEffectsOptions) {
       heartbeatIntensity.value = 1 - normalizedDistance * 0.8; // 0.2 to 1 range
     }
     
-    // Check if cursor is over the card
-    isOrbOverCard.value = 
-      x >= cardRect.left &&
-      x <= cardRect.right &&
-      y >= cardRect.top &&
-      y <= cardRect.bottom;
+    // Check if cursor is over the card with hysteresis to prevent flickering
+    // Use smaller bounds to enter, larger bounds to exit
+    const isCurrentlyOver = isOrbOverCard.value;
+    const buffer = isCurrentlyOver ? HEARTBEAT.ORB_OVER_BUFFER : 0;
+    
+    const isInside = 
+      x >= (cardRect.left - buffer) &&
+      x <= (cardRect.right + buffer) &&
+      y >= (cardRect.top - buffer) &&
+      y <= (cardRect.bottom + buffer);
+    
+    isOrbOverCard.value = isInside;
   };
   
   // Watch cursor position and update heartbeat automatically if refs provided
