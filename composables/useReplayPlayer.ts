@@ -1,9 +1,18 @@
 import { ref, computed, onUnmounted } from 'vue';
-import type { ReplayData, DecodedMousePosition } from '~/types/replay';
-import { decodeReplayData, unflattenMousePositions, codeToOutcome } from '~/types/replay';
+import type { DecodedMousePosition } from '~/types/replay';
+import type { Database, Replay } from '~/types/database';
 
 export function useReplayPlayer() {
-  const replayData = ref<ReplayData | null>(null);
+  // Get Supabase client - may be null if not configured
+  let supabase: ReturnType<typeof useSupabaseClient<Database>> | null = null;
+  try {
+    supabase = useSupabaseClient<Database>();
+  } catch (e) {
+    console.warn('Supabase client not available');
+  }
+  
+  const replayData = ref<Replay | null>(null);
+  const isLoading = ref(false);
   const isPlaying = ref(false);
   const isFinished = ref(false);
   const currentPositionIndex = ref(0);
@@ -11,33 +20,76 @@ export function useReplayPlayer() {
   const cursorY = ref(0);
   const playbackStartTime = ref(0);
   const positions = ref<DecodedMousePosition[]>([]);
+  const error = ref<string | null>(null);
   
   let animationFrameId: number | null = null;
 
-  const username = computed(() => replayData.value?.u || '');
-  const userAvatar = computed(() => replayData.value?.a || '');
-  const cardInfo = computed(() => replayData.value?.c || null);
-  const outcome = computed(() => replayData.value ? codeToOutcome(replayData.value.r) : null);
+  const username = computed(() => replayData.value?.username || '');
+  const userAvatar = computed(() => replayData.value?.user_avatar || '');
+  const cardInfo = computed(() => {
+    if (!replayData.value) return null;
+    return {
+      id: replayData.value.card_id,
+      var: replayData.value.card_variation,
+      uid: replayData.value.card_unique_id,
+      tier: replayData.value.card_tier,
+      foil: replayData.value.card_foil || false
+    };
+  });
+  const outcome = computed(() => replayData.value?.outcome as 'nothing' | 'foil' | 'destroyed' | null);
   const totalDuration = computed(() => {
     if (positions.value.length === 0) return 0;
     return positions.value[positions.value.length - 1].t;
   });
+  const views = computed(() => replayData.value?.views || 0);
+  const createdAt = computed(() => replayData.value?.created_at || null);
 
-  const loadFromUrl = (encodedData: string): boolean => {
-    const data = decodeReplayData(encodedData);
-    if (!data) return false;
+  const loadFromId = async (id: string): Promise<boolean> => {
+    isLoading.value = true;
+    error.value = null;
     
-    replayData.value = data;
-    positions.value = unflattenMousePositions(data.m);
-    currentPositionIndex.value = 0;
-    isFinished.value = false;
-    
-    if (positions.value.length > 0) {
-      cursorX.value = positions.value[0].x * window.innerWidth;
-      cursorY.value = positions.value[0].y * window.innerHeight;
+    if (!supabase) {
+      error.value = 'Service non disponible';
+      isLoading.value = false;
+      return false;
     }
     
-    return true;
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('replays')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !data) {
+        error.value = 'Replay introuvable';
+        return false;
+      }
+
+      replayData.value = data;
+      positions.value = data.mouse_positions as DecodedMousePosition[];
+      currentPositionIndex.value = 0;
+      isFinished.value = false;
+      
+      if (positions.value.length > 0) {
+        cursorX.value = positions.value[0].x * window.innerWidth;
+        cursorY.value = positions.value[0].y * window.innerHeight;
+      }
+      
+      // Increment view count
+      await supabase
+        .from('replays')
+        .update({ views: (data.views || 0) + 1 })
+        .eq('id', id);
+      
+      return true;
+    } catch (e) {
+      console.error('Error loading replay:', e);
+      error.value = 'Erreur lors du chargement';
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   const interpolatePosition = (elapsed: number): { x: number; y: number } | null => {
@@ -144,19 +196,22 @@ export function useReplayPlayer() {
 
   return {
     replayData: computed(() => replayData.value),
+    isLoading: computed(() => isLoading.value),
     isPlaying: computed(() => isPlaying.value),
     isFinished: computed(() => isFinished.value),
     cursorX: computed(() => cursorX.value),
     cursorY: computed(() => cursorY.value),
+    error: computed(() => error.value),
     username,
     userAvatar,
     cardInfo,
     outcome,
     totalDuration,
-    loadFromUrl,
+    views,
+    createdAt,
+    loadFromId,
     play,
     pause,
     reset
   };
 }
-

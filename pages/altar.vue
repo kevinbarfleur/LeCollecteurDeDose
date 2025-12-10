@@ -343,7 +343,9 @@ const forcedOutcome = ref<ForcedOutcome>('random');
 const {
   isRecording,
   isRecordingArmed,
+  isSaving,
   generatedUrl,
+  replayId,
   setUser,
   armRecording,
   startRecording,

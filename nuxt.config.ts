@@ -8,7 +8,20 @@ export default defineNuxtConfig({
     '@vueuse/motion/nuxt',
     'nuxt-auth-utils',
     '@nuxtjs/i18n',
+    '@nuxtjs/supabase',
   ],
+
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    key: process.env.SUPABASE_KEY || '',
+    redirectOptions: {
+      login: '/',
+      callback: '/',
+      exclude: ['/*'],
+    },
+    // Use our custom database types file
+    types: '~/types/database.ts',
+  },
 
   i18n: {
     locales: [{ code: 'fr', name: 'Français', file: 'fr.json' }],

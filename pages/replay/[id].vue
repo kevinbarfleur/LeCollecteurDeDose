@@ -11,6 +11,7 @@ const route = useRoute();
 const router = useRouter();
 
 const {
+  isLoading,
   isPlaying,
   cursorX,
   cursorY,
@@ -18,7 +19,10 @@ const {
   userAvatar,
   cardInfo,
   outcome,
-  loadFromUrl,
+  views,
+  createdAt,
+  error: playerError,
+  loadFromId,
   play,
   reset
 } = useReplayPlayer();
@@ -34,11 +38,11 @@ const showOutcome = ref(false);
 const cardData = ref<any>(null);
 const isOrbOverCard = ref(false);
 
-// Disintegration state
 const DISINTEGRATION_FRAMES = 64;
 const REPETITION_COUNT = 2;
 const cardSnapshot = ref<HTMLCanvasElement | null>(null);
 const imageSnapshot = ref<HTMLCanvasElement | null>(null);
+const isCapturingSnapshot = ref(false);
 const capturedImageDimensions = ref<{ width: number; height: number } | null>(null);
 const capturedCardDimensions = ref<{ width: number; height: number } | null>(null);
 const heartbeatIntensity = ref(0);
@@ -70,9 +74,16 @@ const heartbeatStyles = computed(() => ({
   '--heartbeat-glow-intensity': `${heartbeatIntensity.value * 0.5}`,
 }));
 
-// ==========================================
-// DISINTEGRATION FUNCTIONS (same as altar.vue)
-// ==========================================
+const formattedDate = computed(() => {
+  if (!createdAt.value) return '';
+  return new Date(createdAt.value).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+});
 
 const findCardImageElement = (): HTMLElement | null => {
   if (!cardFrontRef.value) return null;
@@ -219,11 +230,17 @@ const createDisintegrationEffect = (
 };
 
 const captureCardSnapshot = async () => {
-  if (!cardFrontRef.value) return;
+  if (!cardFrontRef.value || isCapturingSnapshot.value) return;
+  
+  isCapturingSnapshot.value = true;
   
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    if (!cardFrontRef.value) return;
+    // Wait for images to fully load and render - same timing as altar.vue
+    await new Promise(resolve => setTimeout(resolve, 800));
+    if (!cardFrontRef.value) {
+      isCapturingSnapshot.value = false;
+      return;
+    }
     
     const imgElement = cardFrontRef.value.querySelector('.game-card__image') as HTMLImageElement;
     const imageWrapperElement = findCardImageElement();
@@ -261,17 +278,19 @@ const captureCardSnapshot = async () => {
   } catch (error) {
     cardSnapshot.value = null;
   }
+  
+  isCapturingSnapshot.value = false;
 };
 
-onMounted(() => {
-  const encodedData = route.query.d as string;
+onMounted(async () => {
+  const replayId = route.params.id as string;
   
-  if (!encodedData) {
+  if (!replayId) {
     hasError.value = true;
     return;
   }
   
-  const success = loadFromUrl(encodedData);
+  const success = await loadFromId(replayId);
   if (!success) {
     hasError.value = true;
     return;
@@ -336,7 +355,6 @@ const startReplay = async () => {
   heartbeatIntensity.value = 0;
   isOrbOverCard.value = false;
   
-  // Reset snapshots
   cardSnapshot.value = null;
   imageSnapshot.value = null;
   capturedImageDimensions.value = null;
@@ -350,7 +368,6 @@ const startReplay = async () => {
     gsap.set(altarCardRef.value, { opacity: 1, scale: 1, filter: "brightness(1) saturate(1)", x: 0, y: 0 });
   }
   
-  // Capture snapshot for potential disintegration
   await captureCardSnapshot();
   
   play(() => {
@@ -396,7 +413,6 @@ const triggerOutcome = async () => {
   }, 800);
 };
 
-// Effect when nothing happens - exactly like altar.vue
 const showNothingEffect = async () => {
   if (!altarCardRef.value) return;
   
@@ -416,11 +432,9 @@ const showNothingEffect = async () => {
   await new Promise(resolve => setTimeout(resolve, 400));
 };
 
-// Transform to foil - exactly like altar.vue
 const transformToFoilEffect = async () => {
   if (!altarCardRef.value) return;
   
-  // Phase 1: Build up glow
   gsap.to(altarCardRef.value, {
     filter: "brightness(1.8) saturate(1.5)",
     scale: 1.05,
@@ -430,7 +444,6 @@ const transformToFoilEffect = async () => {
   
   await new Promise(resolve => setTimeout(resolve, 200));
   
-  // Phase 2: Bright flash - transformation happens
   gsap.to(altarCardRef.value, {
     filter: "brightness(3) saturate(2)",
     scale: 1.1,
@@ -440,12 +453,10 @@ const transformToFoilEffect = async () => {
   
   await new Promise(resolve => setTimeout(resolve, 100));
   
-  // Update card to foil
   if (cardData.value) {
     cardData.value = { ...cardData.value, foil: true };
   }
   
-  // Phase 3: Settle back
   gsap.to(altarCardRef.value, {
     filter: "brightness(1) saturate(1)",
     scale: 1,
@@ -456,13 +467,11 @@ const transformToFoilEffect = async () => {
   await new Promise(resolve => setTimeout(resolve, 400));
 };
 
-// Destroy card effect - full disintegration exactly like altar.vue
 const destroyCardEffect = async () => {
   if (!altarCardRef.value) return;
   
   isCardBeingDestroyed.value = true;
   
-  // Shake effect - exactly like altar.vue
   const shakeTl = gsap.timeline();
   for (let i = 0; i < 6; i++) {
     shakeTl.to(altarCardRef.value, {
@@ -473,7 +482,6 @@ const destroyCardEffect = async () => {
   }
   shakeTl.to(altarCardRef.value, { x: 0, duration: 0.03 });
   
-  // Flash effect - exactly like altar.vue
   gsap.to(altarCardRef.value, {
     filter: "brightness(1.5) sepia(0.4) saturate(1.2)",
     duration: 0.25,
@@ -483,7 +491,6 @@ const destroyCardEffect = async () => {
   
   const cardSlot = cardSlotRef.value;
   if (!cardSlot) {
-    // Fallback to simple fade
     gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
     await new Promise(resolve => setTimeout(resolve, 500));
     return;
@@ -494,7 +501,6 @@ const destroyCardEffect = async () => {
     const imageElement = findCardImageElement();
     const hasImageSnapshot = imageSnapshot.value && canvasHasContent(imageSnapshot.value);
     
-    // Phase 1: Disintegrate the image first
     if (hasImageSnapshot && imageElement && altarCardRef.value) {
       const imgTag = imageElement.querySelector('.game-card__image') as HTMLImageElement | null;
       const imgRect = imgTag?.getBoundingClientRect();
@@ -531,11 +537,9 @@ const destroyCardEffect = async () => {
       
       if (imgTag) imgTag.style.opacity = '0';
       
-      // Wait for image disintegration to finish
       await new Promise(resolve => setTimeout(resolve, 800));
     }
     
-    // Phase 2: Disintegrate the card frame
     let cardCanvas = cardSnapshot.value;
     if (!cardCanvas && cardFrontRef.value) {
       try {
@@ -647,7 +651,6 @@ const getCardImageUrl = () => {
   const card = getCardById(cardInfo.value.id);
   if (!card) return '';
   
-  // For foil outcome, show foil image if available
   if (outcome.value === 'foil' && card.gameData?.foilImg) {
     return card.gameData.foilImg;
   }
@@ -667,9 +670,14 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 <template>
   <NuxtLayout>
     <div class="replay-page">
-      <div v-if="hasError" class="replay-error">
-        <h2>Replay invalide</h2>
-        <p>Le lien de replay est invalide ou corrompu.</p>
+      <div v-if="isLoading" class="replay-loading">
+        <div class="replay-loading__spinner"></div>
+        <p>Chargement du replay...</p>
+      </div>
+      
+      <div v-else-if="hasError || playerError" class="replay-error">
+        <h2>Replay introuvable</h2>
+        <p>{{ playerError || 'Ce replay n\'existe pas ou a été supprimé.' }}</p>
         <RunicButton variant="primary" @click="goToAltar">
           Retour à l'autel
         </RunicButton>
@@ -687,7 +695,10 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
               />
               <div class="replay-user__info">
                 <h2 class="replay-user__name">{{ username }}</h2>
-                <p class="replay-user__label">Replay Vaal Orb</p>
+                <div class="replay-user__meta">
+                  <span class="replay-user__label">Replay Vaal Orb</span>
+                  <span v-if="views" class="replay-user__views">{{ views }} vue{{ views > 1 ? 's' : '' }}</span>
+                </div>
               </div>
             </div>
           </RunicBox>
@@ -795,11 +806,6 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
           </div>
         </div>
       </div>
-      
-      <div v-else class="replay-loading">
-        <div class="replay-loading__spinner"></div>
-        <p>Chargement du replay...</p>
-      </div>
     </div>
   </NuxtLayout>
 </template>
@@ -873,12 +879,26 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   margin: 0;
 }
 
+.replay-user__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
 .replay-user__label {
   font-size: 0.75rem;
   color: rgba(200, 180, 160, 0.6);
-  margin: 0.25rem 0 0 0;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+.replay-user__views {
+  font-size: 0.7rem;
+  color: rgba(157, 123, 59, 0.8);
+  padding: 0.15rem 0.4rem;
+  background: rgba(157, 123, 59, 0.1);
+  border-radius: 4px;
 }
 
 .replay-stage {
@@ -888,9 +908,7 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   justify-content: center;
 }
 
-/* ==========================================
-   ALTAR PLATFORM - Same as altar.vue
-   ========================================== */
+/* ALTAR PLATFORM */
 .altar-platform {
   --altar-accent: #3a3530;
   --altar-rune-color: rgba(60, 55, 50, 0.3);
@@ -1040,7 +1058,7 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   }
 }
 
-/* Circles - exactly like altar.vue */
+/* Circles */
 .altar-circle {
   position: absolute;
   border-radius: 50%;
@@ -1122,7 +1140,7 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   to { transform: rotate(360deg); }
 }
 
-/* Runes - exactly like altar.vue */
+/* Runes */
 .altar-rune {
   position: absolute;
   font-size: 1rem;
@@ -1141,11 +1159,6 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 .altar-rune--e { right: 15px; top: 50%; transform: translateY(-50%); }
 .altar-rune--s { bottom: 15px; left: 50%; transform: translateX(-50%); }
 .altar-rune--w { left: 15px; top: 50%; transform: translateY(-50%); }
-
-.altar-platform--active .altar-rune {
-  opacity: 1;
-  animation: runeGlow 3s ease-in-out infinite;
-}
 
 @keyframes runeGlow {
   0%, 100% { opacity: 0.6; }
@@ -1440,3 +1453,4 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   opacity: 0;
 }
 </style>
+
