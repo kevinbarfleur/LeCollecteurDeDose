@@ -34,6 +34,13 @@ onMounted(() => {
   localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
 });
 
+// Cancel recording if user leaves the page
+onBeforeUnmount(() => {
+  if (isRecording.value) {
+    cancelRecording();
+  }
+});
+
 // User's collection - points to local session copy
 const collection = computed(() => localCollection.value);
 
@@ -336,7 +343,6 @@ type ForcedOutcome = 'random' | VaalOutcome;
 const isCardBeingDestroyed = ref(false);
 
 // Admin/Debug settings
-const showAdminModal = ref(false);
 const forcedOutcome = ref<ForcedOutcome>('random');
 
 // Replay Recording
@@ -357,13 +363,48 @@ const {
 
 const showShareModal = ref(false);
 const urlCopied = ref(false);
+const showPreferencesModal = ref(false);
+
+// Record preferences - saved in localStorage
+const recordOnNothing = ref(false);
+const recordOnFoil = ref(true);
+const recordOnDestroyed = ref(true);
+
+// Load preferences from localStorage on mount
+onMounted(() => {
+  const savedNothing = localStorage.getItem('record_nothing');
+  const savedFoil = localStorage.getItem('record_foil');
+  const savedDestroyed = localStorage.getItem('record_destroyed');
+  
+  if (savedNothing !== null) recordOnNothing.value = savedNothing === 'true';
+  if (savedFoil !== null) recordOnFoil.value = savedFoil === 'true';
+  if (savedDestroyed !== null) recordOnDestroyed.value = savedDestroyed === 'true';
+});
+
+// Watch and save preferences to localStorage
+watch(recordOnNothing, (val) => localStorage.setItem('record_nothing', String(val)));
+watch(recordOnFoil, (val) => localStorage.setItem('record_foil', String(val)));
+watch(recordOnDestroyed, (val) => localStorage.setItem('record_destroyed', String(val)));
+
+// Check if recording should happen for a given outcome
+const shouldRecordOutcome = (outcome: 'nothing' | 'foil' | 'destroyed'): boolean => {
+  switch (outcome) {
+    case 'nothing': return recordOnNothing.value;
+    case 'foil': return recordOnFoil.value;
+    case 'destroyed': return recordOnDestroyed.value;
+    default: return false;
+  }
+};
 
 // Set user info for recorder when user changes
 watch(user, (newUser) => {
   setUser(newUser.name, newUser.avatar);
 }, { immediate: true });
 
-const armRecordingForCurrentCard = () => {
+const startAutoRecording = () => {
+  // Check if any recording is enabled
+  if (!recordOnNothing.value && !recordOnFoil.value && !recordOnDestroyed.value) return;
+  
   const card = displayCard.value;
   if (!card || !isCardOnAltar.value) return;
   
@@ -374,6 +415,8 @@ const armRecordingForCurrentCard = () => {
     tier: card.tier,
     foil: isCardFoil(card)
   });
+  
+  startRecording();
 };
 
 const handleCopyUrl = async () => {
@@ -827,14 +870,19 @@ const destroyCard = async () => {
 // Flip card to back (first part of Vaal ritual)
 // Handle Vaal outcome - instant result
 const handleVaalOutcome = async (outcome: VaalOutcome) => {
-  // Stop recording and capture outcome
+  // Handle recording based on outcome preferences
   if (isRecording.value) {
-    stopRecording(outcome);
-    // Show share modal after 2 seconds (when recording finishes)
-    setTimeout(() => {
-      showShareModal.value = true;
-      urlCopied.value = false;
-    }, 2100);
+    if (shouldRecordOutcome(outcome)) {
+      stopRecording(outcome);
+      // Show share modal after 2 seconds (when recording finishes)
+      setTimeout(() => {
+        showShareModal.value = true;
+        urlCopied.value = false;
+      }, 2100);
+    } else {
+      // Cancel recording for outcomes that shouldn't be recorded
+      cancelRecording();
+    }
   }
   
   switch (outcome) {
@@ -1011,10 +1059,8 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
 
   event.preventDefault();
   
-  // Start recording if armed
-  if (isRecordingArmed.value) {
-    startRecording();
-  }
+  // Auto-start recording if enabled
+  startAutoRecording();
   
   // Get the origin position of the orb element
   const orbElement = orbRefs.value[index];
@@ -1350,39 +1396,31 @@ const endDragOrb = async () => {
 
         <!-- Vaal Orbs inventory -->
         <div class="vaal-orbs-section">
-          <RunicBox padding="md" class="vaal-orbs-box">
-            <!-- Top right buttons -->
+          <!-- Toolbar box -->
+          <RunicBox padding="sm" class="vaal-toolbar-box">
             <div class="vaal-toolbar">
-              <!-- Record button -->
-              <RunicButton
-                variant="ghost"
-                size="sm"
-                icon="record"
-                class="vaal-record-btn"
-                :class="{ 
-                  'vaal-record-btn--armed': isRecordingArmed,
-                  'vaal-record-btn--recording': isRecording 
-                }"
-                :title="isRecording ? 'Enregistrement...' : isRecordingArmed ? 'En attente...' : 'Enregistrer'"
-                :disabled="!isCardOnAltar || isAnimating || (isRecordingArmed || isRecording)"
-                @click="armRecordingForCurrentCard"
-              >
-                <span class="sr-only">Record</span>
-              </RunicButton>
-
-              <!-- Admin settings button -->
+              <div class="vaal-toolbar__status">
+                <span 
+                  v-if="isRecording" 
+                  class="vaal-toolbar__recording-indicator"
+                  title="Enregistrement en cours..."
+                ></span>
+                <span v-if="isRecording" class="vaal-toolbar__recording-text">Enregistrement...</span>
+              </div>
               <RunicButton
                 variant="ghost"
                 size="sm"
                 icon="settings"
-                class="vaal-admin-btn"
-                title="Admin / Debug"
-                @click="showAdminModal = true"
+                class="vaal-settings-btn"
+                title="Préférences"
+                @click="showPreferencesModal = true"
               >
-                <span class="sr-only">Admin</span>
+                <span class="sr-only">Préférences</span>
               </RunicButton>
             </div>
+          </RunicBox>
 
+          <RunicBox padding="md" class="vaal-orbs-box">
             <div class="vaal-orbs-header">
               <h3 class="vaal-orbs-title">
                 <span class="vaal-orbs-icon">◈</span>
@@ -1444,67 +1482,90 @@ const endDragOrb = async () => {
           </div>
         </Teleport>
 
-        <!-- Admin Modal -->
+        <!-- Preferences Modal -->
         <Teleport to="body">
           <Transition name="modal">
-            <div v-if="showAdminModal" class="admin-modal-overlay" @click.self="showAdminModal = false">
-              <div class="admin-modal">
-                <div class="admin-modal__header">
-                  <h3 class="admin-modal__title">
-                    <span class="admin-modal__icon">⚙</span>
-                    Admin / Debug
+            <div v-if="showPreferencesModal" class="prefs-modal-overlay" @click.self="showPreferencesModal = false">
+              <div class="prefs-modal">
+                <div class="prefs-modal__header">
+                  <h3 class="prefs-modal__title">
+                    <span class="prefs-modal__icon">⚙</span>
+                    Préférences
                   </h3>
-                  <RunicButton
-                    variant="ghost"
-                    size="sm"
-                    icon="close"
-                    @click="showAdminModal = false"
-                  />
+                  <button
+                    type="button"
+                    class="prefs-modal__close"
+                    aria-label="Fermer"
+                    @click="showPreferencesModal = false"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
                 
-                <div class="admin-modal__content">
-                  <div class="admin-field">
-                    <RunicSelect
-                      v-model="forcedOutcome"
-                      :options="forcedOutcomeOptions"
-                      label="Forcer le résultat Vaal"
-                      size="md"
-                    />
-                    <p class="admin-field__hint">
-                      Sélectionne un résultat pour tester les animations
+                <div class="prefs-modal__content">
+                  <!-- Recording Preferences Section -->
+                  <div class="prefs-section">
+                    <h4 class="prefs-section__title">Enregistrement automatique</h4>
+                    <p class="prefs-section__hint">
+                      Sélectionne les résultats qui déclenchent un enregistrement
                     </p>
-                  </div>
-
-                  <div class="admin-field">
-                    <label class="admin-field__label">Vaal Orbs</label>
-                    <p class="admin-field__hint">
-                      Ajuste le nombre de Vaal Orbs disponibles
-                    </p>
-                    <div class="admin-field__number">
-                      <button 
-                        class="admin-field__btn"
-                        :disabled="vaalOrbs <= 0"
-                        @click="vaalOrbs = Math.max(0, vaalOrbs - 1)"
-                      >−</button>
-                      <span class="admin-field__value">{{ vaalOrbs }}</span>
-                      <button 
-                        class="admin-field__btn"
-                        :disabled="vaalOrbs >= 99"
-                        @click="vaalOrbs = Math.min(99, vaalOrbs + 1)"
-                      >+</button>
+                    
+                    <div class="prefs-toggles">
+                      <div class="prefs-toggle">
+                        <span class="prefs-toggle__label">Rien ne s'est passé</span>
+                        <RunicRadio v-model="recordOnNothing" :toggle="true" size="sm" />
+                      </div>
+                      
+                      <div class="prefs-toggle">
+                        <span class="prefs-toggle__label prefs-toggle__label--foil">Transformation en Foil</span>
+                        <RunicRadio v-model="recordOnFoil" :toggle="true" size="sm" />
+                      </div>
+                      
+                      <div class="prefs-toggle">
+                        <span class="prefs-toggle__label prefs-toggle__label--destroyed">Destruction</span>
+                        <RunicRadio v-model="recordOnDestroyed" :toggle="true" size="sm" />
+                      </div>
                     </div>
                   </div>
-
-                  <div class="admin-info">
-                    <div class="admin-info__item">
-                      <span class="admin-info__label">Collection:</span>
-                      <span class="admin-info__value">{{ localCollection.length }} cartes</span>
+                  
+                  <div class="prefs-divider"></div>
+                  
+                  <!-- Admin/Debug Section -->
+                  <div class="prefs-section">
+                    <h4 class="prefs-section__title">Admin / Debug</h4>
+                    
+                    <div class="prefs-field">
+                      <RunicSelect
+                        v-model="forcedOutcome"
+                        :options="forcedOutcomeOptions"
+                        label="Forcer le résultat Vaal"
+                        size="md"
+                      />
+                      <p class="prefs-field__hint">
+                        Sélectionne un résultat pour tester les animations
+                      </p>
                     </div>
-                    <div class="admin-info__item">
-                      <span class="admin-info__label">Mode forcé:</span>
-                      <span class="admin-info__value" :class="{ 'admin-info__value--active': forcedOutcome !== 'random' }">
-                        {{ forcedOutcome === 'random' ? 'Non' : 'Oui' }}
-                      </span>
+
+                    <div class="prefs-field">
+                      <label class="prefs-field__label">Vaal Orbs</label>
+                      <p class="prefs-field__hint">
+                        Ajuste le nombre de Vaal Orbs disponibles
+                      </p>
+                      <div class="prefs-field__number">
+                        <button 
+                          class="prefs-field__btn"
+                          :disabled="vaalOrbs <= 0"
+                          @click="vaalOrbs = Math.max(0, vaalOrbs - 1)"
+                        >−</button>
+                        <span class="prefs-field__value">{{ vaalOrbs }}</span>
+                        <button 
+                          class="prefs-field__btn"
+                          :disabled="vaalOrbs >= 99"
+                          @click="vaalOrbs = Math.min(99, vaalOrbs + 1)"
+                        >+</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1516,22 +1577,26 @@ const endDragOrb = async () => {
         <!-- Share Replay Modal -->
         <Teleport to="body">
           <Transition name="modal">
-            <div v-if="showShareModal && generatedUrl" class="admin-modal-overlay" @click.self="showShareModal = false">
-              <div class="admin-modal share-modal">
-                <div class="admin-modal__header">
-                  <h3 class="admin-modal__title">
-                    <span class="admin-modal__icon">🎬</span>
+            <div v-if="showShareModal && generatedUrl" class="prefs-modal-overlay" @click.self="showShareModal = false">
+              <div class="prefs-modal share-modal">
+                <div class="prefs-modal__header">
+                  <h3 class="prefs-modal__title">
+                    <span class="prefs-modal__icon">🎬</span>
                     Session enregistrée !
                   </h3>
-                  <RunicButton
-                    variant="ghost"
-                    size="sm"
-                    icon="close"
+                  <button
+                    type="button"
+                    class="prefs-modal__close"
+                    aria-label="Fermer"
                     @click="showShareModal = false"
-                  />
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
                 
-                <div class="admin-modal__content">
+                <div class="prefs-modal__content">
                   <p class="share-modal__text">
                     Ta session a été enregistrée. Partage ce lien pour que d'autres puissent voir ta Vaal Orb !
                   </p>
@@ -2442,47 +2507,53 @@ const endDragOrb = async () => {
   position: relative;
 }
 
-.vaal-toolbar {
-  position: absolute !important;
-  top: 10px;
-  right: 10px;
-  z-index: 10;
-  display: flex;
-  gap: 0.25rem;
+.vaal-toolbar-box {
+  margin-bottom: 0.75rem;
 }
 
-.vaal-admin-btn,
-.vaal-record-btn {
+.vaal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.vaal-toolbar__status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 28px;
+}
+
+.vaal-toolbar__recording-text {
+  font-family: "Cinzel", serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #e53935;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vaal-toolbar__recording-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e53935;
+  box-shadow: 0 0 8px rgba(229, 57, 53, 0.8);
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.vaal-settings-btn {
   padding: 0.5rem !important;
 }
 
-.vaal-admin-btn :deep(.runic-button__text),
-.vaal-record-btn :deep(.runic-button__text) {
+.vaal-settings-btn :deep(.runic-button__text) {
   display: none;
-}
-
-.vaal-record-btn--armed {
-  background: rgba(255, 193, 7, 0.2) !important;
-  border-color: rgba(255, 193, 7, 0.5) !important;
-}
-
-.vaal-record-btn--armed :deep(.runic-button__icon--record) {
-  color: #ffc107 !important;
-  animation: pulse-record 1.5s ease-in-out infinite;
-}
-
-.vaal-record-btn--recording {
-  background: rgba(229, 57, 53, 0.2) !important;
-  border-color: rgba(229, 57, 53, 0.5) !important;
-}
-
-.vaal-record-btn--recording :deep(.runic-button__icon--record) {
-  animation: pulse-record 0.8s ease-in-out infinite;
-}
-
-@keyframes pulse-record {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
 }
 
 .sr-only {
@@ -2664,13 +2735,13 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   ADMIN MODAL
+   PREFERENCES MODAL
    ========================================== */
-.admin-modal-overlay {
+.prefs-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2678,59 +2749,151 @@ const endDragOrb = async () => {
   padding: 1rem;
 }
 
-.admin-modal {
+.prefs-modal {
   background: linear-gradient(
     180deg,
-    rgba(22, 20, 18, 0.98) 0%,
-    rgba(16, 14, 12, 0.99) 100%
+    rgba(18, 18, 22, 0.98) 0%,
+    rgba(12, 12, 15, 0.99) 50%,
+    rgba(14, 14, 18, 0.98) 100%
   );
-  border: 1px solid rgba(175, 96, 37, 0.3);
+  border: 1px solid rgba(60, 55, 50, 0.4);
   border-radius: 8px;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.6),
-    0 0 40px rgba(175, 96, 37, 0.1),
-    inset 0 1px 0 rgba(80, 70, 60, 0.15);
+    0 25px 60px rgba(0, 0, 0, 0.8),
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(80, 75, 70, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
-.admin-modal__header {
+.prefs-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid rgba(60, 55, 50, 0.3);
 }
 
-.admin-modal__title {
+.prefs-modal__title {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   font-family: "Cinzel", serif;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: var(--color-accent);
+  letter-spacing: 0.05em;
+  color: #c9a227;
+  text-shadow: 0 0 20px rgba(201, 162, 39, 0.3);
   margin: 0;
 }
 
-.admin-modal__icon {
+.prefs-modal__icon {
   font-size: 1.25rem;
 }
 
-.admin-modal__content {
-  padding: 1.25rem;
+.prefs-modal__close {
   display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  border-radius: 4px;
+  color: rgba(140, 130, 120, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.admin-field {
+.prefs-modal__close:hover {
+  background: rgba(175, 96, 37, 0.1);
+  border-color: rgba(175, 96, 37, 0.3);
+  color: rgba(175, 96, 37, 0.8);
+}
+
+.prefs-modal__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.prefs-modal__content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Preferences Sections */
+.prefs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.prefs-section__title {
+  font-family: "Cinzel", serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(180, 170, 160, 0.9);
+  margin: 0;
+}
+
+.prefs-section__hint {
+  font-family: "Crimson Text", serif;
+  font-size: 0.875rem;
+  color: rgba(140, 130, 120, 0.7);
+  margin: 0 0 0.5rem;
+}
+
+.prefs-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(60, 55, 50, 0.4), transparent);
+  margin: 0.5rem 0;
+}
+
+/* Preferences Toggles */
+.prefs-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.prefs-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.875rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(60, 55, 50, 0.25);
+  border-radius: 4px;
+}
+
+.prefs-toggle__label {
+  font-family: "Crimson Text", serif;
+  font-size: 0.9375rem;
+  color: rgba(200, 190, 180, 0.85);
+}
+
+.prefs-toggle__label--foil {
+  color: #ffd700;
+}
+
+.prefs-toggle__label--destroyed {
+  color: #e05050;
+}
+
+/* Preferences Fields (Admin section) */
+.prefs-field {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.admin-field__label {
+.prefs-field__label {
   font-family: "Cinzel", serif;
   font-size: 0.75rem;
   font-weight: 600;
@@ -2739,7 +2902,7 @@ const endDragOrb = async () => {
   color: rgba(200, 190, 180, 0.8);
 }
 
-.admin-field__hint {
+.prefs-field__hint {
   font-family: "Crimson Text", serif;
   font-size: 0.8125rem;
   font-style: italic;
@@ -2747,14 +2910,14 @@ const endDragOrb = async () => {
   margin: 0;
 }
 
-.admin-field__number {
+.prefs-field__number {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-top: 0.5rem;
 }
 
-.admin-field__btn {
+.prefs-field__btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2775,7 +2938,7 @@ const endDragOrb = async () => {
   transition: all 0.2s ease;
 }
 
-.admin-field__btn:hover:not(:disabled) {
+.prefs-field__btn:hover:not(:disabled) {
   background: linear-gradient(
     180deg,
     rgba(40, 38, 35, 0.9) 0%,
@@ -2785,12 +2948,12 @@ const endDragOrb = async () => {
   color: var(--color-accent);
 }
 
-.admin-field__btn:disabled {
+.prefs-field__btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.admin-field__value {
+.prefs-field__value {
   min-width: 48px;
   padding: 0.5rem 0.75rem;
   font-family: "Cinzel", serif;
@@ -2808,45 +2971,14 @@ const endDragOrb = async () => {
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-.admin-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  border: 1px solid rgba(60, 55, 50, 0.2);
-}
-
-.admin-info__item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
-}
-
-.admin-info__label {
-  color: rgba(140, 130, 120, 0.7);
-}
-
-.admin-info__value {
-  color: rgba(200, 190, 180, 0.9);
-}
-
-.admin-info__value--active {
-  color: var(--color-accent);
-  font-weight: 600;
-}
-
 /* Modal transition */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.25s ease;
 }
 
-.modal-enter-active .admin-modal,
-.modal-leave-active .admin-modal {
+.modal-enter-active .prefs-modal,
+.modal-leave-active .prefs-modal {
   transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
@@ -2855,26 +2987,10 @@ const endDragOrb = async () => {
   opacity: 0;
 }
 
-.modal-enter-from .admin-modal,
-.modal-leave-to .admin-modal {
+.modal-enter-from .prefs-modal,
+.modal-leave-to .prefs-modal {
   transform: scale(0.95) translateY(-10px);
   opacity: 0;
-}
-
-/* ==========================================
-   RECORD STATUS
-   ========================================== */
-.admin-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(60, 55, 50, 0.5), transparent);
-  margin: 0.5rem 0;
-}
-
-.admin-field__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
 }
 
 .record-status {
