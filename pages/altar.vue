@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
-import {
-  VARIATION_CONFIG,
-  TIER_CONFIG,
-  getCardVariation,
-  isCardFoil,
-} from "~/types/card";
+import { TIER_CONFIG, isCardFoil } from "~/types/card";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
 import { useAltarEffects } from "~/composables/useAltarEffects";
+import {
+  useCardGrouping,
+  type CardGroupWithVariations,
+  type VariationGroup,
+} from "~/composables/useCardGrouping";
+import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 
 const { t } = useI18n();
 
@@ -56,96 +57,9 @@ const collection = computed(() => localCollection.value);
 // CARD GROUPING WITH VARIATIONS
 // ==========================================
 
-interface VariationGroup {
-  variation: CardVariation;
-  cards: Card[];
-  count: number;
-}
-
-interface CardGroupWithVariations {
-  cardId: string;
-  name: string;
-  tier: CardTier;
-  itemClass: string;
-  cards: Card[];
-  count: number;
-  variations: VariationGroup[];
-  hasMultipleVariations: boolean;
-}
-
-const groupedCards = computed(() => {
-  const groups = new Map<string, CardGroupWithVariations>();
-
-  collection.value.forEach((card) => {
-    const variation: CardVariation = getCardVariation(card);
-    const existing = groups.get(card.id);
-
-    if (existing) {
-      existing.cards.push(card);
-      existing.count++;
-
-      const existingVariation = existing.variations.find(
-        (v) => v.variation === variation
-      );
-      if (existingVariation) {
-        existingVariation.cards.push(card);
-        existingVariation.count++;
-      } else {
-        existing.variations.push({
-          variation,
-          cards: [card],
-          count: 1,
-        });
-      }
-    } else {
-      groups.set(card.id, {
-        cardId: card.id,
-        name: card.name,
-        tier: card.tier,
-        itemClass: card.itemClass,
-        cards: [card],
-        count: 1,
-        variations: [
-          {
-            variation,
-            cards: [card],
-            count: 1,
-          },
-        ],
-        hasMultipleVariations: false,
-      });
-    }
-  });
-
-  // Sort variations and update hasMultipleVariations flag
-  groups.forEach((group) => {
-    group.variations.sort(
-      (a, b) =>
-        VARIATION_CONFIG[a.variation].priority -
-        VARIATION_CONFIG[b.variation].priority
-    );
-    group.hasMultipleVariations = group.variations.length > 1;
-  });
-
-  // Sort by tier then name
-  const tierOrder: Record<CardTier, number> = { T0: 0, T1: 1, T2: 2, T3: 3 };
-  return Array.from(groups.values()).sort((a, b) => {
-    if (tierOrder[a.tier] !== tierOrder[b.tier]) {
-      return tierOrder[a.tier] - tierOrder[b.tier];
-    }
-    return a.name.localeCompare(b.name);
-  });
+const { groupedCards, cardOptions } = useCardGrouping(collection, {
+  sortByNameWithinTier: true,
 });
-
-// Card selector options
-const cardOptions = computed(() =>
-  groupedCards.value.map((group) => ({
-    value: group.cardId,
-    label: group.name,
-    description: `${group.itemClass} • ${group.tier}`,
-    count: group.count,
-  }))
-);
 
 // ==========================================
 // ALTAR STATE
@@ -200,12 +114,6 @@ const isCurrentCardFoil = computed(() => {
 const currentTierConfig = computed(() => {
   if (!displayCard.value) return null;
   return TIER_CONFIG[displayCard.value.tier as CardTier];
-});
-
-// Altar theme styles based on card (CSS variables applied via classes now)
-const altarThemeStyles = computed(() => {
-  // CSS classes handle the theming, this is kept for potential custom overrides
-  return {};
 });
 
 // Altar classes based on card
@@ -544,167 +452,22 @@ const transformToFoil = async () => {
   captureCardSnapshot();
 };
 
-const DISINTEGRATION_FRAMES = 64;
-const REPETITION_COUNT = 2;
+// Use shared disintegration effect composable
+const {
+  cardSnapshot,
+  imageSnapshot,
+  capturedImageDimensions,
+  capturedCardDimensions,
+  canvasHasContent,
+  createDisintegrationEffect,
+  findCardImageElement: findCardImageElementBase,
+  captureCardSnapshot: captureCardSnapshotBase,
+  clearSnapshots,
+} = useDisintegrationEffect();
 
-const cardSnapshot = ref<HTMLCanvasElement | null>(null);
-const imageSnapshot = ref<HTMLCanvasElement | null>(null);
-const isCapturingSnapshot = ref(false);
-const capturedImageDimensions = ref<{ width: number; height: number } | null>(
-  null
-);
-const capturedCardDimensions = ref<{ width: number; height: number } | null>(
-  null
-);
-
-const findCardImageElement = (): HTMLElement | null => {
-  if (!cardFrontRef.value) return null;
-  return cardFrontRef.value.querySelector(
-    ".game-card__image-wrapper"
-  ) as HTMLElement | null;
-};
-
-const loadImageToCanvas = (
-  imgUrl: string,
-  targetWidth?: number,
-  targetHeight?: number
-): Promise<HTMLCanvasElement | null> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-
-    img.onload = () => {
-      const width = targetWidth || img.naturalWidth;
-      const height = targetHeight || img.naturalHeight;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas);
-      } else {
-        resolve(null);
-      }
-    };
-
-    img.onerror = () => resolve(null);
-    img.src = `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
-  });
-};
-
-// Capture both the image and the full card as canvas snapshots
-const captureCardSnapshot = async () => {
-  if (!cardFrontRef.value || isCapturingSnapshot.value) return;
-
-  isCapturingSnapshot.value = true;
-
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    if (!cardFrontRef.value) {
-      isCapturingSnapshot.value = false;
-      return;
-    }
-
-    const imgElement = cardFrontRef.value.querySelector(
-      ".game-card__image"
-    ) as HTMLImageElement;
-    const imageWrapperElement = findCardImageElement();
-
-    if (imgElement && imgElement.src && imageWrapperElement) {
-      const wrapperRect = imageWrapperElement.getBoundingClientRect();
-      const naturalRatio = imgElement.naturalWidth / imgElement.naturalHeight;
-      const wrapperRatio = wrapperRect.width / wrapperRect.height;
-
-      const displaySize =
-        naturalRatio > wrapperRatio
-          ? wrapperRect.width
-          : wrapperRect.height * naturalRatio;
-
-      const targetSize = Math.round(displaySize);
-      const directCanvas = await loadImageToCanvas(
-        imgElement.src,
-        targetSize,
-        targetSize
-      );
-
-      if (directCanvas && canvasHasContent(directCanvas)) {
-        imageSnapshot.value = directCanvas;
-        capturedImageDimensions.value = {
-          width: targetSize,
-          height: targetSize,
-        };
-      }
-    }
-
-    const cardRect = cardFrontRef.value.getBoundingClientRect();
-    const canvas = await html2canvas(cardFrontRef.value, {
-      backgroundColor: null,
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      imageTimeout: 10000,
-    });
-
-    cardSnapshot.value = canvas;
-    capturedCardDimensions.value = {
-      width: cardRect.width,
-      height: cardRect.height,
-    };
-  } catch (error) {
-    cardSnapshot.value = null;
-  }
-
-  isCapturingSnapshot.value = false;
-};
-
-const canvasHasContent = (canvas: HTMLCanvasElement): boolean => {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return false;
-  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] > 0) return true;
-  }
-  return false;
-};
-
-const generateDisintegrationFrames = (
-  canvas: HTMLCanvasElement,
-  count: number
-): HTMLCanvasElement[] => {
-  const { width, height } = canvas;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return [];
-
-  const originalData = ctx.getImageData(0, 0, width, height);
-  const imageDatas = [...Array(count)].map(() =>
-    ctx.createImageData(width, height)
-  );
-
-  for (let x = 0; x < width; ++x) {
-    for (let y = 0; y < height; ++y) {
-      for (let i = 0; i < REPETITION_COUNT; ++i) {
-        const dataIndex = Math.floor(
-          (count * (Math.random() + (2 * x) / width)) / 3
-        );
-        const pixelIndex = (y * width + x) * 4;
-        for (let offset = 0; offset < 4; ++offset) {
-          imageDatas[dataIndex].data[pixelIndex + offset] =
-            originalData.data[pixelIndex + offset];
-        }
-      }
-    }
-  }
-
-  return imageDatas.map((data) => {
-    const newCanvas = document.createElement("canvas");
-    newCanvas.width = width;
-    newCanvas.height = height;
-    newCanvas.getContext("2d")?.putImageData(data, 0, 0);
-    return newCanvas;
-  });
-};
+// Wrapper to use the composable with our ref
+const findCardImageElement = () => findCardImageElementBase(cardFrontRef);
+const captureCardSnapshot = () => captureCardSnapshotBase(cardFrontRef);
 
 const cleanupAfterDestruction = (destroyedCardUid: number) => {
   const cardIndex = localCollection.value.findIndex(
@@ -714,10 +477,7 @@ const cleanupAfterDestruction = (destroyedCardUid: number) => {
     localCollection.value.splice(cardIndex, 1);
   }
 
-  cardSnapshot.value = null;
-  imageSnapshot.value = null;
-  capturedImageDimensions.value = null;
-  capturedCardDimensions.value = null;
+  clearSnapshots();
   isCardBeingDestroyed.value = false;
   isCardOnAltar.value = false;
   isAltarActive.value = false;
@@ -736,83 +496,6 @@ const cleanupAfterDestruction = (destroyedCardUid: number) => {
       filter: "none",
     });
   }
-};
-
-const createDisintegrationEffect = (
-  canvas: HTMLCanvasElement,
-  container: HTMLElement,
-  options: {
-    frameCount?: number;
-    direction?: "up" | "out";
-    duration?: number;
-    delayMultiplier?: number;
-    targetWidth?: number;
-    targetHeight?: number;
-  } = {}
-): Promise<HTMLCanvasElement[]> => {
-  const {
-    frameCount = DISINTEGRATION_FRAMES,
-    direction = "out",
-    duration = 1.2,
-    delayMultiplier = 1.5,
-    targetWidth,
-    targetHeight,
-  } = options;
-
-  const displayWidth = targetWidth || canvas.width;
-  const displayHeight = targetHeight || canvas.height;
-  const frames = generateDisintegrationFrames(canvas, frameCount);
-
-  frames.forEach((frame) => {
-    frame.style.cssText = `
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: ${displayWidth}px;
-      height: ${displayHeight}px;
-      opacity: 1;
-      transform: rotate(0deg) translate(0px, 0px);
-    `;
-    container.appendChild(frame);
-  });
-
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        frames.forEach((frame, i) => {
-          frame.style.transition = `transform ${duration}s ease-out, opacity ${duration}s ease-out`;
-          frame.style.transitionDelay = `${
-            (delayMultiplier * i) / frames.length
-          }s`;
-        });
-
-        requestAnimationFrame(() => {
-          frames.forEach((frame) => {
-            const randomAngle = 2 * Math.PI * (Math.random() - 0.5);
-            let translateX: number, translateY: number;
-
-            if (direction === "up") {
-              translateX = (Math.random() - 0.5) * 120;
-              translateY = -100 - Math.random() * 150;
-            } else {
-              const distance = 80 + Math.random() * 60;
-              translateX = distance * Math.cos(randomAngle);
-              translateY = distance * Math.sin(randomAngle) - 30;
-            }
-
-            frame.style.transform = `
-              rotate(${25 * (Math.random() - 0.5)}deg) 
-              translate(${translateX}px, ${translateY}px)
-              rotate(${20 * (Math.random() - 0.5)}deg)
-            `;
-            frame.style.opacity = "0";
-          });
-
-          resolve(frames);
-        });
-      });
-    });
-  });
 };
 
 const destroyCard = async () => {
@@ -1371,11 +1054,7 @@ const endDragOrb = async () => {
         <!-- Altar area -->
         <div ref="altarAreaRef" class="altar-area">
           <!-- The altar platform -->
-          <div
-            class="altar-platform"
-            :class="altarClasses"
-            :style="altarThemeStyles"
-          >
+          <div class="altar-platform" :class="altarClasses">
             <!-- Runic circles decoration -->
             <div class="altar-circle altar-circle--outer"></div>
             <div class="altar-circle altar-circle--middle"></div>

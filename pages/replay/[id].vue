@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useReplayPlayer } from "~/composables/useReplayPlayer";
 import { useAltarEffects } from "~/composables/useAltarEffects";
+import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 import { getCardById } from "~/data/mockCards";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
 import gsap from "gsap";
@@ -56,13 +57,22 @@ const {
   isDestroying: isCardBeingDestroyed
 });
 
-const DISINTEGRATION_FRAMES = 64;
-const REPETITION_COUNT = 2;
-const cardSnapshot = ref<HTMLCanvasElement | null>(null);
-const imageSnapshot = ref<HTMLCanvasElement | null>(null);
-const isCapturingSnapshot = ref(false);
-const capturedImageDimensions = ref<{ width: number; height: number } | null>(null);
-const capturedCardDimensions = ref<{ width: number; height: number } | null>(null);
+// Use shared disintegration effect composable
+const {
+  cardSnapshot,
+  imageSnapshot,
+  capturedImageDimensions,
+  capturedCardDimensions,
+  canvasHasContent,
+  createDisintegrationEffect,
+  findCardImageElement: findCardImageElementBase,
+  captureCardSnapshot: captureCardSnapshotBase,
+  clearSnapshots,
+} = useDisintegrationEffect();
+
+// Wrapper to use the composable with our ref
+const findCardImageElement = () => findCardImageElementBase(cardFrontRef);
+const captureCardSnapshot = () => captureCardSnapshotBase(cardFrontRef);
 
 const tierConfig = computed(() => {
   if (!cardData.value) return TIER_CONFIG.T3;
@@ -93,203 +103,6 @@ const formattedDate = computed(() => {
     minute: '2-digit'
   });
 });
-
-const findCardImageElement = (): HTMLElement | null => {
-  if (!cardFrontRef.value) return null;
-  return cardFrontRef.value.querySelector('.game-card__image-wrapper') as HTMLElement | null;
-};
-
-const loadImageToCanvas = (imgUrl: string, targetWidth?: number, targetHeight?: number): Promise<HTMLCanvasElement | null> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    
-    img.onload = () => {
-      const width = targetWidth || img.naturalWidth;
-      const height = targetHeight || img.naturalHeight;
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas);
-      } else {
-        resolve(null);
-      }
-    };
-    
-    img.onerror = () => resolve(null);
-    img.src = `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
-  });
-};
-
-const canvasHasContent = (canvas: HTMLCanvasElement): boolean => {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return false;
-  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] > 0) return true;
-  }
-  return false;
-};
-
-const generateDisintegrationFrames = (canvas: HTMLCanvasElement, count: number): HTMLCanvasElement[] => {
-  const { width, height } = canvas;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return [];
-  
-  const originalData = ctx.getImageData(0, 0, width, height);
-  const imageDatas = [...Array(count)].map(() => ctx.createImageData(width, height));
-  
-  for (let x = 0; x < width; ++x) {
-    for (let y = 0; y < height; ++y) {
-      for (let i = 0; i < REPETITION_COUNT; ++i) {
-        const dataIndex = Math.floor(count * (Math.random() + 2 * x / width) / 3);
-        const pixelIndex = (y * width + x) * 4;
-        for (let offset = 0; offset < 4; ++offset) {
-          imageDatas[dataIndex].data[pixelIndex + offset] = originalData.data[pixelIndex + offset];
-        }
-      }
-    }
-  }
-  
-  return imageDatas.map(data => {
-    const newCanvas = document.createElement("canvas");
-    newCanvas.width = width;
-    newCanvas.height = height;
-    newCanvas.getContext("2d")?.putImageData(data, 0, 0);
-    return newCanvas;
-  });
-};
-
-const createDisintegrationEffect = (
-  canvas: HTMLCanvasElement, 
-  container: HTMLElement,
-  options: {
-    frameCount?: number;
-    direction?: 'up' | 'out';
-    duration?: number;
-    delayMultiplier?: number;
-    targetWidth?: number;
-    targetHeight?: number;
-  } = {}
-): Promise<HTMLCanvasElement[]> => {
-  const {
-    frameCount = DISINTEGRATION_FRAMES,
-    direction = 'out',
-    duration = 1.2,
-    delayMultiplier = 1.5,
-    targetWidth,
-    targetHeight
-  } = options;
-  
-  const displayWidth = targetWidth || canvas.width;
-  const displayHeight = targetHeight || canvas.height;
-  const frames = generateDisintegrationFrames(canvas, frameCount);
-  
-  frames.forEach((frame) => {
-    frame.style.cssText = `
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: ${displayWidth}px;
-      height: ${displayHeight}px;
-      opacity: 1;
-      transform: rotate(0deg) translate(0px, 0px);
-    `;
-    container.appendChild(frame);
-  });
-  
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        frames.forEach((frame, i) => {
-          frame.style.transition = `transform ${duration}s ease-out, opacity ${duration}s ease-out`;
-          frame.style.transitionDelay = `${(delayMultiplier * i / frames.length)}s`;
-        });
-        
-        requestAnimationFrame(() => {
-          frames.forEach(frame => {
-            const randomAngle = 2 * Math.PI * (Math.random() - 0.5);
-            let translateX: number, translateY: number;
-            
-            if (direction === 'up') {
-              translateX = (Math.random() - 0.5) * 120;
-              translateY = -100 - Math.random() * 150;
-            } else {
-              const distance = 80 + Math.random() * 60;
-              translateX = distance * Math.cos(randomAngle);
-              translateY = distance * Math.sin(randomAngle) - 30;
-            }
-            
-            frame.style.transform = `
-              rotate(${25 * (Math.random() - 0.5)}deg) 
-              translate(${translateX}px, ${translateY}px)
-              rotate(${20 * (Math.random() - 0.5)}deg)
-            `;
-            frame.style.opacity = "0";
-          });
-          
-          resolve(frames);
-        });
-      });
-    });
-  });
-};
-
-const captureCardSnapshot = async () => {
-  if (!cardFrontRef.value || isCapturingSnapshot.value) return;
-  
-  isCapturingSnapshot.value = true;
-  
-  try {
-    // Wait for images to fully load and render - same timing as altar.vue
-    await new Promise(resolve => setTimeout(resolve, 800));
-    if (!cardFrontRef.value) {
-      isCapturingSnapshot.value = false;
-      return;
-    }
-    
-    const imgElement = cardFrontRef.value.querySelector('.game-card__image') as HTMLImageElement;
-    const imageWrapperElement = findCardImageElement();
-    
-    if (imgElement && imgElement.src && imageWrapperElement) {
-      const wrapperRect = imageWrapperElement.getBoundingClientRect();
-      const naturalRatio = imgElement.naturalWidth / imgElement.naturalHeight;
-      const wrapperRatio = wrapperRect.width / wrapperRect.height;
-      
-      const displaySize = naturalRatio > wrapperRatio 
-        ? wrapperRect.width 
-        : wrapperRect.height * naturalRatio;
-      
-      const targetSize = Math.round(displaySize);
-      const directCanvas = await loadImageToCanvas(imgElement.src, targetSize, targetSize);
-      
-      if (directCanvas && canvasHasContent(directCanvas)) {
-        imageSnapshot.value = directCanvas;
-        capturedImageDimensions.value = { width: targetSize, height: targetSize };
-      }
-    }
-    
-    const cardRect = cardFrontRef.value.getBoundingClientRect();
-    const canvas = await html2canvas(cardFrontRef.value, {
-      backgroundColor: null,
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      imageTimeout: 10000,
-    });
-    
-    cardSnapshot.value = canvas;
-    capturedCardDimensions.value = { width: cardRect.width, height: cardRect.height };
-  } catch (error) {
-    cardSnapshot.value = null;
-  }
-  
-  isCapturingSnapshot.value = false;
-};
 
 onMounted(async () => {
   const replayId = route.params.id as string;

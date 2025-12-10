@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import type { DecodedMousePosition } from '~/types/replay';
 import type { Database, ReplayInsert } from '~/types/database';
 
+// Throttle interval for recording mouse positions (20fps is sufficient for smooth replay)
 const SAMPLE_INTERVAL = 50;
 
 export function useReplayRecorder() {
@@ -25,6 +26,7 @@ export function useReplayRecorder() {
   const generatedUrl = ref<string | null>(null);
   const replayId = ref<string | null>(null);
   
+  // Track last sample time for throttling
   let lastSampleTime = 0;
 
   const canStartRecording = computed(() => {
@@ -49,10 +51,6 @@ export function useReplayRecorder() {
     return true;
   };
 
-  // Store the card center position for relative calculations
-  let cardCenterX = 0;
-  let cardCenterY = 0;
-
   const startRecording = () => {
     if (!isRecordingArmed.value) return;
     
@@ -65,6 +63,7 @@ export function useReplayRecorder() {
 
   // Record position relative to the card center
   // cardCenter should be the center coordinates of the card on screen
+  // Throttled to SAMPLE_INTERVAL (20fps) to reduce data size while maintaining smooth replay
   const recordPosition = (
     clientX: number, 
     clientY: number, 
@@ -73,6 +72,10 @@ export function useReplayRecorder() {
     if (!isRecording.value) return;
     
     const now = Date.now() - recordStartTime.value;
+    
+    // Throttle: skip if not enough time has passed since last sample
+    if (now - lastSampleTime < SAMPLE_INTERVAL) return;
+    lastSampleTime = now;
     
     // Store the offset from the card center (in pixels)
     // This way, on replay, we can position relative to wherever the card is
