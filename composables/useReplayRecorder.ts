@@ -76,6 +76,7 @@ export function useReplayRecorder() {
     window.addEventListener('mousemove', mouseMoveHandler);
   };
 
+  // Record position as window-relative coordinates
   const recordPosition = (clientX: number, clientY: number) => {
     if (!isRecording.value) return;
     

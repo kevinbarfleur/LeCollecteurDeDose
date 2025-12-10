@@ -117,6 +117,7 @@ export function useReplayPlayer() {
     const progress = (elapsed - prev.t) / (next.t - prev.t);
     const easedProgress = easeInOutCubic(progress);
     
+    // Simple window-relative interpolation
     return {
       x: (prev.x + (next.x - prev.x) * easedProgress) * window.innerWidth,
       y: (prev.y + (next.y - prev.y) * easedProgress) * window.innerHeight

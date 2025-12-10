@@ -1088,7 +1088,7 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   // Update heartbeat intensity based on proximity
   updateHeartbeatIntensity(clientX, clientY);
   
-  // Record position for replay (sampling handled in composable)
+  // Record position for replay
   if (isRecording.value) {
     recordPosition(clientX, clientY);
   }

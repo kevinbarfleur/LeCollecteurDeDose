@@ -17,9 +17,9 @@ export interface ReplayData {
 }
 
 export interface DecodedMousePosition {
-  x: number;
-  y: number;
-  t: number;
+  x: number;  // Position relative à la fenêtre (0-1)
+  y: number;  // Position relative à la fenêtre (0-1)
+  t: number;  // Temps en ms
 }
 
 export function encodeReplayData(data: ReplayData): string {
