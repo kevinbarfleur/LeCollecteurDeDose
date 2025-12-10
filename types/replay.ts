@@ -17,9 +17,9 @@ export interface ReplayData {
 }
 
 export interface DecodedMousePosition {
-  x: number;
-  y: number;
-  t: number;
+  x: number;  // Offset horizontal depuis le centre de la carte (en pixels)
+  y: number;  // Offset vertical depuis le centre de la carte (en pixels)
+  t: number;  // Temps en ms
 }
 
 export function encodeReplayData(data: ReplayData): string {

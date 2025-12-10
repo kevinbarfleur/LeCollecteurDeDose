@@ -1,9 +1,18 @@
-import { ref, computed, onUnmounted } from 'vue';
-import type { ReplayData, DecodedMousePosition } from '~/types/replay';
-import { decodeReplayData, unflattenMousePositions, codeToOutcome } from '~/types/replay';
+import { ref, computed, onUnmounted, type Ref } from 'vue';
+import type { DecodedMousePosition } from '~/types/replay';
+import type { Database, Replay } from '~/types/database';
 
 export function useReplayPlayer() {
-  const replayData = ref<ReplayData | null>(null);
+  // Get Supabase client - may be null if not configured
+  let supabase: ReturnType<typeof useSupabaseClient<Database>> | null = null;
+  try {
+    supabase = useSupabaseClient<Database>();
+  } catch (e) {
+    console.warn('Supabase client not available');
+  }
+  
+  const replayData = ref<Replay | null>(null);
+  const isLoading = ref(false);
   const isPlaying = ref(false);
   const isFinished = ref(false);
   const currentPositionIndex = ref(0);
@@ -11,37 +20,99 @@ export function useReplayPlayer() {
   const cursorY = ref(0);
   const playbackStartTime = ref(0);
   const positions = ref<DecodedMousePosition[]>([]);
+  const error = ref<string | null>(null);
+  
+  // Reference to the card element for calculating cursor position
+  let cardRef: Ref<HTMLElement | null> | null = null;
   
   let animationFrameId: number | null = null;
+  
+  // Set the card reference for position calculations
+  const setCardRef = (ref: Ref<HTMLElement | null>) => {
+    cardRef = ref;
+  };
+  
+  // Get the current card center position
+  const getCardCenter = (): { x: number; y: number } | null => {
+    if (!cardRef?.value) return null;
+    const rect = cardRef.value.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+  };
 
-  const username = computed(() => replayData.value?.u || '');
-  const userAvatar = computed(() => replayData.value?.a || '');
-  const cardInfo = computed(() => replayData.value?.c || null);
-  const outcome = computed(() => replayData.value ? codeToOutcome(replayData.value.r) : null);
+  const username = computed(() => replayData.value?.username || '');
+  const userAvatar = computed(() => replayData.value?.user_avatar || '');
+  const cardInfo = computed(() => {
+    if (!replayData.value) return null;
+    return {
+      id: replayData.value.card_id,
+      var: replayData.value.card_variation,
+      uid: replayData.value.card_unique_id,
+      tier: replayData.value.card_tier,
+      foil: replayData.value.card_foil || false
+    };
+  });
+  const outcome = computed(() => replayData.value?.outcome as 'nothing' | 'foil' | 'destroyed' | null);
   const totalDuration = computed(() => {
     if (positions.value.length === 0) return 0;
     return positions.value[positions.value.length - 1].t;
   });
+  const views = computed(() => replayData.value?.views || 0);
+  const createdAt = computed(() => replayData.value?.created_at || null);
 
-  const loadFromUrl = (encodedData: string): boolean => {
-    const data = decodeReplayData(encodedData);
-    if (!data) return false;
+  const loadFromId = async (id: string): Promise<boolean> => {
+    isLoading.value = true;
+    error.value = null;
     
-    replayData.value = data;
-    positions.value = unflattenMousePositions(data.m);
-    currentPositionIndex.value = 0;
-    isFinished.value = false;
-    
-    if (positions.value.length > 0) {
-      cursorX.value = positions.value[0].x * window.innerWidth;
-      cursorY.value = positions.value[0].y * window.innerHeight;
+    if (!supabase) {
+      error.value = 'Service non disponible';
+      isLoading.value = false;
+      return false;
     }
     
-    return true;
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('replays')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !data) {
+        error.value = 'Replay introuvable';
+        return false;
+      }
+
+      replayData.value = data;
+      positions.value = data.mouse_positions as DecodedMousePosition[];
+      currentPositionIndex.value = 0;
+      isFinished.value = false;
+      
+      // Initial position will be set when play() is called and card ref is available
+      
+      // Increment view count
+      await supabase
+        .from('replays')
+        .update({ views: (data.views || 0) + 1 })
+        .eq('id', id);
+      
+      return true;
+    } catch (e) {
+      console.error('Error loading replay:', e);
+      error.value = 'Erreur lors du chargement';
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   const interpolatePosition = (elapsed: number): { x: number; y: number } | null => {
     if (positions.value.length === 0) return null;
+    
+    // Get current card center position
+    const cardCenter = getCardCenter();
+    if (!cardCenter) return null;
     
     let prevIndex = 0;
     for (let i = 0; i < positions.value.length; i++) {
@@ -56,18 +127,23 @@ export function useReplayPlayer() {
     const next = positions.value[prevIndex + 1];
     
     if (!next) {
+      // Apply offset from card center
       return {
-        x: prev.x * window.innerWidth,
-        y: prev.y * window.innerHeight
+        x: cardCenter.x + prev.x,
+        y: cardCenter.y + prev.y
       };
     }
     
     const progress = (elapsed - prev.t) / (next.t - prev.t);
     const easedProgress = easeInOutCubic(progress);
     
+    // Interpolate the offset and apply to card center
+    const offsetX = prev.x + (next.x - prev.x) * easedProgress;
+    const offsetY = prev.y + (next.y - prev.y) * easedProgress;
+    
     return {
-      x: (prev.x + (next.x - prev.x) * easedProgress) * window.innerWidth,
-      y: (prev.y + (next.y - prev.y) * easedProgress) * window.innerHeight
+      x: cardCenter.x + offsetX,
+      y: cardCenter.y + offsetY
     };
   };
 
@@ -130,9 +206,11 @@ export function useReplayPlayer() {
     currentPositionIndex.value = 0;
     isFinished.value = false;
     
-    if (positions.value.length > 0) {
-      cursorX.value = positions.value[0].x * window.innerWidth;
-      cursorY.value = positions.value[0].y * window.innerHeight;
+    // Reset cursor position relative to card center
+    const cardCenter = getCardCenter();
+    if (cardCenter && positions.value.length > 0) {
+      cursorX.value = cardCenter.x + positions.value[0].x;
+      cursorY.value = cardCenter.y + positions.value[0].y;
     }
   };
 
@@ -144,19 +222,23 @@ export function useReplayPlayer() {
 
   return {
     replayData: computed(() => replayData.value),
+    isLoading: computed(() => isLoading.value),
     isPlaying: computed(() => isPlaying.value),
     isFinished: computed(() => isFinished.value),
     cursorX: computed(() => cursorX.value),
     cursorY: computed(() => cursorY.value),
+    error: computed(() => error.value),
     username,
     userAvatar,
     cardInfo,
     outcome,
     totalDuration,
-    loadFromUrl,
+    views,
+    createdAt,
+    setCardRef,
+    loadFromId,
     play,
     pause,
     reset
   };
 }
-
