@@ -1315,17 +1315,14 @@ const endDragOrb = async () => {
 
       <!-- Main altar content -->
       <div v-if="loggedIn" class="altar-page">
-        <!-- Header -->
-        <div class="altar-header">
+        <!-- Header + Card selector -->
+        <div class="altar-selector-section">
           <RunicHeader
             title="Autel (Demo)"
             subtitle="Vaal or no balls, Exile."
+            attached
           />
-        </div>
-
-        <!-- Card selector -->
-        <div class="altar-selector">
-          <RunicBox padding="md">
+          <RunicBox padding="md" attached>
             <div class="selector-grid">
               <!-- Card selection -->
               <div class="selector-field">
@@ -1467,51 +1464,59 @@ const endDragOrb = async () => {
 
         <!-- Vaal Orbs inventory -->
         <div class="vaal-orbs-section">
-          <!-- Toolbar box -->
-          <RunicBox padding="sm" class="vaal-toolbar-box">
-            <div class="vaal-toolbar">
-              <div class="vaal-toolbar__status">
-                <span
-                  v-if="isRecording"
-                  class="vaal-toolbar__recording-indicator"
-                  title="Enregistrement en cours..."
-                ></span>
-                <span v-if="isRecording" class="vaal-toolbar__recording-text"
-                  >Enregistrement...</span
-                >
-              </div>
-              <RunicButton
-                variant="ghost"
-                size="sm"
-                icon="settings"
-                class="vaal-settings-btn"
-                title="Préférences"
-                @click="showPreferencesModal = true"
-              >
-                <span class="sr-only">Préférences</span>
-              </RunicButton>
-            </div>
-          </RunicBox>
+          <!-- Header with actions -->
+          <div class="vaal-header-wrapper">
+            <div class="vaal-header">
+              <div class="vaal-header__accent vaal-header__accent--left"></div>
+              <div class="vaal-header__accent vaal-header__accent--right"></div>
 
-          <RunicBox padding="md" class="vaal-orbs-box">
-            <div class="vaal-orbs-header">
-              <h3 class="vaal-orbs-title">
-                <span class="vaal-orbs-icon">◈</span>
-                Vaal Orbs
-                <span class="vaal-orbs-count">{{ vaalOrbs }}</span>
-              </h3>
-              <p class="vaal-orbs-hint">
-                <template v-if="isCurrentCardFoil">
-                  <span class="vaal-orbs-hint--foil"
-                    >✦ Cette carte est déjà à son apogée</span
+              <div class="vaal-header__content">
+                <div class="vaal-header__left">
+                  <h3 class="vaal-header__title">
+                    <span class="vaal-header__rune">◆</span>
+                    Vaal Orbs
+                    <span class="vaal-header__rune">◆</span>
+                  </h3>
+                  <p class="vaal-header__subtitle">
+                    <template v-if="isCurrentCardFoil">
+                      <span class="vaal-header__subtitle--foil"
+                        >✦ Cette carte est déjà à son apogée</span
+                      >
+                    </template>
+                    <template v-else>
+                      Glissez une Vaal Orb sur la carte pour la corrompre
+                    </template>
+                  </p>
+                </div>
+
+                <div class="vaal-header__actions">
+                  <span
+                    v-if="isRecording"
+                    class="vaal-header__recording"
+                    title="Enregistrement en cours..."
                   >
-                </template>
-                <template v-else>
-                  Glissez une Vaal Orb sur la carte pour la corrompre
-                </template>
-              </p>
-            </div>
+                    <span class="vaal-header__recording-dot"></span>
+                    <span class="vaal-header__recording-text">REC</span>
+                  </span>
+                  <span class="vaal-header__count">{{ vaalOrbs }}</span>
+                  <RunicButton
+                    variant="ghost"
+                    size="sm"
+                    icon="settings"
+                    class="vaal-header__settings"
+                    title="Préférences"
+                    @click="showPreferencesModal = true"
+                  >
+                    <span class="sr-only">Préférences</span>
+                  </RunicButton>
+                </div>
+              </div>
 
+              <div class="vaal-header__edge"></div>
+            </div>
+          </div>
+
+          <RunicBox padding="md" class="vaal-orbs-box" attached>
             <div class="vaal-orbs-inventory">
               <button
                 v-for="(_, index) in vaalOrbs"
@@ -1797,17 +1802,11 @@ const endDragOrb = async () => {
   padding-bottom: 4rem;
 }
 
-.altar-header {
-  text-align: center;
-}
-
 /* ==========================================
-   CARD SELECTOR
+   CARD SELECTOR SECTION
    ========================================== */
-.altar-selector {
-  max-width: 750px;
-  margin: 0 auto;
-  width: 100%;
+.altar-selector-section {
+  margin-bottom: 0.5rem;
 }
 
 .selector-grid {
@@ -1820,8 +1819,7 @@ const endDragOrb = async () => {
   .selector-grid {
     flex-direction: row;
     align-items: flex-end;
-    justify-content: center;
-    gap: 1rem;
+    gap: 1.5rem;
   }
 }
 
@@ -1834,15 +1832,14 @@ const endDragOrb = async () => {
 
 @media (min-width: 640px) {
   .selector-field {
-    width: auto;
-    flex: 1;
-    max-width: 280px;
+    flex: 0 0 auto;
+    width: 280px;
   }
 
   .selector-field--action {
     flex: 0 0 auto;
     width: auto;
-    min-width: 120px;
+    margin-left: auto;
   }
 }
 
@@ -2711,40 +2708,198 @@ const endDragOrb = async () => {
   position: relative;
 }
 
-.vaal-toolbar-box {
-  margin-bottom: 0.75rem;
+/* ==========================================
+   VAAL HEADER - Custom header with actions
+   ========================================== */
+.vaal-header-wrapper {
+  position: relative;
+  padding: 0 12px;
+  margin-bottom: -1px;
 }
 
-.vaal-toolbar {
+@media (min-width: 640px) {
+  .vaal-header-wrapper {
+    padding: 0 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .vaal-header-wrapper {
+    padding: 0 20px;
+  }
+}
+
+.vaal-header {
+  position: relative;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(
+    180deg,
+    rgba(16, 16, 18, 0.98) 0%,
+    rgba(12, 12, 14, 0.95) 60%,
+    rgba(10, 10, 12, 0.98) 100%
+  );
+  border-radius: 6px 6px 0 0;
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 3px rgba(0, 0, 0, 0.7), inset 0 -1px 2px rgba(50, 45, 40, 0.05),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(40, 38, 35, 0.6);
+  border-bottom: none;
+}
+
+.vaal-header__accent {
+  position: absolute;
+  top: 10px;
+  width: 25px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.vaal-header__accent--left {
+  left: 10px;
+  background: linear-gradient(
+    to right,
+    rgba(175, 96, 37, 0.5),
+    rgba(80, 70, 55, 0.2),
+    transparent
+  );
+}
+
+.vaal-header__accent--right {
+  right: 10px;
+  background: linear-gradient(
+    to left,
+    rgba(175, 96, 37, 0.5),
+    rgba(80, 70, 55, 0.2),
+    transparent
+  );
+}
+
+.vaal-header__content {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.vaal-toolbar__status {
+.vaal-header__left {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 28px;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.vaal-toolbar__recording-text {
+.vaal-header__title {
   font-family: "Cinzel", serif;
-  font-size: 0.7rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #d4c4a8;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(175, 96, 37, 0.15);
+}
+
+@media (min-width: 640px) {
+  .vaal-header__title {
+    font-size: 1.125rem;
+  }
+}
+
+.vaal-header__rune {
+  display: inline-block;
+  font-size: 0.4rem;
+  color: rgba(175, 96, 37, 0.6);
+  margin: 0 0.5rem;
+  vertical-align: middle;
+  text-shadow: 0 0 8px rgba(175, 96, 37, 0.4);
+}
+
+.vaal-header__subtitle {
+  font-family: "Crimson Text", serif;
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: rgba(140, 130, 120, 0.7);
+  margin: 0;
+}
+
+.vaal-header__subtitle--foil {
+  color: rgba(255, 215, 100, 0.8);
+  font-style: normal;
+}
+
+.vaal-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vaal-header__recording {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.vaal-header__recording-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e53935;
+  box-shadow: 0 0 6px rgba(229, 57, 53, 0.8);
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+.vaal-header__recording-text {
+  font-family: "Cinzel", serif;
+  font-size: 0.625rem;
   font-weight: 600;
   color: #e53935;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.vaal-toolbar__recording-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #e53935;
-  box-shadow: 0 0 8px rgba(229, 57, 53, 0.8);
-  animation: recording-pulse 1s ease-in-out infinite;
+.vaal-header__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(175, 96, 37, 0.2) 0%,
+    rgba(175, 96, 37, 0.1) 100%
+  );
+  border: 1px solid rgba(175, 96, 37, 0.4);
+  border-radius: 14px;
+  font-family: "Cinzel", serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.vaal-header__settings {
+  padding: 0.375rem !important;
+}
+
+.vaal-header__settings :deep(.runic-button__text) {
+  display: none;
+}
+
+.vaal-header__edge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(60, 55, 48, 0.4) 15%,
+    rgba(80, 70, 55, 0.5) 50%,
+    rgba(60, 55, 48, 0.4) 85%,
+    transparent
+  );
 }
 
 @keyframes recording-pulse {
@@ -2759,14 +2914,6 @@ const endDragOrb = async () => {
   }
 }
 
-.vaal-settings-btn {
-  padding: 0.5rem !important;
-}
-
-.vaal-settings-btn :deep(.runic-button__text) {
-  display: none;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -2777,61 +2924,6 @@ const endDragOrb = async () => {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-.vaal-orbs-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.vaal-orbs-title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-family: "Cinzel", serif;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #e8e8e8;
-}
-
-.vaal-orbs-icon {
-  color: var(--color-accent);
-  font-size: 1.25rem;
-}
-
-.vaal-orbs-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  background: linear-gradient(
-    180deg,
-    rgba(175, 96, 37, 0.2) 0%,
-    rgba(175, 96, 37, 0.1) 100%
-  );
-  border: 1px solid rgba(175, 96, 37, 0.4);
-  border-radius: 14px;
-  font-size: 0.875rem;
-  color: var(--color-accent);
-}
-
-.vaal-orbs-hint {
-  font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
-  font-style: italic;
-  color: rgba(140, 130, 120, 0.6);
-}
-
-.vaal-orbs-hint--foil {
-  color: rgba(255, 215, 100, 0.7);
-  font-style: normal;
-  font-weight: 500;
 }
 
 /* ==========================================
