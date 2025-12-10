@@ -21,7 +21,7 @@ export function useReplayRecorder() {
   const recordedPositions = ref<DecodedMousePosition[]>([]);
   const recordStartTime = ref(0);
   const cardData = ref<{ cardId: string; variation: string; uid: number; tier: string; foil: boolean } | null>(null);
-  const recordedOutcome = ref<'nothing' | 'foil' | 'destroyed' | null>(null);
+  const recordedOutcome = ref<VaalOutcome | null>(null);
   const generatedUrl = ref<string | null>(null);
   const replayId = ref<string | null>(null);
   

@@ -331,7 +331,7 @@ const lastRecordedOutcome = ref<VaalOutcome | null>(null);
 const recordOnNothing = ref(false);
 const recordOnFoil = ref(true);
 const recordOnDestroyed = ref(true);
-const recordOnTransform = ref(true);
+const recordOnTransform = ref(false);
 const recordOnDuplicate = ref(true);
 
 // Load preferences from localStorage on mount
@@ -1420,6 +1420,12 @@ const endDragOrb = async () => {
                           size="sm"
                         />
                       </div>
+
+                      <p class="prefs-experimental-notice">
+                        Le système <strong>Vaal</strong> est en cours
+                        d'exploration et de tests. Les effets, probabilités et
+                        animations sont sujets à modification.
+                      </p>
                     </div>
                   </div>
 
@@ -2980,6 +2986,26 @@ const endDragOrb = async () => {
 
 .prefs-toggle__label--duplicate {
   color: #50e0a0;
+}
+
+/* Experimental Notice */
+.prefs-experimental-notice {
+  font-family: "Crimson Text", serif;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: rgba(200, 170, 90, 0.9);
+  background: rgba(200, 160, 80, 0.12);
+  border: 1px solid rgba(200, 160, 80, 0.25);
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  margin: 1rem 0 0 0;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.prefs-experimental-notice strong {
+  color: rgba(230, 200, 100, 1);
+  font-weight: 700;
 }
 
 /* Preferences Fields (Admin section) */
