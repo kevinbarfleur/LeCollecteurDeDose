@@ -100,8 +100,14 @@ export function useReplayRecorder() {
       recordedPositions.value.push({ x: lastPos.x, y: lastPos.y, t: finalTime });
     }
 
+    // Immediately mark as not recording so a new recording can start
+    // The save will happen in the background
+    isRecording.value = false;
+    isRecordingArmed.value = false;
+    
+    // Save to Supabase in the background after a delay
+    // This allows the animation to complete before saving
     setTimeout(async () => {
-      isRecording.value = false;
       await saveReplayToSupabase();
     }, 2000);
 
@@ -166,6 +172,17 @@ export function useReplayRecorder() {
     replayId.value = null;
   };
 
+  // Reset state to allow a new recording without clearing user info
+  const resetForNewRecording = () => {
+    isRecording.value = false;
+    isRecordingArmed.value = false;
+    recordedPositions.value = [];
+    recordedOutcome.value = null;
+    resultCardId.value = null;
+    // Keep generatedUrl and replayId for the share modal
+    // They will be cleared on the next armRecording call
+  };
+
   const copyUrlToClipboard = async () => {
     if (!generatedUrl.value) return false;
     
@@ -193,6 +210,7 @@ export function useReplayRecorder() {
     recordPosition,
     stopRecording,
     cancelRecording,
+    resetForNewRecording,
     copyUrlToClipboard
   };
 }

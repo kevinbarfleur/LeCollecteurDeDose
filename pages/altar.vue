@@ -319,6 +319,7 @@ const {
   recordPosition,
   stopRecording,
   cancelRecording,
+  resetForNewRecording,
   copyUrlToClipboard,
 } = useReplayRecorder();
 
@@ -327,6 +328,13 @@ const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
 const lastRecordedOutcome = ref<VaalOutcome | null>(null);
 const pendingShareModal = ref(false); // Flag to show modal when URL is ready
+
+// Close share modal and reset recording state to allow new recordings
+const closeShareModal = () => {
+  showShareModal.value = false;
+  // Reset recording state so user can immediately start a new recording
+  resetForNewRecording();
+};
 
 // Record preferences - saved in localStorage
 const recordOnNothing = ref(false);
@@ -1489,7 +1497,7 @@ const endDragOrb = async () => {
             <div
               v-if="showShareModal && generatedUrl"
               class="prefs-modal-overlay"
-              @click.self="showShareModal = false"
+              @click.self="closeShareModal"
             >
               <div
                 class="prefs-modal share-modal"
@@ -1506,7 +1514,7 @@ const endDragOrb = async () => {
                     type="button"
                     class="prefs-modal__close"
                     aria-label="Fermer"
-                    @click="showShareModal = false"
+                    @click="closeShareModal"
                   >
                     <svg
                       viewBox="0 0 24 24"

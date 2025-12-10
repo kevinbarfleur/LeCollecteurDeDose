@@ -212,7 +212,6 @@ const startReplay = async () => {
   }
   
   await captureCardSnapshot();
-  console.log('[REPLAY] Card snapshot captured:', !!cardSnapshot.value);
   
   play(() => {
     triggerOutcome();
@@ -254,9 +253,7 @@ const triggerOutcome = async () => {
       break;
       
     case 'duplicate':
-      console.log('[REPLAY] Triggering duplicate effect');
       await showDuplicateEffect();
-      console.log('[REPLAY] Duplicate effect completed');
       break;
   }
   
@@ -595,16 +592,7 @@ const showTransformEffect = async () => {
 
 // Duplicate effect - clone appears on top, then both translate apart side by side
 const showDuplicateEffect = async () => {
-  console.log('[DUPLICATE] Starting effect', {
-    hasAltarCardRef: !!altarCardRef.value,
-    hasCardSlotRef: !!cardSlotRef.value,
-    hasCardSnapshot: !!cardSnapshot.value,
-  });
-  
-  if (!altarCardRef.value || !cardSlotRef.value) {
-    console.log('[DUPLICATE] Missing refs, aborting');
-    return;
-  }
+  if (!altarCardRef.value || !cardSlotRef.value) return;
   
   const tierColors = getTierColors(cardInfo.value?.tier);
   const glowShadow = `0 0 25px ${tierColors.glow}, 0 0 50px ${tierColors.glow}`;
@@ -733,9 +721,8 @@ const showDuplicateEffect = async () => {
       cardClone.style.transform = 'none';
       cardClone.style.animation = 'none';
       cloneElement.appendChild(cardClone);
-      console.log('[DUPLICATE] Card cloned with inline styles');
     } catch (e) {
-      console.error('[DUPLICATE] Clone failed:', e);
+      console.error('Clone failed:', e);
       cloneElement.style.background = `linear-gradient(135deg, ${tierColors.primary}, ${tierColors.secondary})`;
     }
   } else {
@@ -771,13 +758,6 @@ const showDuplicateEffect = async () => {
   
   // Calculate translation distance (half card width + small gap)
   const translateDistance = (cardWidth / 2) + 12;
-  
-  console.log('[DUPLICATE] Phase 3: Split animation', {
-    translateDistance,
-    cardWidth,
-    cardRect: { top: cardRect.top, left: cardRect.left, width: cardRect.width, height: cardRect.height },
-    cloneInDOM: document.body.contains(clone),
-  });
   
   // Phase 3: Both cards translate apart - original left, clone right
   const splitTimeline = gsap.timeline();
