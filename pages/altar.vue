@@ -781,6 +781,9 @@ let originX = 0;
 let originY = 0;
 let currentX = 0;
 let currentY = 0;
+// Store click offset from orb center to prevent jump on drag start
+let clickOffsetX = 0;
+let clickOffsetY = 0;
 
 // ==========================================
 // HEARTBEAT EFFECT - Using shared composable
@@ -865,19 +868,24 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   // Auto-start recording if enabled
   startAutoRecording();
 
+  const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
+  const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
+
   // Get the origin position of the orb element
   const orbElement = orbRefs.value[index];
   if (orbElement) {
     const rect = orbElement.getBoundingClientRect();
     originX = rect.left + rect.width / 2;
     originY = rect.top + rect.height / 2;
+    
+    // Calculate click offset from orb center to prevent jump
+    clickOffsetX = clientX - originX;
+    clickOffsetY = clientY - originY;
   }
 
   isDraggingOrb.value = true;
   draggedOrbIndex.value = index;
 
-  const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
-  const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
   currentX = clientX;
   currentY = clientY;
 
@@ -892,11 +900,17 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   }
 
   // Wait for floating orb to be rendered, then set initial position
+  // Position the floating orb so that the click point stays at the same visual position
   nextTick(() => {
     if (floatingOrbRef.value) {
+      // Position orb center at (clientX - clickOffsetX, clientY - clickOffsetY)
+      // This keeps the orb visually in the same place as the original
+      const orbCenterX = clientX - clickOffsetX;
+      const orbCenterY = clientY - clickOffsetY;
+
       gsap.set(floatingOrbRef.value, {
-        left: clientX,
-        top: clientY,
+        left: orbCenterX,
+        top: orbCenterY,
         xPercent: -50,
         yPercent: -50,
       });
@@ -922,25 +936,31 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   currentX = clientX;
   currentY = clientY;
 
+  // Calculate orb center position by applying click offset
+  const orbCenterX = clientX - clickOffsetX;
+  const orbCenterY = clientY - clickOffsetY;
+
   // Instant position update using GSAP set (no animation)
+  // Apply click offset to keep orb visually attached to click point
   gsap.set(floatingOrbRef.value, {
-    left: clientX,
-    top: clientY,
+    left: orbCenterX,
+    top: orbCenterY,
   });
 
-  // Check if orb is over the card
+  // Check if orb is over the card (use orb center, not mouse position)
   if (altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
     const isOver =
-      clientX >= cardRect.left &&
-      clientX <= cardRect.right &&
-      clientY >= cardRect.top &&
-      clientY <= cardRect.bottom;
+      orbCenterX >= cardRect.left &&
+      orbCenterX <= cardRect.right &&
+      orbCenterY >= cardRect.top &&
+      orbCenterY <= cardRect.bottom;
+    
     isOrbOverCard.value = isOver;
   }
 
-  // Update heartbeat intensity based on proximity
-  updateHeartbeat(clientX, clientY);
+  // Update heartbeat intensity based on proximity (use orb center)
+  updateHeartbeat(orbCenterX, orbCenterY);
 
   // Record position for replay relative to card center
   if (isRecording.value && altarCardRef.value) {
@@ -949,7 +969,7 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
       x: cardRect.left + cardRect.width / 2,
       y: cardRect.top + cardRect.height / 2,
     };
-    recordPosition(clientX, clientY, cardCenter);
+    recordPosition(orbCenterX, orbCenterY, cardCenter);
   }
 };
 

@@ -118,6 +118,13 @@ const maxDropdownHeight = computed(() => {
   return props.maxVisibleItems * itemHeight.value + 8 + searchInputHeight.value;
 });
 
+// Calculate actual dropdown height based on current options count
+const actualDropdownHeight = computed(() => {
+  const actualItemCount = processedOptions.value.length;
+  const contentHeight = actualItemCount * itemHeight.value + 8 + searchInputHeight.value;
+  return Math.min(contentHeight, maxDropdownHeight.value);
+});
+
 const updateDropdownPosition = () => {
   if (!triggerRef.value) return;
 
@@ -126,13 +133,16 @@ const updateDropdownPosition = () => {
   const spaceBelow = viewportHeight - rect.bottom;
   const spaceAbove = rect.top;
 
+  // Use actual dropdown height for positioning calculations
+  const dropdownHeight = actualDropdownHeight.value;
+
   // Determine if dropdown should open above or below
   const openAbove =
-    spaceBelow < maxDropdownHeight.value && spaceAbove > spaceBelow;
+    spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
   dropdownPosition.value = {
     top: openAbove
-      ? rect.top - Math.min(maxDropdownHeight.value, spaceAbove - 10)
+      ? rect.top - Math.min(dropdownHeight, spaceAbove - 10) - 4
       : rect.bottom + 4,
     left: rect.left,
     width: rect.width,
