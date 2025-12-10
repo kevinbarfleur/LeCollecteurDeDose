@@ -448,6 +448,21 @@ const destroyCardEffect = async () => {
   }
 };
 
+// Helper to preload an image
+const preloadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
+// Helper to find all image elements in the card
+const findCardImages = (element: HTMLElement): HTMLImageElement[] => {
+  return Array.from(element.querySelectorAll('img.game-card__image, img.detail__image'));
+};
+
 // Transform effect - heartbeat vibration with synchronized transformation at peak
 const showTransformEffect = async () => {
   if (!altarCardRef.value) return;
@@ -459,6 +474,25 @@ const showTransformEffect = async () => {
   // IMPORTANT: Disable CSS animations that conflict with GSAP transforms
   cardElement.classList.remove('altar-card--heartbeat', 'altar-card--panicking');
   cardElement.style.animation = 'none';
+  
+  // Get the new card data and PRELOAD its image BEFORE animation
+  let newCard: ReturnType<typeof getCardById> | null = null;
+  let newImageUrl: string | null = null;
+  
+  if (resultCardId.value) {
+    newCard = getCardById(resultCardId.value);
+    if (newCard?.gameData?.img) {
+      newImageUrl = newCard.gameData.img;
+      try {
+        await preloadImage(newImageUrl);
+      } catch (e) {
+        console.warn('Failed to preload transform card image, continuing anyway');
+      }
+    }
+  }
+  
+  // Find all image elements to swap them directly at peak
+  const cardImages = findCardImages(cardElement);
   
   // Phase 1: Heartbeat vibration effect with synchronized transformation
   const timeline = gsap.timeline();
@@ -515,15 +549,19 @@ const showTransformEffect = async () => {
     duration: 0.08,
     ease: 'power2.out',
     onComplete: () => {
-      // Update to the transformed card at the peak of the flash
-      if (resultCardId.value) {
-        const newCard = getCardById(resultCardId.value);
-        if (newCard) {
-          cardData.value = {
-            ...newCard,
-            foil: cardInfo.value?.foil || false
-          };
-        }
+      // INSTANT image swap in DOM at peak brightness (hidden by blur/brightness)
+      if (newImageUrl) {
+        cardImages.forEach(img => {
+          img.src = newImageUrl!;
+        });
+      }
+      
+      // Update the reactive card data
+      if (newCard) {
+        cardData.value = {
+          ...newCard,
+          foil: cardInfo.value?.foil || false
+        };
       }
     },
   });
@@ -795,7 +833,7 @@ const outcomeText = computed(() => {
     case 'nothing': return 'Rien ne s\'est passé';
     case 'foil': return 'Transformation en Foil !';
     case 'destroyed': return 'Carte détruite...';
-    case 'transform': return 'Métamorphose Vaal !';
+    case 'transform': return 'Carte transformée !';
     case 'duplicate': return 'Duplication miraculeuse !';
     default: return '';
   }
@@ -812,12 +850,29 @@ const outcomeClass = computed(() => {
   }
 });
 
+// Get the appropriate card name based on outcome
+// For transform: show the NEW card name
+// For others: show the original card name
 const getCardName = () => {
   if (!cardInfo.value) return '';
+  
+  // For transformation, show the transformed (new) card name
+  if (outcome.value === 'transform' && resultCardId.value) {
+    const newCard = getCardById(resultCardId.value);
+    return newCard?.name || resultCardId.value;
+  }
+  
+  // For all other outcomes, show the original card name
   const card = getCardById(cardInfo.value.id);
   return card?.name || cardInfo.value.id;
 };
 
+// Get original card name (for showing "before" state)
+const getOriginalCardName = () => {
+  if (!cardInfo.value) return '';
+  const card = getCardById(cardInfo.value.id);
+  return card?.name || cardInfo.value.id;
+};
 
 const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   if (!cardInfo.value?.tier) return 'default';
@@ -945,14 +1000,26 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
                 <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
                 
                 <div class="replay-outcome__card">
-                  <div class="replay-outcome__card-info">
-                    <span class="replay-outcome__card-name">{{ getCardName() }}</span>
-                    <RunicNumber 
-                      :value="cardInfo?.tier || ''" 
-                      :color="getTierColor()"
-                      size="sm"
-                    />
-                  </div>
+                  <!-- For transform: show before → after -->
+                  <template v-if="outcome === 'transform' && resultCardId">
+                    <div class="replay-outcome__transform">
+                      <span class="replay-outcome__card-name replay-outcome__card-name--old">{{ getOriginalCardName() }}</span>
+                      <span class="replay-outcome__transform-arrow">→</span>
+                      <span class="replay-outcome__card-name replay-outcome__card-name--new">{{ getCardName() }}</span>
+                    </div>
+                  </template>
+                  
+                  <!-- For other outcomes: show single card -->
+                  <template v-else>
+                    <div class="replay-outcome__card-info">
+                      <span class="replay-outcome__card-name">{{ getCardName() }}</span>
+                      <RunicNumber 
+                        :value="cardInfo?.tier || ''" 
+                        :color="getTierColor()"
+                        size="sm"
+                      />
+                    </div>
+                  </template>
                 </div>
               </div>
               
@@ -1563,6 +1630,31 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   font-family: "Cinzel", serif;
   font-size: 0.95rem;
   color: rgba(200, 180, 160, 0.85);
+}
+
+/* Transform display: before → after */
+.replay-outcome__transform {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.replay-outcome__card-name--old {
+  color: rgba(150, 140, 130, 0.6);
+  font-size: 0.85rem;
+}
+
+.replay-outcome__transform-arrow {
+  color: #50b0e0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.replay-outcome__card-name--new {
+  color: #50b0e0;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .replay-outcome__actions {

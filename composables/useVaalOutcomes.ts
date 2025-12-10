@@ -166,8 +166,23 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
 
   // ==========================================
   // TRANSFORM - Change to another card of same tier
-  // Heartbeat vibration + zoom/dezoom + pof + fade
+  // Heartbeat vibration + zoom/dezoom + instant swap at flash peak
   // ==========================================
+  
+  // Helper to preload an image
+  const preloadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  };
+  
+  // Helper to find all image elements in the card
+  const findCardImages = (element: HTMLElement): HTMLImageElement[] => {
+    return Array.from(element.querySelectorAll('img.game-card__image, img.detail__image'));
+  };
   
   const executeTransform = async (): Promise<OutcomeResult> => {
     if (!cardRef.value || !displayCard.value) return { success: false };
@@ -198,12 +213,25 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     const glowShadow = `0 0 20px ${tierColors.glow}, 0 0 40px ${tierColors.glow}`;
     
     // Create the new card early (keeping foil status if original was foil)
-    // Generate a numeric UID by combining template UID and timestamp to ensure uniqueness
     const newCard: Card = {
       ...newCardTemplate,
       uid: newCardTemplate.uid * 1000000 + (Date.now() % 1000000),
       foil: isCardFoil(currentCard),
     };
+    
+    // PRELOAD the new card's image BEFORE starting animation
+    const newImageUrl = newCard.gameData?.img;
+    if (newImageUrl) {
+      try {
+        await preloadImage(newImageUrl);
+      } catch (e) {
+        console.warn('Failed to preload transform card image, continuing anyway');
+      }
+    }
+    
+    // Find all image elements in the card to swap them directly
+    const cardImages = findCardImages(cardElement);
+    const originalImageUrls = cardImages.map(img => img.src);
     
     // Phase 1: Heartbeat vibration effect with synchronized transformation
     const timeline = gsap.timeline();
@@ -260,6 +288,13 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       duration: 0.08,
       ease: 'power2.out',
       onComplete: () => {
+        // INSTANT image swap in DOM at peak brightness (hidden by blur/brightness)
+        if (newImageUrl) {
+          cardImages.forEach(img => {
+            img.src = newImageUrl;
+          });
+        }
+        
         // Update collection
         const cardIndex = localCollection.value.findIndex(
           (c) => c.uid === currentCard.uid
@@ -267,6 +302,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
         if (cardIndex !== -1) {
           localCollection.value[cardIndex] = newCard;
         }
+        
         // Notify callback to update displayed card AT the peak
         if (onCardTransformed) {
           onCardTransformed(currentCard, newCard);
