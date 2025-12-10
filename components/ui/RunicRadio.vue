@@ -530,16 +530,40 @@ const handleToggleClick = () => {
 .runic-radio__slider--off {
   background: linear-gradient(
     180deg,
-    rgba(30, 28, 26, 0.9) 0%,
-    rgba(22, 20, 18, 0.95) 50%,
-    rgba(18, 16, 14, 0.9) 100%
+    rgba(25, 24, 22, 0.95) 0%,
+    rgba(18, 17, 15, 0.98) 50%,
+    rgba(14, 13, 11, 0.95) 100%
   );
-  border-color: rgba(40, 38, 35, 0.4);
+  border-color: rgba(35, 33, 30, 0.4);
   box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.4),
-    0 1px 4px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(50, 45, 40, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 1px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(40, 38, 35, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* On state in toggle mode - subtle glow */
+.runic-radio--toggle .runic-radio__slider:not(.runic-radio__slider--off) {
+  background: linear-gradient(
+    180deg,
+    rgba(55, 50, 42, 0.95) 0%,
+    rgba(40, 36, 30, 0.98) 50%,
+    rgba(35, 31, 26, 0.95) 100%
+  );
+  border-color: rgba(175, 96, 37, 0.4);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 8px rgba(175, 96, 37, 0.15),
+    inset 0 1px 0 rgba(175, 96, 37, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Inner highlight for on state */
+.runic-radio--toggle .runic-radio__slider:not(.runic-radio__slider--off)::before {
+  border-color: rgba(175, 96, 37, 0.2);
+  border-bottom-color: transparent;
+  border-right-color: transparent;
 }
 
 /* ==========================================
