@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onUnmounted, type Ref } from 'vue';
 import type { DecodedMousePosition } from '~/types/replay';
 import type { Database, Replay } from '~/types/database';
 
@@ -22,7 +22,25 @@ export function useReplayPlayer() {
   const positions = ref<DecodedMousePosition[]>([]);
   const error = ref<string | null>(null);
   
+  // Reference to the card element for calculating cursor position
+  let cardRef: Ref<HTMLElement | null> | null = null;
+  
   let animationFrameId: number | null = null;
+  
+  // Set the card reference for position calculations
+  const setCardRef = (ref: Ref<HTMLElement | null>) => {
+    cardRef = ref;
+  };
+  
+  // Get the current card center position
+  const getCardCenter = (): { x: number; y: number } | null => {
+    if (!cardRef?.value) return null;
+    const rect = cardRef.value.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+  };
 
   const username = computed(() => replayData.value?.username || '');
   const userAvatar = computed(() => replayData.value?.user_avatar || '');
@@ -71,10 +89,7 @@ export function useReplayPlayer() {
       currentPositionIndex.value = 0;
       isFinished.value = false;
       
-      if (positions.value.length > 0) {
-        cursorX.value = positions.value[0].x * window.innerWidth;
-        cursorY.value = positions.value[0].y * window.innerHeight;
-      }
+      // Initial position will be set when play() is called and card ref is available
       
       // Increment view count
       await supabase
@@ -95,6 +110,10 @@ export function useReplayPlayer() {
   const interpolatePosition = (elapsed: number): { x: number; y: number } | null => {
     if (positions.value.length === 0) return null;
     
+    // Get current card center position
+    const cardCenter = getCardCenter();
+    if (!cardCenter) return null;
+    
     let prevIndex = 0;
     for (let i = 0; i < positions.value.length; i++) {
       if (positions.value[i].t <= elapsed) {
@@ -108,19 +127,23 @@ export function useReplayPlayer() {
     const next = positions.value[prevIndex + 1];
     
     if (!next) {
+      // Apply offset from card center
       return {
-        x: prev.x * window.innerWidth,
-        y: prev.y * window.innerHeight
+        x: cardCenter.x + prev.x,
+        y: cardCenter.y + prev.y
       };
     }
     
     const progress = (elapsed - prev.t) / (next.t - prev.t);
     const easedProgress = easeInOutCubic(progress);
     
-    // Simple window-relative interpolation
+    // Interpolate the offset and apply to card center
+    const offsetX = prev.x + (next.x - prev.x) * easedProgress;
+    const offsetY = prev.y + (next.y - prev.y) * easedProgress;
+    
     return {
-      x: (prev.x + (next.x - prev.x) * easedProgress) * window.innerWidth,
-      y: (prev.y + (next.y - prev.y) * easedProgress) * window.innerHeight
+      x: cardCenter.x + offsetX,
+      y: cardCenter.y + offsetY
     };
   };
 
@@ -183,9 +206,11 @@ export function useReplayPlayer() {
     currentPositionIndex.value = 0;
     isFinished.value = false;
     
-    if (positions.value.length > 0) {
-      cursorX.value = positions.value[0].x * window.innerWidth;
-      cursorY.value = positions.value[0].y * window.innerHeight;
+    // Reset cursor position relative to card center
+    const cardCenter = getCardCenter();
+    if (cardCenter && positions.value.length > 0) {
+      cursorX.value = cardCenter.x + positions.value[0].x;
+      cursorY.value = cardCenter.y + positions.value[0].y;
     }
   };
 
@@ -210,6 +235,7 @@ export function useReplayPlayer() {
     totalDuration,
     views,
     createdAt,
+    setCardRef,
     loadFromId,
     play,
     pause,

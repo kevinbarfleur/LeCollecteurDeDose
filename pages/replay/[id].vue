@@ -23,6 +23,7 @@ const {
   views,
   createdAt,
   error: playerError,
+  setCardRef,
   loadFromId,
   play,
   reset
@@ -315,6 +316,9 @@ onMounted(async () => {
   }
   
   isLoaded.value = true;
+  
+  // Set the card reference for position calculations
+  setCardRef(altarCardRef);
   
   setTimeout(() => {
     startReplay();

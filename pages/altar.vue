@@ -1035,9 +1035,14 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   currentX = clientX;
   currentY = clientY;
   
-  // Record initial position
-  if (isRecording.value) {
-    recordPosition(clientX, clientY);
+  // Record initial position relative to card center
+  if (isRecording.value && altarCardRef.value) {
+    const cardRect = altarCardRef.value.getBoundingClientRect();
+    const cardCenter = {
+      x: cardRect.left + cardRect.width / 2,
+      y: cardRect.top + cardRect.height / 2
+    };
+    recordPosition(clientX, clientY, cardCenter);
   }
 
   // Wait for floating orb to be rendered, then set initial position
@@ -1091,9 +1096,14 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   // Update heartbeat intensity based on proximity
   updateHeartbeat(clientX, clientY);
   
-  // Record position for replay
-  if (isRecording.value) {
-    recordPosition(clientX, clientY);
+  // Record position for replay relative to card center
+  if (isRecording.value && altarCardRef.value) {
+    const cardRect = altarCardRef.value.getBoundingClientRect();
+    const cardCenter = {
+      x: cardRect.left + cardRect.width / 2,
+      y: cardRect.top + cardRect.height / 2
+    };
+    recordPosition(clientX, clientY, cardCenter);
   }
 };
 

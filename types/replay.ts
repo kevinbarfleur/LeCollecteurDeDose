@@ -17,8 +17,8 @@ export interface ReplayData {
 }
 
 export interface DecodedMousePosition {
-  x: number;  // Position relative à la fenêtre (0-1)
-  y: number;  // Position relative à la fenêtre (0-1)
+  x: number;  // Offset horizontal depuis le centre de la carte (en pixels)
+  y: number;  // Offset vertical depuis le centre de la carte (en pixels)
   t: number;  // Temps en ms
 }
 

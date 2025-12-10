@@ -26,7 +26,6 @@ export function useReplayRecorder() {
   const replayId = ref<string | null>(null);
   
   let lastSampleTime = 0;
-  let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
 
   const canStartRecording = computed(() => {
     return username.value.trim().length > 0 && !isRecording.value;
@@ -50,6 +49,10 @@ export function useReplayRecorder() {
     return true;
   };
 
+  // Store the card center position for relative calculations
+  let cardCenterX = 0;
+  let cardCenterY = 0;
+
   const startRecording = () => {
     if (!isRecordingArmed.value) return;
     
@@ -58,31 +61,23 @@ export function useReplayRecorder() {
     recordStartTime.value = Date.now();
     lastSampleTime = 0;
     recordedPositions.value = [];
-
-    mouseMoveHandler = (e: MouseEvent) => {
-      if (!isRecording.value) return;
-      
-      const now = Date.now() - recordStartTime.value;
-      if (now - lastSampleTime < SAMPLE_INTERVAL) return;
-      
-      lastSampleTime = now;
-      
-      const x = e.clientX / window.innerWidth;
-      const y = e.clientY / window.innerHeight;
-      
-      recordedPositions.value.push({ x, y, t: now });
-    };
-
-    window.addEventListener('mousemove', mouseMoveHandler);
   };
 
-  // Record position as window-relative coordinates
-  const recordPosition = (clientX: number, clientY: number) => {
+  // Record position relative to the card center
+  // cardCenter should be the center coordinates of the card on screen
+  const recordPosition = (
+    clientX: number, 
+    clientY: number, 
+    cardCenter: { x: number; y: number }
+  ) => {
     if (!isRecording.value) return;
     
     const now = Date.now() - recordStartTime.value;
-    const x = clientX / window.innerWidth;
-    const y = clientY / window.innerHeight;
+    
+    // Store the offset from the card center (in pixels)
+    // This way, on replay, we can position relative to wherever the card is
+    const x = clientX - cardCenter.x;
+    const y = clientY - cardCenter.y;
     
     recordedPositions.value.push({ x, y, t: now });
   };
@@ -91,15 +86,12 @@ export function useReplayRecorder() {
     if (!isRecording.value) return null;
     
     recordedOutcome.value = outcome;
-    
-    if (mouseMoveHandler) {
-      window.removeEventListener('mousemove', mouseMoveHandler);
-      mouseMoveHandler = null;
-    }
 
+    // Add final position to ensure the animation plays to completion
     const finalTime = Date.now() - recordStartTime.value + 2000;
     const lastPos = recordedPositions.value[recordedPositions.value.length - 1];
     if (lastPos) {
+      // Keep the same offset for the final position
       recordedPositions.value.push({ x: lastPos.x, y: lastPos.y, t: finalTime });
     }
 
@@ -160,11 +152,6 @@ export function useReplayRecorder() {
   };
 
   const cancelRecording = () => {
-    if (mouseMoveHandler) {
-      window.removeEventListener('mousemove', mouseMoveHandler);
-      mouseMoveHandler = null;
-    }
-    
     isRecording.value = false;
     isRecordingArmed.value = false;
     recordedPositions.value = [];
