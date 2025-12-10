@@ -16,6 +16,7 @@ export function useReplayRecorder() {
   const isRecording = ref(false);
   const isRecordingArmed = ref(false);
   const isSaving = ref(false);
+  const saveError = ref<string | null>(null); // Error message for UI feedback
   const username = ref('');
   const userAvatar = ref('');
   const recordedPositions = ref<DecodedMousePosition[]>([]);
@@ -115,11 +116,32 @@ export function useReplayRecorder() {
   };
 
   const saveReplayToSupabase = async () => {
-    if (!cardData.value || !recordedOutcome.value) return null;
+    saveError.value = null;
+    
+    if (!cardData.value || !recordedOutcome.value) {
+      saveError.value = 'Données de replay manquantes';
+      return null;
+    }
     
     // If Supabase is not configured, skip saving
     if (!supabase) {
       console.warn('Supabase not configured, replay not saved');
+      saveError.value = 'Service de sauvegarde non disponible';
+      return null;
+    }
+
+    // Validate card_unique_id is a valid integer
+    const uid = cardData.value.uid;
+    if (typeof uid !== 'number' || !Number.isFinite(uid) || !Number.isInteger(uid)) {
+      console.error('Invalid card UID type:', typeof uid, uid);
+      saveError.value = 'Erreur de données (UID invalide)';
+      return null;
+    }
+
+    // Validate required string fields
+    if (!cardData.value.cardId || typeof cardData.value.cardId !== 'string') {
+      console.error('Invalid card ID:', cardData.value.cardId);
+      saveError.value = 'Erreur de données (ID invalide)';
       return null;
     }
 
@@ -131,7 +153,7 @@ export function useReplayRecorder() {
         user_avatar: userAvatar.value || null,
         card_id: cardData.value.cardId,
         card_variation: cardData.value.variation,
-        card_unique_id: cardData.value.uid,
+        card_unique_id: uid,
         card_tier: cardData.value.tier,
         card_foil: cardData.value.foil,
         mouse_positions: recordedPositions.value,
@@ -147,6 +169,16 @@ export function useReplayRecorder() {
 
       if (error) {
         console.error('Failed to save replay:', error);
+        // User-friendly error messages based on error code
+        if (error.code === '22P02') {
+          saveError.value = 'Erreur de format des données';
+        } else if (error.code === '23514') {
+          saveError.value = 'Résultat non supporté';
+        } else if (error.code === '23505') {
+          saveError.value = 'Ce replay existe déjà';
+        } else {
+          saveError.value = 'Échec de la sauvegarde';
+        }
         return null;
       }
 
@@ -157,6 +189,7 @@ export function useReplayRecorder() {
       return url;
     } catch (e) {
       console.error('Error saving replay:', e);
+      saveError.value = 'Erreur inattendue lors de la sauvegarde';
       return null;
     } finally {
       isSaving.value = false;
@@ -170,6 +203,7 @@ export function useReplayRecorder() {
     recordedOutcome.value = null;
     generatedUrl.value = null;
     replayId.value = null;
+    saveError.value = null;
   };
 
   // Reset state to allow a new recording without clearing user info
@@ -179,8 +213,14 @@ export function useReplayRecorder() {
     recordedPositions.value = [];
     recordedOutcome.value = null;
     resultCardId.value = null;
+    saveError.value = null;
     // Keep generatedUrl and replayId for the share modal
     // They will be cleared on the next armRecording call
+  };
+  
+  // Clear error state
+  const clearError = () => {
+    saveError.value = null;
   };
 
   const copyUrlToClipboard = async () => {
@@ -199,6 +239,7 @@ export function useReplayRecorder() {
     isRecording: computed(() => isRecording.value),
     isRecordingArmed: computed(() => isRecordingArmed.value),
     isSaving: computed(() => isSaving.value),
+    saveError: computed(() => saveError.value),
     username: computed(() => username.value),
     userAvatar: computed(() => userAvatar.value),
     generatedUrl: computed(() => generatedUrl.value),
@@ -211,6 +252,7 @@ export function useReplayRecorder() {
     stopRecording,
     cancelRecording,
     resetForNewRecording,
+    clearError,
     copyUrlToClipboard
   };
 }

@@ -198,9 +198,10 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     const glowShadow = `0 0 20px ${tierColors.glow}, 0 0 40px ${tierColors.glow}`;
     
     // Create the new card early (keeping foil status if original was foil)
+    // Generate a numeric UID by combining template UID and timestamp to ensure uniqueness
     const newCard: Card = {
       ...newCardTemplate,
-      uid: `${newCardTemplate.id}-${Date.now()}`,
+      uid: newCardTemplate.uid * 1000000 + (Date.now() % 1000000),
       foil: isCardFoil(currentCard),
     };
     
@@ -313,10 +314,10 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     const tierColors = getTierColors(currentTier);
     const cardElement = cardRef.value;
     
-    // Create duplicate card data
+    // Create duplicate card data with unique numeric UID
     const duplicateCard: Card = {
       ...originalCard,
-      uid: `${originalCard.id}-dup-${Date.now()}`,
+      uid: originalCard.uid * 1000000 + (Date.now() % 1000000) + 1,
     };
     
     // Get card position and dimensions

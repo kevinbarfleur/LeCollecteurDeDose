@@ -311,6 +311,7 @@ const {
   isRecording,
   isRecordingArmed,
   isSaving,
+  saveError,
   generatedUrl,
   replayId,
   setUser,
@@ -320,6 +321,7 @@ const {
   stopRecording,
   cancelRecording,
   resetForNewRecording,
+  clearError,
   copyUrlToClipboard,
 } = useReplayRecorder();
 
@@ -1533,7 +1535,14 @@ const endDragOrb = async () => {
 
                 <p class="share-panel__text">{{ shareModalContent.text }}</p>
 
-                <div class="share-panel__url">
+                <!-- Error state -->
+                <div v-if="saveError" class="share-panel__error">
+                  <span class="share-panel__error-icon">⚠</span>
+                  <span class="share-panel__error-text">{{ saveError }}</span>
+                </div>
+
+                <!-- URL state -->
+                <div v-else class="share-panel__url">
                   <template v-if="generatedUrl">
                     <input
                       type="text"
@@ -1558,7 +1567,10 @@ const endDragOrb = async () => {
                   </template>
                 </div>
 
-                <div v-if="generatedUrl" class="share-panel__actions">
+                <div
+                  v-if="generatedUrl && !saveError"
+                  class="share-panel__actions"
+                >
                   <NuxtLink
                     :to="generatedUrl"
                     target="_blank"
@@ -3358,6 +3370,28 @@ const endDragOrb = async () => {
 
 .share-panel__link:hover {
   color: var(--color-primary-light);
+}
+
+/* Error state */
+.share-panel__error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(180, 50, 50, 0.15);
+  border: 1px solid rgba(180, 50, 50, 0.3);
+  border-radius: 2px;
+  margin: 0.75rem 1rem;
+}
+
+.share-panel__error-icon {
+  color: #c83232;
+  font-size: 1rem;
+}
+
+.share-panel__error-text {
+  color: rgba(220, 150, 150, 0.9);
+  font-size: 0.8rem;
 }
 
 /* Share Panel Slide Animation */
