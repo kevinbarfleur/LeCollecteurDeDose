@@ -4,6 +4,20 @@ import type { VaalOutcome } from '~/types/vaalOutcome';
 import type { Database, ReplayInsert, ActivityLogInsert } from '~/types/database';
 import { RECORDING } from '~/constants/timing';
 
+// Type for captured recording data (immutable snapshot at stop time)
+interface CapturedRecordingData {
+  username: string;
+  userAvatar: string | null;
+  cardId: string;
+  cardVariation: string;
+  cardUid: number;
+  cardTier: string;
+  cardFoil: boolean;
+  positions: DecodedMousePosition[];
+  outcome: VaalOutcome;
+  resultCardId: string | null;
+}
+
 export function useReplayRecorder() {
   // Get Supabase client - may be null if not configured
   let supabase: ReturnType<typeof useSupabaseClient<Database>> | null = null;
@@ -22,8 +36,6 @@ export function useReplayRecorder() {
   const recordedPositions = ref<DecodedMousePosition[]>([]);
   const recordStartTime = ref(0);
   const cardData = ref<{ cardId: string; variation: string; uid: number; tier: string; foil: boolean } | null>(null);
-  const recordedOutcome = ref<VaalOutcome | null>(null);
-  const resultCardId = ref<string | null>(null); // For transform outcomes - the card it became
   const generatedUrl = ref<string | null>(null);
   const replayId = ref<string | null>(null);
   
@@ -45,8 +57,6 @@ export function useReplayRecorder() {
     isRecordingArmed.value = true;
     cardData.value = card;
     recordedPositions.value = [];
-    recordedOutcome.value = null;
-    resultCardId.value = null;
     generatedUrl.value = null;
     replayId.value = null;
     
@@ -88,40 +98,46 @@ export function useReplayRecorder() {
   };
 
   const stopRecording = async (outcome: VaalOutcome, newCardId?: string) => {
-    if (!isRecording.value) return null;
+    if (!isRecording.value || !cardData.value) return null;
     
-    recordedOutcome.value = outcome;
-    resultCardId.value = newCardId || null;
+    // CRITICAL: Capture ALL data NOW as an immutable snapshot
+    // This prevents data corruption if user starts a new recording before save completes
+    const capturedData: CapturedRecordingData = {
+      username: username.value.trim(),
+      userAvatar: userAvatar.value || null,
+      cardId: cardData.value.cardId,
+      cardVariation: cardData.value.variation,
+      cardUid: cardData.value.uid,
+      cardTier: cardData.value.tier,
+      cardFoil: cardData.value.foil,
+      positions: [...recordedPositions.value], // Clone the array
+      outcome,
+      resultCardId: newCardId || null,
+    };
 
     // Add final position to ensure the animation plays to completion
     const finalTime = Date.now() - recordStartTime.value + 2000;
-    const lastPos = recordedPositions.value[recordedPositions.value.length - 1];
+    const lastPos = capturedData.positions[capturedData.positions.length - 1];
     if (lastPos) {
-      // Keep the same offset for the final position
-      recordedPositions.value.push({ x: lastPos.x, y: lastPos.y, t: finalTime });
+      capturedData.positions.push({ x: lastPos.x, y: lastPos.y, t: finalTime });
     }
 
     // Immediately mark as not recording so a new recording can start
-    // The save will happen in the background
     isRecording.value = false;
     isRecordingArmed.value = false;
     
-    // Save to Supabase in the background after a delay
-    // This allows the animation to complete before saving
+    // Save to Supabase in the background after a short delay
+    // Pass captured data directly - it won't be affected by new recordings
     setTimeout(async () => {
-      await saveReplayToSupabase();
-    }, 2000);
+      await saveReplayWithData(capturedData);
+    }, 500); // Reduced delay since animation is already complete
 
     return outcome;
   };
 
-  const saveReplayToSupabase = async () => {
+  // Internal function that uses captured data directly (immutable)
+  const saveReplayWithData = async (data: CapturedRecordingData) => {
     saveError.value = null;
-    
-    if (!cardData.value || !recordedOutcome.value) {
-      saveError.value = 'Données de replay manquantes';
-      return null;
-    }
     
     // If Supabase is not configured, skip saving
     if (!supabase) {
@@ -130,17 +146,16 @@ export function useReplayRecorder() {
       return null;
     }
 
-    // Validate card_unique_id is a valid integer
-    const uid = cardData.value.uid;
-    if (typeof uid !== 'number' || !Number.isFinite(uid) || !Number.isInteger(uid)) {
-      console.error('Invalid card UID type:', typeof uid, uid);
+    // Validate card_unique_id is a valid number
+    if (typeof data.cardUid !== 'number' || !Number.isFinite(data.cardUid)) {
+      console.error('Invalid card UID type:', typeof data.cardUid, data.cardUid);
       saveError.value = 'Erreur de données (UID invalide)';
       return null;
     }
 
     // Validate required string fields
-    if (!cardData.value.cardId || typeof cardData.value.cardId !== 'string') {
-      console.error('Invalid card ID:', cardData.value.cardId);
+    if (!data.cardId || typeof data.cardId !== 'string') {
+      console.error('Invalid card ID:', data.cardId);
       saveError.value = 'Erreur de données (ID invalide)';
       return null;
     }
@@ -149,19 +164,19 @@ export function useReplayRecorder() {
 
     try {
       const replayInsert: ReplayInsert = {
-        username: username.value.trim(),
-        user_avatar: userAvatar.value || null,
-        card_id: cardData.value.cardId,
-        card_variation: cardData.value.variation,
-        card_unique_id: uid,
-        card_tier: cardData.value.tier,
-        card_foil: cardData.value.foil,
-        mouse_positions: recordedPositions.value,
-        outcome: recordedOutcome.value,
-        result_card_id: resultCardId.value,
+        username: data.username,
+        user_avatar: data.userAvatar,
+        card_id: data.cardId,
+        card_variation: data.cardVariation,
+        card_unique_id: data.cardUid,
+        card_tier: data.cardTier,
+        card_foil: data.cardFoil,
+        mouse_positions: data.positions as unknown as ReplayInsert['mouse_positions'],
+        outcome: data.outcome,
+        result_card_id: data.resultCardId,
       };
 
-      const { data, error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from('replays')
         .insert(replayInsert)
         .select('id')
@@ -176,18 +191,21 @@ export function useReplayRecorder() {
           saveError.value = 'Résultat non supporté';
         } else if (error.code === '23505') {
           saveError.value = 'Ce replay existe déjà';
+        } else if (error.code === '22003') {
+          saveError.value = 'Erreur de données (valeur trop grande)';
         } else {
           saveError.value = 'Échec de la sauvegarde';
         }
         return null;
       }
 
-      replayId.value = data.id;
-      const url = `${window.location.origin}/replay/${data.id}`;
+      replayId.value = insertedData.id;
+      const url = `${window.location.origin}/replay/${insertedData.id}`;
       generatedUrl.value = url;
       
       // Also insert into activity_logs for real-time feed (fire and forget)
-      await saveActivityLog();
+      // Pass captured data and the new replay ID
+      await saveActivityLogWithData(data, insertedData.id);
       
       return url;
     } catch (e) {
@@ -199,19 +217,19 @@ export function useReplayRecorder() {
     }
   };
 
-  // Save a lightweight activity log entry for real-time feed
-  const saveActivityLog = async () => {
-    if (!supabase || !cardData.value || !recordedOutcome.value) return;
+  // Save activity log using captured data (internal)
+  const saveActivityLogWithData = async (data: CapturedRecordingData, savedReplayId: string) => {
+    if (!supabase) return;
 
     try {
       const activityLogInsert: ActivityLogInsert = {
-        username: username.value.trim(),
-        user_avatar: userAvatar.value || null,
-        card_id: cardData.value.cardId,
-        card_tier: cardData.value.tier,
-        outcome: recordedOutcome.value,
-        result_card_id: resultCardId.value,
-        replay_id: replayId.value, // Link to the replay if available
+        username: data.username,
+        user_avatar: data.userAvatar,
+        card_id: data.cardId,
+        card_tier: data.cardTier,
+        outcome: data.outcome,
+        result_card_id: data.resultCardId,
+        replay_id: savedReplayId,
       };
 
       const { error } = await supabase
@@ -219,7 +237,6 @@ export function useReplayRecorder() {
         .insert(activityLogInsert);
 
       if (error) {
-        // Log but don't fail - activity logs are non-critical
         console.warn('Failed to save activity log:', error);
       }
     } catch (e) {
@@ -231,7 +248,6 @@ export function useReplayRecorder() {
     isRecording.value = false;
     isRecordingArmed.value = false;
     recordedPositions.value = [];
-    recordedOutcome.value = null;
     generatedUrl.value = null;
     replayId.value = null;
     saveError.value = null;
@@ -275,8 +291,6 @@ export function useReplayRecorder() {
     isRecording.value = false;
     isRecordingArmed.value = false;
     recordedPositions.value = [];
-    recordedOutcome.value = null;
-    resultCardId.value = null;
     saveError.value = null;
     // Keep generatedUrl and replayId for the share modal
     // They will be cleared on the next armRecording call

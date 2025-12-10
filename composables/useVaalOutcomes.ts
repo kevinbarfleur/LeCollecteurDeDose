@@ -110,14 +110,23 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
 
     isAnimating.value = true;
     
-    const currentTier = displayCard.value.tier as CardTier;
+    // CRITICAL: Capture the card BEFORE modifying the collection
+    // After modification, displayCard computed will return a different card
+    const currentCard = displayCard.value;
+    const currentTier = currentCard.tier as CardTier;
     const tierColors = getTierColors(currentTier);
     const cardElement = cardRef.value;
     const glowShadow = `0 0 30px ${tierColors.glow}, 0 0 60px ${tierColors.glow}`;
 
-    // Find the card in the local collection and update it
+    // Notify callback BEFORE modifying collection so UI can update selectedVariation
+    // This ensures displayCard stays valid during and after the animation
+    if (onCardUpdate) {
+      onCardUpdate({ ...currentCard, foil: true });
+    }
+
+    // Now update the collection - the callback above should have updated selectedVariation
     const cardIndex = localCollection.value.findIndex(
-      (c) => c.uid === displayCard.value!.uid
+      (c) => c.uid === currentCard.uid
     );
     if (cardIndex !== -1) {
       localCollection.value[cardIndex].foil = true;
@@ -156,10 +165,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
 
     await new Promise((resolve) => setTimeout(resolve, 400));
     isAnimating.value = false;
-
-    if (onCardUpdate && displayCard.value) {
-      onCardUpdate({ ...displayCard.value, foil: true });
-    }
 
     return { success: true };
   };
@@ -295,17 +300,19 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
           });
         }
         
-        // Update collection
+        // CRITICAL: Notify callback BEFORE modifying collection
+        // This allows the UI to update selectedCardId/selectedVariation first
+        // so displayCard stays valid when the computed recalculates
+        if (onCardTransformed) {
+          onCardTransformed(currentCard, newCard);
+        }
+        
+        // Now update collection - the callback above should have updated selection
         const cardIndex = localCollection.value.findIndex(
           (c) => c.uid === currentCard.uid
         );
         if (cardIndex !== -1) {
           localCollection.value[cardIndex] = newCard;
-        }
-        
-        // Notify callback to update displayed card AT the peak
-        if (onCardTransformed) {
-          onCardTransformed(currentCard, newCard);
         }
       },
     });

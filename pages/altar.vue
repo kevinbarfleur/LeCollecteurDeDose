@@ -486,6 +486,10 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
     isAnimating,
     onCardUpdate: (updatedCard) => {
       // Called when card is updated (e.g., foil transformation)
+      // Update selectedVariation to match the new foil state so displayCard stays valid
+      if (updatedCard.foil) {
+        selectedVariation.value = "foil";
+      }
       // Re-capture snapshot with new appearance
       nextTick(() => captureCardSnapshot());
     },
@@ -493,6 +497,12 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
       // Set flag to prevent fly-in animation - card morphs in place
       isTransformingCard.value = true;
       // Update the display card to show the new card
+      // Keep foil variation if the new card is foil (transformation preserves foil status)
+      if (newCard.foil) {
+        selectedVariation.value = "foil";
+      } else {
+        selectedVariation.value = "standard";
+      }
       selectedCardId.value = newCard.id;
       // Re-capture snapshot for new card appearance
       nextTick(() => captureCardSnapshot());
@@ -677,6 +687,19 @@ const destroyCard = async () => {
 // Flip card to back (first part of Vaal ritual)
 // Handle Vaal outcome - instant result
 const handleVaalOutcome = async (outcome: VaalOutcome) => {
+  // IMPORTANT: Capture card data BEFORE animation starts
+  // After animation, displayCard may have changed (foil, transform, etc.)
+  const cardBeforeAnimation = displayCard.value;
+  if (!cardBeforeAnimation) {
+    console.warn("handleVaalOutcome called without a card on altar");
+    return;
+  }
+  
+  const capturedCardData = {
+    cardId: cardBeforeAnimation.id,
+    tier: cardBeforeAnimation.tier,
+  };
+
   const shouldRecord = isRecording.value && shouldRecordOutcome(outcome);
   let resultCardId: string | undefined;
 
@@ -721,14 +744,8 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
     }, 1200);
   } else {
     // No replay recorded - but still log the activity for the real-time feed
-    const card = displayCard.value;
-    if (card) {
-      logActivityOnly(
-        { cardId: card.id, tier: card.tier },
-        outcome,
-        resultCardId
-      );
-    }
+    // Use captured card data from BEFORE the animation
+    logActivityOnly(capturedCardData, outcome, resultCardId);
     
     // Cancel any in-progress recording if outcome wasn't selected for recording
     if (isRecording.value) {
