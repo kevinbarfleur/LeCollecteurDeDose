@@ -70,7 +70,7 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
     forcedLabel: '✨ Transformation Foil',
     shareModal: {
       icon: '✨',
-      title: 'Transformation légendaire !',
+      title: 'Élévation !',
       text: 'La corruption Vaal a béni ta carte d\'un éclat prismatique. Partage ce moment de gloire avec le monde !',
       linkText: 'Admirer le chef-d\'œuvre',
       theme: 'foil',
