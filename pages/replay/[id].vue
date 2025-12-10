@@ -594,28 +594,7 @@ const destroyCardEffect = async () => {
 };
 
 const restartReplay = () => {
-  reset();
-  
-  if (cardInfo.value) {
-    const card = getCardById(cardInfo.value.id);
-    if (card) {
-      cardData.value = {
-        ...card,
-        foil: cardInfo.value.foil
-      };
-    }
-  }
-  
-  if (altarCardRef.value) {
-    gsap.set(altarCardRef.value, { opacity: 1, scale: 1, filter: "brightness(1) saturate(1)" });
-  }
-  
-  isCardBeingDestroyed.value = false;
-  showOutcome.value = false;
-  
-  setTimeout(() => {
-    startReplay();
-  }, 500);
+  window.location.reload();
 };
 
 const goToAltar = () => {
@@ -624,9 +603,9 @@ const goToAltar = () => {
 
 const outcomeText = computed(() => {
   switch (outcome.value) {
-    case 'nothing': return '😐 Rien ne s\'est passé';
-    case 'foil': return '✨ Transformation en Foil !';
-    case 'destroyed': return '💀 Carte détruite...';
+    case 'nothing': return 'Rien ne s\'est passé';
+    case 'foil': return 'Transformation en Foil !';
+    case 'destroyed': return 'Carte détruite...';
     default: return '';
   }
 });
@@ -646,16 +625,6 @@ const getCardName = () => {
   return card?.name || cardInfo.value.id;
 };
 
-const getCardImageUrl = () => {
-  if (!cardInfo.value) return '';
-  const card = getCardById(cardInfo.value.id);
-  if (!card) return '';
-  
-  if (outcome.value === 'foil' && card.gameData?.foilImg) {
-    return card.gameData.foilImg;
-  }
-  return card.gameData?.img || '';
-};
 
 const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   if (!cardInfo.value?.tier) return 'default';
@@ -665,46 +634,60 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   }
   return 'default';
 };
+
 </script>
 
 <template>
-  <NuxtLayout>
+  <NuxtLayout name="replay">
     <div class="replay-page">
-      <div v-if="isLoading" class="replay-loading">
-        <div class="replay-loading__spinner"></div>
-        <p>Chargement du replay...</p>
+      <!-- Loading State -->
+      <div v-if="isLoading" class="replay-state">
+        <div class="replay-loading">
+          <div class="replay-loading__spinner"></div>
+          <p class="replay-loading__text">Chargement du replay...</p>
+        </div>
       </div>
       
-      <div v-else-if="hasError || playerError" class="replay-error">
-        <h2>Replay introuvable</h2>
-        <p>{{ playerError || 'Ce replay n\'existe pas ou a été supprimé.' }}</p>
-        <RunicButton variant="primary" @click="goToAltar">
-          Retour à l'autel
-        </RunicButton>
+      <!-- Error State -->
+      <div v-else-if="hasError || playerError" class="replay-state">
+        <div class="replay-error">
+          <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-error__icon" />
+          <h2 class="replay-error__title">Replay introuvable</h2>
+          <p class="replay-error__message">{{ playerError || 'Ce replay n\'existe pas ou a été supprimé.' }}</p>
+          <RunicButton variant="primary" @click="goToAltar">
+            Découvrir l'autel
+          </RunicButton>
+        </div>
       </div>
       
-      <div v-else-if="isLoaded" class="replay-container">
-        <div class="replay-header">
-          <RunicBox padding="md" class="replay-user-box">
-            <div class="replay-user">
+      <!-- Replay Content -->
+      <div v-else-if="isLoaded" class="replay-content">
+        <!-- Compact Header -->
+        <RunicBox padding="sm" class="replay-header-box">
+          <div class="replay-header">
+            <div class="replay-header__user">
               <img 
                 v-if="userAvatar" 
                 :src="userAvatar" 
                 :alt="username" 
-                class="replay-user__avatar"
+                class="replay-header__avatar"
               />
-              <div class="replay-user__info">
-                <h2 class="replay-user__name">{{ username }}</h2>
-                <div class="replay-user__meta">
-                  <span class="replay-user__label">Replay Vaal Orb</span>
-                  <span v-if="views" class="replay-user__views">{{ views }} vue{{ views > 1 ? 's' : '' }}</span>
-                </div>
+              <div class="replay-header__info">
+                <span class="replay-header__name">{{ username }}</span>
+                <span class="replay-header__label">a utilisé une Vaal Orb</span>
               </div>
             </div>
-          </RunicBox>
-        </div>
-        
-        <div class="replay-stage">
+            <RunicNumber 
+              v-if="views" 
+              :value="views" 
+              label="vues"
+              size="sm"
+            />
+          </div>
+        </RunicBox>
+
+        <!-- Main Stage -->
+        <main class="replay-stage">
           <div 
             class="altar-platform"
             :class="altarClasses"
@@ -742,32 +725,28 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
               </div>
             </div>
           </div>
-        </div>
+        </main>
         
-        <Transition name="fade">
-          <RunicBox v-if="showOutcome" padding="lg" class="replay-outcome-box" :class="outcomeClass">
+        <!-- Outcome Panel -->
+        <Transition name="outcome">
+          <RunicBox v-if="showOutcome" padding="md" class="replay-outcome-box" :class="outcomeClass">
             <div class="replay-outcome">
-              <div class="replay-outcome__header">
-                <p class="replay-outcome__text">{{ outcomeText }}</p>
+              <div class="replay-outcome__badge">
+                <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-outcome__badge-img" />
               </div>
               
-              <div class="replay-outcome__card">
-                <div class="replay-outcome__card-image-wrapper">
-                  <img 
-                    v-if="cardInfo" 
-                    :src="getCardImageUrl()" 
-                    :alt="getCardName()"
-                    class="replay-outcome__card-image"
-                  />
-                </div>
-                <div class="replay-outcome__card-details">
-                  <span class="replay-outcome__card-name">{{ getCardName() }}</span>
-                  <RunicNumber 
-                    :value="cardInfo?.tier || ''" 
-                    :color="getTierColor()"
-                    size="sm"
-                    label="Tier"
-                  />
+              <div class="replay-outcome__content">
+                <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
+                
+                <div class="replay-outcome__card">
+                  <div class="replay-outcome__card-info">
+                    <span class="replay-outcome__card-name">{{ getCardName() }}</span>
+                    <RunicNumber 
+                      :value="cardInfo?.tier || ''" 
+                      :color="getTierColor()"
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </div>
               
@@ -783,6 +762,7 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
           </RunicBox>
         </Transition>
         
+        <!-- Animated Cursor with Vaal Orb -->
         <div 
           v-if="isPlaying"
           ref="vaalOrbRef"
@@ -792,17 +772,17 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
             top: `${cursorY}px`
           }"
         >
-          <div class="replay-cursor__user">
+          <div class="replay-cursor__tag">
             <img 
               v-if="userAvatar" 
               :src="userAvatar" 
               :alt="username" 
-              class="replay-cursor__avatar"
+              class="replay-cursor__tag-avatar"
             />
-            <span class="replay-cursor__username">{{ username }}</span>
+            <span class="replay-cursor__tag-name">{{ username }}</span>
           </div>
           <div class="replay-cursor__orb">
-            <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-cursor__image" />
+            <img src="/images/card-back-logo.png" alt="Vaal Orb" class="replay-cursor__orb-img" />
           </div>
         </div>
       </div>
@@ -811,101 +791,146 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
 </template>
 
 <style scoped>
+/* ===== PAGE LAYOUT ===== */
 .replay-page {
-  min-height: 80vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.replay-state {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
 }
 
-.replay-error {
-  text-align: center;
-  color: var(--color-text);
-}
-
-.replay-error h2 {
-  font-family: "Cinzel", serif;
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--color-error);
-}
-
-.replay-error p {
-  margin-bottom: 2rem;
-  color: rgba(200, 180, 160, 0.8);
-}
-
-.replay-container {
+.replay-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
   width: 100%;
-  max-width: 800px;
+}
+
+/* ===== LOADING STATE ===== */
+.replay-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
+  gap: 1.25rem;
 }
 
-.replay-header {
-  text-align: center;
-}
-
-.replay-user-box {
-  display: inline-block;
-}
-
-.replay-user {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.replay-user__avatar {
-  width: 52px;
-  height: 52px;
+.replay-loading__spinner {
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgba(60, 55, 50, 0.2);
+  border-top-color: rgba(175, 96, 37, 0.8);
   border-radius: 50%;
-  border: 2px solid var(--color-primary);
-  box-shadow: 0 0 12px rgba(157, 123, 59, 0.3);
+  animation: spin 0.8s linear infinite;
 }
 
-.replay-user__info {
-  text-align: left;
-}
-
-.replay-user__name {
-  font-family: "Cinzel", serif;
-  font-size: 1.25rem;
-  color: var(--color-text);
+.replay-loading__text {
+  font-family: "Crimson Text", serif;
+  font-size: 1rem;
+  color: rgba(200, 180, 160, 0.6);
   margin: 0;
 }
 
-.replay-user__meta {
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== ERROR STATE ===== */
+.replay-error {
+  text-align: center;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.replay-error__icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 1.5rem;
+  filter: grayscale(0.4) opacity(0.6);
+}
+
+.replay-error__title {
+  font-family: "Cinzel", serif;
+  font-size: 1.5rem;
+  color: rgba(200, 180, 160, 0.9);
+  margin: 0 0 0.75rem;
+}
+
+.replay-error__message {
+  font-family: "Crimson Text", serif;
+  font-size: 1rem;
+  color: rgba(200, 180, 160, 0.5);
+  margin: 0 0 2rem;
+  line-height: 1.5;
+}
+
+/* ===== HEADER ===== */
+.replay-header-box {
+  width: 100%;
+}
+
+.replay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.replay-header__user {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-top: 0.25rem;
 }
 
-.replay-user__label {
-  font-size: 0.75rem;
-  color: rgba(200, 180, 160, 0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.replay-header__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(175, 96, 37, 0.5);
+  object-fit: cover;
+  box-shadow: 0 0 8px rgba(175, 96, 37, 0.2);
 }
 
-.replay-user__views {
-  font-size: 0.7rem;
-  color: rgba(157, 123, 59, 0.8);
-  padding: 0.15rem 0.4rem;
-  background: rgba(157, 123, 59, 0.1);
-  border-radius: 4px;
-}
-
-.replay-stage {
-  position: relative;
-  width: 100%;
+.replay-header__info {
   display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.replay-header__name {
+  font-family: "Cinzel", serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(200, 180, 160, 0.95);
+}
+
+.replay-header__label {
+  font-family: "Crimson Text", serif;
+  font-size: 0.9rem;
+  color: rgba(200, 180, 160, 0.5);
+}
+
+/* ===== STAGE ===== */
+.replay-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  min-height: 450px;
 }
 
 /* ALTAR PLATFORM */
@@ -1244,130 +1269,126 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   object-fit: contain;
 }
 
-/* Outcome */
+/* ===== OUTCOME PANEL ===== */
 .replay-outcome-box {
-  min-width: 320px;
+  width: 100%;
 }
 
 .replay-outcome {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 1.25rem;
 }
 
-.replay-outcome__header {
-  text-align: center;
+.replay-outcome__badge {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.replay-outcome__text {
+.replay-outcome__badge-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(180, 50, 50, 0.4));
+}
+
+.replay-outcome__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.replay-outcome__title {
   font-family: "Cinzel", serif;
-  font-size: 1.35rem;
-  margin: 0;
-  letter-spacing: 0.02em;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(200, 180, 160, 0.9);
+  margin: 0 0 0.75rem;
 }
 
 .replay-outcome__card {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  padding: 1rem 1.25rem;
-  background: linear-gradient(
-    180deg,
-    rgba(25, 23, 20, 0.9) 0%,
-    rgba(18, 16, 14, 0.95) 100%
-  );
-  border-radius: 6px;
-  border: 1px solid rgba(60, 55, 50, 0.4);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+  gap: 0.875rem;
 }
 
-.replay-outcome__card-image-wrapper {
-  width: 64px;
-  height: 64px;
+.replay-outcome__card-visual {
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 13, 12, 0.8);
+  background: rgba(10, 9, 8, 0.8);
+  border: 1px solid rgba(50, 45, 40, 0.4);
   border-radius: 4px;
-  border: 1px solid rgba(50, 45, 40, 0.3);
-  padding: 4px;
+  flex-shrink: 0;
 }
 
-.replay-outcome__card-image {
-  max-width: 100%;
-  max-height: 100%;
+.replay-outcome__card-img {
+  max-width: 40px;
+  max-height: 40px;
   object-fit: contain;
 }
 
-.replay-outcome__card-details {
+.replay-outcome__card-info {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .replay-outcome__card-name {
   font-family: "Cinzel", serif;
-  font-size: 1rem;
-  color: var(--color-text);
-  font-weight: 600;
+  font-size: 0.95rem;
+  color: rgba(200, 180, 160, 0.85);
 }
 
 .replay-outcome__actions {
   display: flex;
-  gap: 1rem;
-  justify-content: center;
-  padding-top: 0.5rem;
+  gap: 0.625rem;
+  flex-shrink: 0;
 }
 
-/* Outcome variants */
-.outcome--nothing .replay-outcome__text {
-  color: rgba(200, 180, 160, 0.8);
+/* Outcome Variants */
+.outcome--nothing .replay-outcome__badge-img {
+  filter: grayscale(0.5) opacity(0.6);
 }
 
-.outcome--foil .replay-outcome__text {
+.outcome--foil .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)) brightness(1.2);
+}
+
+.outcome--foil .replay-outcome__title {
   color: #ffd700;
-  text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
 }
 
-.outcome--foil .replay-outcome__card {
-  border-color: rgba(255, 215, 0, 0.25);
-  background: linear-gradient(
-    180deg,
-    rgba(35, 30, 18, 0.95) 0%,
-    rgba(25, 22, 14, 0.98) 100%
-  );
-}
-
-.outcome--foil .replay-outcome__card-image-wrapper {
+.outcome--foil .replay-outcome__card-visual {
   border-color: rgba(255, 215, 0, 0.3);
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.2);
 }
 
-.outcome--destroyed .replay-outcome__text {
+.outcome--destroyed .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(200, 50, 50, 0.7)) saturate(1.5);
+}
+
+.outcome--destroyed .replay-outcome__title {
   color: #e05050;
-}
-
-.outcome--destroyed .replay-outcome__card {
-  border-color: rgba(200, 50, 50, 0.25);
-  background: linear-gradient(
-    180deg,
-    rgba(35, 20, 20, 0.95) 0%,
-    rgba(25, 14, 14, 0.98) 100%
-  );
 }
 
 .outcome--destroyed .replay-outcome__card-name {
   text-decoration: line-through;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
-.outcome--destroyed .replay-outcome__card-image {
-  filter: grayscale(0.6) opacity(0.7);
+.outcome--destroyed .replay-outcome__card-img {
+  filter: grayscale(0.7) opacity(0.6);
 }
 
-/* Cursor */
+/* ===== CURSOR ===== */
 .replay-cursor {
   position: fixed;
   pointer-events: none;
@@ -1376,81 +1397,123 @@ const getTierColor = (): 'default' | 't0' | 't1' | 't2' | 't3' => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.375rem;
 }
 
-.replay-cursor__user {
+.replay-cursor__tag {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  background: rgba(20, 18, 16, 0.95);
-  border: 1px solid rgba(157, 123, 59, 0.6);
-  border-radius: 6px;
-  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  background: rgba(15, 13, 11, 0.95);
+  border: 1px solid rgba(175, 96, 37, 0.5);
+  border-radius: 20px;
+  padding: 0.2rem 0.625rem 0.2rem 0.2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
-.replay-cursor__avatar {
-  width: 20px;
-  height: 20px;
+.replay-cursor__tag-avatar {
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(157, 123, 59, 0.4);
+  border: 1px solid rgba(175, 96, 37, 0.4);
 }
 
-.replay-cursor__username {
-  font-size: 0.75rem;
-  color: var(--color-primary);
+.replay-cursor__tag-name {
+  font-family: "Cinzel", serif;
+  font-size: 0.7rem;
   font-weight: 600;
+  color: rgba(175, 96, 37, 0.95);
   white-space: nowrap;
 }
 
 .replay-cursor__orb {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.replay-cursor__image {
+.replay-cursor__orb-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(180, 50, 50, 0.6));
+  filter: drop-shadow(0 0 10px rgba(180, 50, 50, 0.7)) drop-shadow(0 0 20px rgba(180, 50, 50, 0.3));
+  animation: orbPulse 0.8s ease-in-out infinite;
 }
 
-/* Loading */
-.replay-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  color: rgba(200, 180, 160, 0.8);
+@keyframes orbPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
-.replay-loading__spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(60, 55, 50, 0.3);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+/* ===== TRANSITIONS ===== */
+.outcome-enter-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.outcome-leave-active {
+  transition: all 0.2s ease-out;
 }
 
-/* Transitions */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
+.outcome-enter-from {
   opacity: 0;
+  transform: translateY(20px);
+}
+
+.outcome-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .replay-content {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .replay-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .replay-header__user {
+    justify-content: center;
+  }
+
+  .replay-header__info {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+  }
+
+  .replay-outcome {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .replay-outcome__badge {
+    width: 44px;
+    height: 44px;
+  }
+
+  .replay-outcome__card {
+    justify-content: center;
+  }
+
+  .replay-outcome__card-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .replay-outcome__actions {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
 
