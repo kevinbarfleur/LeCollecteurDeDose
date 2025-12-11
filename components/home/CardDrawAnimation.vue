@@ -4,9 +4,9 @@ import poeUniques from "~/data/poe_uniques.json";
 import type { Card } from "~/types/card";
 
 // Configuration
-const CARD_COUNT = 12;
-const DRAW_INTERVAL = 3000;
-const ANIMATION_DURATION = 0.85;
+const CARD_COUNT = 9;
+const DRAW_INTERVAL = 2500; // 2.5 seconds between draws
+const ANIMATION_DURATION = 0.85; // Animation takes 0.85s, well within the interval
 
 // Card with stored rotation (stable, doesn't change when array shifts)
 interface CardWithRotation {
@@ -159,13 +159,82 @@ const scheduleNextDraw = (delaySeconds: number = DRAW_INTERVAL / 1000) => {
   nextDrawCall = gsap.delayedCall(delaySeconds, drawCard);
 };
 
+// Initial animation - cards arrive from right on first load
+const initialArrival = async () => {
+  const { startX } = getStackPositions();
+
+  // Create new deck with fixed rotations
+  const newDeck = createRealisticDeck(CARD_COUNT);
+
+  // Use the deck as arriving cards
+  arrivingCards.value = newDeck;
+
+  await nextTick();
+
+  // Pre-calculate entry points for each card
+  const entryPoints = newDeck.map(() => getRandomEntryPoint());
+
+  // Collect DOM elements and set initial positions
+  const arriveElements: HTMLElement[] = [];
+  arrivingCards.value.forEach((cardData, index) => {
+    const el = document.querySelector(
+      `[data-arrive-id="${cardData.id}"]`
+    ) as HTMLElement;
+
+    if (el) {
+      arriveElements.push(el);
+      const entry = entryPoints[index];
+      gsap.set(el, {
+        x: entry.x,
+        y: entry.y,
+        rotation: entry.rotation,
+        scale: 1,
+        force3D: true,
+      });
+    }
+  });
+
+  // Small delay to ensure DOM is ready
+  await gsapDelay(0.05);
+
+  // Create GSAP Timeline with stagger for arrival
+  const arriveTimeline = gsap.timeline();
+
+  arriveElements.forEach((el, index) => {
+    const cardData = arrivingCards.value[index];
+    arriveTimeline.to(
+      el,
+      {
+        x: startX,
+        y: 0,
+        rotation: cardData.rotation,
+        duration: 0.6,
+        ease: "expo.out",
+      },
+      index * 0.1 // Stagger: 0.1s between each card
+    );
+  });
+
+  // Wait for arrival to complete
+  await waitForTimeline(arriveTimeline, 8000);
+
+  // Transfer arriving cards to deck
+  deckCards.value = newDeck;
+  arrivingCards.value = [];
+
+  // Small delay before first draw
+  await gsapDelay(0.5);
+  drawCard();
+};
+
 // Initialize
 onMounted(() => {
-  deckCards.value = createRealisticDeck(CARD_COUNT);
+  // Start with empty deck (no cards visible)
+  deckCards.value = [];
   startAmbientAnimation();
 
-  // First draw after 1 second
-  gsap.delayedCall(1, drawCard);
+  // Cards arrive from right after a short delay
+  gsap.delayedCall(0.5, initialArrival);
 });
 
 // Cleanup
