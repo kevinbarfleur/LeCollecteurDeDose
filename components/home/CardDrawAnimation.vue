@@ -647,24 +647,24 @@ const getDrawnStyle = (index: number) => {
   <div ref="containerRef" class="card-draw">
     <!-- Drawn stack (LEFT) - uses stored rotations -->
     <div ref="leftStackRef" class="card-draw__stack card-draw__stack--left">
-      <template v-if="drawnCards.length > 0">
-        <div
-          v-for="(cardData, i) in drawnCards.slice(0, 5)"
-          :key="cardData.id"
-          class="stack-card-wrapper"
-          :style="getDrawnStyle(i)"
-        >
-          <HomeFlipCard
-            :card="cardData.card"
-            :flipped="true"
-            :rotation="cardData.rotation"
-            :pointer-x="ambientPointer.x"
-            :pointer-y="ambientPointer.y"
-          />
-        </div>
-      </template>
-      <div v-else-if="!isRenewing" class="stack-placeholder">
+      <!-- Placeholder always visible in background -->
+      <div class="stack-placeholder">
         <span>✧</span>
+      </div>
+      <!-- Cards on top of placeholder -->
+      <div
+        v-for="(cardData, i) in drawnCards.slice(0, 5)"
+        :key="cardData.id"
+        class="stack-card-wrapper"
+        :style="getDrawnStyle(i)"
+      >
+        <HomeFlipCard
+          :card="cardData.card"
+          :flipped="true"
+          :rotation="cardData.rotation"
+          :pointer-x="ambientPointer.x"
+          :pointer-y="ambientPointer.y"
+        />
       </div>
     </div>
 
@@ -720,7 +720,12 @@ const getDrawnStyle = (index: number) => {
 
     <!-- Deck stack (RIGHT) - uses stored rotations -->
     <div ref="rightStackRef" class="card-draw__stack card-draw__stack--right">
-      <template v-if="deckCards.length > 0 && !isRenewing">
+      <!-- Placeholder always visible in background -->
+      <div class="stack-placeholder">
+        <span>✧</span>
+      </div>
+      <!-- Cards on top of placeholder (hidden during renewal to avoid overlap with arriving cards) -->
+      <template v-if="!isRenewing">
         <div
           v-for="(cardData, i) in deckCards.slice(-5)"
           :key="cardData.id"
@@ -736,9 +741,6 @@ const getDrawnStyle = (index: number) => {
           />
         </div>
       </template>
-      <div v-else-if="!isRenewing" class="stack-placeholder">
-        <span>✧</span>
-      </div>
     </div>
   </div>
 </template>
@@ -849,6 +851,8 @@ const getDrawnStyle = (index: number) => {
 }
 
 .stack-placeholder {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: 2px dashed rgba(60, 55, 50, 0.2);
@@ -858,17 +862,18 @@ const getDrawnStyle = (index: number) => {
   justify-content: center;
   color: rgba(80, 70, 60, 0.15);
   font-size: 2rem;
+  z-index: 0; /* Always behind cards */
 }
 
 /* ==========================================
-   FLYING CARD
+   FLYING CARD - Same size as stack cards
    ========================================== */
 .flying-card {
   position: absolute;
   top: 50%;
   left: 50%;
-  --card-w: 130px;
-  --card-h: 182px;
+  --card-w: 120px;
+  --card-h: 168px;
   width: var(--card-w);
   height: var(--card-h);
   margin-top: calc(var(--card-h) / -2);
@@ -885,28 +890,35 @@ const getDrawnStyle = (index: number) => {
 
 @media (min-width: 640px) {
   .flying-card {
-    --card-w: 160px;
-    --card-h: 224px;
+    --card-w: 140px;
+    --card-h: 196px;
   }
 }
 
 @media (min-width: 1024px) {
   .flying-card {
-    --card-w: 190px;
-    --card-h: 266px;
+    --card-w: 150px;
+    --card-h: 210px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .flying-card {
+    --card-w: 170px;
+    --card-h: 238px;
   }
 }
 
 /* ==========================================
    EJECTING CARDS (renewal animation)
-   GSAP controls all transforms
+   GSAP controls all transforms - Same size as stack cards
    ========================================== */
 .ejecting-card {
   position: absolute;
   top: 50%;
   left: 50%;
-  --card-w: 130px;
-  --card-h: 182px;
+  --card-w: 120px;
+  --card-h: 168px;
   width: var(--card-w);
   height: var(--card-h);
   margin-top: calc(var(--card-h) / -2);
@@ -918,28 +930,35 @@ const getDrawnStyle = (index: number) => {
 
 @media (min-width: 640px) {
   .ejecting-card {
-    --card-w: 160px;
-    --card-h: 224px;
+    --card-w: 140px;
+    --card-h: 196px;
   }
 }
 
 @media (min-width: 1024px) {
   .ejecting-card {
-    --card-w: 190px;
-    --card-h: 266px;
+    --card-w: 150px;
+    --card-h: 210px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .ejecting-card {
+    --card-w: 170px;
+    --card-h: 238px;
   }
 }
 
 /* ==========================================
    ARRIVING CARDS (renewal animation)
-   GSAP controls all transforms
+   GSAP controls all transforms - Same size as stack cards
    ========================================== */
 .arriving-card {
   position: absolute;
   top: 50%;
   left: 50%;
-  --card-w: 130px;
-  --card-h: 182px;
+  --card-w: 120px;
+  --card-h: 168px;
   width: var(--card-w);
   height: var(--card-h);
   margin-top: calc(var(--card-h) / -2);
@@ -951,15 +970,22 @@ const getDrawnStyle = (index: number) => {
 
 @media (min-width: 640px) {
   .arriving-card {
-    --card-w: 160px;
-    --card-h: 224px;
+    --card-w: 140px;
+    --card-h: 196px;
   }
 }
 
 @media (min-width: 1024px) {
   .arriving-card {
-    --card-w: 190px;
-    --card-h: 266px;
+    --card-w: 150px;
+    --card-h: 210px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .arriving-card {
+    --card-w: 170px;
+    --card-h: 238px;
   }
 }
 </style>
