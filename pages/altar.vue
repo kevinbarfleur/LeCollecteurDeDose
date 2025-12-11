@@ -125,6 +125,32 @@ const isCurrentCardFoil = computed(() => {
   return isCardFoil(displayCard.value);
 });
 
+// Foil preload state - set before actual foil to "warm up" CSS
+const isFoilPreloaded = ref(false);
+const isFoilReady = ref(false);
+
+// Watch for foil state changes to implement preload strategy
+watch(
+  isCurrentCardFoil,
+  async (isFoil, wasFoil) => {
+    if (isFoil && !wasFoil) {
+      // Card just became foil - preload first
+      isFoilPreloaded.value = true;
+      isFoilReady.value = false;
+      // Wait for CSS to compute and render at opacity 0
+      await nextTick();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Now reveal
+      isFoilReady.value = true;
+    } else if (!isFoil) {
+      // Reset states
+      isFoilPreloaded.value = false;
+      isFoilReady.value = false;
+    }
+  },
+  { immediate: true }
+);
+
 // Get tier config for current card
 const currentTierConfig = computed(() => {
   if (!displayCard.value) return null;
@@ -137,7 +163,8 @@ const altarClasses = computed(() => ({
   "altar-platform--t1": displayCard.value?.tier === "T1",
   "altar-platform--t2": displayCard.value?.tier === "T2",
   "altar-platform--t3": displayCard.value?.tier === "T3",
-  "altar-platform--foil": isCurrentCardFoil.value,
+  "altar-platform--foil-preload": isFoilPreloaded.value && !isFoilReady.value,
+  "altar-platform--foil": isFoilReady.value,
   "altar-platform--active": isAltarActive.value,
   "altar-platform--vaal": isOrbOverCard.value,
 }));
@@ -886,7 +913,7 @@ const { auraContainer, resetAura } = useAltarAura({
   isActive: isAltarActive,
   isVaalMode: isOrbOverCard,
   tier: computed(() => displayCard.value?.tier),
-  isFoil: isCurrentCardFoil,
+  isFoil: computed(() => isFoilReady.value),
 });
 
 // Set orb ref
