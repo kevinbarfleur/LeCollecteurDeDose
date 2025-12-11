@@ -1131,7 +1131,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
           class="fixed bottom-20 left-0 right-0 z-[100] pointer-events-none flex justify-center px-4"
         >
           <div
-            class="replay-outcome-panel w-full max-w-[420px] pointer-events-auto"
+            class="replay-outcome-panel w-full max-w-[480px] pointer-events-auto"
             :class="outcomeClass"
           >
             <RunicBox padding="md">
