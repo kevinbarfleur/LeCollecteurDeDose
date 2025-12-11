@@ -1,8 +1,13 @@
 import { ref, computed } from 'vue';
-import type { DecodedMousePosition } from '~/types/replay';
+import type { DecodedMousePosition, ReplayEvent, ReplayDataV2 } from '~/types/replay';
 import type { VaalOutcome } from '~/types/vaalOutcome';
 import type { Database, ReplayInsert, ActivityLogInsert } from '~/types/database';
-import { RECORDING } from '~/constants/timing';
+import { 
+  shouldSample, 
+  douglasPeucker, 
+  DEFAULT_ADAPTIVE_CONFIG,
+  type AdaptiveSamplingConfig 
+} from '~/utils/replayInterpolation';
 
 // Type for captured recording data (immutable snapshot at stop time)
 interface CapturedRecordingData {
@@ -13,10 +18,13 @@ interface CapturedRecordingData {
   cardUid: number;
   cardTier: string;
   cardFoil: boolean;
-  positions: DecodedMousePosition[];
+  replayData: ReplayDataV2;
   outcome: VaalOutcome;
   resultCardId: string | null;
 }
+
+// Compression settings
+const DOUGLAS_PEUCKER_EPSILON = 3; // pixels - higher = more compression, less accuracy
 
 export function useReplayRecorder() {
   // Get Supabase client - may be null if not configured
@@ -34,13 +42,18 @@ export function useReplayRecorder() {
   const username = ref('');
   const userAvatar = ref('');
   const recordedPositions = ref<DecodedMousePosition[]>([]);
+  const recordedEvents = ref<ReplayEvent[]>([]);
   const recordStartTime = ref(0);
   const cardData = ref<{ cardId: string; variation: string; uid: number; tier: string; foil: boolean } | null>(null);
   const generatedUrl = ref<string | null>(null);
   const replayId = ref<string | null>(null);
   
-  // Track last sample time for throttling
+  // Track timing with high precision
   let lastSampleTime = 0;
+  let lastPosition: DecodedMousePosition | null = null;
+  
+  // Adaptive sampling config (can be customized per-recording if needed)
+  const samplingConfig: AdaptiveSamplingConfig = { ...DEFAULT_ADAPTIVE_CONFIG };
 
   const canStartRecording = computed(() => {
     return username.value.trim().length > 0 && !isRecording.value;
@@ -57,6 +70,7 @@ export function useReplayRecorder() {
     isRecordingArmed.value = true;
     cardData.value = card;
     recordedPositions.value = [];
+    recordedEvents.value = [];
     generatedUrl.value = null;
     replayId.value = null;
     
@@ -68,14 +82,28 @@ export function useReplayRecorder() {
     
     isRecording.value = true;
     isRecordingArmed.value = false;
-    recordStartTime.value = Date.now();
+    // Use performance.now() for high precision monotonic timing
+    recordStartTime.value = performance.now();
     lastSampleTime = 0;
+    lastPosition = null;
     recordedPositions.value = [];
+    recordedEvents.value = [{ type: 'recording_start', t: 0 }];
   };
 
-  // Record position relative to the card center
-  // cardCenter should be the center coordinates of the card on screen
-  // Throttled to SAMPLE_INTERVAL (20fps) to reduce data size while maintaining smooth replay
+  /**
+   * Record a discrete event with timestamp
+   */
+  const recordEvent = (type: ReplayEvent['type'], data?: ReplayEvent['data']) => {
+    if (!isRecording.value) return;
+    
+    const t = performance.now() - recordStartTime.value;
+    recordedEvents.value.push({ type, t, data });
+  };
+
+  /**
+   * Record position relative to the card center
+   * Uses adaptive sampling: more samples during fast movement, fewer during slow/idle
+   */
   const recordPosition = (
     clientX: number, 
     clientY: number, 
@@ -83,22 +111,67 @@ export function useReplayRecorder() {
   ) => {
     if (!isRecording.value) return;
     
-    const now = Date.now() - recordStartTime.value;
+    // Use performance.now() for precise timing
+    const now = performance.now() - recordStartTime.value;
+    const timeSinceLastSample = now - lastSampleTime;
     
-    // Throttle: skip if not enough time has passed since last sample
-    if (now - lastSampleTime < RECORDING.SAMPLE_INTERVAL) return;
-    lastSampleTime = now;
-    
-    // Store the offset from the card center (in pixels)
-    // This way, on replay, we can position relative to wherever the card is
+    // Calculate offset from card center
     const x = clientX - cardCenter.x;
     const y = clientY - cardCenter.y;
     
-    recordedPositions.value.push({ x, y, t: now });
+    // Check if we should sample using adaptive algorithm
+    if (!shouldSample(x, y, lastPosition, timeSinceLastSample, samplingConfig)) {
+      return;
+    }
+    
+    // Record this position
+    const position: DecodedMousePosition = { x, y, t: now };
+    recordedPositions.value.push(position);
+    
+    lastSampleTime = now;
+    lastPosition = position;
   };
 
   const stopRecording = async (outcome: VaalOutcome, newCardId?: string) => {
     if (!isRecording.value || !cardData.value) return null;
+    
+    const endTime = performance.now() - recordStartTime.value;
+    
+    // Record the drop event with outcome
+    recordEvent('orb_drop', { outcome });
+    recordEvent('outcome_resolved', { outcome });
+    
+    // Clone positions before compression
+    const rawPositions = [...recordedPositions.value];
+    const originalCount = rawPositions.length;
+    
+    // Add final position to ensure animation plays to completion (2s buffer)
+    const finalTime = endTime + 2000;
+    const lastPos = rawPositions[rawPositions.length - 1];
+    if (lastPos) {
+      rawPositions.push({ x: lastPos.x, y: lastPos.y, t: finalTime });
+    }
+    
+    // Apply Douglas-Peucker compression to reduce data size
+    const compressedPositions = douglasPeucker(rawPositions, DOUGLAS_PEUCKER_EPSILON);
+    
+    // Record end event
+    const events: ReplayEvent[] = [
+      ...recordedEvents.value,
+      { type: 'recording_end', t: finalTime }
+    ];
+    
+    // Create v2 replay data structure
+    const replayData: ReplayDataV2 = {
+      version: 2,
+      positions: compressedPositions,
+      events,
+      metadata: {
+        originalPointCount: originalCount,
+        compressionRatio: originalCount > 0 ? compressedPositions.length / originalCount : 1,
+        recordingDuration: finalTime,
+      },
+    };
     
     // CRITICAL: Capture ALL data NOW as an immutable snapshot
     // This prevents data corruption if user starts a new recording before save completes
@@ -110,21 +183,19 @@ export function useReplayRecorder() {
       cardUid: cardData.value.uid,
       cardTier: cardData.value.tier,
       cardFoil: cardData.value.foil,
-      positions: [...recordedPositions.value], // Clone the array
+      replayData,
       outcome,
       resultCardId: newCardId || null,
     };
 
-    // Add final position to ensure the animation plays to completion
-    const finalTime = Date.now() - recordStartTime.value + 2000;
-    const lastPos = capturedData.positions[capturedData.positions.length - 1];
-    if (lastPos) {
-      capturedData.positions.push({ x: lastPos.x, y: lastPos.y, t: finalTime });
-    }
-
     // Immediately mark as not recording so a new recording can start
     isRecording.value = false;
     isRecordingArmed.value = false;
+    
+    // Log compression stats in dev
+    if (import.meta.dev) {
+      console.log(`[Replay] Compressed ${originalCount} points to ${compressedPositions.length} (${Math.round((1 - compressedPositions.length / originalCount) * 100)}% reduction)`);
+    }
     
     // Save to Supabase in the background after a short delay
     // Pass captured data directly - it won't be affected by new recordings
@@ -163,6 +234,8 @@ export function useReplayRecorder() {
     isSaving.value = true;
 
     try {
+      // Store the full ReplayDataV2 structure in mouse_positions
+      // This is backward compatible - the field is JSON type
       const replayInsert: ReplayInsert = {
         username: data.username,
         user_avatar: data.userAvatar,
@@ -171,7 +244,7 @@ export function useReplayRecorder() {
         card_unique_id: data.cardUid,
         card_tier: data.cardTier,
         card_foil: data.cardFoil,
-        mouse_positions: data.positions as unknown as ReplayInsert['mouse_positions'],
+        mouse_positions: data.replayData as unknown as ReplayInsert['mouse_positions'],
         outcome: data.outcome,
         result_card_id: data.resultCardId,
       };
@@ -248,9 +321,11 @@ export function useReplayRecorder() {
     isRecording.value = false;
     isRecordingArmed.value = false;
     recordedPositions.value = [];
+    recordedEvents.value = [];
     generatedUrl.value = null;
     replayId.value = null;
     saveError.value = null;
+    lastPosition = null;
   };
 
   // Log an activity without a replay (for when user preferences skip recording)
@@ -291,7 +366,9 @@ export function useReplayRecorder() {
     isRecording.value = false;
     isRecordingArmed.value = false;
     recordedPositions.value = [];
+    recordedEvents.value = [];
     saveError.value = null;
+    lastPosition = null;
     // Keep generatedUrl and replayId for the share modal
     // They will be cleared on the next armRecording call
   };
@@ -327,6 +404,7 @@ export function useReplayRecorder() {
     armRecording,
     startRecording,
     recordPosition,
+    recordEvent,  // New: record discrete events
     stopRecording,
     cancelRecording,
     resetForNewRecording,

@@ -4,6 +4,15 @@
  */
 
 /* ==========================================
+   NO SCROLL DURING DRAG
+   Prevents scrollbar flicker during earthquake effect
+   ========================================== */
+html.no-scroll-during-drag,
+body.no-scroll-during-drag {
+  overflow: hidden !important;
+}
+
+/* ==========================================
    ALTAR PLATFORM - Main container
    ========================================== */
 .altar-platform {

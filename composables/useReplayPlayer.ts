@@ -1,6 +1,8 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue';
-import type { DecodedMousePosition } from '~/types/replay';
+import type { DecodedMousePosition, ReplayEvent, ReplayDataV2 } from '~/types/replay';
+import { isReplayDataV2, migrateToV2 } from '~/types/replay';
 import type { Database, Replay } from '~/types/database';
+import { interpolateCatmullRom } from '~/utils/replayInterpolation';
 
 export function useReplayPlayer() {
   // Get Supabase client - may be null if not configured
@@ -20,6 +22,7 @@ export function useReplayPlayer() {
   const cursorY = ref(0);
   const playbackStartTime = ref(0);
   const positions = ref<DecodedMousePosition[]>([]);
+  const events = ref<ReplayEvent[]>([]);
   const error = ref<string | null>(null);
   
   // Reference to the card element for calculating cursor position
@@ -86,7 +89,24 @@ export function useReplayPlayer() {
       }
 
       replayData.value = data;
-      positions.value = data.mouse_positions as DecodedMousePosition[];
+      
+      // Handle both v1 (array) and v2 (object with version) formats
+      const rawData = data.mouse_positions;
+      let replayDataV2: ReplayDataV2;
+      
+      if (isReplayDataV2(rawData)) {
+        // Already v2 format
+        replayDataV2 = rawData;
+      } else if (Array.isArray(rawData)) {
+        // Legacy v1 format - migrate to v2
+        replayDataV2 = migrateToV2(rawData as DecodedMousePosition[]);
+      } else {
+        error.value = 'Format de replay invalide';
+        return false;
+      }
+      
+      positions.value = replayDataV2.positions;
+      events.value = replayDataV2.events;
       currentPositionIndex.value = 0;
       isFinished.value = false;
       
@@ -108,6 +128,10 @@ export function useReplayPlayer() {
     }
   };
 
+  /**
+   * Interpolate cursor position using Catmull-Rom splines
+   * Produces much smoother curves than linear interpolation
+   */
   const interpolatePosition = (elapsed: number): { x: number; y: number } | null => {
     if (positions.value.length === 0) return null;
     
@@ -115,43 +139,31 @@ export function useReplayPlayer() {
     const cardCenter = getCardCenter();
     if (!cardCenter) return null;
     
-    let prevIndex = 0;
-    for (let i = 0; i < positions.value.length; i++) {
-      if (positions.value[i].t <= elapsed) {
-        prevIndex = i;
-      } else {
-        break;
-      }
-    }
-    
-    const prev = positions.value[prevIndex];
-    const next = positions.value[prevIndex + 1];
-    
-    if (!next) {
-      // Apply offset from card center
-      return {
-        x: cardCenter.x + prev.x,
-        y: cardCenter.y + prev.y
-      };
-    }
-    
-    const progress = (elapsed - prev.t) / (next.t - prev.t);
-    const easedProgress = easeInOutCubic(progress);
-    
-    // Interpolate the offset and apply to card center
-    const offsetX = prev.x + (next.x - prev.x) * easedProgress;
-    const offsetY = prev.y + (next.y - prev.y) * easedProgress;
+    // Use Catmull-Rom interpolation for smooth curves
+    const offset = interpolateCatmullRom(positions.value, elapsed);
+    if (!offset) return null;
     
     return {
-      x: cardCenter.x + offsetX,
-      y: cardCenter.y + offsetY
+      x: cardCenter.x + offset.x,
+      y: cardCenter.y + offset.y
     };
   };
 
-  const easeInOutCubic = (t: number): number => {
-    return t < 0.5
-      ? 4 * t * t * t
-      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  /**
+   * Find the drop time from events (more reliable than position-based)
+   */
+  const getDropTime = (): number => {
+    const dropEvent = events.value.find(e => e.type === 'orb_drop');
+    if (dropEvent) {
+      return dropEvent.t;
+    }
+    
+    // Fallback: legacy behavior (last position - 2000ms buffer)
+    if (positions.value.length > 0) {
+      return Math.max(0, positions.value[positions.value.length - 1].t - 2000);
+    }
+    
+    return 0;
   };
 
   const play = (onDropTime?: (elapsed: number) => void) => {
@@ -159,19 +171,17 @@ export function useReplayPlayer() {
     
     isPlaying.value = true;
     isFinished.value = false;
-    playbackStartTime.value = Date.now();
+    // Use performance.now() for consistent high-precision timing
+    playbackStartTime.value = performance.now();
     
-    // The recording adds a fake final position 2000ms after the actual drop
-    // So we need to subtract 2000ms to get the actual drop time
-    const dropTime = positions.value.length > 0 
-      ? positions.value[positions.value.length - 1].t - 2000 
-      : 0;
+    // Get drop time from events (more reliable than position-based)
+    const dropTime = getDropTime();
     let dropTriggered = false;
 
     const animate = () => {
       if (!isPlaying.value) return;
       
-      const elapsed = Date.now() - playbackStartTime.value;
+      const elapsed = performance.now() - playbackStartTime.value;
       
       if (elapsed >= totalDuration.value) {
         isPlaying.value = false;
@@ -179,12 +189,14 @@ export function useReplayPlayer() {
         return;
       }
       
+      // Use Catmull-Rom interpolation for smooth cursor movement
       const pos = interpolatePosition(elapsed);
       if (pos) {
         cursorX.value = pos.x;
         cursorY.value = pos.y;
       }
       
+      // Trigger drop callback based on event timestamp
       if (!dropTriggered && elapsed >= dropTime && onDropTime) {
         dropTriggered = true;
         onDropTime(elapsed);
@@ -223,6 +235,13 @@ export function useReplayPlayer() {
     }
   });
 
+  /**
+   * Get a specific event by type
+   */
+  const getEvent = (type: ReplayEvent['type']): ReplayEvent | undefined => {
+    return events.value.find(e => e.type === type);
+  };
+
   return {
     replayData: computed(() => replayData.value),
     isLoading: computed(() => isLoading.value),
@@ -231,6 +250,7 @@ export function useReplayPlayer() {
     cursorX: computed(() => cursorX.value),
     cursorY: computed(() => cursorY.value),
     error: computed(() => error.value),
+    events: computed(() => events.value),
     username,
     userAvatar,
     cardInfo,
@@ -243,6 +263,8 @@ export function useReplayPlayer() {
     loadFromId,
     play,
     pause,
-    reset
+    reset,
+    getEvent,
+    getDropTime,
   };
 }

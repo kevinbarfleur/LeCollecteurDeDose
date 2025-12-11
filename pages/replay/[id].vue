@@ -83,6 +83,8 @@ const {
   getAltarClasses,
   getCardClasses,
   resetEffects,
+  lockEffects,
+  unlockEffects,
   // Earthquake effect styles
   earthquakeHeaderStyles,
   earthquakeVaalStyles,
@@ -117,11 +119,27 @@ watch(isOrbOverCard, (isOver) => {
   }
 });
 
+// Prevent scrollbar flicker during replay (earthquake effect can cause overflow)
+watch(isPlaying, (playing) => {
+  if (typeof document !== "undefined") {
+    if (playing) {
+      document.documentElement.classList.add("no-scroll-during-drag");
+      document.body.classList.add("no-scroll-during-drag");
+    } else {
+      document.documentElement.classList.remove("no-scroll-during-drag");
+      document.body.classList.remove("no-scroll-during-drag");
+    }
+  }
+});
+
 onBeforeUnmount(() => {
   const appWrapper = document.getElementById("app-wrapper");
   if (appWrapper) {
     appWrapper.classList.remove("earthquake-global");
   }
+  // Clean up scroll lock classes
+  document.documentElement.classList.remove("no-scroll-during-drag");
+  document.body.classList.remove("no-scroll-during-drag");
 });
 
 // Use shared disintegration effect composable
@@ -222,6 +240,7 @@ onMounted(async () => {
 const startReplay = async () => {
   showOutcome.value = false;
   isCardBeingDestroyed.value = false;
+  unlockEffects(); // Ensure effects are unlocked for new replay
   resetEffects();
 
   cardSnapshot.value = null;
@@ -253,7 +272,10 @@ const startReplay = async () => {
 const triggerOutcome = async () => {
   if (!outcome.value || !altarCardRef.value) return;
 
-  resetEffects();
+  // Lock effects IMMEDIATELY to prevent recalculation from cursor position updates
+  // This ensures the altar stops vibrating/glowing at the exact moment of the drop
+  // lockEffects() also resets visual states (heartbeat, isOrbOverCard)
+  lockEffects();
 
   if (vaalOrbRef.value) {
     await new Promise<void>((resolve) => {
@@ -1085,32 +1107,33 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
             </div>
           </div>
         </main>
+      </div>
 
-        <!-- Outcome Panel -->
-        <Transition name="outcome">
+      <!-- Outcome Panel - Fixed position, outside replay-content -->
+      <Transition name="outcome">
+        <div v-if="showOutcome" class="replay-outcome-container">
           <RunicBox
-            v-if="showOutcome"
             padding="md"
             class="replay-outcome-box"
-            :class="[outcomeClass, outcomeEarthquakeClasses]"
-            :style="earthquakeVaalStyles"
+            :class="outcomeClass"
           >
             <div class="replay-outcome">
-              <div class="replay-outcome__badge">
-                <img
-                  src="/images/card-back-logo.png"
-                  alt="Vaal Orb"
-                  class="replay-outcome__badge-img"
-                />
-              </div>
+              <!-- Header row: badge + title + card info -->
+              <div class="replay-outcome__header">
+                <div class="replay-outcome__badge">
+                  <img
+                    src="/images/card-back-logo.png"
+                    alt="Vaal Orb"
+                    class="replay-outcome__badge-img"
+                  />
+                </div>
 
-              <div class="replay-outcome__content">
-                <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
+                <div class="replay-outcome__info">
+                  <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
 
-                <div class="replay-outcome__card">
-                  <!-- For transform: show before → after -->
-                  <template v-if="outcome === 'transform' && resultCardId">
-                    <div class="replay-outcome__transform">
+                  <div class="replay-outcome__card">
+                    <!-- For transform: show before → after -->
+                    <template v-if="outcome === 'transform' && resultCardId">
                       <span
                         class="replay-outcome__card-name replay-outcome__card-name--old"
                         >{{ getOriginalCardName() }}</span
@@ -1120,12 +1143,10 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
                         class="replay-outcome__card-name replay-outcome__card-name--new"
                         >{{ getCardName() }}</span
                       >
-                    </div>
-                  </template>
+                    </template>
 
-                  <!-- For other outcomes: show single card -->
-                  <template v-else>
-                    <div class="replay-outcome__card-info">
+                    <!-- For other outcomes: show single card -->
+                    <template v-else>
                       <span class="replay-outcome__card-name">{{
                         getCardName()
                       }}</span>
@@ -1134,11 +1155,12 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
                         :color="getTierColor()"
                         size="sm"
                       />
-                    </div>
-                  </template>
+                    </template>
+                  </div>
                 </div>
               </div>
 
+              <!-- Actions row -->
               <div class="replay-outcome__actions">
                 <RunicButton variant="ghost" size="sm" @click="restartReplay">
                   Revoir
@@ -1149,8 +1171,8 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
               </div>
             </div>
           </RunicBox>
-        </Transition>
-      </div>
+        </div>
+      </Transition>
 
       <!-- Animated Cursor with Vaal Orb - OUTSIDE replay-content to avoid earthquake transform interference -->
       <div
@@ -1358,19 +1380,39 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 }
 
 /* ===== OUTCOME PANEL ===== */
+.replay-outcome-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
 .replay-outcome-box {
   width: 100%;
+  max-width: 420px;
+  pointer-events: auto;
 }
 
 .replay-outcome {
   display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.replay-outcome__header {
+  display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .replay-outcome__badge {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1384,85 +1426,57 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
   filter: drop-shadow(0 0 6px rgba(180, 50, 50, 0.4));
 }
 
-.replay-outcome__content {
+.replay-outcome__info {
   flex: 1;
   min-width: 0;
 }
 
 .replay-outcome__title {
   font-family: "Cinzel", serif;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: rgba(200, 180, 160, 0.9);
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.25rem;
+  line-height: 1.3;
 }
 
 .replay-outcome__card {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
-.replay-outcome__card-visual {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(10, 9, 8, 0.8);
-  border: 1px solid rgba(50, 45, 40, 0.4);
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.replay-outcome__card-img {
-  max-width: 40px;
-  max-height: 40px;
-  object-fit: contain;
-}
-
-.replay-outcome__card-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.replay-outcome__card-name {
-  font-family: "Cinzel", serif;
-  font-size: 0.95rem;
-  color: rgba(200, 180, 160, 0.85);
-}
-
-/* Transform display: before → after */
-.replay-outcome__transform {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
+.replay-outcome__card-name {
+  font-family: "Cinzel", serif;
+  font-size: 0.875rem;
+  color: rgba(180, 165, 150, 0.8);
+}
+
 .replay-outcome__card-name--old {
   color: rgba(150, 140, 130, 0.6);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  text-decoration: line-through;
 }
 
 .replay-outcome__transform-arrow {
   color: #50b0e0;
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .replay-outcome__card-name--new {
   color: #50b0e0;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .replay-outcome__actions {
   display: flex;
-  gap: 0.625rem;
-  flex-shrink: 0;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(60, 55, 50, 0.2);
 }
 
 /* Outcome Variants */

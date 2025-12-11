@@ -59,6 +59,9 @@ onBeforeUnmount(() => {
   if (appWrapper) {
     appWrapper.classList.remove("earthquake-global");
   }
+  // Clean up scroll lock classes
+  document.documentElement.classList.remove("no-scroll-during-drag");
+  document.body.classList.remove("no-scroll-during-drag");
 });
 
 // User's collection - points to local session copy
@@ -316,6 +319,7 @@ const {
   armRecording,
   startRecording,
   recordPosition,
+  recordEvent,
   stopRecording,
   cancelRecording,
   resetForNewRecording,
@@ -863,6 +867,19 @@ watch(isOrbOverCard, (isOver) => {
   }
 });
 
+// Prevent scrollbar flicker during orb drag (earthquake effect can cause overflow)
+watch(isDraggingOrb, (isDragging) => {
+  if (typeof document !== "undefined") {
+    if (isDragging) {
+      document.documentElement.classList.add("no-scroll-during-drag");
+      document.body.classList.add("no-scroll-during-drag");
+    } else {
+      document.documentElement.classList.remove("no-scroll-during-drag");
+      document.body.classList.remove("no-scroll-during-drag");
+    }
+  }
+});
+
 // Altar Aura Effect - outer glow, rays, and particles
 const { auraContainer, resetAura } = useAltarAura({
   containerRef: altarPlatformRef,
@@ -921,13 +938,17 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   currentX = clientX;
   currentY = clientY;
 
-  // Record initial position relative to card center
+  // Record initial position and orb_pickup event relative to card center
   if (isRecording.value && altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
     const cardCenter = {
       x: cardRect.left + cardRect.width / 2,
       y: cardRect.top + cardRect.height / 2,
     };
+    recordEvent("orb_pickup", {
+      x: clientX - cardCenter.x,
+      y: clientY - cardCenter.y,
+    });
     recordPosition(clientX, clientY, cardCenter);
   }
 
@@ -987,6 +1008,18 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
       orbCenterX <= cardRect.right &&
       orbCenterY >= cardRect.top &&
       orbCenterY <= cardRect.bottom;
+
+    // Record card hover/leave events for replay
+    if (isRecording.value && isOver !== isOrbOverCard.value) {
+      const cardCenter = {
+        x: cardRect.left + cardRect.width / 2,
+        y: cardRect.top + cardRect.height / 2,
+      };
+      recordEvent(isOver ? "card_hover" : "card_leave", {
+        x: orbCenterX - cardCenter.x,
+        y: orbCenterY - cardCenter.y,
+      });
+    }
 
     isOrbOverCard.value = isOver;
   }
