@@ -356,8 +356,8 @@ const truncatedFlavour = computed(() => {
   border: 1px solid var(--tier-color, #2a2a30);
   display: flex;
   flex-direction: column;
-  padding: 8px;
-  gap: 4px;
+  padding: 5px;
+  gap: 2px;
 }
 
 /* Title bar */
@@ -366,7 +366,7 @@ const truncatedFlavour = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
+  padding: 4px 6px;
   background: linear-gradient(
     180deg,
     rgba(12, 12, 14, 0.95) 0%,
@@ -374,7 +374,7 @@ const truncatedFlavour = computed(() => {
     rgba(15, 15, 17, 0.95) 70%,
     rgba(10, 10, 12, 0.98) 100%
   );
-  border-radius: 4px;
+  border-radius: 3px;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6),
     inset 0 1px 2px rgba(0, 0, 0, 0.7), inset 0 -1px 2px rgba(50, 45, 40, 0.08),
     0 1px 0 rgba(50, 45, 40, 0.2);
@@ -383,7 +383,7 @@ const truncatedFlavour = computed(() => {
 
 .detail__name {
   font-family: "Cinzel", serif;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--tier-glow, #e8e8e8);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
@@ -397,9 +397,9 @@ const truncatedFlavour = computed(() => {
 
 .detail__tier-badge {
   font-family: "Cinzel", serif;
-  font-size: 9px;
+  font-size: 7px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 1px 4px;
   border-radius: 2px;
   background: linear-gradient(
     180deg,
@@ -412,7 +412,7 @@ const truncatedFlavour = computed(() => {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   flex-shrink: 0;
-  margin-left: 6px;
+  margin-left: 4px;
 }
 
 /* Artwork */
@@ -424,7 +424,7 @@ const truncatedFlavour = computed(() => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 8px;
+  padding: 4px;
   background: linear-gradient(
     180deg,
     rgba(8, 8, 10, 0.98) 0%,
@@ -432,7 +432,7 @@ const truncatedFlavour = computed(() => {
     rgba(10, 10, 12, 0.97) 80%,
     rgba(6, 6, 8, 0.99) 100%
   );
-  border-radius: 4px;
+  border-radius: 3px;
   box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.7),
     inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 -2px 4px rgba(50, 45, 40, 0.06),
     0 1px 0 rgba(50, 45, 40, 0.15);
@@ -442,7 +442,7 @@ const truncatedFlavour = computed(() => {
 .detail__artwork::after {
   content: "";
   position: absolute;
-  inset: 4px;
+  inset: 2px;
   border: 1px solid rgba(50, 45, 40, 0.12);
   border-radius: 2px;
   pointer-events: none;
@@ -471,28 +471,28 @@ const truncatedFlavour = computed(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  padding: 3px 0;
+  gap: 4px;
+  padding: 1px 0;
 }
 
 .detail__type {
   font-family: "Cinzel", serif;
-  font-size: 9px;
+  font-size: 6px;
   font-weight: 600;
   color: #8a8a8a;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
 }
 
 .detail__divider {
-  font-size: 6px;
+  font-size: 4px;
   color: var(--tier-color, #4a4a4a);
   opacity: 0.6;
 }
 
 .detail__rarity {
   font-family: "Crimson Text", serif;
-  font-size: 10px;
+  font-size: 7px;
   color: var(--tier-glow, #7a7a7a);
   font-style: italic;
 }
@@ -502,8 +502,8 @@ const truncatedFlavour = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 2px 0;
+  gap: 4px;
+  padding: 1px 0;
 }
 
 .detail__separator-line {
@@ -520,7 +520,7 @@ const truncatedFlavour = computed(() => {
 }
 
 .detail__separator-rune {
-  font-size: 7px;
+  font-size: 5px;
   color: var(--tier-color, #4a4a4a);
   opacity: 0.5;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
@@ -532,15 +532,15 @@ const truncatedFlavour = computed(() => {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 2px 6px;
-  min-height: 28px;
+  padding: 1px 4px;
+  min-height: 16px;
 }
 
 .detail__flavour p {
   font-family: "Crimson Text", serif;
   font-style: italic;
-  font-size: 9px;
-  line-height: 1.4;
+  font-size: 7px;
+  line-height: 1.3;
   color: #888888;
   margin: 0;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
@@ -548,7 +548,7 @@ const truncatedFlavour = computed(() => {
 
 .detail__no-flavour {
   color: #4a4a4a;
-  font-size: 10px;
+  font-size: 7px;
 }
 
 /* Bottom info */
@@ -557,14 +557,14 @@ const truncatedFlavour = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 8px;
+  padding: 2px 4px;
   background: linear-gradient(
     180deg,
     rgba(14, 14, 16, 0.92) 0%,
     rgba(18, 18, 20, 0.88) 50%,
     rgba(12, 12, 14, 0.95) 100%
   );
-  border-radius: 3px;
+  border-radius: 2px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
     inset 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 -1px 2px rgba(50, 45, 40, 0.06),
     0 1px 0 rgba(50, 45, 40, 0.15);
@@ -573,19 +573,19 @@ const truncatedFlavour = computed(() => {
 
 .detail__collector-number {
   font-family: "Crimson Text", serif;
-  font-size: 9px;
+  font-size: 6px;
   color: #5a5a5a;
   letter-spacing: 0.02em;
 }
 
 .detail__wiki-link {
   font-family: "Cinzel", serif;
-  font-size: 8px;
+  font-size: 6px;
   font-weight: 600;
   color: #6a5a4a;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 2px 6px;
+  padding: 1px 3px;
   background: linear-gradient(
     180deg,
     rgba(80, 70, 55, 0.08) 0%,
@@ -597,7 +597,7 @@ const truncatedFlavour = computed(() => {
 
 .detail__weight {
   font-family: "Cinzel", serif;
-  font-size: 9px;
+  font-size: 6px;
   color: var(--tier-glow, #5a5a5a);
   letter-spacing: 0.02em;
 }
