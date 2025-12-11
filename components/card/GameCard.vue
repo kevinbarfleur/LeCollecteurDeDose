@@ -4,6 +4,8 @@ import { TIER_CONFIG } from "~/types/card";
 import { useFoilEffect } from "~/composables/useFoilEffect";
 import gsap from "gsap";
 
+const { t } = useI18n();
+
 // Get the selected foil effect
 const { selectedFoilEffect } = useFoilEffect();
 
@@ -770,7 +772,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
       <article
         ref="cardRef"
         tabindex="-1"
-        aria-label="Carte inconnue"
+        :aria-label="t('common.unknownCard')"
         class="game-card game-card--back game-card--preview"
         @mouseenter="onMouseEnter"
         @mouseleave="onMouseLeave"

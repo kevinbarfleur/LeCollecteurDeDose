@@ -3,6 +3,9 @@
  * 
  * Centralized configuration for all Vaal outcomes.
  * Easy to add new outcomes, configure probabilities, and define UI content.
+ * 
+ * Note: Labels and texts use i18n keys. Use the helper functions with a 
+ * translation function (t) to get translated content.
  */
 
 // ==========================================
@@ -23,21 +26,18 @@ export type VaalOutcome =
 export interface VaalOutcomeConfig {
   id: VaalOutcome;
   probability: number; // Weight for random selection (not percentage)
-  label: string;       // Display label for settings
+  label: string;       // i18n key for display label
   emoji: string;       // Emoji for UI
   
-  // Share modal content
+  // Share modal content (i18n keys)
   shareModal: {
     icon: string;
-    title: string;
-    text: string;
-    linkText: string;
+    titleKey: string;
+    textKey: string;
+    linkTextKey: string;
     theme: string;
     buttonClass: string; // CSS class for themed button
   };
-  
-  // For forced outcome selector
-  forcedLabel: string;
 }
 
 /**
@@ -49,14 +49,13 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
   nothing: {
     id: 'nothing',
     probability: 40, // 40% base chance
-    label: 'Rien',
+    label: 'vaalOutcomes.nothing.label',
     emoji: '😐',
-    forcedLabel: '😐 Rien ne se passe',
     shareModal: {
       icon: '😐',
-      title: 'Rien ne s\'est passé...',
-      text: 'La Vaal Orb a été absorbée sans effet. Pas très excitant, mais tu peux quand même partager ce moment de suspense.',
-      linkText: 'Voir le non-événement',
+      titleKey: 'vaalOutcomes.nothing.shareTitle',
+      textKey: 'vaalOutcomes.nothing.shareText',
+      linkTextKey: 'vaalOutcomes.nothing.shareLinkText',
       theme: 'nothing',
       buttonClass: 'share-btn--nothing',
     },
@@ -65,14 +64,13 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
   foil: {
     id: 'foil',
     probability: 20, // 20% chance
-    label: 'Foil',
+    label: 'vaalOutcomes.foil.label',
     emoji: '✨',
-    forcedLabel: '✨ Transformation Foil',
     shareModal: {
       icon: '✨',
-      title: 'Élévation !',
-      text: 'La corruption Vaal a béni ta carte d\'un éclat prismatique. Partage ce moment de gloire avec le monde !',
-      linkText: 'Admirer le chef-d\'œuvre',
+      titleKey: 'vaalOutcomes.foil.shareTitle',
+      textKey: 'vaalOutcomes.foil.shareText',
+      linkTextKey: 'vaalOutcomes.foil.shareLinkText',
       theme: 'foil',
       buttonClass: 'share-btn--foil',
     },
@@ -81,14 +79,13 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
   destroyed: {
     id: 'destroyed',
     probability: 15, // 15% chance
-    label: 'Destruction',
+    label: 'vaalOutcomes.destroyed.label',
     emoji: '💀',
-    forcedLabel: '💀 Destruction',
     shareModal: {
       icon: '💀',
-      title: 'Destruction immortalisée',
-      text: 'Ta carte a été réduite en cendres par la corruption Vaal. Partage ce désastre pour que tous puissent contempler ta chute.',
-      linkText: 'Revivre le cauchemar',
+      titleKey: 'vaalOutcomes.destroyed.shareTitle',
+      textKey: 'vaalOutcomes.destroyed.shareText',
+      linkTextKey: 'vaalOutcomes.destroyed.shareLinkText',
       theme: 'destroyed',
       buttonClass: 'share-btn--destroyed',
     },
@@ -97,14 +94,13 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
   transform: {
     id: 'transform',
     probability: 15, // 15% chance
-    label: 'Transformation',
+    label: 'vaalOutcomes.transform.label',
     emoji: '🔄',
-    forcedLabel: '🔄 Transformation en autre carte',
     shareModal: {
       icon: '🔄',
-      title: 'Métamorphose Vaal !',
-      text: 'La corruption a transformé ta carte en une autre du même tier. Le destin est capricieux... Partage cette mutation !',
-      linkText: 'Découvrir la transformation',
+      titleKey: 'vaalOutcomes.transform.shareTitle',
+      textKey: 'vaalOutcomes.transform.shareText',
+      linkTextKey: 'vaalOutcomes.transform.shareLinkText',
       theme: 'transform',
       buttonClass: 'share-btn--transform',
     },
@@ -113,14 +109,13 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
   duplicate: {
     id: 'duplicate',
     probability: 10, // 10% chance - rare!
-    label: 'Duplication',
+    label: 'vaalOutcomes.duplicate.label',
     emoji: '👯',
-    forcedLabel: '👯 Duplication',
     shareModal: {
       icon: '👯',
-      title: 'Duplication miraculeuse !',
-      text: 'La Vaal Orb a créé une copie parfaite de ta carte ! Un événement extrêmement rare. Montre au monde cette bénédiction !',
-      linkText: 'Voir le miracle',
+      titleKey: 'vaalOutcomes.duplicate.shareTitle',
+      textKey: 'vaalOutcomes.duplicate.shareText',
+      linkTextKey: 'vaalOutcomes.duplicate.shareLinkText',
       theme: 'duplicate',
       buttonClass: 'share-btn--duplicate',
     },
@@ -130,6 +125,8 @@ export const VAAL_OUTCOMES: Record<VaalOutcome, VaalOutcomeConfig> = {
 // ==========================================
 // HELPER FUNCTIONS
 // ==========================================
+
+type TranslationFunction = (key: string) => string;
 
 /**
  * Get outcome configuration by ID
@@ -146,14 +143,15 @@ export function getAllOutcomes(): VaalOutcomeConfig[] {
 }
 
 /**
- * Get forced outcome options for settings dropdown
+ * Get forced outcome options for settings dropdown (with translations)
+ * @param t - Translation function from useI18n()
  */
-export function getForcedOutcomeOptions(): Array<{ value: VaalOutcome | 'random'; label: string }> {
+export function getForcedOutcomeOptions(t: TranslationFunction): Array<{ value: VaalOutcome | 'random'; label: string }> {
   return [
-    { value: 'random', label: '🎲 Aléatoire (défaut)' },
+    { value: 'random', label: `🎲 ${t('vaalOutcomes.random')}` },
     ...getAllOutcomes().map(outcome => ({
       value: outcome.id,
-      label: outcome.forcedLabel,
+      label: `${outcome.emoji} ${t(outcome.label)}`,
     })),
   ];
 }
@@ -179,20 +177,30 @@ export function rollVaalOutcome(): VaalOutcome {
 }
 
 /**
- * Get share modal content for an outcome
+ * Get share modal content for an outcome (with translations)
+ * @param outcome - The Vaal outcome
+ * @param t - Translation function from useI18n()
  */
-export function getShareModalContent(outcome: VaalOutcome | null) {
+export function getShareModalContent(outcome: VaalOutcome | null, t: TranslationFunction) {
   if (!outcome) {
     return {
       icon: '🎬',
-      title: 'Session enregistrée !',
-      text: 'Ta session a été enregistrée. Partage ce lien pour que d\'autres puissent voir ta Vaal Orb !',
-      linkText: 'Voir le replay →',
+      title: t('vaalOutcomes.nothing.shareTitle'),
+      text: t('vaalOutcomes.nothing.shareText'),
+      linkText: t('vaalOutcomes.nothing.shareLinkText'),
       theme: 'default',
       buttonClass: 'share-btn--default',
     };
   }
   
-  return VAAL_OUTCOMES[outcome].shareModal;
+  const config = VAAL_OUTCOMES[outcome].shareModal;
+  return {
+    icon: config.icon,
+    title: t(config.titleKey),
+    text: t(config.textKey),
+    linkText: t(config.linkTextKey),
+    theme: config.theme,
+    buttonClass: config.buttonClass,
+  };
 }
 

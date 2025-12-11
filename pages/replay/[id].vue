@@ -39,7 +39,9 @@ const getTierColors = (tier?: string) => {
   return TIER_COLORS[key] || TIER_COLORS.T3;
 };
 
-useHead({ title: "Replay - Le Collecteur de Dose" });
+const { t } = useI18n();
+
+useHead({ title: t("meta.replay.title") });
 
 const route = useRoute();
 const router = useRouter();
@@ -939,15 +941,15 @@ const goToAltar = () => {
 const outcomeText = computed(() => {
   switch (outcome.value) {
     case "nothing":
-      return "Rien ne s'est passé";
+      return t("replay.outcomes.nothing");
     case "foil":
-      return "Transformation en Foil !";
+      return t("replay.outcomes.foil");
     case "destroyed":
-      return "Carte détruite...";
+      return t("replay.outcomes.destroyed");
     case "transform":
-      return "Carte transformée !";
+      return t("replay.outcomes.transform");
     case "duplicate":
-      return "Duplication miraculeuse !";
+      return t("replay.outcomes.duplicate");
     default:
       return "";
   }
@@ -1012,7 +1014,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
         <div class="flex flex-col items-center gap-5">
           <div class="replay-loading__spinner"></div>
           <p class="font-serif text-base text-stone-400/60">
-            Chargement du replay...
+            {{ t("replay.loading") }}
           </p>
         </div>
       </div>
@@ -1026,15 +1028,15 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
             class="w-16 h-16 object-contain mb-6 grayscale-[40%] opacity-60"
           />
           <h2 class="font-display text-2xl text-stone-300/90 mb-3">
-            Replay introuvable
+            {{ t("replay.notFound") }}
           </h2>
           <p
             class="font-serif text-base text-stone-400/50 mb-8 leading-relaxed"
           >
-            {{ playerError || "Ce replay n'existe pas ou a été supprimé." }}
+            {{ playerError || t("replay.notFoundDescription") }}
           </p>
           <RunicButton variant="primary" @click="goToAltar">
-            Découvrir l'autel
+            {{ t("replay.discoverAltar") }}
           </RunicButton>
         </div>
       </div>
@@ -1063,10 +1065,17 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
               />
               <div class="flex items-baseline gap-2 flex-wrap">
                 <span class="replay-header__name">{{ username }}</span>
-                <span class="replay-header__label">a utilisé une Vaal Orb</span>
+                <span class="replay-header__label">{{
+                  t("replay.usedVaalOrb")
+                }}</span>
               </div>
             </div>
-            <RunicNumber v-if="views" :value="views" label="vues" size="sm" />
+            <RunicNumber
+              v-if="views"
+              :value="views"
+              :label="t('replay.views')"
+              size="sm"
+            />
           </div>
         </RunicBox>
 
@@ -1176,10 +1185,10 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
                   class="flex gap-2 justify-end pt-2 border-t border-white/5"
                 >
                   <RunicButton variant="ghost" size="sm" @click="restartReplay">
-                    Revoir
+                    {{ t("replay.rewatch") }}
                   </RunicButton>
                   <RunicButton variant="primary" size="sm" @click="goToAltar">
-                    Essayer l'autel
+                    {{ t("replay.tryAltar") }}
                   </RunicButton>
                 </div>
               </div>

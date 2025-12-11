@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
@@ -89,7 +91,7 @@ const maxWidthClasses: Record<string, string> = {
               v-if="showCloseButton"
               type="button"
               class="runic-modal__close"
-              aria-label="Close"
+              :aria-label="t('common.close')"
               @click="closeModal"
             >
               <RunicIcon name="close" size="sm" />

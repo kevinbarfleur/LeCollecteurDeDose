@@ -97,7 +97,10 @@ const variationOptions = computed(() => {
   if (!selectedCardGroup.value) return [];
   return selectedCardGroup.value.variations.map((v) => ({
     value: v.variation,
-    label: v.variation === "foil" ? "✦ Foil" : "Standard",
+    label:
+      v.variation === "foil"
+        ? t("altar.variations.foil")
+        : t("altar.variations.standard"),
     count: v.count,
   }));
 });
@@ -471,11 +474,11 @@ const handleCopyUrl = async () => {
 
 // Share modal content based on outcome (centralized configuration)
 const shareModalContent = computed(() =>
-  getShareModalContent(lastRecordedOutcome.value)
+  getShareModalContent(lastRecordedOutcome.value, t)
 );
 
 // Use centralized outcome options
-const forcedOutcomeOptions = getForcedOutcomeOptions();
+const forcedOutcomeOptions = computed(() => getForcedOutcomeOptions(t));
 
 // Simulate Vaal outcome (will be server-side later)
 const simulateVaalOutcome = (): VaalOutcome => {
@@ -1195,11 +1198,13 @@ const endDragOrb = async () => {
             <div class="selector-grid">
               <!-- Card selection -->
               <div class="selector-field">
-                <label class="selector-label">Choisir une carte</label>
+                <label class="selector-label">{{
+                  t("altar.selector.chooseCard")
+                }}</label>
                 <RunicSelect
                   v-model="selectedCardId"
                   :options="cardOptions"
-                  placeholder="Sélectionnez une carte..."
+                  :placeholder="t('altar.selector.selectCard')"
                   size="md"
                   :searchable="true"
                 />
@@ -1210,11 +1215,13 @@ const endDragOrb = async () => {
                 v-if="selectedCardGroup?.hasMultipleVariations"
                 class="selector-field"
               >
-                <label class="selector-label">Variante</label>
+                <label class="selector-label">{{
+                  t("altar.selector.variant")
+                }}</label>
                 <RunicSelect
                   v-model="selectedVariation"
                   :options="variationOptions"
-                  placeholder="Choisir la variante..."
+                  :placeholder="t('altar.selector.chooseVariant')"
                   size="md"
                 />
               </div>
@@ -1230,7 +1237,7 @@ const endDragOrb = async () => {
                   rune-right="✕"
                   @click="removeCardFromAltar"
                 >
-                  Retirer
+                  {{ t("altar.selector.remove") }}
                 </RunicButton>
               </div>
             </div>
@@ -1267,7 +1274,7 @@ const endDragOrb = async () => {
               <!-- Empty state -->
               <div v-if="!displayCard" class="altar-empty">
                 <div class="altar-empty__icon">◈</div>
-                <p class="altar-empty__text">Placez une carte sur l'autel</p>
+                <p class="altar-empty__text">{{ t("altar.empty") }}</p>
               </div>
 
               <!-- Card display with 3D flip -->
@@ -1347,17 +1354,17 @@ const endDragOrb = async () => {
                 <div class="vaal-header__left">
                   <h3 class="vaal-header__title">
                     <span class="vaal-header__rune">◆</span>
-                    Vaal Orbs
+                    {{ t("altar.vaalOrbs.title") }}
                     <span class="vaal-header__rune">◆</span>
                   </h3>
                   <p class="vaal-header__subtitle">
                     <template v-if="isCurrentCardFoil">
-                      <span class="vaal-header__subtitle--foil"
-                        >✦ Cette carte est déjà à son apogée</span
-                      >
+                      <span class="vaal-header__subtitle--foil">{{
+                        t("altar.vaalOrbs.foilMessage")
+                      }}</span>
                     </template>
                     <template v-else>
-                      Glissez une Vaal Orb sur la carte pour la corrompre
+                      {{ t("altar.vaalOrbs.subtitle") }}
                     </template>
                   </p>
                 </div>
@@ -1366,10 +1373,12 @@ const endDragOrb = async () => {
                   <span
                     v-if="isRecording"
                     class="vaal-header__recording"
-                    title="Enregistrement en cours..."
+                    :title="t('altar.vaalOrbs.recording')"
                   >
                     <span class="vaal-header__recording-dot"></span>
-                    <span class="vaal-header__recording-text">REC</span>
+                    <span class="vaal-header__recording-text">{{
+                      t("altar.vaalOrbs.rec")
+                    }}</span>
                   </span>
                   <span class="vaal-header__count">{{ vaalOrbs }}</span>
                   <RunicButton
@@ -1377,10 +1386,12 @@ const endDragOrb = async () => {
                     size="sm"
                     icon="settings"
                     class="vaal-header__settings"
-                    title="Préférences"
+                    :title="t('altar.preferences.title')"
                     @click="showPreferencesModal = true"
                   >
-                    <span class="sr-only">Préférences</span>
+                    <span class="sr-only">{{
+                      t("altar.preferences.title")
+                    }}</span>
                   </RunicButton>
                 </div>
               </div>
@@ -1417,9 +1428,9 @@ const endDragOrb = async () => {
               <!-- Empty state -->
               <div v-if="vaalOrbs === 0" class="vaal-orbs-empty">
                 <span class="vaal-orbs-empty__icon">◇</span>
-                <span class="vaal-orbs-empty__text"
-                  >Vous n'avez plus de Vaal Orbs</span
-                >
+                <span class="vaal-orbs-empty__text">{{
+                  t("altar.vaalOrbs.empty")
+                }}</span>
               </div>
             </div>
           </RunicBox>
@@ -1456,12 +1467,12 @@ const endDragOrb = async () => {
                 <div class="prefs-modal__header">
                   <h3 class="prefs-modal__title">
                     <span class="prefs-modal__icon">⚙</span>
-                    Préférences
+                    {{ t("altar.preferences.title") }}
                   </h3>
                   <button
                     type="button"
                     class="prefs-modal__close"
-                    aria-label="Fermer"
+                    :aria-label="t('common.close')"
                     @click="showPreferencesModal = false"
                   >
                     <svg
@@ -1483,18 +1494,17 @@ const endDragOrb = async () => {
                   <!-- Recording Preferences Section -->
                   <div class="prefs-section">
                     <h4 class="prefs-section__title">
-                      Enregistrement automatique
+                      {{ t("altar.preferences.autoRecording") }}
                     </h4>
                     <p class="prefs-section__hint">
-                      Sélectionne les résultats qui déclenchent un
-                      enregistrement
+                      {{ t("altar.preferences.autoRecordingHint") }}
                     </p>
 
                     <div class="prefs-toggles">
                       <div class="prefs-toggle">
-                        <span class="prefs-toggle__label"
-                          >Rien ne s'est passé</span
-                        >
+                        <span class="prefs-toggle__label">{{
+                          t("vaalOutcomes.nothing.label")
+                        }}</span>
                         <RunicRadio
                           v-model="recordOnNothing"
                           :toggle="true"
@@ -1505,7 +1515,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--foil"
-                          >Transformation en Foil</span
+                          >{{ t("vaalOutcomes.foil.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnFoil"
@@ -1517,7 +1527,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--destroyed"
-                          >Destruction</span
+                          >{{ t("vaalOutcomes.destroyed.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnDestroyed"
@@ -1529,7 +1539,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--transform"
-                          >Transformation</span
+                          >{{ t("vaalOutcomes.transform.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnTransform"
@@ -1541,7 +1551,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--duplicate"
-                          >Duplication</span
+                          >{{ t("vaalOutcomes.duplicate.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnDuplicate"
@@ -1551,9 +1561,7 @@ const endDragOrb = async () => {
                       </div>
 
                       <p class="prefs-experimental-notice">
-                        Le système <strong>Vaal</strong> est en cours
-                        d'exploration et de tests. Les effets, probabilités et
-                        animations sont sujets à modification.
+                        {{ t("altar.preferences.experimental") }}
                       </p>
                     </div>
                   </div>
@@ -1562,24 +1570,28 @@ const endDragOrb = async () => {
 
                   <!-- Admin/Debug Section -->
                   <div class="prefs-section">
-                    <h4 class="prefs-section__title">Admin / Debug</h4>
+                    <h4 class="prefs-section__title">
+                      {{ t("altar.preferences.adminTitle") }}
+                    </h4>
 
                     <div class="prefs-field">
                       <RunicSelect
                         v-model="forcedOutcome"
                         :options="forcedOutcomeOptions"
-                        label="Forcer le résultat Vaal"
+                        :label="t('altar.preferences.forceOutcome')"
                         size="md"
                       />
                       <p class="prefs-field__hint">
-                        Sélectionne un résultat pour tester les animations
+                        {{ t("altar.preferences.forceOutcomeHint") }}
                       </p>
                     </div>
 
                     <div class="prefs-field">
-                      <label class="prefs-field__label">Vaal Orbs</label>
+                      <label class="prefs-field__label">{{
+                        t("altar.preferences.vaalOrbsLabel")
+                      }}</label>
                       <p class="prefs-field__hint">
-                        Ajuste le nombre de Vaal Orbs disponibles
+                        {{ t("altar.preferences.vaalOrbsHint") }}
                       </p>
                       <div class="prefs-field__number">
                         <button
@@ -1627,7 +1639,7 @@ const endDragOrb = async () => {
                   <button
                     type="button"
                     class="share-panel__close"
-                    aria-label="Fermer"
+                    :aria-label="t('common.close')"
                     @click="closeShareModal"
                   >
                     <svg
@@ -1668,12 +1680,16 @@ const endDragOrb = async () => {
                       size="sm"
                       @click="handleCopyUrl"
                     >
-                      {{ urlCopied ? "✓ Copié" : "Copier" }}
+                      {{
+                        urlCopied
+                          ? t("altar.share.copied")
+                          : t("altar.share.copy")
+                      }}
                     </RunicButton>
                   </template>
                   <template v-else>
                     <div class="share-panel__input share-panel__input--loading">
-                      <span>Génération du lien...</span>
+                      <span>{{ t("altar.share.generating") }}</span>
                       <span class="share-panel__spinner"></span>
                     </div>
                   </template>

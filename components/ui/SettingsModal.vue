@@ -4,6 +4,8 @@ import {
   type FoilEffectType,
 } from "~/composables/useFoilEffect";
 
+const { t } = useI18n();
+
 const props = defineProps<{
   modelValue: boolean;
 }>();
@@ -52,13 +54,13 @@ onUnmounted(() => {
           <div class="settings-modal__header">
             <h2 class="settings-modal__title">
               <span class="settings-modal__rune">✧</span>
-              Paramètres
+              {{ t("settings.title") }}
               <span class="settings-modal__rune">✧</span>
             </h2>
             <button
               type="button"
               class="settings-modal__close"
-              aria-label="Fermer"
+              :aria-label="t('common.close')"
               @click="closeModal"
             >
               <svg
@@ -80,10 +82,11 @@ onUnmounted(() => {
           <div class="settings-modal__body">
             <!-- Foil Effect Section -->
             <div class="settings-modal__section">
-              <h3 class="settings-modal__section-title">Effet Holographique</h3>
+              <h3 class="settings-modal__section-title">
+                {{ t("settings.foilEffect.title") }}
+              </h3>
               <p class="settings-modal__section-desc">
-                Choisissez le style d'effet foil appliqué à vos cartes
-                brillantes.
+                {{ t("settings.foilEffect.description") }}
               </p>
 
               <RunicSelect
@@ -103,10 +106,7 @@ onUnmounted(() => {
             <!-- Info Section -->
             <div class="settings-modal__section settings-modal__section--info">
               <p class="settings-modal__info-text">
-                Les effets holographiques s'appliquent aux cartes avec la
-                variation <strong>Foil</strong>. Certains effets utilisent des
-                couleurs arc-en-ciel, d'autres sont adaptés aux couleurs de
-                rareté.
+                {{ t("settings.foilEffect.info") }}
               </p>
             </div>
           </div>
@@ -114,7 +114,7 @@ onUnmounted(() => {
           <!-- Footer -->
           <div class="settings-modal__footer">
             <RunicButton variant="secondary" size="sm" @click="closeModal">
-              Fermer
+              {{ t("settings.close") }}
             </RunicButton>
           </div>
         </div>

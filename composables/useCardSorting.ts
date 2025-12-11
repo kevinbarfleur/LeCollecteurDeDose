@@ -22,15 +22,13 @@ export interface SortOptionConfig {
 }
 
 /**
- * Default sort options - can be used directly or translated via i18n
+ * Sort options with i18n keys
  */
-export const SORT_OPTIONS: SortOptionConfig[] = [
-  { value: 'rarity-asc', label: 'Rareté (T0 → T3)' },
-  { value: 'rarity-desc', label: 'Rareté (T3 → T0)' },
-  { value: 'alpha-asc', label: 'Alphabétique (A → Z)' },
-  { value: 'alpha-desc', label: 'Alphabétique (Z → A)' },
-  { value: 'category-asc', label: 'Catégorie (A → Z)' },
-  { value: 'category-desc', label: 'Catégorie (Z → A)' },
+const SORT_OPTIONS_KEYS: Array<{ value: SortOption; labelKey: string }> = [
+  { value: 'rarity-asc', labelKey: 'sorting.rarityAsc' },
+  { value: 'rarity-desc', labelKey: 'sorting.rarityDesc' },
+  { value: 'alpha-asc', labelKey: 'sorting.nameAsc' },
+  { value: 'alpha-desc', labelKey: 'sorting.nameDesc' },
 ];
 
 /**
@@ -90,6 +88,18 @@ function sortByOption<T extends Sortable>(items: T[], sortType: SortOption): T[]
  * Composable for card sorting utilities
  */
 export function useCardSorting() {
+  const { t } = useI18n();
+
+  /**
+   * Sort options with translated labels
+   */
+  const SORT_OPTIONS = computed<SortOptionConfig[]>(() => 
+    SORT_OPTIONS_KEYS.map(opt => ({
+      value: opt.value,
+      label: t(opt.labelKey),
+    }))
+  );
+
   /**
    * Sort an array of cards by the specified option
    */

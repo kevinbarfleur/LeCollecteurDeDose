@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 interface Option {
   value: string;
   label: string;
@@ -18,12 +20,17 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: "Sélectionner...",
+  placeholder: undefined,
   size: "md",
   maxVisibleItems: 8,
   searchable: false,
   multiple: false,
 });
+
+// Use translated default placeholder if none provided
+const displayPlaceholder = computed(
+  () => props.placeholder ?? t("common.select")
+);
 
 const emit = defineEmits<{
   "update:modelValue": [value: string | string[]];
@@ -50,7 +57,7 @@ const selectedValues = computed<string[]>(() => {
 // Display text for trigger
 const displayText = computed(() => {
   if (selectedValues.value.length === 0) {
-    return props.placeholder;
+    return displayPlaceholder.value;
   }
 
   if (props.multiple) {
@@ -60,11 +67,11 @@ const displayText = computed(() => {
       );
       return opt?.label || selectedValues.value[0];
     }
-    return `${selectedValues.value.length} sélectionnés`;
+    return t("common.selected", { count: selectedValues.value.length });
   }
 
   const opt = props.options.find((o) => o.value === props.modelValue);
-  return opt?.label || props.placeholder;
+  return opt?.label || displayPlaceholder.value;
 });
 
 // Filter and sort options: selected first, then filtered by search
@@ -121,7 +128,8 @@ const maxDropdownHeight = computed(() => {
 // Calculate actual dropdown height based on current options count
 const actualDropdownHeight = computed(() => {
   const actualItemCount = processedOptions.value.length;
-  const contentHeight = actualItemCount * itemHeight.value + 8 + searchInputHeight.value;
+  const contentHeight =
+    actualItemCount * itemHeight.value + 8 + searchInputHeight.value;
   return Math.min(contentHeight, maxDropdownHeight.value);
 });
 
@@ -137,8 +145,7 @@ const updateDropdownPosition = () => {
   const dropdownHeight = actualDropdownHeight.value;
 
   // Determine if dropdown should open above or below
-  const openAbove =
-    spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+  const openAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
   dropdownPosition.value = {
     top: openAbove
@@ -347,7 +354,7 @@ onUnmounted(() => {
               v-model="searchQuery"
               type="text"
               class="runic-select__search-input"
-              placeholder="Rechercher..."
+              :placeholder="t('common.search')"
               @click.stop
             />
             <button

@@ -22,11 +22,32 @@ const selectedOutcome = ref("");
 // Outcome filter options
 const outcomeOptions = computed(() => [
   { value: "", label: t("activityLogs.allOutcomes") },
-  { value: "destroyed", label: VAAL_OUTCOMES.destroyed.label },
-  { value: "foil", label: VAAL_OUTCOMES.foil.label },
-  { value: "transform", label: VAAL_OUTCOMES.transform.label },
-  { value: "duplicate", label: VAAL_OUTCOMES.duplicate.label },
-  { value: "nothing", label: VAAL_OUTCOMES.nothing.label },
+  {
+    value: "destroyed",
+    label: `${VAAL_OUTCOMES.destroyed.emoji} ${t(
+      VAAL_OUTCOMES.destroyed.label
+    )}`,
+  },
+  {
+    value: "foil",
+    label: `${VAAL_OUTCOMES.foil.emoji} ${t(VAAL_OUTCOMES.foil.label)}`,
+  },
+  {
+    value: "transform",
+    label: `${VAAL_OUTCOMES.transform.emoji} ${t(
+      VAAL_OUTCOMES.transform.label
+    )}`,
+  },
+  {
+    value: "duplicate",
+    label: `${VAAL_OUTCOMES.duplicate.emoji} ${t(
+      VAAL_OUTCOMES.duplicate.label
+    )}`,
+  },
+  {
+    value: "nothing",
+    label: `${VAAL_OUTCOMES.nothing.emoji} ${t(VAAL_OUTCOMES.nothing.label)}`,
+  },
 ]);
 
 // Get card name from ID
@@ -66,7 +87,8 @@ const getOutcomeEmoji = (outcome: string): string => {
 };
 
 const getOutcomeLabel = (outcome: string): string => {
-  return VAAL_OUTCOMES[outcome as VaalOutcome]?.label || outcome;
+  const config = VAAL_OUTCOMES[outcome as VaalOutcome];
+  return config ? t(config.label) : outcome;
 };
 
 // Format relative time
@@ -183,7 +205,7 @@ const getOutcomeClass = (outcome: string): string => {
           <button
             class="activity-panel__close"
             @click="closePanel"
-            aria-label="Fermer"
+            :aria-label="t('common.close')"
           >
             <svg
               viewBox="0 0 24 24"

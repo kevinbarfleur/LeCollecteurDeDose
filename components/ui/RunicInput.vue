@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 interface Props {
   modelValue: string;
   placeholder?: string;
@@ -106,7 +108,7 @@ defineExpose({ focus });
         type="button"
         class="runic-input__clear"
         @click="clearValue"
-        aria-label="Effacer"
+        :aria-label="t('common.clear')"
       >
         <svg
           viewBox="0 0 24 24"

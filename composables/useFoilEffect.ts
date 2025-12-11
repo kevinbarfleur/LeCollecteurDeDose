@@ -1,4 +1,4 @@
-import { ref, readonly } from 'vue';
+import { ref, readonly, computed } from 'vue';
 
 /**
  * Available foil effect types
@@ -15,14 +15,14 @@ export interface FoilEffectOption {
 }
 
 /**
- * Available foil effects with labels
+ * Foil effects with i18n keys
  */
-export const FOIL_EFFECTS: FoilEffectOption[] = [
-  { value: 'trainer-gallery', label: 'Trainer Gallery' },
-  { value: 'holo-vertical', label: 'Holographique Vertical' },
-  { value: 'holo-horizontal', label: 'Holographique Horizontal' },
-  { value: 'cosmos', label: 'Cosmos' },
-  { value: 'radial', label: 'Radial' },
+const FOIL_EFFECTS_KEYS: Array<{ value: FoilEffectType; labelKey: string }> = [
+  { value: 'trainer-gallery', labelKey: 'settings.foilEffect.effects.trainerGallery' },
+  { value: 'holo-vertical', labelKey: 'settings.foilEffect.effects.holoVertical' },
+  { value: 'holo-horizontal', labelKey: 'settings.foilEffect.effects.holoHorizontal' },
+  { value: 'cosmos', labelKey: 'settings.foilEffect.effects.cosmos' },
+  { value: 'radial', labelKey: 'settings.foilEffect.effects.radial' },
 ];
 
 // Global state - shared across all components using this composable
@@ -33,6 +33,18 @@ const _selectedFoilEffect = ref<FoilEffectType>('trainer-gallery');
  * Uses shared state so the selection persists across components
  */
 export function useFoilEffect() {
+  const { t } = useI18n();
+
+  /**
+   * Foil effects with translated labels
+   */
+  const foilEffects = computed<FoilEffectOption[]>(() =>
+    FOIL_EFFECTS_KEYS.map(opt => ({
+      value: opt.value,
+      label: t(opt.labelKey),
+    }))
+  );
+
   /**
    * Update the selected foil effect
    */
@@ -46,6 +58,6 @@ export function useFoilEffect() {
     /** Function to update the selected foil effect */
     setFoilEffect,
     /** List of available foil effects for dropdowns */
-    foilEffects: FOIL_EFFECTS,
+    foilEffects,
   };
 }

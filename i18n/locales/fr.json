@@ -20,6 +20,9 @@
     },
     "about": {
       "title": "À propos - Le Collecteur de Dose"
+    },
+    "replay": {
+      "title": "Replay - Le Collecteur de Dose"
     }
   },
   "nav": {
@@ -50,6 +53,10 @@
     "search": {
       "placeholder": "Fouille dans les ténèbres..."
     },
+    "filters": {
+      "categories": "Catégories d'objets...",
+      "sort": "Trier par..."
+    },
     "empty": "Aucune carte ne correspond à votre recherche",
     "auth": {
       "title": "Prouve ton existence",
@@ -64,6 +71,43 @@
       "title": "Prouve ton existence",
       "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
       "button": "Invoquer Twitch"
+    },
+    "selector": {
+      "chooseCard": "Choisir une carte",
+      "selectCard": "Sélectionnez une carte...",
+      "variant": "Variante",
+      "chooseVariant": "Choisir la variante...",
+      "remove": "Retirer"
+    },
+    "variations": {
+      "foil": "✦ Foil",
+      "standard": "Standard"
+    },
+    "empty": "Placez une carte sur l'autel",
+    "vaalOrbs": {
+      "title": "Vaal Orbs",
+      "subtitle": "Glissez une Vaal Orb sur la carte pour la corrompre",
+      "foilMessage": "✦ Cette carte est déjà à son apogée",
+      "empty": "Vous n'avez plus de Vaal Orbs",
+      "recording": "Enregistrement en cours...",
+      "rec": "REC"
+    },
+    "preferences": {
+      "title": "Préférences",
+      "close": "Fermer",
+      "autoRecording": "Enregistrement automatique",
+      "autoRecordingHint": "Sélectionne les résultats qui déclenchent un enregistrement",
+      "experimental": "Le système Vaal est en cours d'exploration et de tests. Les effets, probabilités et animations sont sujets à modification.",
+      "adminTitle": "Admin / Debug",
+      "forceOutcome": "Forcer le résultat Vaal",
+      "forceOutcomeHint": "Sélectionne un résultat pour tester les animations",
+      "vaalOrbsLabel": "Vaal Orbs",
+      "vaalOrbsHint": "Ajuste le nombre de Vaal Orbs disponibles"
+    },
+    "share": {
+      "copied": "✓ Copié",
+      "copy": "Copier",
+      "generating": "Génération du lien..."
     }
   },
   "collection": {
@@ -82,7 +126,9 @@
       "unique": "Uniques"
     },
     "filters": {
-      "showDuplicates": "Révéler les doublons"
+      "showDuplicates": "Révéler les doublons",
+      "categories": "Catégories possédées...",
+      "sort": "Trier par..."
     },
     "empty": "Ton inventaire est aussi vide que ton âme. Prouve ta dévotion sur le stream.",
     "tiers": {
@@ -120,7 +166,90 @@
     }
   },
   "common": {
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "close": "Fermer",
+    "search": "Rechercher...",
+    "clear": "Effacer",
+    "select": "Sélectionner...",
+    "selected": "{count} sélectionnés",
+    "unknownCard": "Carte inconnue"
+  },
+  "sorting": {
+    "rarityAsc": "Rareté (+ rare en 1er)",
+    "rarityDesc": "Rareté (+ rare en dernier)",
+    "nameAsc": "Nom (A → Z)",
+    "nameDesc": "Nom (Z → A)"
+  },
+  "vaalOutcomes": {
+    "random": "Aléatoire",
+    "nothing": {
+      "label": "Rien",
+      "emoji": "😐",
+      "shareTitle": "Replay sauvegardé",
+      "shareText": "La corruption a échoué... mais l'instant est immortalisé.",
+      "shareLinkText": "Voir le non-événement"
+    },
+    "foil": {
+      "label": "Foil",
+      "emoji": "✨",
+      "shareTitle": "Transformation légendaire !",
+      "shareText": "Ta carte brille désormais d'une aura prismatique. Partage ce moment de gloire !",
+      "shareLinkText": "Admirer la transformation"
+    },
+    "destroyed": {
+      "label": "Détruite",
+      "emoji": "💀",
+      "shareTitle": "Perte immortalisée",
+      "shareText": "Ta carte a été consumée par les ténèbres. Le replay témoignera de ton sacrifice.",
+      "shareLinkText": "Revoir la tragédie"
+    },
+    "transform": {
+      "label": "Transformée",
+      "emoji": "🔄",
+      "shareTitle": "Métamorphose capturée !",
+      "shareText": "Ta carte s'est transformée en quelque chose d'inattendu. Partage cette transformation !",
+      "shareLinkText": "Voir la métamorphose"
+    },
+    "duplicate": {
+      "label": "Dupliquée",
+      "emoji": "👯",
+      "shareTitle": "Duplication miraculeuse !",
+      "shareText": "L'impossible s'est produit : ta carte s'est dédoublée !",
+      "shareLinkText": "Revivre le miracle"
+    }
+  },
+  "replay": {
+    "loading": "Chargement du replay...",
+    "notFound": "Replay introuvable",
+    "notFoundDescription": "Ce replay n'existe pas ou a été supprimé.",
+    "discoverAltar": "Découvrir l'autel",
+    "usedVaalOrb": "a utilisé une Vaal Orb",
+    "views": "vues",
+    "rewatch": "Revoir",
+    "tryAltar": "Essayer l'autel",
+    "outcomes": {
+      "nothing": "Rien ne s'est passé",
+      "foil": "Transformation en Foil !",
+      "destroyed": "Carte détruite...",
+      "transform": "Carte transformée !",
+      "duplicate": "Duplication miraculeuse !"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "close": "Fermer",
+    "foilEffect": {
+      "title": "Effet Holographique",
+      "description": "Choisissez le style d'effet foil appliqué à vos cartes brillantes.",
+      "info": "Les effets holographiques s'appliquent aux cartes avec la variation Foil. Certains effets utilisent des couleurs arc-en-ciel, d'autres sont adaptés aux couleurs de rareté.",
+      "effects": {
+        "trainerGallery": "Trainer Gallery",
+        "holoVertical": "Holographique Vertical",
+        "holoHorizontal": "Holographique Horizontal",
+        "cosmos": "Cosmos",
+        "radial": "Radial"
+      }
+    }
   },
   "footer": {
     "disclaimer": "Fansite non officiel — Non affilié à Grinding Gear Games",

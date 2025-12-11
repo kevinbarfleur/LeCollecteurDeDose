@@ -1,129 +1,145 @@
 <script setup lang="ts">
-import { allCards, mockUserCollection } from '~/data/mockCards'
-import type { Card, CardTier, CardVariation } from '~/types/card'
-import { TIER_CONFIG, VARIATION_CONFIG, getCardVariation } from '~/types/card'
-import { useCardSorting, type SortOption } from '~/composables/useCardSorting'
+import { allCards, mockUserCollection } from "~/data/mockCards";
+import type { Card, CardTier, CardVariation } from "~/types/card";
+import { TIER_CONFIG, VARIATION_CONFIG, getCardVariation } from "~/types/card";
+import { useCardSorting, type SortOption } from "~/composables/useCardSorting";
 
-const { t } = useI18n()
+const { t } = useI18n();
 
-useHead({ title: t('meta.catalogue.title') })
+useHead({ title: t("meta.catalogue.title") });
 
 const ownedCardsWithBestVariation = computed(() => {
-  const map = new Map<string, { owned: boolean; bestVariation: CardVariation | null; card: Card | null }>()
-  
-  allCards.forEach(card => {
-    map.set(card.id, { owned: false, bestVariation: null, card: null })
-  })
-  
-  mockUserCollection.forEach(card => {
-    const variation: CardVariation = getCardVariation(card)
-    const existing = map.get(card.id)
-    
+  const map = new Map<
+    string,
+    { owned: boolean; bestVariation: CardVariation | null; card: Card | null }
+  >();
+
+  allCards.forEach((card) => {
+    map.set(card.id, { owned: false, bestVariation: null, card: null });
+  });
+
+  mockUserCollection.forEach((card) => {
+    const variation: CardVariation = getCardVariation(card);
+    const existing = map.get(card.id);
+
     if (existing) {
-      existing.owned = true
-      
-      if (!existing.bestVariation || 
-          VARIATION_CONFIG[variation].priority < VARIATION_CONFIG[existing.bestVariation].priority) {
-        existing.bestVariation = variation
-        existing.card = card
+      existing.owned = true;
+
+      if (
+        !existing.bestVariation ||
+        VARIATION_CONFIG[variation].priority <
+          VARIATION_CONFIG[existing.bestVariation].priority
+      ) {
+        existing.bestVariation = variation;
+        existing.card = card;
       }
     }
-  })
-  
-  return map
-})
+  });
 
-const ownedCardIds = computed(() => 
+  return map;
+});
+
+const ownedCardIds = computed(() =>
   Array.from(ownedCardsWithBestVariation.value.entries())
     .filter(([_, data]) => data.owned)
     .map(([id]) => id)
-)
+);
 
 // Persisted filters (stored in sessionStorage)
-const searchQuery = usePersistedFilter('catalogue_search', '')
-const selectedTier = usePersistedFilter<CardTier | 'all'>('catalogue_tier', 'all')
-const selectedCategories = usePersistedFilter<string[]>('catalogue_categories', [])
-const selectedSort = usePersistedFilter('catalogue_sort', 'rarity-asc')
+const searchQuery = usePersistedFilter("catalogue_search", "");
+const selectedTier = usePersistedFilter<CardTier | "all">(
+  "catalogue_tier",
+  "all"
+);
+const selectedCategories = usePersistedFilter<string[]>(
+  "catalogue_categories",
+  []
+);
+const selectedSort = usePersistedFilter("catalogue_sort", "rarity-asc");
 
 // Use shared sorting composable
-const { sortCards, SORT_OPTIONS: sortOptions } = useCardSorting()
+const { sortCards, SORT_OPTIONS: sortOptions } = useCardSorting();
 
 // Extract unique categories from all cards with count
 const categoryOptions = computed(() => {
-  const categoryMap = new Map<string, number>()
-  
-  allCards.forEach(card => {
-    const current = categoryMap.get(card.itemClass) || 0
-    categoryMap.set(card.itemClass, current + 1)
-  })
-  
+  const categoryMap = new Map<string, number>();
+
+  allCards.forEach((card) => {
+    const current = categoryMap.get(card.itemClass) || 0;
+    categoryMap.set(card.itemClass, current + 1);
+  });
+
   // Sort by count descending, then alphabetically
   return Array.from(categoryMap.entries())
     .sort((a, b) => {
-      if (b[1] !== a[1]) return b[1] - a[1]
-      return a[0].localeCompare(b[0])
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
     })
     .map(([category, count]) => ({
       value: category,
       label: category,
-      count
-    }))
-})
+      count,
+    }));
+});
 
 const tierOptions = computed(() => [
-  { value: 'all', label: t('collection.tiers.all'), color: 'default' },
-  { value: 'T0', label: t('collection.tiers.t0'), color: 't0' },
-  { value: 'T1', label: t('collection.tiers.t1'), color: 't1' },
-  { value: 'T2', label: t('collection.tiers.t2'), color: 't2' },
-  { value: 'T3', label: t('collection.tiers.t3'), color: 't3' }
-])
+  { value: "all", label: t("collection.tiers.all"), color: "default" },
+  { value: "T0", label: t("collection.tiers.t0"), color: "t0" },
+  { value: "T1", label: t("collection.tiers.t1"), color: "t1" },
+  { value: "T2", label: t("collection.tiers.t2"), color: "t2" },
+  { value: "T3", label: t("collection.tiers.t3"), color: "t3" },
+]);
 
 const filteredCards = computed(() => {
-  let cards = allCards.map(card => {
-    const ownedData = ownedCardsWithBestVariation.value.get(card.id)
-    
+  let cards = allCards.map((card) => {
+    const ownedData = ownedCardsWithBestVariation.value.get(card.id);
+
     if (ownedData?.owned && ownedData.card) {
-      return ownedData.card
+      return ownedData.card;
     }
-    
-    return card
-  })
-  
+
+    return card;
+  });
+
   // Filter by search query - only return owned cards when searching
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    cards = cards.filter(card => {
+    const query = searchQuery.value.toLowerCase();
+    cards = cards.filter((card) => {
       // Must be owned to appear in search results
-      const isOwned = ownedCardIds.value.includes(card.id)
-      if (!isOwned) return false
-      
+      const isOwned = ownedCardIds.value.includes(card.id);
+      if (!isOwned) return false;
+
       // Then match the search query
-      return card.name.toLowerCase().includes(query) ||
-             card.itemClass.toLowerCase().includes(query)
-    })
+      return (
+        card.name.toLowerCase().includes(query) ||
+        card.itemClass.toLowerCase().includes(query)
+      );
+    });
   }
-  
+
   // Filter by selected categories
   if (selectedCategories.value.length > 0) {
-    cards = cards.filter(card => selectedCategories.value.includes(card.itemClass))
+    cards = cards.filter((card) =>
+      selectedCategories.value.includes(card.itemClass)
+    );
   }
-  
+
   // Filter by tier
-  if (selectedTier.value !== 'all') {
-    cards = cards.filter(card => card.tier === selectedTier.value)
+  if (selectedTier.value !== "all") {
+    cards = cards.filter((card) => card.tier === selectedTier.value);
   }
-  
+
   // Apply sorting
-  return sortCards(cards, selectedSort.value as SortOption)
-})
+  return sortCards(cards, selectedSort.value as SortOption);
+});
 
 const stats = computed(() => ({
   total: allCards.length,
-  t0: allCards.filter(c => c.tier === 'T0').length,
-  t1: allCards.filter(c => c.tier === 'T1').length,
-  t2: allCards.filter(c => c.tier === 'T2').length,
-  t3: allCards.filter(c => c.tier === 'T3').length
-}))
+  t0: allCards.filter((c) => c.tier === "T0").length,
+  t1: allCards.filter((c) => c.tier === "T1").length,
+  t2: allCards.filter((c) => c.tier === "T2").length,
+  t3: allCards.filter((c) => c.tier === "T3").length,
+}));
 </script>
 
 <template>
@@ -135,16 +151,20 @@ const stats = computed(() => ({
           :subtitle="t('catalogue.subtitle')"
           attached
         />
-      <RunicStats
-        :stats="[
-          { value: stats.total, label: t('cards.stats.total'), color: 'default' },
-          { value: stats.t0, label: t('collection.tiers.t0'), color: 't0' },
-          { value: stats.t1, label: t('collection.tiers.t1'), color: 't1' },
-          { value: stats.t2, label: t('collection.tiers.t2'), color: 't2' },
-          { value: stats.t3, label: t('collection.tiers.t3'), color: 't3' }
-        ]"
+        <RunicStats
+          :stats="[
+            {
+              value: stats.total,
+              label: t('cards.stats.total'),
+              color: 'default',
+            },
+            { value: stats.t0, label: t('collection.tiers.t0'), color: 't0' },
+            { value: stats.t1, label: t('collection.tiers.t1'), color: 't1' },
+            { value: stats.t2, label: t('collection.tiers.t2'), color: 't2' },
+            { value: stats.t3, label: t('collection.tiers.t3'), color: 't3' },
+          ]"
           attached
-      />
+        />
       </div>
 
       <!-- Filters -->
@@ -160,12 +180,12 @@ const stats = computed(() => ({
                 size="md"
               />
             </div>
-            
+
             <div class="flex-1 max-w-full sm:max-w-xs">
               <RunicSelect
                 v-model="selectedCategories"
                 :options="categoryOptions"
-                placeholder="Catégories d'objets..."
+                :placeholder="t('catalogue.filters.categories')"
                 size="md"
                 :searchable="true"
                 :multiple="true"
@@ -177,7 +197,7 @@ const stats = computed(() => ({
               <RunicSelect
                 v-model="selectedSort"
                 :options="sortOptions"
-                placeholder="Trier par..."
+                :placeholder="t('catalogue.filters.sort')"
                 size="md"
               />
             </div>
@@ -203,8 +223,8 @@ const stats = computed(() => ({
         </div>
       </RunicBox>
 
-      <CardGrid 
-        :cards="filteredCards" 
+      <CardGrid
+        :cards="filteredCards"
         :owned-card-ids="ownedCardIds"
         :empty-message="t('catalogue.empty')"
       />
