@@ -1115,11 +1115,11 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
         </main>
       </div>
 
-      <!-- Outcome Panel - Fixed position, outside replay-content -->
+      <!-- Outcome Panel - Fixed position, above footer -->
       <Transition name="outcome">
         <div
           v-if="showOutcome"
-          class="fixed bottom-6 left-0 right-0 z-[99999] pointer-events-none flex justify-center px-4"
+          class="fixed bottom-20 left-0 right-0 z-[100] pointer-events-none flex justify-center px-4"
         >
           <div
             class="replay-outcome-panel w-full max-w-[420px] pointer-events-auto"
