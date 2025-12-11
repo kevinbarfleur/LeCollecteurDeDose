@@ -80,7 +80,7 @@ const showLegalModal = ref(false);
         <!-- Original footer content -->
         <div class="flex items-center gap-2 group">
           <img
-            src="/images/card-back-logo.png"
+            src="/images/vaal-risitas.png"
             alt="Logo"
             class="w-5 h-5 sm:w-6 sm:h-6 object-contain opacity-50 transition-opacity duration-base group-hover:opacity-80"
           />

@@ -223,7 +223,7 @@ watch(selectedCardId, async (newId, oldId) => {
 
 const altarCardRef = ref<HTMLElement | null>(null);
 const cardFrontRef = ref<HTMLElement | null>(null);
-const cardBackLogoUrl = "/images/card-back-logo.png";
+const cardBackLogoUrl = "/images/vaal-risitas.png";
 const isCardAnimatingIn = ref(false);
 const isCardAnimatingOut = ref(false);
 
@@ -2489,7 +2489,9 @@ const endDragOrb = async () => {
   background: transparent;
   border: none;
   cursor: grab;
-  transition: transform 0.2s ease, filter 0.2s ease;
+  opacity: 1;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.4s ease,
+    opacity 0.4s ease;
 }
 
 .vaal-orb:active {
@@ -2497,9 +2499,9 @@ const endDragOrb = async () => {
 }
 
 .vaal-orb--disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
-  filter: grayscale(0.5);
+  filter: grayscale(0.6) brightness(0.7);
 }
 
 .vaal-orb--dragging {
@@ -2517,7 +2519,7 @@ const endDragOrb = async () => {
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-  transition: filter 0.2s ease;
+  transition: filter 0.4s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ==========================================

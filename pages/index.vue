@@ -11,7 +11,7 @@ const cards = Array.from({ length: cardCount }, (_, i) => ({
 }));
 
 const hoveredCard = ref<number | null>(null);
-const cardBackLogoUrl = "/images/card-back-logo.png";
+const cardBackLogoUrl = "/images/vaal-risitas.png";
 
 const getCardStyle = (card: (typeof cards)[0], index: number) => {
   const isHovered = hoveredCard.value === index;
