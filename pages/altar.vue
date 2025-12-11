@@ -51,15 +51,13 @@ onMounted(() => {
   localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
 });
 
-// Cleanup on unmount
 onBeforeUnmount(() => {
-  // Cancel any active recording
   if (isRecording.value) {
     cancelRecording();
   }
-  // Remove global earthquake class
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.remove("earthquake-global");
+  const appWrapper = document.getElementById("app-wrapper");
+  if (appWrapper) {
+    appWrapper.classList.remove("earthquake-global");
   }
 });
 
@@ -851,13 +849,16 @@ const vaalSectionEarthquakeClasses = computed(() =>
 );
 const bodyEarthquakeClasses = computed(() => getEarthquakeClasses("body"));
 
-// Global earthquake effect on html element (affects header, footer, entire page)
+// Global earthquake on #app-wrapper (not html, to avoid breaking position:fixed)
 watch(isOrbOverCard, (isOver) => {
   if (typeof document !== "undefined") {
-    if (isOver) {
-      document.documentElement.classList.add("earthquake-global");
-    } else {
-      document.documentElement.classList.remove("earthquake-global");
+    const appWrapper = document.getElementById("app-wrapper");
+    if (appWrapper) {
+      if (isOver) {
+        appWrapper.classList.add("earthquake-global");
+      } else {
+        appWrapper.classList.remove("earthquake-global");
+      }
     }
   }
 });

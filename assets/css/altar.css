@@ -679,8 +679,8 @@
   }
 }
 
-/* Global body earthquake - applied to html element for full page shake */
-html.earthquake-global {
+/* Global earthquake - applied to #app-wrapper to avoid breaking position:fixed */
+#app-wrapper.earthquake-global {
   animation: earthquakeGlobal 0.18s ease-in-out infinite;
 }
 

@@ -4,7 +4,7 @@ const showLegalModal = ref(false);
 </script>
 
 <template>
-  <div class="h-screen flex flex-col replay-layout">
+  <div id="app-wrapper" class="h-screen flex flex-col replay-layout">
     <main class="flex-1 min-h-0 replay-content">
       <slot />
     </main>
@@ -19,13 +19,13 @@ const showLegalModal = ref(false);
           />
           <span class="replay-footer__name">Le Collecteur de Dose</span>
         </NuxtLink>
-        
+
         <div class="replay-footer__separator">·</div>
-        
+
         <p class="replay-footer__disclaimer">
           {{ t("footer.disclaimer") }}
         </p>
-        
+
         <button
           type="button"
           class="replay-footer__link"
@@ -52,10 +52,22 @@ const showLegalModal = ref(false);
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background: 
-    radial-gradient(ellipse at 30% 20%, rgba(175, 96, 37, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(157, 123, 59, 0.02) 0%, transparent 40%),
-    linear-gradient(180deg, rgba(8, 8, 10, 1) 0%, rgba(12, 12, 14, 0.98) 50%, rgba(8, 8, 10, 1) 100%);
+  background: radial-gradient(
+      ellipse at 30% 20%,
+      rgba(175, 96, 37, 0.03) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 70% 80%,
+      rgba(157, 123, 59, 0.02) 0%,
+      transparent 40%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(8, 8, 10, 1) 0%,
+      rgba(12, 12, 14, 0.98) 50%,
+      rgba(8, 8, 10, 1) 100%
+    );
 }
 
 .replay-content {
@@ -143,10 +155,9 @@ const showLegalModal = ref(false);
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .replay-footer__separator {
     display: none;
   }
 }
 </style>
-
