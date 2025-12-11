@@ -14,19 +14,10 @@ import { isCardFoil } from '~/types/card';
 import { allCards } from '~/data/mockCards';
 
 // ==========================================
-// TIER-BASED COLORS
+// TIER-BASED COLORS (from centralized constants)
 // ==========================================
 
-const TIER_COLORS = {
-  T0: { primary: '#c9a227', secondary: '#f5d76e', glow: 'rgba(201, 162, 39, 0.8)' },
-  T1: { primary: '#7a6a8a', secondary: '#a294b0', glow: 'rgba(122, 106, 138, 0.7)' },
-  T2: { primary: '#5a7080', secondary: '#8aa0b0', glow: 'rgba(90, 112, 128, 0.6)' },
-  T3: { primary: '#5a5a5d', secondary: '#7a7a7d', glow: 'rgba(90, 90, 93, 0.5)' },
-} as const;
-
-const getTierColors = (tier: CardTier) => {
-  return TIER_COLORS[tier as keyof typeof TIER_COLORS] || TIER_COLORS.T3;
-};
+import { TIER_COLORS, getTierColors } from '~/constants/colors';
 
 // ==========================================
 // TYPES

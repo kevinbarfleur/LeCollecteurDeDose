@@ -390,6 +390,8 @@
 
 /* ==========================================
    TIER COLORS
+   Source of truth: constants/colors.ts
+   These values should match the TIER_COLORS export
    ========================================== */
 
 .game-card--t0 {

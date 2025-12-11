@@ -870,6 +870,16 @@ const showOverlay = computed(() => animationState.value !== "idle");
 </template>
 
 <style scoped>
+/*
+ * GameCard Component Styles
+ * 
+ * Base card styling (frame, corners, tier colors) is in assets/css/cards.css (globally loaded).
+ * This scoped CSS contains component-specific styles for:
+ * - Detail view / floating card presentation
+ * - 3D tilt effects
+ * - Preview mode
+ * - Variation selector
+ */
 .game-card-container {
   position: relative;
 }

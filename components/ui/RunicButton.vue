@@ -253,23 +253,17 @@ const handleClick = (event: MouseEvent) => {
 </template>
 
 <style scoped>
+/*
+ * RunicButton Styling
+ * 
+ * Layout (using Tailwind): inline-flex, items-center, justify-center, gap
+ * Visual effects (custom CSS): gradients, shadows, borders, rune styling
+ */
 .runic-button {
-  position: relative;
-  display: inline-flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  font-family: "Cinzel", serif;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: all 0.3s ease;
+  @apply relative inline-flex flex-row flex-nowrap items-center justify-center gap-4;
+  @apply font-display font-semibold tracking-widest uppercase;
+  @apply no-underline whitespace-nowrap cursor-pointer;
+  @apply rounded-sm transition-all duration-300;
 }
 
 .runic-button::before {
