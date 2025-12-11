@@ -42,6 +42,10 @@ export default defineNuxtConfig({
     },
     session: {
       maxAge: 60 * 60 * 24 * 7
+    },
+    // Public runtime config (accessible client-side)
+    public: {
+      apiUrl: process.env.API_URL || 'http://localhost:3001',
     }
   },
 
