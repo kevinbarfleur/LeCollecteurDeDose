@@ -1,16 +1,17 @@
 import type { ApiResponse, PlayerCollection, CatalogueResponse, ApiError } from '~/types/api'
 
 /**
- * Composable for interacting with Le Collecteur de Dose API
+ * Composable for interacting with Le Collecteur de Dose Data API
  * 
  * Provides methods to fetch:
- * - Global card catalogue
- * - Player collections
- * - Health check
+ * - User collections
+ * - Global card catalogue (future)
+ * 
+ * Note: Write operations require the x-api-key header
  */
 export function useApi() {
   const config = useRuntimeConfig()
-  const apiUrl = config.public.apiUrl as string
+  const apiUrl = config.public.dataApiUrl as string
 
   // State
   const isLoading = ref(false)
@@ -18,10 +19,14 @@ export function useApi() {
 
   /**
    * Generic fetch wrapper with error handling
+   * @param endpoint - API endpoint (e.g., '/api/userCollection')
+   * @param options - Fetch options
+   * @param requiresAuth - If true, includes x-api-key header (for write operations)
    */
   async function apiFetch<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    requiresAuth: boolean = false
   ): Promise<T | null> {
     isLoading.value = true
     error.value = null
@@ -31,18 +36,30 @@ export function useApi() {
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
     const url = `${baseUrl}${normalizedEndpoint}`
 
+    // Build headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      // Required for ngrok free tier
+      'ngrok-skip-browser-warning': 'true',
+      ...(options.headers as Record<string, string> || {}),
+    }
+
+    // Add API key for authenticated requests (write operations)
+    // Note: For client-side, we'll need to call a server route that has the key
+    if (requiresAuth) {
+      // The API key should be handled server-side for security
+      // This is a placeholder - actual implementation should use a server route
+      console.warn('[API] Authenticated request - should be routed through server')
+    }
+
     try {
-      const response = await $fetch<T>(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          // Required for ngrok free tier
-          'ngrok-skip-browser-warning': 'true',
-          ...options.headers,
-        },
+      const response = await $fetch(url, {
+        method: (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET',
+        body: options.body,
+        headers,
       })
 
-      return response
+      return response as T
     } catch (err: any) {
       console.error(`[API Error] ${endpoint}:`, err)
       
@@ -59,11 +76,26 @@ export function useApi() {
   }
 
   /**
-   * Fetch the global card catalogue
+   * Fetch all user collections from the Data API
+   * Endpoint: GET /api/userCollection
+   */
+  async function fetchUserCollections(): Promise<Record<string, any> | null> {
+    console.log('[API] Fetching user collections...')
+    const result = await apiFetch<Record<string, any>>('/api/userCollection')
+    
+    if (result) {
+      console.log('[API] User collections fetched:', result)
+    }
+    
+    return result
+  }
+
+  /**
+   * Fetch the global card catalogue (future endpoint)
    */
   async function fetchCatalogue(): Promise<CatalogueResponse | null> {
     console.log('[API] Fetching catalogue...')
-    const result = await apiFetch<CatalogueResponse>('/catalogue')
+    const result = await apiFetch<CatalogueResponse>('/api/catalogue')
     
     if (result) {
       console.log('[API] Catalogue fetched:', result)
@@ -73,41 +105,42 @@ export function useApi() {
   }
 
   /**
-   * Fetch a player's collection by their ID or username
+   * Update a player's collection
+   * Endpoint: POST /api/collection/update
+   * Requires x-api-key header
+   * 
+   * Note: This should be called from a server route for security
    */
-  async function fetchPlayerCollection(playerIdOrUsername: string): Promise<PlayerCollection | null> {
-    console.log(`[API] Fetching collection for: ${playerIdOrUsername}`)
-    const result = await apiFetch<PlayerCollection>(`/collection/${playerIdOrUsername}`)
+  async function updatePlayerCollection(
+    pseudo: string,
+    data: { cards: any[]; vaalOrb?: number }
+  ): Promise<boolean> {
+    console.log(`[API] Updating collection for: ${pseudo}`)
     
-    if (result) {
-      console.log('[API] Player collection fetched:', result)
-    }
+    const result = await apiFetch<any>(
+      '/api/collection/update',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          [pseudo]: data
+        }),
+      },
+      true // requiresAuth
+    )
     
-    return result
+    return !!result
   }
 
   /**
-   * Fetch all collections (if the API supports it)
-   */
-  async function fetchAllCollections(): Promise<PlayerCollection[] | null> {
-    console.log('[API] Fetching all collections...')
-    const result = await apiFetch<PlayerCollection[]>('/collections')
-    
-    if (result) {
-      console.log('[API] All collections fetched:', result)
-    }
-    
-    return result
-  }
-
-  /**
-   * Health check endpoint
+   * Health check - try to reach the API
    */
   async function healthCheck(): Promise<boolean> {
     console.log('[API] Health check...')
-    const result = await apiFetch<{ status: string }>('/health')
     
-    const isHealthy = result?.status === 'ok' || !!result
+    // Try the user collection endpoint as a health check
+    const result = await apiFetch<any>('/api/userCollection')
+    
+    const isHealthy = result !== null
     console.log(`[API] Health check result: ${isHealthy ? '✓ OK' : '✗ FAILED'}`)
     
     return isHealthy
@@ -120,33 +153,18 @@ export function useApi() {
   async function testConnection(): Promise<void> {
     console.group('🔌 [API] Testing connection to:', apiUrl)
     
-    // Test health first
-    const healthy = await healthCheck()
+    // Try fetching user collections
+    console.log('[API] Fetching user collections from /api/userCollection...')
+    const collections = await fetchUserCollections()
     
-    if (!healthy) {
-      console.warn('[API] Health check failed, API might not be available')
-      console.groupEnd()
-      return
-    }
-
-    // Try fetching catalogue
-    console.log('[API] Attempting to fetch catalogue...')
-    const catalogue = await fetchCatalogue()
-    
-    if (catalogue) {
-      console.log(`[API] ✓ Catalogue available with ${catalogue.totalCards || catalogue.cards?.length || 0} cards`)
+    if (collections) {
+      const userCount = Object.keys(collections).length
+      console.log(`[API] ✓ User collections available with ${userCount} users`)
+      
+      // Log structure for debugging
+      console.log('[API] Data structure:', collections)
     } else {
-      console.log('[API] ✗ Catalogue not available or endpoint different')
-    }
-
-    // Try fetching a test collection
-    console.log('[API] Attempting to fetch test collection...')
-    const collection = await fetchPlayerCollection('test')
-    
-    if (collection) {
-      console.log(`[API] ✓ Collection endpoint working`)
-    } else {
-      console.log('[API] ✗ Collection not available (this might be expected)')
+      console.log('[API] ✗ Could not fetch user collections')
     }
 
     console.groupEnd()
@@ -166,12 +184,14 @@ export function useApi() {
     error: computed(() => error.value),
     apiUrl,
 
-    // Methods
+    // Methods - Read operations
+    fetchUserCollections,
     fetchCatalogue,
-    fetchPlayerCollection,
-    fetchAllCollections,
     healthCheck,
     testConnection,
     fetchRaw,
+
+    // Methods - Write operations (require auth)
+    updatePlayerCollection,
   }
 }

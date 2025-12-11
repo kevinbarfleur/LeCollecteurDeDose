@@ -40,7 +40,7 @@
       "title": "Le Collecteur",
       "accent": "de Dose",
       "description": "Récolte les reliques maudites de Wraeclast. Chaque carte porte une malédiction, chaque drop un mensonge de la RNG.",
-      "highlight": "Quel trésor… ou quelle déception t’attend ?"
+      "highlight": "Quel trésor… ou quelle déception t'attend ?"
     },
     "cta": {
       "collection": "Voir ma Collection",
@@ -54,18 +54,18 @@
       "placeholder": "Fouille les abysses…"
     },
     "filters": {
-      "categories": "Catégories d’objets…",
+      "categories": "Catégories d'objets…",
       "sort": "Trier par…"
     },
-    "empty": "Aucune carte n’a daigné répondre à ton appel, pauvre exile.",
+    "empty": "Aucune carte n'a daigné répondre à ton appel, pauvre exile.",
     "auth": {
       "title": "Prouve ton existence",
-      "description": "Les ténèbres n’accordent audience qu’aux identités vérifiées.",
+      "description": "Les ténèbres n'accordent audience qu'aux identités vérifiées.",
       "button": "Invoquer Twitch"
     }
   },
   "altar": {
-    "title": "L’Autel (Playground)",
+    "title": "L'Autel (Playground)",
     "subtitle": "Approche, exile… et laisse la corruption juger ta dignité.",
     "auth": {
       "title": "Prouve ton existence",
@@ -77,18 +77,18 @@
       "selectCard": "Sélectionne une carte sacrifiable…",
       "variant": "Variante",
       "chooseVariant": "Choisir la variante…",
-      "remove": "Retirer l’offrande"
+      "remove": "Retirer l'offrande"
     },
     "variations": {
       "foil": "✦ Brillante",
       "standard": "Standard"
     },
-    "empty": "Dépose une carte sur l’autel… ou retourne pleurer ton absence de loot.",
+    "empty": "Dépose une carte sur l'autel… ou retourne pleurer ton absence de loot.",
     "vaalOrbs": {
       "title": "Vaal Orbs",
       "subtitle": "Glisse une Vaal Orb et laisse la corruption te rire au nez.",
       "foilMessage": "✦ Cette carte brille déjà plus que ton DPS.",
-      "empty": "Tu n’as plus de Vaal Orbs. Skill issue.",
+      "empty": "Tu n'as plus de Vaal Orbs. Skill issue.",
       "recording": "Sacrifice consigné…",
       "rec": "REC"
     },
@@ -96,10 +96,10 @@
       "title": "Préférences",
       "close": "Fermer",
       "autoRecording": "Enregistrement automatique",
-      "autoRecordingHint": "Déclenche l’enregistrement lors d’issues… mémorables.",
+      "autoRecordingHint": "Déclenche l'enregistrement lors d'issues… mémorables.",
       "experimental": "Le pouvoir Vaal est instable. Les résultats, probabilités et effets mutent constamment.",
       "adminTitle": "Admin / Debug",
-      "forceOutcome": "Forcer l’issue de corruption",
+      "forceOutcome": "Forcer l'issue de corruption",
       "forceOutcomeHint": "Choisis un destin artificiel pour tester les animations.",
       "vaalOrbsLabel": "Vaal Orbs",
       "vaalOrbsHint": "Ajuste ton stock de tentatives désespérées."
@@ -115,7 +115,7 @@
     "subtitle": "Les reliques que tu as arrachées à la douleur de Wraeclast.",
     "auth": {
       "title": "Prouve ton existence",
-      "description": "Les ténèbres n’accordent rien à ceux qui ne s’affichent pas.",
+      "description": "Les ténèbres n'accordent rien à ceux qui ne s'affichent pas.",
       "button": "Invoquer Twitch"
     },
     "profile": {
@@ -160,7 +160,7 @@
     }
   },
   "cards": {
-    "empty": "Aucune carte n’a été retrouvée. RNG sus.",
+    "empty": "Aucune carte n'a été retrouvée. RNG sus.",
     "stats": {
       "total": "Total"
     }
@@ -193,7 +193,7 @@
       "label": "Foil",
       "emoji": "✨",
       "shareTitle": "Éclat improbable !",
-      "shareText": "Ta carte rayonne d’un éclat anormal. Sans doute un bug de la RNG.",
+      "shareText": "Ta carte rayonne d'un éclat anormal. Sans doute un bug de la RNG.",
       "shareLinkText": "Contempler le miracle"
     },
     "destroyed": {
@@ -207,28 +207,28 @@
       "label": "Transformée",
       "emoji": "🔄",
       "shareTitle": "Mutation capturée",
-      "shareText": "La carte a muté en quelque chose d’inattendu. Cope.",
+      "shareText": "La carte a muté en quelque chose d'inattendu. Cope.",
       "shareLinkText": "Observer la mutation"
     },
     "duplicate": {
       "label": "Dupliquée",
       "emoji": "👯",
       "shareTitle": "Duplication impossible !",
-      "shareText": "RNGesus a décidé de t’offrir une copie. Ne t’habitue pas.",
+      "shareText": "RNGesus a décidé de t'offrir une copie. Ne t'habitue pas.",
       "shareLinkText": "Revivre le miracle"
     }
   },
   "replay": {
     "loading": "Invocation du replay…",
     "notFound": "Rituel introuvable",
-    "notFoundDescription": "Ce sacrifice n’a jamais eu lieu… ou il était trop honteux pour survivre.",
-    "discoverAltar": "Découvrir l’autel",
+    "notFoundDescription": "Ce sacrifice n'a jamais eu lieu… ou il était trop honteux pour survivre.",
+    "discoverAltar": "Découvrir l'autel",
     "usedVaalOrb": "a utilisé une Vaal Orb",
     "views": "vues",
     "rewatch": "Revoir",
-    "tryAltar": "Retenter l’autel",
+    "tryAltar": "Retenter l'autel",
     "outcomes": {
-      "nothing": "Rien ne s’est produit. Surprenant ? Non.",
+      "nothing": "Rien ne s'est produit. Surprenant ? Non.",
       "foil": "Transformation en Foil !",
       "destroyed": "La carte a été annihilée.",
       "transform": "Métamorphose réussie !",
@@ -236,19 +236,16 @@
     }
   },
   "settings": {
-    "title": "Paramètres",
+    "title": "Paramètres Admin",
     "close": "Fermer",
-    "foilEffect": {
-      "title": "Effet Holographique",
-      "description": "Choisis la lueur maudite de tes cartes brillantes.",
-      "info": "Certaines variations invoquent des couleurs arc-en-ciel. D’autres respectent les préceptes de rareté.",
-      "effects": {
-        "trainerGallery": "Lueur de Galerie",
-        "holoVertical": "Holographique Vertical",
-        "holoHorizontal": "Holographique Horizontal",
-        "cosmos": "Cosmos Maudit",
-        "radial": "Radial Occulte"
-      }
+    "dataSource": {
+      "title": "Source des Données",
+      "description": "Choisis la source des collections et du catalogue.",
+      "mock": "Données Mock",
+      "mockHint": "Utilise les données locales de test (mockCards.ts)",
+      "api": "API Externe",
+      "apiHint": "Récupère les données depuis l'API de production",
+      "warning": "Changer la source rechargera les données. L'API doit être accessible."
     }
   },
   "footer": {
@@ -257,14 +254,14 @@
   },
   "activityLogs": {
     "title": "Activité des Exilés",
-    "toggleLabel": "Voir l’activité",
+    "toggleLabel": "Voir l'activité",
     "empty": "Aucune activité. Les exilés farmment leur dépression.",
-    "noResults": "Aucune trace de l’exile recherché.",
+    "noResults": "Aucune trace de l'exile recherché.",
     "searchPlaceholder": "Joueur ou carte…",
     "allOutcomes": "Tous les résultats",
     "connected": "Connecté en temps réel",
     "disconnected": "Déconnecté",
-    "justNow": "À l’instant",
+    "justNow": "À l'instant",
     "minutesAgo": "Il y a {n} min",
     "hoursAgo": "Il y a {n}h",
     "replay": "Voir",

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import {
-  useFoilEffect,
-  type FoilEffectType,
-} from "~/composables/useFoilEffect";
+import { useDataSource, type DataSource } from "~/composables/useDataSource";
 
 const { t } = useI18n();
 
@@ -14,11 +11,11 @@ const emit = defineEmits<{
   "update:modelValue": [value: boolean];
 }>();
 
-const { selectedFoilEffect, setFoilEffect, foilEffects } = useFoilEffect();
+const { dataSource, setDataSource } = useDataSource();
 
-// Update when select changes - directly use the composable
-const handleEffectChange = (value: string) => {
-  setFoilEffect(value as FoilEffectType);
+// Handle data source change
+const handleDataSourceChange = (value: string) => {
+  setDataSource(value as DataSource);
 };
 
 const closeModal = () => {
@@ -80,33 +77,63 @@ onUnmounted(() => {
 
           <!-- Body -->
           <div class="settings-modal__body">
-            <!-- Foil Effect Section -->
+            <!-- Data Source Section -->
             <div class="settings-modal__section">
               <h3 class="settings-modal__section-title">
-                {{ t("settings.foilEffect.title") }}
+                {{ t("settings.dataSource.title") }}
               </h3>
               <p class="settings-modal__section-desc">
-                {{ t("settings.foilEffect.description") }}
+                {{ t("settings.dataSource.description") }}
               </p>
 
-              <RunicSelect
-                :model-value="selectedFoilEffect"
-                :options="foilEffects"
-                :max-visible-items="8"
-                size="md"
-                @update:model-value="handleEffectChange"
-              />
-            </div>
+              <!-- Radio buttons for data source -->
+              <div class="settings-modal__radio-group">
+                <label class="settings-modal__radio-label">
+                  <input
+                    type="radio"
+                    name="dataSource"
+                    value="mock"
+                    :checked="dataSource === 'mock'"
+                    class="settings-modal__radio-input"
+                    @change="handleDataSourceChange('mock')"
+                  />
+                  <span class="settings-modal__radio-custom"></span>
+                  <span class="settings-modal__radio-text">
+                    <span class="settings-modal__radio-title">{{
+                      t("settings.dataSource.mock")
+                    }}</span>
+                    <span class="settings-modal__radio-hint">{{
+                      t("settings.dataSource.mockHint")
+                    }}</span>
+                  </span>
+                </label>
 
-            <!-- Divider -->
-            <div class="settings-modal__divider">
-              <span class="settings-modal__divider-rune">◆</span>
+                <label class="settings-modal__radio-label">
+                  <input
+                    type="radio"
+                    name="dataSource"
+                    value="api"
+                    :checked="dataSource === 'api'"
+                    class="settings-modal__radio-input"
+                    @change="handleDataSourceChange('api')"
+                  />
+                  <span class="settings-modal__radio-custom"></span>
+                  <span class="settings-modal__radio-text">
+                    <span class="settings-modal__radio-title">{{
+                      t("settings.dataSource.api")
+                    }}</span>
+                    <span class="settings-modal__radio-hint">{{
+                      t("settings.dataSource.apiHint")
+                    }}</span>
+                  </span>
+                </label>
+              </div>
             </div>
 
             <!-- Info Section -->
             <div class="settings-modal__section settings-modal__section--info">
               <p class="settings-modal__info-text">
-                {{ t("settings.foilEffect.info") }}
+                ⚠️ {{ t("settings.dataSource.warning") }}
               </p>
             </div>
           </div>
@@ -275,33 +302,102 @@ onUnmounted(() => {
 }
 
 /* ==========================================
-   DIVIDER
+   RADIO GROUP
    ========================================== */
-.settings-modal__divider {
+.settings-modal__radio-group {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 1.5rem 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings-modal__radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-modal__radio-label:hover {
+  background: rgba(175, 96, 37, 0.05);
+  border-color: rgba(175, 96, 37, 0.3);
+}
+
+.settings-modal__radio-label:has(.settings-modal__radio-input:checked) {
+  background: rgba(175, 96, 37, 0.1);
+  border-color: rgba(175, 96, 37, 0.5);
+  box-shadow: 0 0 15px rgba(175, 96, 37, 0.1);
+}
+
+.settings-modal__radio-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-modal__radio-custom {
   position: relative;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 2px solid rgba(100, 90, 80, 0.5);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
 }
 
-.settings-modal__divider::before,
-.settings-modal__divider::after {
+.settings-modal__radio-custom::after {
   content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(60, 55, 50, 0.4),
-    transparent
-  );
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: #c97a3a;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.2s ease;
+  box-shadow: 0 0 10px rgba(175, 96, 37, 0.5);
 }
 
-.settings-modal__divider-rune {
-  padding: 0 1rem;
-  font-size: 0.5rem;
-  color: rgba(80, 70, 60, 0.4);
+.settings-modal__radio-input:checked + .settings-modal__radio-custom {
+  border-color: #c97a3a;
+}
+
+.settings-modal__radio-input:checked + .settings-modal__radio-custom::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.settings-modal__radio-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-modal__radio-title {
+  font-family: "Cinzel", serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: rgba(200, 190, 180, 0.9);
+  letter-spacing: 0.02em;
+}
+
+.settings-modal__radio-input:checked
+  ~ .settings-modal__radio-text
+  .settings-modal__radio-title {
+  color: #c97a3a;
+}
+
+.settings-modal__radio-hint {
+  font-family: "Crimson Text", serif;
+  font-size: 1rem;
+  color: rgba(120, 115, 110, 0.7);
+  line-height: 1.4;
 }
 
 /* ==========================================
