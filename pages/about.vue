@@ -150,23 +150,14 @@ useHead({
   height: 140px;
   object-fit: contain;
   filter: drop-shadow(0 0 25px rgba(175, 96, 37, 0.25));
-  animation: float 6s ease-in-out infinite;
+  /* Uses animate-float from Tailwind config */
+  @apply animate-float;
 }
 
 @media (min-width: 768px) {
   .about-hero__logo {
     width: 180px;
     height: 180px;
-  }
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
   }
 }
 

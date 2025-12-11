@@ -1,36 +1,10 @@
-/**
- * Vaal Outcomes Composable
- * 
- * Handles animations and logic for all Vaal orb outcomes.
- * Designed to be modular and reusable across altar and replay views.
- * All animations use tier-based colors for consistency.
- */
-
 import { ref, type Ref } from 'vue';
 import gsap from 'gsap';
 import type { VaalOutcome } from '~/types/vaalOutcome';
 import type { Card, CardTier } from '~/types/card';
 import { isCardFoil } from '~/types/card';
 import { allCards } from '~/data/mockCards';
-
-// ==========================================
-// TIER-BASED COLORS
-// ==========================================
-
-const TIER_COLORS = {
-  T0: { primary: '#c9a227', secondary: '#f5d76e', glow: 'rgba(201, 162, 39, 0.8)' },
-  T1: { primary: '#7a6a8a', secondary: '#a294b0', glow: 'rgba(122, 106, 138, 0.7)' },
-  T2: { primary: '#5a7080', secondary: '#8aa0b0', glow: 'rgba(90, 112, 128, 0.6)' },
-  T3: { primary: '#5a5a5d', secondary: '#7a7a7d', glow: 'rgba(90, 90, 93, 0.5)' },
-} as const;
-
-const getTierColors = (tier: CardTier) => {
-  return TIER_COLORS[tier as keyof typeof TIER_COLORS] || TIER_COLORS.T3;
-};
-
-// ==========================================
-// TYPES
-// ==========================================
+import { TIER_COLORS, getTierColors } from '~/constants/colors';
 
 export interface VaalOutcomeContext {
   cardRef: Ref<HTMLElement | null>;

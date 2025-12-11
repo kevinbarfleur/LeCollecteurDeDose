@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier } from "~/types/card";
-import { useCardGrouping, type CardGroupWithVariations } from "~/composables/useCardGrouping";
+import {
+  useCardGrouping,
+  type CardGroupWithVariations,
+} from "~/composables/useCardGrouping";
 import { useCardSorting, type SortOption } from "~/composables/useCardSorting";
 
 const { t } = useI18n();
@@ -20,7 +23,9 @@ const user = computed(() => ({
 const collection = computed(() => mockUserCollection);
 
 // Use shared card grouping composable
-const { groupedCards } = useCardGrouping(collection, { sortByNameWithinTier: false });
+const { groupedCards } = useCardGrouping(collection, {
+  sortByNameWithinTier: false,
+});
 
 const stats = computed(() => {
   const cards = collection.value;
@@ -36,13 +41,23 @@ const stats = computed(() => {
 
 // Persisted filters (stored in sessionStorage)
 const searchQuery = usePersistedFilter("collection_search", "");
-const selectedCategories = usePersistedFilter<string[]>("collection_categories", []);
+const selectedCategories = usePersistedFilter<string[]>(
+  "collection_categories",
+  []
+);
 const showDuplicates = usePersistedFilter("collection_duplicates", false);
-const selectedTier = usePersistedFilter<CardTier | "all">("collection_tier", "all");
+const selectedTier = usePersistedFilter<CardTier | "all">(
+  "collection_tier",
+  "all"
+);
 const selectedSort = usePersistedFilter("collection_sort", "rarity-asc");
 
 // Use shared sorting composable
-const { sortCards, sortGroupedCards, SORT_OPTIONS: sortOptions } = useCardSorting();
+const {
+  sortCards,
+  sortGroupedCards,
+  SORT_OPTIONS: sortOptions,
+} = useCardSorting();
 
 // Extract unique categories from player's collection only (with count)
 const categoryOptions = computed(() => {
@@ -251,7 +266,7 @@ const filteredIndividualCards = computed(() => {
                 <RunicSelect
                   v-model="selectedCategories"
                   :options="categoryOptions"
-                  placeholder="Catégories possédées..."
+                  :placeholder="t('collection.filters.categories')"
                   size="md"
                   :searchable="true"
                   :multiple="true"
@@ -263,7 +278,7 @@ const filteredIndividualCards = computed(() => {
                 <RunicSelect
                   v-model="selectedSort"
                   :options="sortOptions"
-                  placeholder="Trier par..."
+                  :placeholder="t('collection.filters.sort')"
                   size="md"
                 />
               </div>

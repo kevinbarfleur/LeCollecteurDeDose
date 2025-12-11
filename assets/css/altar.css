@@ -4,6 +4,15 @@
  */
 
 /* ==========================================
+   NO SCROLL DURING DRAG
+   Prevents scrollbar flicker during earthquake effect
+   ========================================== */
+html.no-scroll-during-drag,
+body.no-scroll-during-drag {
+  overflow: hidden !important;
+}
+
+/* ==========================================
    ALTAR PLATFORM - Main container
    ========================================== */
 .altar-platform {
@@ -80,14 +89,199 @@
     inset 0 -4px 20px rgba(42, 42, 45, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5);
 }
 
-/* Foil - Rainbow/Prismatic - Active */
+/* Foil preload - all styles applied but invisible, allows CSS to "warm up" */
+.altar-platform--active.altar-platform--foil-preload {
+  --altar-accent: #c0a0ff;
+  --altar-rune-color: rgba(192, 160, 255, 0.7);
+  position: relative;
+}
+
+.altar-platform--active.altar-platform--foil-preload::before,
+.altar-platform--active.altar-platform--foil-preload::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.altar-platform--active.altar-platform--foil-preload .altar-circle {
+  transition: none;
+  opacity: 0;
+}
+
+/* Foil - Rainbow/Prismatic - Active with synchronized fade-in */
 .altar-platform--active.altar-platform--foil {
   --altar-accent: #c0a0ff;
   --altar-rune-color: rgba(192, 160, 255, 0.7);
   box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
     inset 0 -4px 20px rgba(180, 160, 220, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
-    0 0 50px rgba(180, 160, 255, 0.1);
-  animation: foilGlowSubtle 4s ease-in-out infinite;
+    0 0 60px rgba(192, 160, 255, 0.2),
+    0 0 100px rgba(255, 160, 192, 0.1),
+    0 0 140px rgba(160, 255, 192, 0.08);
+  animation: 
+    foilPlatformFadeIn 0.6s ease-out forwards,
+    foilPrismaticGlow 6s ease-in-out 0.6s infinite;
+  position: relative;
+}
+
+@keyframes foilPlatformFadeIn {
+  from {
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(180, 160, 220, 0), 0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 60px rgba(192, 160, 255, 0),
+      0 0 100px rgba(255, 160, 192, 0),
+      0 0 140px rgba(160, 255, 192, 0);
+  }
+  to {
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(180, 160, 220, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 60px rgba(192, 160, 255, 0.2),
+      0 0 100px rgba(255, 160, 192, 0.1),
+      0 0 140px rgba(160, 255, 192, 0.08);
+  }
+}
+
+/* Subtle radial glow overlay - slow rotation opposite to rays */
+.altar-platform--active.altar-platform--foil::before {
+  content: "";
+  position: absolute;
+  inset: -30px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(192, 160, 255, 0.08) 20%,
+    rgba(255, 160, 192, 0.06) 40%,
+    rgba(160, 255, 192, 0.04) 60%,
+    transparent 80%
+  );
+  filter: blur(15px);
+  animation: 
+    foilFadeInFull 0.6s ease-out forwards,
+    foilDivineGlow 5s ease-in-out 0.6s infinite,
+    foilDivineRotate 40s linear infinite;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes foilDivineRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes foilFadeInFull {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes foilFadeInRays {
+  from { opacity: 0; }
+  to { opacity: 0.8; }
+}
+
+/* Prismatic rays effect - counter-rotating for dynamic halos */
+.altar-platform--active.altar-platform--foil::after {
+  content: "";
+  position: absolute;
+  inset: -60px;
+  border-radius: 50%;
+  background: 
+    conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg,
+      rgba(192, 160, 255, 0.15) 20deg,
+      transparent 40deg,
+      rgba(255, 160, 192, 0.12) 60deg,
+      transparent 80deg,
+      rgba(160, 255, 192, 0.15) 100deg,
+      transparent 120deg,
+      rgba(160, 192, 255, 0.12) 140deg,
+      transparent 160deg,
+      rgba(255, 220, 160, 0.15) 180deg,
+      transparent 200deg,
+      rgba(192, 160, 255, 0.12) 220deg,
+      transparent 240deg,
+      rgba(255, 160, 192, 0.15) 260deg,
+      transparent 280deg,
+      rgba(160, 255, 192, 0.12) 300deg,
+      transparent 320deg,
+      rgba(160, 192, 255, 0.15) 340deg,
+      transparent 360deg
+    );
+  filter: blur(50px);
+  animation: 
+    foilFadeInRays 0.6s ease-out forwards,
+    foilRaysRotateReverse 30s linear infinite;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes foilRaysRotateReverse {
+  from { transform: rotate(360deg) scale(1); }
+  to { transform: rotate(0deg) scale(1); }
+}
+
+@keyframes foilPrismaticGlow {
+  0%, 100% {
+    --altar-accent: #c0a0ff;
+    --altar-rune-color: rgba(192, 160, 255, 0.7);
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(180, 160, 220, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 60px rgba(192, 160, 255, 0.2),
+      0 0 100px rgba(255, 160, 192, 0.1),
+      0 0 140px rgba(160, 255, 192, 0.08);
+  }
+  25% {
+    --altar-accent: #ffa0c0;
+    --altar-rune-color: rgba(255, 160, 192, 0.7);
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(220, 160, 180, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 60px rgba(255, 160, 192, 0.2),
+      0 0 100px rgba(160, 255, 192, 0.1),
+      0 0 140px rgba(160, 192, 255, 0.08);
+  }
+  50% {
+    --altar-accent: #a0ffc0;
+    --altar-rune-color: rgba(160, 255, 192, 0.7);
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(160, 220, 180, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 60px rgba(160, 255, 192, 0.2),
+      0 0 100px rgba(160, 192, 255, 0.1),
+      0 0 140px rgba(192, 160, 255, 0.08);
+  }
+  75% {
+    --altar-accent: #a0c0ff;
+    --altar-rune-color: rgba(160, 192, 255, 0.7);
+    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
+      inset 0 -4px 20px rgba(160, 180, 220, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
+      0 0 60px rgba(160, 192, 255, 0.2),
+      0 0 100px rgba(192, 160, 255, 0.1),
+      0 0 140px rgba(255, 160, 192, 0.08);
+  }
+}
+
+@keyframes foilDivineGlow {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+    filter: blur(15px) brightness(1);
+  }
+  25% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+    filter: blur(12px) brightness(1.1);
+  }
+  75% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
 }
 
 /* ==========================================
@@ -164,27 +358,6 @@
   --altar-rune-color: rgba(200, 50, 50, 0.8);
 }
 
-/* vaalGlowPulse - removed, now handled by aura system */
-
-@keyframes foilGlowSubtle {
-  0%,
-  100% {
-    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-      inset 0 -4px 20px rgba(180, 160, 220, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(180, 160, 255, 0.1);
-  }
-  33% {
-    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-      inset 0 -4px 20px rgba(220, 180, 180, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(255, 180, 200, 0.1);
-  }
-  66% {
-    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-      inset 0 -4px 20px rgba(160, 220, 180, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(160, 255, 200, 0.1);
-  }
-}
-
 /* ==========================================
    ALTAR CIRCLES - Runic decorations
    ========================================== */
@@ -192,8 +365,13 @@
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  /* Smooth transition for color changes */
-  transition: border-color 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
+  /* Smooth transition for all foil properties */
+  transition: 
+    border-color 0.6s ease,
+    border-width 0.6s ease,
+    opacity 0.6s ease,
+    filter 0.6s ease,
+    box-shadow 0.6s ease;
   z-index: 1;
 }
 
@@ -232,20 +410,74 @@
   animation: rotateCircle 30s linear infinite;
 }
 
-/* Foil circles - animated colors (only when active) */
+/* Foil circles - disable transition to let animation control opacity */
+.altar-platform--active.altar-platform--foil .altar-circle {
+  transition: none;
+}
+
+/* Foil circles - extreme blur + chaotic rotations + synchronized fade-in */
 .altar-platform--active.altar-platform--foil .altar-circle--outer {
-  animation: rotateCircle 60s linear infinite,
-    foilCircle 4s ease-in-out infinite;
+  border-width: 25px;
+  border-style: solid;
+  filter: blur(80px);
+  opacity: 0;
+  /* Glow styles included - no animation delay */
+  border-color: rgba(192, 160, 255, 0.25);
+  box-shadow: 0 0 80px rgba(192, 160, 255, 0.2);
+  animation: 
+    foilFadeInOuter 0.6s ease-out forwards,
+    foilRotateSlow 50s linear infinite,
+    foilCircleGlowOuter 6s ease-in-out infinite,
+    foilCirclePulseOuter 4s ease-in-out infinite;
 }
 
 .altar-platform--active.altar-platform--foil .altar-circle--middle {
-  animation: rotateCircle 45s linear infinite reverse,
-    foilCircle 4s ease-in-out infinite 0.5s;
+  border-width: 4px;
+  border-style: solid;
+  filter: blur(12px);
+  opacity: 0;
+  /* Glow styles included - no animation delay */
+  border-color: rgba(192, 160, 255, 0.8);
+  box-shadow: 0 0 30px rgba(192, 160, 255, 0.5),
+    0 0 60px rgba(192, 160, 255, 0.3),
+    inset 0 0 20px rgba(192, 160, 255, 0.2);
+  animation:
+    foilFadeInMiddle 0.6s ease-out forwards,
+    foilRotateMediumReverse 35s linear infinite,
+    foilCircleGlow 6s ease-in-out infinite,
+    foilCirclePulseMiddle 3s ease-in-out infinite;
 }
 
 .altar-platform--active.altar-platform--foil .altar-circle--inner {
-  animation: rotateCircle 30s linear infinite,
-    foilCircle 4s ease-in-out infinite 1s;
+  border-width: 5px;
+  border-style: solid;
+  filter: blur(16px);
+  opacity: 0;
+  /* Glow included in fade-in - no delay on foilCircleGlow */
+  border-color: rgba(192, 160, 255, 0.8);
+  box-shadow: 0 0 30px rgba(192, 160, 255, 0.5),
+    0 0 60px rgba(192, 160, 255, 0.3),
+    inset 0 0 20px rgba(192, 160, 255, 0.2);
+  animation:
+    foilFadeInInner 0.6s ease-out forwards,
+    foilRotateFast 25s linear infinite,
+    foilCircleGlow 6s ease-in-out infinite,
+    foilCirclePulseInner 2.5s ease-in-out infinite;
+}
+
+@keyframes foilFadeInOuter {
+  from { opacity: 0; }
+  to { opacity: 0.4; }
+}
+
+@keyframes foilFadeInMiddle {
+  from { opacity: 0; }
+  to { opacity: 0.8; }
+}
+
+@keyframes foilFadeInInner {
+  from { opacity: 0; }
+  to { opacity: 0.9; }
 }
 
 /* Vaal circles - color transitions smoothly, brightness pulses via filter */
@@ -264,16 +496,83 @@
   filter: drop-shadow(0 0 8px rgba(240, 70, 70, 0.6));
 }
 
-@keyframes foilCircle {
-  0%,
-  100% {
-    border-color: rgba(180, 160, 220, 0.35);
+/* Outer circle - extreme diffusion, invisible edge */
+@keyframes foilCircleGlowOuter {
+  0%, 100% {
+    border-color: rgba(192, 160, 255, 0.25);
+    box-shadow: 0 0 80px rgba(192, 160, 255, 0.2);
   }
-  33% {
-    border-color: rgba(220, 160, 180, 0.35);
+  25% {
+    border-color: rgba(255, 160, 192, 0.25);
+    box-shadow: 0 0 80px rgba(255, 160, 192, 0.2);
   }
-  66% {
-    border-color: rgba(160, 220, 200, 0.35);
+  50% {
+    border-color: rgba(160, 255, 192, 0.25);
+    box-shadow: 0 0 80px rgba(160, 255, 192, 0.2);
+  }
+  75% {
+    border-color: rgba(160, 192, 255, 0.25);
+    box-shadow: 0 0 80px rgba(160, 192, 255, 0.2);
+  }
+}
+
+/* Chaotic rotations - different speeds and directions for halo effect */
+@keyframes foilRotateSlow {
+  from { transform: rotate(0deg) scale(1); }
+  to { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes foilRotateMediumReverse {
+  from { transform: rotate(360deg) scale(1); }
+  to { transform: rotate(0deg) scale(1); }
+}
+
+@keyframes foilRotateFast {
+  from { transform: rotate(0deg) scale(1); }
+  to { transform: rotate(360deg) scale(1); }
+}
+
+/* Subtle pulsing animations - circles breathe gently */
+@keyframes foilCirclePulseOuter {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes foilCirclePulseMiddle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes foilCirclePulseInner {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* Middle/Inner circles - more visible glow */
+@keyframes foilCircleGlow {
+  0%, 100% {
+    border-color: rgba(192, 160, 255, 0.8);
+    box-shadow: 0 0 30px rgba(192, 160, 255, 0.5),
+      0 0 60px rgba(192, 160, 255, 0.3),
+      inset 0 0 20px rgba(192, 160, 255, 0.2);
+  }
+  25% {
+    border-color: rgba(255, 160, 192, 0.8);
+    box-shadow: 0 0 30px rgba(255, 160, 192, 0.5),
+      0 0 60px rgba(255, 160, 192, 0.3),
+      inset 0 0 20px rgba(255, 160, 192, 0.2);
+  }
+  50% {
+    border-color: rgba(160, 255, 192, 0.8);
+    box-shadow: 0 0 30px rgba(160, 255, 192, 0.5),
+      0 0 60px rgba(160, 255, 192, 0.3),
+      inset 0 0 20px rgba(160, 255, 192, 0.2);
+  }
+  75% {
+    border-color: rgba(160, 192, 255, 0.8);
+    box-shadow: 0 0 30px rgba(160, 192, 255, 0.5),
+      0 0 60px rgba(160, 192, 255, 0.3),
+      inset 0 0 20px rgba(160, 192, 255, 0.2);
   }
 }
 
@@ -366,24 +665,40 @@
   }
 }
 
-/* Foil runes - rainbow animation (only when active) */
+/* Foil runes - intense prismatic glow */
 .altar-platform--active.altar-platform--foil .altar-rune {
-  animation: pulseRune 3s ease-in-out infinite, foilRune 4s ease-in-out infinite;
+  filter: blur(1px);
+  animation: pulseRune 3s ease-in-out infinite, foilRuneGlow 6s ease-in-out infinite;
 }
 
-@keyframes foilRune {
-  0%,
-  100% {
-    color: rgba(180, 160, 220, 0.7);
-    text-shadow: 0 0 10px rgba(180, 160, 220, 0.3);
+@keyframes foilRuneGlow {
+  0%, 100% {
+    color: rgba(192, 160, 255, 0.9);
+    text-shadow: 
+      0 0 10px rgba(192, 160, 255, 0.8),
+      0 0 20px rgba(192, 160, 255, 0.5),
+      0 0 30px rgba(192, 160, 255, 0.3);
   }
-  33% {
-    color: rgba(220, 160, 180, 0.7);
-    text-shadow: 0 0 10px rgba(220, 160, 180, 0.3);
+  25% {
+    color: rgba(255, 160, 192, 0.9);
+    text-shadow: 
+      0 0 10px rgba(255, 160, 192, 0.8),
+      0 0 20px rgba(255, 160, 192, 0.5),
+      0 0 30px rgba(255, 160, 192, 0.3);
   }
-  66% {
-    color: rgba(160, 220, 200, 0.7);
-    text-shadow: 0 0 10px rgba(160, 220, 200, 0.3);
+  50% {
+    color: rgba(160, 255, 192, 0.9);
+    text-shadow: 
+      0 0 10px rgba(160, 255, 192, 0.8),
+      0 0 20px rgba(160, 255, 192, 0.5),
+      0 0 30px rgba(160, 255, 192, 0.3);
+  }
+  75% {
+    color: rgba(160, 192, 255, 0.9);
+    text-shadow: 
+      0 0 10px rgba(160, 192, 255, 0.8),
+      0 0 20px rgba(160, 192, 255, 0.5),
+      0 0 30px rgba(160, 192, 255, 0.3);
   }
 }
 
@@ -679,8 +994,8 @@
   }
 }
 
-/* Global body earthquake - applied to html element for full page shake */
-html.earthquake-global {
+/* Global earthquake - applied to #app-wrapper to avoid breaking position:fixed */
+#app-wrapper.earthquake-global {
   animation: earthquakeGlobal 0.18s ease-in-out infinite;
 }
 

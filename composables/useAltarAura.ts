@@ -1,19 +1,5 @@
-/**
- * Altar Aura System
- * 
- * Manages the visual aura effects around the altar:
- * - Outer energy rays that emanate BEHIND the altar
- * - Floating ember particles for Vaal mode
- * - Rim lighting effects
- * - Clean color transitions without muddy mixing
- */
-
 import { ref, computed, watch, onUnmounted, type Ref } from 'vue';
 import gsap from 'gsap';
-
-// ==========================================
-// TYPES
-// ==========================================
 
 export interface AltarAuraOptions {
   containerRef: Ref<HTMLElement | null>;
@@ -33,35 +19,7 @@ interface EnergyRay {
   angle: number;
 }
 
-// ==========================================
-// COLOR CONFIGURATION
-// ==========================================
-
-const TIER_COLORS = {
-  T0: { primary: '#c9a227', secondary: '#f5d76e', glow: 'rgba(201, 162, 39, 0.6)' },
-  T1: { primary: '#7a6a8a', secondary: '#a294b0', glow: 'rgba(122, 106, 138, 0.5)' },
-  T2: { primary: '#5a7080', secondary: '#8aa0b0', glow: 'rgba(90, 112, 128, 0.5)' },
-  T3: { primary: '#5a5a5d', secondary: '#7a7a7d', glow: 'rgba(90, 90, 93, 0.4)' },
-} as const;
-
-const VAAL_COLORS = {
-  primary: '#c83232',
-  secondary: '#ff6b6b',
-  tertiary: '#8b0000',
-  glow: 'rgba(200, 50, 50, 0.7)',
-  ember: '#ff4444',
-};
-
-const FOIL_COLORS = [
-  { primary: '#c0a0ff', glow: 'rgba(192, 160, 255, 0.6)' },
-  { primary: '#ffa0c0', glow: 'rgba(255, 160, 192, 0.6)' },
-  { primary: '#a0ffc0', glow: 'rgba(160, 255, 192, 0.6)' },
-  { primary: '#a0c0ff', glow: 'rgba(160, 192, 255, 0.6)' },
-];
-
-// ==========================================
-// COMPOSABLE
-// ==========================================
+import { TIER_COLORS, VAAL_COLORS, FOIL_COLORS } from '~/constants/colors';
 
 export function useAltarAura(options: AltarAuraOptions) {
   const { containerRef, isActive, isVaalMode, tier, isFoil } = options;

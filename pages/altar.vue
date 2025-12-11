@@ -51,16 +51,17 @@ onMounted(() => {
   localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
 });
 
-// Cleanup on unmount
 onBeforeUnmount(() => {
-  // Cancel any active recording
   if (isRecording.value) {
     cancelRecording();
   }
-  // Remove global earthquake class
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.remove("earthquake-global");
+  const appWrapper = document.getElementById("app-wrapper");
+  if (appWrapper) {
+    appWrapper.classList.remove("earthquake-global");
   }
+  // Clean up scroll lock classes
+  document.documentElement.classList.remove("no-scroll-during-drag");
+  document.body.classList.remove("no-scroll-during-drag");
 });
 
 // User's collection - points to local session copy
@@ -96,7 +97,10 @@ const variationOptions = computed(() => {
   if (!selectedCardGroup.value) return [];
   return selectedCardGroup.value.variations.map((v) => ({
     value: v.variation,
-    label: v.variation === "foil" ? "✦ Foil" : "Standard",
+    label:
+      v.variation === "foil"
+        ? t("altar.variations.foil")
+        : t("altar.variations.standard"),
     count: v.count,
   }));
 });
@@ -124,6 +128,32 @@ const isCurrentCardFoil = computed(() => {
   return isCardFoil(displayCard.value);
 });
 
+// Foil preload state - set before actual foil to "warm up" CSS
+const isFoilPreloaded = ref(false);
+const isFoilReady = ref(false);
+
+// Watch for foil state changes to implement preload strategy
+watch(
+  isCurrentCardFoil,
+  async (isFoil, wasFoil) => {
+    if (isFoil && !wasFoil) {
+      // Card just became foil - preload first
+      isFoilPreloaded.value = true;
+      isFoilReady.value = false;
+      // Wait for CSS to compute and render at opacity 0
+      await nextTick();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Now reveal
+      isFoilReady.value = true;
+    } else if (!isFoil) {
+      // Reset states
+      isFoilPreloaded.value = false;
+      isFoilReady.value = false;
+    }
+  },
+  { immediate: true }
+);
+
 // Get tier config for current card
 const currentTierConfig = computed(() => {
   if (!displayCard.value) return null;
@@ -136,7 +166,8 @@ const altarClasses = computed(() => ({
   "altar-platform--t1": displayCard.value?.tier === "T1",
   "altar-platform--t2": displayCard.value?.tier === "T2",
   "altar-platform--t3": displayCard.value?.tier === "T3",
-  "altar-platform--foil": isCurrentCardFoil.value,
+  "altar-platform--foil-preload": isFoilPreloaded.value && !isFoilReady.value,
+  "altar-platform--foil": isFoilReady.value,
   "altar-platform--active": isAltarActive.value,
   "altar-platform--vaal": isOrbOverCard.value,
 }));
@@ -318,6 +349,7 @@ const {
   armRecording,
   startRecording,
   recordPosition,
+  recordEvent,
   stopRecording,
   cancelRecording,
   resetForNewRecording,
@@ -442,11 +474,11 @@ const handleCopyUrl = async () => {
 
 // Share modal content based on outcome (centralized configuration)
 const shareModalContent = computed(() =>
-  getShareModalContent(lastRecordedOutcome.value)
+  getShareModalContent(lastRecordedOutcome.value, t)
 );
 
 // Use centralized outcome options
-const forcedOutcomeOptions = getForcedOutcomeOptions();
+const forcedOutcomeOptions = computed(() => getForcedOutcomeOptions(t));
 
 // Simulate Vaal outcome (will be server-side later)
 const simulateVaalOutcome = (): VaalOutcome => {
@@ -694,7 +726,7 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
     console.warn("handleVaalOutcome called without a card on altar");
     return;
   }
-  
+
   const capturedCardData = {
     cardId: cardBeforeAnimation.id,
     tier: cardBeforeAnimation.tier,
@@ -746,7 +778,7 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
     // No replay recorded - but still log the activity for the real-time feed
     // Use captured card data from BEFORE the animation
     logActivityOnly(capturedCardData, outcome, resultCardId);
-    
+
     // Cancel any in-progress recording if outcome wasn't selected for recording
     if (isRecording.value) {
       cancelRecording();
@@ -851,13 +883,29 @@ const vaalSectionEarthquakeClasses = computed(() =>
 );
 const bodyEarthquakeClasses = computed(() => getEarthquakeClasses("body"));
 
-// Global earthquake effect on html element (affects header, footer, entire page)
+// Global earthquake on #app-wrapper (not html, to avoid breaking position:fixed)
 watch(isOrbOverCard, (isOver) => {
   if (typeof document !== "undefined") {
-    if (isOver) {
-      document.documentElement.classList.add("earthquake-global");
+    const appWrapper = document.getElementById("app-wrapper");
+    if (appWrapper) {
+      if (isOver) {
+        appWrapper.classList.add("earthquake-global");
+      } else {
+        appWrapper.classList.remove("earthquake-global");
+      }
+    }
+  }
+});
+
+// Prevent scrollbar flicker during orb drag (earthquake effect can cause overflow)
+watch(isDraggingOrb, (isDragging) => {
+  if (typeof document !== "undefined") {
+    if (isDragging) {
+      document.documentElement.classList.add("no-scroll-during-drag");
+      document.body.classList.add("no-scroll-during-drag");
     } else {
-      document.documentElement.classList.remove("earthquake-global");
+      document.documentElement.classList.remove("no-scroll-during-drag");
+      document.body.classList.remove("no-scroll-during-drag");
     }
   }
 });
@@ -868,7 +916,7 @@ const { auraContainer, resetAura } = useAltarAura({
   isActive: isAltarActive,
   isVaalMode: isOrbOverCard,
   tier: computed(() => displayCard.value?.tier),
-  isFoil: isCurrentCardFoil,
+  isFoil: computed(() => isFoilReady.value),
 });
 
 // Set orb ref
@@ -908,7 +956,7 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
     const rect = orbElement.getBoundingClientRect();
     originX = rect.left + rect.width / 2;
     originY = rect.top + rect.height / 2;
-    
+
     // Calculate click offset from orb center to prevent jump
     clickOffsetX = clientX - originX;
     clickOffsetY = clientY - originY;
@@ -920,13 +968,17 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   currentX = clientX;
   currentY = clientY;
 
-  // Record initial position relative to card center
+  // Record initial position and orb_pickup event relative to card center
   if (isRecording.value && altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
     const cardCenter = {
       x: cardRect.left + cardRect.width / 2,
       y: cardRect.top + cardRect.height / 2,
     };
+    recordEvent("orb_pickup", {
+      x: clientX - cardCenter.x,
+      y: clientY - cardCenter.y,
+    });
     recordPosition(clientX, clientY, cardCenter);
   }
 
@@ -986,7 +1038,19 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
       orbCenterX <= cardRect.right &&
       orbCenterY >= cardRect.top &&
       orbCenterY <= cardRect.bottom;
-    
+
+    // Record card hover/leave events for replay
+    if (isRecording.value && isOver !== isOrbOverCard.value) {
+      const cardCenter = {
+        x: cardRect.left + cardRect.width / 2,
+        y: cardRect.top + cardRect.height / 2,
+      };
+      recordEvent(isOver ? "card_hover" : "card_leave", {
+        x: orbCenterX - cardCenter.x,
+        y: orbCenterY - cardCenter.y,
+      });
+    }
+
     isOrbOverCard.value = isOver;
   }
 
@@ -1134,11 +1198,13 @@ const endDragOrb = async () => {
             <div class="selector-grid">
               <!-- Card selection -->
               <div class="selector-field">
-                <label class="selector-label">Choisir une carte</label>
+                <label class="selector-label">{{
+                  t("altar.selector.chooseCard")
+                }}</label>
                 <RunicSelect
                   v-model="selectedCardId"
                   :options="cardOptions"
-                  placeholder="Sélectionnez une carte..."
+                  :placeholder="t('altar.selector.selectCard')"
                   size="md"
                   :searchable="true"
                 />
@@ -1149,11 +1215,13 @@ const endDragOrb = async () => {
                 v-if="selectedCardGroup?.hasMultipleVariations"
                 class="selector-field"
               >
-                <label class="selector-label">Variante</label>
+                <label class="selector-label">{{
+                  t("altar.selector.variant")
+                }}</label>
                 <RunicSelect
                   v-model="selectedVariation"
                   :options="variationOptions"
-                  placeholder="Choisir la variante..."
+                  :placeholder="t('altar.selector.chooseVariant')"
                   size="md"
                 />
               </div>
@@ -1169,7 +1237,7 @@ const endDragOrb = async () => {
                   rune-right="✕"
                   @click="removeCardFromAltar"
                 >
-                  Retirer
+                  {{ t("altar.selector.remove") }}
                 </RunicButton>
               </div>
             </div>
@@ -1206,7 +1274,7 @@ const endDragOrb = async () => {
               <!-- Empty state -->
               <div v-if="!displayCard" class="altar-empty">
                 <div class="altar-empty__icon">◈</div>
-                <p class="altar-empty__text">Placez une carte sur l'autel</p>
+                <p class="altar-empty__text">{{ t("altar.empty") }}</p>
               </div>
 
               <!-- Card display with 3D flip -->
@@ -1286,17 +1354,17 @@ const endDragOrb = async () => {
                 <div class="vaal-header__left">
                   <h3 class="vaal-header__title">
                     <span class="vaal-header__rune">◆</span>
-                    Vaal Orbs
+                    {{ t("altar.vaalOrbs.title") }}
                     <span class="vaal-header__rune">◆</span>
                   </h3>
                   <p class="vaal-header__subtitle">
                     <template v-if="isCurrentCardFoil">
-                      <span class="vaal-header__subtitle--foil"
-                        >✦ Cette carte est déjà à son apogée</span
-                      >
+                      <span class="vaal-header__subtitle--foil">{{
+                        t("altar.vaalOrbs.foilMessage")
+                      }}</span>
                     </template>
                     <template v-else>
-                      Glissez une Vaal Orb sur la carte pour la corrompre
+                      {{ t("altar.vaalOrbs.subtitle") }}
                     </template>
                   </p>
                 </div>
@@ -1305,10 +1373,12 @@ const endDragOrb = async () => {
                   <span
                     v-if="isRecording"
                     class="vaal-header__recording"
-                    title="Enregistrement en cours..."
+                    :title="t('altar.vaalOrbs.recording')"
                   >
                     <span class="vaal-header__recording-dot"></span>
-                    <span class="vaal-header__recording-text">REC</span>
+                    <span class="vaal-header__recording-text">{{
+                      t("altar.vaalOrbs.rec")
+                    }}</span>
                   </span>
                   <span class="vaal-header__count">{{ vaalOrbs }}</span>
                   <RunicButton
@@ -1316,10 +1386,12 @@ const endDragOrb = async () => {
                     size="sm"
                     icon="settings"
                     class="vaal-header__settings"
-                    title="Préférences"
+                    :title="t('altar.preferences.title')"
                     @click="showPreferencesModal = true"
                   >
-                    <span class="sr-only">Préférences</span>
+                    <span class="sr-only">{{
+                      t("altar.preferences.title")
+                    }}</span>
                   </RunicButton>
                 </div>
               </div>
@@ -1356,9 +1428,9 @@ const endDragOrb = async () => {
               <!-- Empty state -->
               <div v-if="vaalOrbs === 0" class="vaal-orbs-empty">
                 <span class="vaal-orbs-empty__icon">◇</span>
-                <span class="vaal-orbs-empty__text"
-                  >Vous n'avez plus de Vaal Orbs</span
-                >
+                <span class="vaal-orbs-empty__text">{{
+                  t("altar.vaalOrbs.empty")
+                }}</span>
               </div>
             </div>
           </RunicBox>
@@ -1395,12 +1467,12 @@ const endDragOrb = async () => {
                 <div class="prefs-modal__header">
                   <h3 class="prefs-modal__title">
                     <span class="prefs-modal__icon">⚙</span>
-                    Préférences
+                    {{ t("altar.preferences.title") }}
                   </h3>
                   <button
                     type="button"
                     class="prefs-modal__close"
-                    aria-label="Fermer"
+                    :aria-label="t('common.close')"
                     @click="showPreferencesModal = false"
                   >
                     <svg
@@ -1422,18 +1494,17 @@ const endDragOrb = async () => {
                   <!-- Recording Preferences Section -->
                   <div class="prefs-section">
                     <h4 class="prefs-section__title">
-                      Enregistrement automatique
+                      {{ t("altar.preferences.autoRecording") }}
                     </h4>
                     <p class="prefs-section__hint">
-                      Sélectionne les résultats qui déclenchent un
-                      enregistrement
+                      {{ t("altar.preferences.autoRecordingHint") }}
                     </p>
 
                     <div class="prefs-toggles">
                       <div class="prefs-toggle">
-                        <span class="prefs-toggle__label"
-                          >Rien ne s'est passé</span
-                        >
+                        <span class="prefs-toggle__label">{{
+                          t("vaalOutcomes.nothing.label")
+                        }}</span>
                         <RunicRadio
                           v-model="recordOnNothing"
                           :toggle="true"
@@ -1444,7 +1515,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--foil"
-                          >Transformation en Foil</span
+                          >{{ t("vaalOutcomes.foil.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnFoil"
@@ -1456,7 +1527,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--destroyed"
-                          >Destruction</span
+                          >{{ t("vaalOutcomes.destroyed.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnDestroyed"
@@ -1468,7 +1539,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--transform"
-                          >Transformation</span
+                          >{{ t("vaalOutcomes.transform.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnTransform"
@@ -1480,7 +1551,7 @@ const endDragOrb = async () => {
                       <div class="prefs-toggle">
                         <span
                           class="prefs-toggle__label prefs-toggle__label--duplicate"
-                          >Duplication</span
+                          >{{ t("vaalOutcomes.duplicate.label") }}</span
                         >
                         <RunicRadio
                           v-model="recordOnDuplicate"
@@ -1490,9 +1561,7 @@ const endDragOrb = async () => {
                       </div>
 
                       <p class="prefs-experimental-notice">
-                        Le système <strong>Vaal</strong> est en cours
-                        d'exploration et de tests. Les effets, probabilités et
-                        animations sont sujets à modification.
+                        {{ t("altar.preferences.experimental") }}
                       </p>
                     </div>
                   </div>
@@ -1501,24 +1570,28 @@ const endDragOrb = async () => {
 
                   <!-- Admin/Debug Section -->
                   <div class="prefs-section">
-                    <h4 class="prefs-section__title">Admin / Debug</h4>
+                    <h4 class="prefs-section__title">
+                      {{ t("altar.preferences.adminTitle") }}
+                    </h4>
 
                     <div class="prefs-field">
                       <RunicSelect
                         v-model="forcedOutcome"
                         :options="forcedOutcomeOptions"
-                        label="Forcer le résultat Vaal"
+                        :label="t('altar.preferences.forceOutcome')"
                         size="md"
                       />
                       <p class="prefs-field__hint">
-                        Sélectionne un résultat pour tester les animations
+                        {{ t("altar.preferences.forceOutcomeHint") }}
                       </p>
                     </div>
 
                     <div class="prefs-field">
-                      <label class="prefs-field__label">Vaal Orbs</label>
+                      <label class="prefs-field__label">{{
+                        t("altar.preferences.vaalOrbsLabel")
+                      }}</label>
                       <p class="prefs-field__hint">
-                        Ajuste le nombre de Vaal Orbs disponibles
+                        {{ t("altar.preferences.vaalOrbsHint") }}
                       </p>
                       <div class="prefs-field__number">
                         <button
@@ -1566,7 +1639,7 @@ const endDragOrb = async () => {
                   <button
                     type="button"
                     class="share-panel__close"
-                    aria-label="Fermer"
+                    :aria-label="t('common.close')"
                     @click="closeShareModal"
                   >
                     <svg
@@ -1607,12 +1680,16 @@ const endDragOrb = async () => {
                       size="sm"
                       @click="handleCopyUrl"
                     >
-                      {{ urlCopied ? "✓ Copié" : "Copier" }}
+                      {{
+                        urlCopied
+                          ? t("altar.share.copied")
+                          : t("altar.share.copy")
+                      }}
                     </RunicButton>
                   </template>
                   <template v-else>
                     <div class="share-panel__input share-panel__input--loading">
-                      <span>Génération du lien...</span>
+                      <span>{{ t("altar.share.generating") }}</span>
                       <span class="share-panel__spinner"></span>
                     </div>
                   </template>
@@ -1744,445 +1821,13 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   ALTAR PLATFORM - The ritual circle
-   ========================================== */
-.altar-platform {
-  --altar-accent: #3a3530;
-  --altar-rune-color: rgba(60, 55, 50, 0.3);
-
-  position: relative;
-  width: 320px;
-  height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-
-  /* Stone platform base - dormant/dark */
-  background: radial-gradient(
-      ellipse at center,
-      rgba(25, 23, 20, 0.6) 0%,
-      rgba(18, 16, 14, 0.8) 50%,
-      rgba(10, 9, 8, 0.95) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(20, 18, 15, 0.9) 0%,
-      rgba(12, 10, 8, 0.95) 100%
-    );
-
-  border-radius: 50%;
-
-  /* Dormant - no glow, just shadow */
-  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.8),
-    inset 0 -4px 20px rgba(40, 35, 30, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5);
-
-  transition: box-shadow 0.6s ease, background 0.6s ease;
-}
-
-/* ==========================================
-   ALTAR ACTIVATED STATE (with card)
+   ALTAR STYLES
+   Most altar styling is in assets/css/altar.css (globally loaded)
+   Below are only page-specific overrides
    ========================================== */
 
-/* T0 - Gold/Amber - Active */
-.altar-platform--active.altar-platform--t0 {
-  --altar-accent: #c9a227;
-  --altar-rune-color: rgba(201, 162, 39, 0.6);
-  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(109, 90, 42, 0.1), 0 15px 40px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(201, 162, 39, 0.08);
-}
-
-/* T1 - Purple/Obsidian - Active */
-.altar-platform--active.altar-platform--t1 {
-  --altar-accent: #7a6a8a;
-  --altar-rune-color: rgba(122, 106, 138, 0.6);
-  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(58, 52, 69, 0.1), 0 15px 40px rgba(0, 0, 0, 0.5),
-    0 0 35px rgba(122, 106, 138, 0.06);
-}
-
-/* T2 - Blue/Slate - Active */
-.altar-platform--active.altar-platform--t2 {
-  --altar-accent: #5a7080;
-  --altar-rune-color: rgba(90, 112, 128, 0.6);
-  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(58, 69, 80, 0.1), 0 15px 40px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(90, 112, 128, 0.05);
-}
-
-/* T3 - Gray/Basalt - Active */
-.altar-platform--active.altar-platform--t3 {
-  --altar-accent: #5a5a5d;
-  --altar-rune-color: rgba(90, 90, 93, 0.5);
-  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(42, 42, 45, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5);
-}
-
-/* Foil - Rainbow/Prismatic - Active */
-.altar-platform--active.altar-platform--foil {
-  --altar-accent: #c0a0ff;
-  --altar-rune-color: rgba(192, 160, 255, 0.7);
-  box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-    inset 0 -4px 20px rgba(180, 160, 220, 0.08), 0 15px 40px rgba(0, 0, 0, 0.5),
-    0 0 50px rgba(180, 160, 255, 0.1);
-  animation: foilGlowSubtle 4s ease-in-out infinite;
-}
-
 /* ==========================================
-   VAAL THEME - Smooth overlay transition
-   ========================================== */
-
-/* Vaal overlay - fades in smoothly over the tier theme */
-.altar-platform::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(50, 15, 15, 0.85) 0%,
-    rgba(30, 10, 10, 0.9) 50%,
-    rgba(15, 5, 5, 0.95) 100%
-  );
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Vaal glow effect - separate layer for pulsing */
-.altar-platform::after {
-  content: "";
-  position: absolute;
-  inset: -20px;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(200, 50, 50, 0.3) 0%,
-    rgba(180, 40, 40, 0.15) 40%,
-    transparent 70%
-  );
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-  z-index: -1;
-  animation: vaalGlowPulse 0.6s ease-in-out infinite;
-  animation-play-state: paused;
-}
-
-/* When Vaal is active, fade in the overlay and glow */
-.altar-platform--active.altar-platform--vaal::before {
-  opacity: 1;
-}
-
-.altar-platform--active.altar-platform--vaal::after {
-  opacity: 1;
-  animation-play-state: running;
-}
-
-/* Override CSS variables smoothly for elements that use them */
-.altar-platform--active.altar-platform--vaal {
-  --altar-accent: #c83232;
-  --altar-rune-color: rgba(200, 50, 50, 0.8);
-}
-
-/* Vaal theme overrides foil too */
-.altar-platform--active.altar-platform--foil.altar-platform--vaal {
-  --altar-accent: #c83232;
-  --altar-rune-color: rgba(200, 50, 50, 0.8);
-}
-
-@keyframes vaalGlowPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-}
-
-@keyframes foilGlowSubtle {
-  0%,
-  100% {
-    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-      inset 0 -4px 20px rgba(180, 160, 220, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(180, 160, 255, 0.1);
-  }
-  33% {
-    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-      inset 0 -4px 20px rgba(220, 180, 180, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(255, 180, 200, 0.1);
-  }
-  66% {
-    box-shadow: inset 0 8px 30px rgba(0, 0, 0, 0.7),
-      inset 0 -4px 20px rgba(160, 220, 180, 0.08),
-      0 15px 40px rgba(0, 0, 0, 0.5), 0 0 50px rgba(160, 255, 200, 0.1);
-  }
-}
-
-/* ==========================================
-   ALTAR CIRCLES - Runic decorations
-   ========================================== */
-.altar-circle {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  /* Smooth transition for color changes */
-  transition: border-color 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
-  z-index: 1;
-}
-
-/* Dormant state - barely visible, no animation */
-.altar-circle--outer {
-  width: 95%;
-  height: 95%;
-  border: 1px dashed rgba(50, 45, 40, 0.15);
-}
-
-.altar-circle--middle {
-  width: 85%;
-  height: 85%;
-  border: 2px solid rgba(50, 45, 40, 0.12);
-}
-
-.altar-circle--inner {
-  width: 75%;
-  height: 75%;
-  border: 1px dotted rgba(50, 45, 40, 0.1);
-}
-
-/* Active state - colored and rotating (base animations never change) */
-.altar-platform--active .altar-circle--outer {
-  border-color: color-mix(in srgb, var(--altar-accent) 25%, transparent);
-  animation: rotateCircle 60s linear infinite;
-}
-
-.altar-platform--active .altar-circle--middle {
-  border-color: color-mix(in srgb, var(--altar-accent) 35%, transparent);
-  animation: rotateCircle 45s linear infinite reverse;
-}
-
-.altar-platform--active .altar-circle--inner {
-  border-color: color-mix(in srgb, var(--altar-accent) 45%, transparent);
-  animation: rotateCircle 30s linear infinite;
-}
-
-/* Foil circles - animated colors (only when active) */
-.altar-platform--active.altar-platform--foil .altar-circle--outer {
-  animation: rotateCircle 60s linear infinite,
-    foilCircle 4s ease-in-out infinite;
-}
-
-.altar-platform--active.altar-platform--foil .altar-circle--middle {
-  animation: rotateCircle 45s linear infinite reverse,
-    foilCircle 4s ease-in-out infinite 0.5s;
-}
-
-.altar-platform--active.altar-platform--foil .altar-circle--inner {
-  animation: rotateCircle 30s linear infinite,
-    foilCircle 4s ease-in-out infinite 1s;
-}
-
-/* Vaal circles - color transitions smoothly, brightness pulses via filter */
-.altar-platform--active.altar-platform--vaal .altar-circle--outer {
-  border-color: rgba(200, 50, 50, 0.5);
-  filter: drop-shadow(0 0 4px rgba(200, 50, 50, 0.4));
-}
-
-.altar-platform--active.altar-platform--vaal .altar-circle--middle {
-  border-color: rgba(220, 60, 60, 0.6);
-  filter: drop-shadow(0 0 6px rgba(220, 60, 60, 0.5));
-}
-
-.altar-platform--active.altar-platform--vaal .altar-circle--inner {
-  border-color: rgba(240, 70, 70, 0.7);
-  filter: drop-shadow(0 0 8px rgba(240, 70, 70, 0.6));
-}
-
-@keyframes foilCircle {
-  0%,
-  100% {
-    border-color: rgba(180, 160, 220, 0.35);
-  }
-  33% {
-    border-color: rgba(220, 160, 180, 0.35);
-  }
-  66% {
-    border-color: rgba(160, 220, 200, 0.35);
-  }
-}
-
-@keyframes rotateCircle {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ==========================================
-   ALTAR RUNES - Corner decorations
-   ========================================== */
-.altar-rune {
-  position: absolute;
-  font-size: 1.25rem;
-  color: rgba(50, 45, 40, 0.2);
-  text-shadow: none;
-  /* Smooth transitions for all visual properties */
-  transition: color 0.4s ease, text-shadow 0.4s ease, opacity 0.4s ease,
-    transform 0.4s ease, filter 0.4s ease;
-  opacity: 0.4;
-  z-index: 2;
-}
-
-.altar-rune--n {
-  top: 8%;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.altar-rune--e {
-  top: 50%;
-  right: 8%;
-  transform: translateY(-50%);
-}
-.altar-rune--s {
-  bottom: 8%;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.altar-rune--w {
-  top: 50%;
-  left: 8%;
-  transform: translateY(-50%);
-}
-
-/* Active state - colored and glowing (base animation stays constant) */
-.altar-platform--active .altar-rune {
-  color: var(--altar-rune-color);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--altar-accent) 30%, transparent);
-  opacity: 1;
-  animation: pulseRune 3s ease-in-out infinite;
-}
-
-.altar-platform--active .altar-rune--n {
-  animation-delay: 0s;
-}
-.altar-platform--active .altar-rune--e {
-  animation-delay: 0.75s;
-}
-.altar-platform--active .altar-rune--s {
-  animation-delay: 1.5s;
-}
-.altar-platform--active .altar-rune--w {
-  animation-delay: 2.25s;
-}
-
-/* Vaal runes - enhanced glow via filter (transitions smoothly) */
-.altar-platform--active.altar-platform--vaal .altar-rune {
-  filter: drop-shadow(0 0 10px rgba(200, 50, 50, 0.6))
-    drop-shadow(0 0 20px rgba(180, 40, 40, 0.3));
-}
-
-.altar-platform--active.altar-platform--vaal .altar-rune--n {
-  transform: translateX(-50%) scale(1.15);
-}
-.altar-platform--active.altar-platform--vaal .altar-rune--e {
-  transform: translateY(-50%) scale(1.15);
-}
-.altar-platform--active.altar-platform--vaal .altar-rune--s {
-  transform: translateX(-50%) scale(1.15);
-}
-.altar-platform--active.altar-platform--vaal .altar-rune--w {
-  transform: translateY(-50%) scale(1.15);
-}
-
-@keyframes pulseRune {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Foil runes - rainbow animation (only when active) */
-.altar-platform--active.altar-platform--foil .altar-rune {
-  animation: pulseRune 3s ease-in-out infinite, foilRune 4s ease-in-out infinite;
-}
-
-@keyframes foilRune {
-  0%,
-  100% {
-    color: rgba(180, 160, 220, 0.7);
-    text-shadow: 0 0 10px rgba(180, 160, 220, 0.3);
-  }
-  33% {
-    color: rgba(220, 160, 180, 0.7);
-    text-shadow: 0 0 10px rgba(220, 160, 180, 0.3);
-  }
-  66% {
-    color: rgba(160, 220, 200, 0.7);
-    text-shadow: 0 0 10px rgba(160, 220, 200, 0.3);
-  }
-}
-
-/* ==========================================
-   ALTAR CARD SLOT
-   ========================================== */
-.altar-card-slot {
-  position: relative;
-  width: 180px;
-  height: 252px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-
-  /* Perspective for card flip only */
-  perspective: 600px;
-
-  /* Allow card to overflow during animations */
-  overflow: visible;
-  z-index: 2;
-
-  /* Inset groove - dormant */
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.9) 0%,
-    rgba(12, 12, 14, 0.8) 50%,
-    rgba(8, 8, 10, 0.9) 100%
-  );
-
-  box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 10px rgba(40, 35, 30, 0.03), 0 2px 8px rgba(0, 0, 0, 0.3);
-
-  border: 1px solid rgba(40, 38, 35, 0.25);
-
-  /* Smooth transitions for Vaal theme change */
-  transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
-}
-
-.altar-card-slot--active {
-  border-color: color-mix(in srgb, var(--altar-accent) 35%, transparent);
-  box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 10px rgba(40, 35, 30, 0.03), 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.altar-card-slot--highlight {
-  border-color: rgba(200, 50, 50, 0.7);
-  box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.5),
-    inset 0 -2px 10px rgba(200, 50, 50, 0.15), 0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 30px rgba(200, 50, 50, 0.35), 0 0 60px rgba(180, 40, 40, 0.2);
-}
-
-/* ==========================================
-   ALTAR EMPTY STATE
+   ALTAR EMPTY STATE (page-specific)
    ========================================== */
 .altar-empty {
   display: flex;

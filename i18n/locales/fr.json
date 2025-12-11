@@ -2,76 +2,120 @@
   "app": {
     "name": "Le Collecteur de Dose",
     "tagline": "de Dose",
-    "footer": "Vaal or no balls"
+    "footer": "Vaal or no balls, exile."
   },
   "meta": {
-    "description": "Collection de cartes Path of Exile pour Twitch",
+    "description": "Collection de reliques corrompues de Path of Exile pour Twitch",
     "home": {
       "title": "Le Collecteur de Dose - Accueil"
     },
     "collection": {
-      "title": "Ma Collection - Le Collecteur de Dose"
+      "title": "Ma Collection Maudite - Le Collecteur de Dose"
     },
     "catalogue": {
-      "title": "Catalogue - Le Collecteur de Dose"
+      "title": "Registre des Âmes Perdues - Le Collecteur de Dose"
     },
     "altar": {
-      "title": "Autel - Le Collecteur de Dose"
+      "title": "Autel de la Corruption - Le Collecteur de Dose"
     },
     "about": {
       "title": "À propos - Le Collecteur de Dose"
+    },
+    "replay": {
+      "title": "Replay des Sacrifices - Le Collecteur de Dose"
     }
   },
   "nav": {
-    "catalogue": "Catalogue",
+    "catalogue": "Registre",
     "collection": "Ma Collection",
     "altar": "Autel",
     "about": "À propos"
   },
   "auth": {
-    "login": "Connexion",
-    "logout": "Déconnexion"
+    "login": "Se manifester",
+    "logout": "Disparaître"
   },
   "home": {
     "hero": {
       "title": "Le Collecteur",
       "accent": "de Dose",
-      "description": "Collectionne les reliques les plus rares de Wraeclast. Chaque carte raconte une histoire, chaque drop est une légende.",
-      "highlight": "Quel trésor vas-tu découvrir ?"
+      "description": "Récolte les reliques maudites de Wraeclast. Chaque carte porte une malédiction, chaque drop un mensonge de la RNG.",
+      "highlight": "Quel trésor… ou quelle déception t’attend ?"
     },
     "cta": {
       "collection": "Voir ma Collection",
-      "catalogue": "Explorer le Catalogue"
+      "catalogue": "Explorer le Registre"
     }
   },
   "catalogue": {
     "title": "Le Registre des Âmes",
-    "subtitle": "Contemple ce que tu ne posséderas probablement jamais, exile.",
+    "subtitle": "Admire ces reliques… puis accepte que tu ne les posséderas probablement jamais, exile.",
     "search": {
-      "placeholder": "Fouille dans les ténèbres..."
+      "placeholder": "Fouille les abysses…"
     },
-    "empty": "Aucune carte ne correspond à votre recherche",
+    "filters": {
+      "categories": "Catégories d’objets…",
+      "sort": "Trier par…"
+    },
+    "empty": "Aucune carte n’a daigné répondre à ton appel, pauvre exile.",
     "auth": {
       "title": "Prouve ton existence",
-      "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
+      "description": "Les ténèbres n’accordent audience qu’aux identités vérifiées.",
       "button": "Invoquer Twitch"
     }
   },
   "altar": {
-    "title": "L'Autel (Playground)",
-    "subtitle": "Vaal or no balls, exile.",
+    "title": "L’Autel (Playground)",
+    "subtitle": "Approche, exile… et laisse la corruption juger ta dignité.",
     "auth": {
       "title": "Prouve ton existence",
-      "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
+      "description": "Les ténèbres ne reconnaissent que ceux qui osent affronter la vérité.",
       "button": "Invoquer Twitch"
+    },
+    "selector": {
+      "chooseCard": "Choisir une offrande",
+      "selectCard": "Sélectionne une carte sacrifiable…",
+      "variant": "Variante",
+      "chooseVariant": "Choisir la variante…",
+      "remove": "Retirer l’offrande"
+    },
+    "variations": {
+      "foil": "✦ Brillante",
+      "standard": "Standard"
+    },
+    "empty": "Dépose une carte sur l’autel… ou retourne pleurer ton absence de loot.",
+    "vaalOrbs": {
+      "title": "Vaal Orbs",
+      "subtitle": "Glisse une Vaal Orb et laisse la corruption te rire au nez.",
+      "foilMessage": "✦ Cette carte brille déjà plus que ton DPS.",
+      "empty": "Tu n’as plus de Vaal Orbs. Skill issue.",
+      "recording": "Sacrifice consigné…",
+      "rec": "REC"
+    },
+    "preferences": {
+      "title": "Préférences",
+      "close": "Fermer",
+      "autoRecording": "Enregistrement automatique",
+      "autoRecordingHint": "Déclenche l’enregistrement lors d’issues… mémorables.",
+      "experimental": "Le pouvoir Vaal est instable. Les résultats, probabilités et effets mutent constamment.",
+      "adminTitle": "Admin / Debug",
+      "forceOutcome": "Forcer l’issue de corruption",
+      "forceOutcomeHint": "Choisis un destin artificiel pour tester les animations.",
+      "vaalOrbsLabel": "Vaal Orbs",
+      "vaalOrbsHint": "Ajuste ton stock de tentatives désespérées."
+    },
+    "share": {
+      "copied": "✓ Copié",
+      "copy": "Copier",
+      "generating": "Invocation du lien…"
     }
   },
   "collection": {
     "title": "Ma Collection",
-    "subtitle": "Les reliques que tu as arrachées aux ténèbres de Wraeclast.",
+    "subtitle": "Les reliques que tu as arrachées à la douleur de Wraeclast.",
     "auth": {
       "title": "Prouve ton existence",
-      "description": "Les ténèbres ne reconnaissent que ceux qui ont prouvé leur identité, exile.",
+      "description": "Les ténèbres n’accordent rien à ceux qui ne s’affichent pas.",
       "button": "Invoquer Twitch"
     },
     "profile": {
@@ -82,9 +126,11 @@
       "unique": "Uniques"
     },
     "filters": {
-      "showDuplicates": "Révéler les doublons"
+      "showDuplicates": "Révéler les duplicatas",
+      "categories": "Catégories possédées…",
+      "sort": "Trier par…"
     },
-    "empty": "Ton inventaire est aussi vide que ton âme. Prouve ta dévotion sur le stream.",
+    "empty": "Ton inventaire est aussi vide que tes résistances. Retourne farmer, exile.",
     "tiers": {
       "all": "Tous",
       "t0": "T0",
@@ -96,31 +142,114 @@
   "about": {
     "title": "Le Collecteur",
     "tagline": "de Dose",
-    "description": "Seuls les plus dignes survivront.",
+    "description": "Seuls les exilés les plus endurants survivent au rituel.",
     "hero": {
-      "subtitle": "Une quête éternelle pour les reliques de Wraeclast"
+      "subtitle": "Une chasse éternelle aux reliques damnées"
     },
     "rules": {
       "title": "Les Règles Sacrées",
-      "subtitle": "Les lois qui régissent la chasse aux reliques",
+      "subtitle": "Les lois qui régissent la traque aux reliques",
       "button": "Consulter les Règles"
     },
     "socials": {
       "title": "Rejoins la Cave",
-      "subtitle": "Là où les exilés se rassemblent",
+      "subtitle": "Là où les exilés se regroupent pour pleurer leurs rolls",
       "twitch": "Les Doseurs",
       "youtube": "Les Doseurs",
       "youtubePoe": "Les Doseurs POE"
     }
   },
   "cards": {
-    "empty": "Aucune carte trouvée",
+    "empty": "Aucune carte n’a été retrouvée. RNG sus.",
     "stats": {
       "total": "Total"
     }
   },
   "common": {
-    "loading": "Chargement..."
+    "loading": "Chargement des ténèbres…",
+    "close": "Fermer",
+    "search": "Rechercher dans le néant…",
+    "clear": "Effacer",
+    "select": "Sélectionner…",
+    "selected": "{count} sélectionnés",
+    "unknownCard": "Reliques non identifiées"
+  },
+  "sorting": {
+    "rarityAsc": "Rareté (les plus précieuses en premier)",
+    "rarityDesc": "Rareté (les plus déprimantes en premier)",
+    "nameAsc": "Nom (A → Z)",
+    "nameDesc": "Nom (Z → A)"
+  },
+  "vaalOutcomes": {
+    "random": "Aléatoire",
+    "nothing": {
+      "label": "Rien",
+      "emoji": "😐",
+      "shareTitle": "Rituel inutile",
+      "shareText": "La corruption a haussé les épaules. Skill issue.",
+      "shareLinkText": "Voir le néant"
+    },
+    "foil": {
+      "label": "Foil",
+      "emoji": "✨",
+      "shareTitle": "Éclat improbable !",
+      "shareText": "Ta carte rayonne d’un éclat anormal. Sans doute un bug de la RNG.",
+      "shareLinkText": "Contempler le miracle"
+    },
+    "destroyed": {
+      "label": "Détruite",
+      "emoji": "💀",
+      "shareTitle": "Offrande consumée",
+      "shareText": "Les ténèbres ont dévoré ta carte. Classique Wraeclast.",
+      "shareLinkText": "Voir la tragédie"
+    },
+    "transform": {
+      "label": "Transformée",
+      "emoji": "🔄",
+      "shareTitle": "Mutation capturée",
+      "shareText": "La carte a muté en quelque chose d’inattendu. Cope.",
+      "shareLinkText": "Observer la mutation"
+    },
+    "duplicate": {
+      "label": "Dupliquée",
+      "emoji": "👯",
+      "shareTitle": "Duplication impossible !",
+      "shareText": "RNGesus a décidé de t’offrir une copie. Ne t’habitue pas.",
+      "shareLinkText": "Revivre le miracle"
+    }
+  },
+  "replay": {
+    "loading": "Invocation du replay…",
+    "notFound": "Rituel introuvable",
+    "notFoundDescription": "Ce sacrifice n’a jamais eu lieu… ou il était trop honteux pour survivre.",
+    "discoverAltar": "Découvrir l’autel",
+    "usedVaalOrb": "a utilisé une Vaal Orb",
+    "views": "vues",
+    "rewatch": "Revoir",
+    "tryAltar": "Retenter l’autel",
+    "outcomes": {
+      "nothing": "Rien ne s’est produit. Surprenant ? Non.",
+      "foil": "Transformation en Foil !",
+      "destroyed": "La carte a été annihilée.",
+      "transform": "Métamorphose réussie !",
+      "duplicate": "Duplication improbable !"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "close": "Fermer",
+    "foilEffect": {
+      "title": "Effet Holographique",
+      "description": "Choisis la lueur maudite de tes cartes brillantes.",
+      "info": "Certaines variations invoquent des couleurs arc-en-ciel. D’autres respectent les préceptes de rareté.",
+      "effects": {
+        "trainerGallery": "Lueur de Galerie",
+        "holoVertical": "Holographique Vertical",
+        "holoHorizontal": "Holographique Horizontal",
+        "cosmos": "Cosmos Maudit",
+        "radial": "Radial Occulte"
+      }
+    }
   },
   "footer": {
     "disclaimer": "Fansite non officiel — Non affilié à Grinding Gear Games",
@@ -128,33 +257,33 @@
   },
   "activityLogs": {
     "title": "Activité des Exilés",
-    "toggleLabel": "Voir l'activité",
-    "empty": "Aucune activité récente. Les exilés dorment...",
-    "noResults": "Aucun résultat ne correspond à ta recherche.",
-    "searchPlaceholder": "Joueur ou carte...",
+    "toggleLabel": "Voir l’activité",
+    "empty": "Aucune activité. Les exilés farmment leur dépression.",
+    "noResults": "Aucune trace de l’exile recherché.",
+    "searchPlaceholder": "Joueur ou carte…",
     "allOutcomes": "Tous les résultats",
     "connected": "Connecté en temps réel",
     "disconnected": "Déconnecté",
-    "justNow": "À l'instant",
+    "justNow": "À l’instant",
     "minutesAgo": "Il y a {n} min",
     "hoursAgo": "Il y a {n}h",
     "replay": "Voir",
-    "watchReplay": "Regarder le replay"
+    "watchReplay": "Regarder le sacrifice"
   },
   "legal": {
     "title": "Mentions Légales",
     "close": "Fermer",
     "disclaimer": {
       "title": "Clause de non-affiliation",
-      "text": "Ce site est un fansite non officiel dédié à Path of Exile, un jeu développé et publié par Grinding Gear Games (GGG). Ce site n'est ni affilié, ni approuvé, ni sponsorisé par Grinding Gear Games. Il s'agit d'un projet créé par des fans, pour des fans."
+      "text": "Ce site est un fansite non officiel dédié à Path of Exile. Il n'est ni affilié ni approuvé par Grinding Gear Games. Pure dévotion de fans, pur cope."
     },
     "trademarks": {
       "title": "Propriété intellectuelle",
-      "text": "Path of Exile® est une marque déposée de Grinding Gear Games. Tous les noms, logos, images, personnages, objets et autres éléments graphiques ou textuels relatifs à Path of Exile sont la propriété exclusive de Grinding Gear Games. Ces éléments sont utilisés ici à des fins non commerciales et à titre purement informatif, conformément aux principes de fair use."
+      "text": "Path of Exile® est une marque de Grinding Gear Games. Tous les éléments associés leur appartiennent. Nous ne faisons que vénérer leurs créations dans les ténèbres."
     },
     "liability": {
       "title": "Limitation de responsabilité",
-      "text": "Les informations fournies sur ce site le sont à titre purement informatif et récréatif. Nous ne garantissons pas l'exactitude, l'exhaustivité ou l'actualité des informations présentées. Ce site ne collecte aucune donnée personnelle sensible. L'utilisation de ce site se fait à vos propres risques."
+      "text": "Les informations ici présentes sont récréatives, parfois maudites, souvent inutiles. Utilise ce site à tes risques et périls."
     },
     "links": {
       "title": "Liens officiels",

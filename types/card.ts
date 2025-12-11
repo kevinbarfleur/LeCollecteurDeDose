@@ -62,26 +62,30 @@ export interface TierConfig {
   label: string
 }
 
+// Import colors from centralized source
+import { TIER_COLORS } from '~/constants/colors'
+
 // "Glyphes Éteints" palette - Dark, runic aesthetic
+// Colors are imported from constants/colors.ts for consistency
 export const TIER_CONFIG: Record<CardTier, TierConfig> = {
   T0: {
-    color: '#6d5a2a',      // Ambre sombre
-    glowColor: '#c9a227',  // Lueur chaude
+    color: TIER_COLORS.T0.bg,
+    glowColor: TIER_COLORS.T0.primary,
     label: 'T0'
   },
   T1: {
-    color: '#3a3445',      // Obsidienne
-    glowColor: '#7a6a8a',  // Lueur froide
+    color: TIER_COLORS.T1.bg,
+    glowColor: TIER_COLORS.T1.primary,
     label: 'T1'
   },
   T2: {
-    color: '#3a4550',      // Ardoise
-    glowColor: '#5a7080',  // Éclat subtil
+    color: TIER_COLORS.T2.bg,
+    glowColor: TIER_COLORS.T2.primary,
     label: 'T2'
   },
   T3: {
-    color: '#2a2a2d',      // Basalte
-    glowColor: '#4a4a4d',
+    color: TIER_COLORS.T3.bg,
+    glowColor: TIER_COLORS.T3.primary,
     label: 'T3'
   }
 }

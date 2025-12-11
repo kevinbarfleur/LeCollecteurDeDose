@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useActivityLogs } from '~/composables/useActivityLogs';
-import { VAAL_OUTCOMES, type VaalOutcome } from '~/types/vaalOutcome';
-import poeUniques from '~/data/poe_uniques.json';
+import { useActivityLogs } from "~/composables/useActivityLogs";
+import { VAAL_OUTCOMES, type VaalOutcome } from "~/types/vaalOutcome";
+import poeUniques from "~/data/poe_uniques.json";
 
 const { t } = useI18n();
 
@@ -16,17 +16,38 @@ const {
 } = useActivityLogs();
 
 // Search and filter state
-const searchQuery = ref('');
-const selectedOutcome = ref('');
+const searchQuery = ref("");
+const selectedOutcome = ref("");
 
 // Outcome filter options
 const outcomeOptions = computed(() => [
-  { value: '', label: t('activityLogs.allOutcomes') },
-  { value: 'destroyed', label: VAAL_OUTCOMES.destroyed.label },
-  { value: 'foil', label: VAAL_OUTCOMES.foil.label },
-  { value: 'transform', label: VAAL_OUTCOMES.transform.label },
-  { value: 'duplicate', label: VAAL_OUTCOMES.duplicate.label },
-  { value: 'nothing', label: VAAL_OUTCOMES.nothing.label },
+  { value: "", label: t("activityLogs.allOutcomes") },
+  {
+    value: "destroyed",
+    label: `${VAAL_OUTCOMES.destroyed.emoji} ${t(
+      VAAL_OUTCOMES.destroyed.label
+    )}`,
+  },
+  {
+    value: "foil",
+    label: `${VAAL_OUTCOMES.foil.emoji} ${t(VAAL_OUTCOMES.foil.label)}`,
+  },
+  {
+    value: "transform",
+    label: `${VAAL_OUTCOMES.transform.emoji} ${t(
+      VAAL_OUTCOMES.transform.label
+    )}`,
+  },
+  {
+    value: "duplicate",
+    label: `${VAAL_OUTCOMES.duplicate.emoji} ${t(
+      VAAL_OUTCOMES.duplicate.label
+    )}`,
+  },
+  {
+    value: "nothing",
+    label: `${VAAL_OUTCOMES.nothing.emoji} ${t(VAAL_OUTCOMES.nothing.label)}`,
+  },
 ]);
 
 // Get card name from ID
@@ -38,75 +59,76 @@ const getCardName = (cardId: string): string => {
 // Filtered logs based on search and outcome filter
 const filteredLogs = computed(() => {
   let result = logs.value;
-  
+
   // Filter by outcome
   if (selectedOutcome.value) {
-    result = result.filter(log => log.outcome === selectedOutcome.value);
+    result = result.filter((log) => log.outcome === selectedOutcome.value);
   }
-  
+
   // Filter by search query (player name or card name)
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase().trim();
-    result = result.filter(log => {
+    result = result.filter((log) => {
       const playerMatch = log.username.toLowerCase().includes(query);
       const cardMatch = getCardName(log.card_id).toLowerCase().includes(query);
-      const resultCardMatch = log.result_card_id 
+      const resultCardMatch = log.result_card_id
         ? getCardName(log.result_card_id).toLowerCase().includes(query)
         : false;
       return playerMatch || cardMatch || resultCardMatch;
     });
   }
-  
+
   return result;
 });
 
 // Get outcome config
 const getOutcomeEmoji = (outcome: string): string => {
-  return VAAL_OUTCOMES[outcome as VaalOutcome]?.emoji || '❓';
+  return VAAL_OUTCOMES[outcome as VaalOutcome]?.emoji || "❓";
 };
 
 const getOutcomeLabel = (outcome: string): string => {
-  return VAAL_OUTCOMES[outcome as VaalOutcome]?.label || outcome;
+  const config = VAAL_OUTCOMES[outcome as VaalOutcome];
+  return config ? t(config.label) : outcome;
 };
 
 // Format relative time
 const formatRelativeTime = (dateString: string | null): string => {
-  if (!dateString) return '';
-  
+  if (!dateString) return "";
+
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
   const diffMins = Math.floor(diffSecs / 60);
   const diffHours = Math.floor(diffMins / 60);
-  
-  if (diffSecs < 60) return t('activityLogs.justNow');
-  if (diffMins < 60) return t('activityLogs.minutesAgo', { n: diffMins });
-  if (diffHours < 24) return t('activityLogs.hoursAgo', { n: diffHours });
-  return date.toLocaleDateString('fr-FR');
+
+  if (diffSecs < 60) return t("activityLogs.justNow");
+  if (diffMins < 60) return t("activityLogs.minutesAgo", { n: diffMins });
+  if (diffHours < 24) return t("activityLogs.hoursAgo", { n: diffHours });
+  return date.toLocaleDateString("fr-FR");
 };
 
 // Get tier color class
 const getTierClass = (tier: string): string => {
   const tierMap: Record<string, string> = {
-    'T0': 'tier-t0',
-    'T1': 'tier-t1',
-    'T2': 'tier-t2',
-    'T3': 'tier-t3',
+    T0: "tier-t0",
+    T1: "tier-t1",
+    T2: "tier-t2",
+    T3: "tier-t3",
   };
-  return tierMap[tier] || '';
+  return tierMap[tier] || "";
 };
 
 // Get outcome color class
 const getOutcomeClass = (outcome: string): string => {
   const outcomeMap: Record<string, string> = {
-    'destroyed': 'outcome-destroyed',
-    'foil': 'outcome-foil',
-    'transform': 'outcome-transform',
-    'duplicate': 'outcome-duplicate',
-    'nothing': 'outcome-nothing',
+    destroyed: "outcome-destroyed",
+    foil: "outcome-foil",
+    transform: "outcome-transform",
+    duplicate: "outcome-duplicate",
+    nothing: "outcome-nothing",
   };
-  return outcomeMap[outcome] || '';
+  return outcomeMap[outcome] || "";
 };
 </script>
 
@@ -115,30 +137,43 @@ const getOutcomeClass = (outcome: string): string => {
     <!-- Toggle Tab (attached to edge) -->
     <button
       class="activity-tab"
-      :class="{ 'activity-tab--open': isOpen, 'activity-tab--has-unread': hasUnread && !isOpen }"
+      :class="{
+        'activity-tab--open': isOpen,
+        'activity-tab--has-unread': hasUnread && !isOpen,
+      }"
       @click="togglePanel"
       :aria-label="t('activityLogs.toggleLabel')"
     >
       <div class="activity-tab__inner">
         <!-- Connection indicator -->
-        <span 
+        <span
           class="activity-tab__status"
           :class="{ 'activity-tab__status--connected': isConnected }"
         />
-        
+
         <!-- Icon -->
-        <svg class="activity-tab__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+        <svg
+          class="activity-tab__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+          />
         </svg>
 
         <!-- Badge -->
         <Transition name="badge-pop">
           <span v-if="hasUnread && !isOpen" class="activity-tab__badge">
-            {{ unreadCount > 99 ? '99+' : unreadCount }}
+            {{ unreadCount > 99 ? "99+" : unreadCount }}
           </span>
         </Transition>
       </div>
-      
+
       <!-- Rune accent -->
       <span class="activity-tab__rune">◆</span>
     </button>
@@ -154,21 +189,38 @@ const getOutcomeClass = (outcome: string): string => {
 
         <!-- Header -->
         <div class="activity-panel__header">
-          <div class="activity-panel__header-accent activity-panel__header-accent--left"></div>
-          <div class="activity-panel__header-accent activity-panel__header-accent--right"></div>
-          
+          <div
+            class="activity-panel__header-accent activity-panel__header-accent--left"
+          ></div>
+          <div
+            class="activity-panel__header-accent activity-panel__header-accent--right"
+          ></div>
+
           <h3 class="activity-panel__title">
             <span class="activity-panel__title-rune">✧</span>
-            {{ t('activityLogs.title') }}
+            {{ t("activityLogs.title") }}
             <span class="activity-panel__title-rune">✧</span>
           </h3>
-          
-          <button class="activity-panel__close" @click="closePanel" aria-label="Fermer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+
+          <button
+            class="activity-panel__close"
+            @click="closePanel"
+            :aria-label="t('common.close')"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
-          
+
           <div class="activity-panel__header-edge"></div>
         </div>
 
@@ -195,28 +247,46 @@ const getOutcomeClass = (outcome: string): string => {
           <template v-if="filteredLogs.length === 0">
             <div class="activity-empty">
               <div class="activity-empty__icon-wrapper">
-                <span class="activity-empty__rune activity-empty__rune--left">◆</span>
-                <span class="activity-empty__icon">{{ (searchQuery || selectedOutcome) ? '🔍' : '📜' }}</span>
-                <span class="activity-empty__rune activity-empty__rune--right">◆</span>
+                <span class="activity-empty__rune activity-empty__rune--left"
+                  >◆</span
+                >
+                <span class="activity-empty__icon">{{
+                  searchQuery || selectedOutcome ? "🔍" : "📜"
+                }}</span>
+                <span class="activity-empty__rune activity-empty__rune--right"
+                  >◆</span
+                >
               </div>
               <p class="activity-empty__text">
-                {{ (searchQuery || selectedOutcome) ? t('activityLogs.noResults') : t('activityLogs.empty') }}
+                {{
+                  searchQuery || selectedOutcome
+                    ? t("activityLogs.noResults")
+                    : t("activityLogs.empty")
+                }}
               </p>
             </div>
           </template>
 
-          <TransitionGroup v-else name="log-item" tag="ul" class="activity-list">
-            <li
-              v-for="log in filteredLogs"
-              :key="log.id"
-              class="log-entry"
-            >
+          <TransitionGroup
+            v-else
+            name="log-item"
+            tag="ul"
+            class="activity-list"
+          >
+            <li v-for="log in filteredLogs" :key="log.id" class="log-entry">
               <RunicBox padding="none" class="log-entry__box">
                 <!-- Thin header strip with outcome -->
-                <div class="log-entry__header" :class="getOutcomeClass(log.outcome)">
+                <div
+                  class="log-entry__header"
+                  :class="getOutcomeClass(log.outcome)"
+                >
                   <span class="log-entry__header-rune">◆</span>
-                  <span class="log-entry__header-emoji">{{ getOutcomeEmoji(log.outcome) }}</span>
-                  <span class="log-entry__header-title">{{ getOutcomeLabel(log.outcome) }}</span>
+                  <span class="log-entry__header-emoji">{{
+                    getOutcomeEmoji(log.outcome)
+                  }}</span>
+                  <span class="log-entry__header-title">{{
+                    getOutcomeLabel(log.outcome)
+                  }}</span>
                   <span class="log-entry__header-rune">◆</span>
                 </div>
 
@@ -224,13 +294,22 @@ const getOutcomeClass = (outcome: string): string => {
                 <div class="log-entry__content">
                   <!-- Card info row -->
                   <div class="log-entry__card-row">
-                    <span class="log-entry__tier" :class="getTierClass(log.card_tier)">
+                    <span
+                      class="log-entry__tier"
+                      :class="getTierClass(log.card_tier)"
+                    >
                       {{ log.card_tier }}
                     </span>
-                    <span class="log-entry__card-name">{{ getCardName(log.card_id) }}</span>
-                    <template v-if="log.outcome === 'transform' && log.result_card_id">
+                    <span class="log-entry__card-name">{{
+                      getCardName(log.card_id)
+                    }}</span>
+                    <template
+                      v-if="log.outcome === 'transform' && log.result_card_id"
+                    >
                       <span class="log-entry__arrow">→</span>
-                      <span class="log-entry__card-name">{{ getCardName(log.result_card_id) }}</span>
+                      <span class="log-entry__card-name">{{
+                        getCardName(log.result_card_id)
+                      }}</span>
                     </template>
                   </div>
 
@@ -252,23 +331,25 @@ const getOutcomeClass = (outcome: string): string => {
 
                   <!-- Footer row: timestamp + play button -->
                   <div class="log-entry__footer-row">
-                    <span class="log-entry__time">{{ formatRelativeTime(log.created_at) }}</span>
-                    
-                  <!-- Play button using RunicButton component (opens in new tab) -->
-                  <div class="log-entry__play-wrapper">
-                    <RunicButton
-                      v-if="log.replay_id"
-                      :href="`/replay/${log.replay_id}`"
-                      :external="true"
-                      icon="play"
-                      size="sm"
-                      variant="primary"
-                      rune-left=""
-                      rune-right=""
-                      class="log-entry__play-btn"
-                      :title="t('activityLogs.watchReplay')"
-                    />
-                  </div>
+                    <span class="log-entry__time">{{
+                      formatRelativeTime(log.created_at)
+                    }}</span>
+
+                    <!-- Play button using RunicButton component (opens in new tab) -->
+                    <div class="log-entry__play-wrapper">
+                      <RunicButton
+                        v-if="log.replay_id"
+                        :href="`/replay/${log.replay_id}`"
+                        :external="true"
+                        icon="play"
+                        size="sm"
+                        variant="primary"
+                        rune-left=""
+                        rune-right=""
+                        class="log-entry__play-btn"
+                        :title="t('activityLogs.watchReplay')"
+                      />
+                    </div>
                   </div>
                 </div>
               </RunicBox>
@@ -310,24 +391,22 @@ const getOutcomeClass = (outcome: string): string => {
   cursor: pointer;
   pointer-events: auto;
   z-index: 101;
-  
+
   /* Runic dark stone background */
   background: linear-gradient(
     90deg,
     rgba(18, 18, 22, 0.98) 0%,
     rgba(14, 14, 17, 0.99) 100%
   );
-  
+
   border: 1px solid rgba(60, 55, 50, 0.5);
   border-right: none;
   border-radius: 6px 0 0 6px;
-  
-  box-shadow: 
-    inset 0 1px 0 rgba(80, 75, 70, 0.1),
-    inset 1px 0 0 rgba(80, 75, 70, 0.05),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+
+  box-shadow: inset 0 1px 0 rgba(80, 75, 70, 0.1),
+    inset 1px 0 0 rgba(80, 75, 70, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.3),
     -4px 0 12px rgba(0, 0, 0, 0.5);
-  
+
   transition: all 0.3s ease;
 }
 
@@ -350,12 +429,9 @@ const getOutcomeClass = (outcome: string): string => {
     rgba(22, 20, 18, 0.99) 100%
   );
   border-color: rgba(100, 80, 60, 0.5);
-  box-shadow: 
-    inset 0 1px 0 rgba(100, 85, 70, 0.15),
-    inset 1px 0 0 rgba(100, 85, 70, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    -6px 0 20px rgba(0, 0, 0, 0.6),
-    0 0 15px rgba(175, 96, 37, 0.1);
+  box-shadow: inset 0 1px 0 rgba(100, 85, 70, 0.15),
+    inset 1px 0 0 rgba(100, 85, 70, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    -6px 0 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(175, 96, 37, 0.1);
 }
 
 .activity-tab:hover::before {
@@ -378,18 +454,19 @@ const getOutcomeClass = (outcome: string): string => {
   inset: -1px;
   right: 0;
   border-radius: 6px 0 0 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(175, 96, 37, 0.15),
-    transparent
-  );
+  background: linear-gradient(90deg, rgba(175, 96, 37, 0.15), transparent);
   pointer-events: none;
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .activity-tab__inner {
@@ -440,12 +517,12 @@ const getOutcomeClass = (outcome: string): string => {
   display: flex;
   align-items: center;
   justify-content: center;
-  
-  font-family: 'Cinzel', serif;
+
+  font-family: "Cinzel", serif;
   font-size: 9px;
   font-weight: 600;
   color: #1a1a1a;
-  
+
   background: linear-gradient(135deg, #c9a227 0%, #af6025 100%);
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 8px rgba(175, 96, 37, 0.4);
@@ -474,7 +551,7 @@ const getOutcomeClass = (outcome: string): string => {
   display: flex;
   flex-direction: column;
   pointer-events: auto;
-  
+
   /* Dark stone background */
   background: linear-gradient(
     180deg,
@@ -482,11 +559,10 @@ const getOutcomeClass = (outcome: string): string => {
     rgba(10, 10, 12, 0.99) 50%,
     rgba(12, 12, 15, 0.99) 100%
   );
-  
+
   border-left: 1px solid rgba(50, 48, 45, 0.5);
-  
-  box-shadow: 
-    inset 1px 0 0 rgba(80, 75, 70, 0.08),
+
+  box-shadow: inset 1px 0 0 rgba(80, 75, 70, 0.08),
     -8px 0 30px rgba(0, 0, 0, 0.7);
 }
 
@@ -596,17 +672,15 @@ const getOutcomeClass = (outcome: string): string => {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  
+
   background: linear-gradient(
     180deg,
     rgba(18, 18, 22, 0.98) 0%,
     rgba(14, 14, 17, 0.95) 100%
   );
-  
-  box-shadow: 
-    inset 0 2px 8px rgba(0, 0, 0, 0.5),
-    inset 0 1px 2px rgba(0, 0, 0, 0.6),
-    inset 0 -1px 2px rgba(50, 45, 40, 0.04);
+
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 -1px 2px rgba(50, 45, 40, 0.04);
 }
 
 .activity-panel__header-accent {
@@ -632,7 +706,7 @@ const getOutcomeClass = (outcome: string): string => {
   align-items: center;
   gap: 0.5rem;
   margin: 0;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -758,7 +832,7 @@ const getOutcomeClass = (outcome: string): string => {
 
 .activity-empty__text {
   margin: 0;
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 1.0625rem;
   font-style: italic;
   color: rgba(120, 115, 110, 0.6);
@@ -806,7 +880,7 @@ const getOutcomeClass = (outcome: string): string => {
 }
 
 .log-entry__header-title {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -828,7 +902,7 @@ const getOutcomeClass = (outcome: string): string => {
 }
 
 .log-entry__tier {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 0.5rem;
   font-weight: 700;
   padding: 0.125rem 0.375rem;
@@ -861,7 +935,7 @@ const getOutcomeClass = (outcome: string): string => {
 }
 
 .log-entry__card-name {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 0.8125rem;
   color: rgba(200, 195, 190, 0.95);
   white-space: nowrap;
@@ -905,7 +979,7 @@ const getOutcomeClass = (outcome: string): string => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 0.5rem;
   font-weight: 600;
   color: rgba(140, 130, 120, 0.6);
@@ -913,7 +987,7 @@ const getOutcomeClass = (outcome: string): string => {
 }
 
 .log-entry__username {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-weight: 600;
   font-size: 0.6875rem;
   letter-spacing: 0.02em;
@@ -930,7 +1004,7 @@ const getOutcomeClass = (outcome: string): string => {
 }
 
 .log-entry__time {
-  font-family: 'Crimson Text', serif;
+  font-family: "Crimson Text", serif;
   font-size: 0.8125rem;
   color: rgba(150, 145, 140, 0.85);
 }
@@ -977,22 +1051,75 @@ const getOutcomeClass = (outcome: string): string => {
   color: rgba(180, 70, 70, 0.5);
 }
 
-/* Foil - Subtle gold */
+/* Foil - Prismatic/Rainbow shimmer */
 .log-entry__header.outcome-foil {
   background: linear-gradient(
     180deg,
-    rgba(60, 50, 20, 0.5) 0%,
-    rgba(40, 35, 15, 0.3) 100%
+    rgba(40, 30, 50, 0.5) 0%,
+    rgba(30, 25, 35, 0.3) 100%
   );
-  border-bottom-color: rgba(160, 130, 40, 0.3);
+  border-bottom-color: rgba(160, 140, 200, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Prismatic shimmer overlay - subtle */
+.log-entry__header.outcome-foil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(192, 160, 255, 0.06) 0%,
+    rgba(255, 160, 192, 0.06) 25%,
+    rgba(160, 255, 192, 0.06) 50%,
+    rgba(160, 192, 255, 0.06) 75%,
+    rgba(192, 160, 255, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: logFoilShimmer 8s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .log-entry__header.outcome-foil .log-entry__header-title {
-  color: #c9a227;
+  background: linear-gradient(
+    90deg,
+    #c0a0ff,
+    #ffa0c0,
+    #a0ffc0,
+    #a0c0ff,
+    #c0a0ff
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: logFoilTextShimmer 3s linear infinite;
 }
 
 .log-entry__header.outcome-foil .log-entry__header-rune {
-  color: rgba(180, 145, 40, 0.5);
+  color: rgba(192, 160, 255, 0.6);
+}
+
+@keyframes logFoilShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes logFoilTextShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
 }
 
 /* Transform - Subtle purple */
@@ -1068,7 +1195,7 @@ const getOutcomeClass = (outcome: string): string => {
     width: 100%;
     max-width: 340px;
   }
-  
+
   .activity-tab {
     top: auto;
     bottom: 100px;
@@ -1107,13 +1234,25 @@ const getOutcomeClass = (outcome: string): string => {
 }
 
 @keyframes badge-pop-in {
-  0% { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes badge-pop-out {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 .log-item-enter-active {

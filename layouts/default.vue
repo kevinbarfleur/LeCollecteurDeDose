@@ -14,7 +14,7 @@ const showLegalModal = ref(false);
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col forged-metal">
+  <div id="app-wrapper" class="min-h-screen flex flex-col forged-metal">
     <header class="app-header">
       <div
         class="max-w-[1400px] mx-auto px-3 sm:px-6 py-2 sm:py-4 flex items-center justify-between gap-4 sm:gap-8 flex-wrap sm:flex-nowrap"
@@ -110,7 +110,7 @@ const showLegalModal = ref(false);
 
     <!-- Legal Modal -->
     <LegalModal v-model="showLegalModal" />
-    
+
     <!-- Activity Logs Panel -->
     <ActivityLogsPanel />
   </div>
@@ -122,10 +122,8 @@ const showLegalModal = ref(false);
   top: 0;
   z-index: 50;
   background: rgba(12, 12, 14, 0.98);
-  box-shadow: 
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.02),
-    0 4px 20px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 4px 20px rgba(0, 0, 0, 0.6);
   border-bottom: 1px solid rgba(50, 45, 40, 0.25);
 }
 
@@ -273,10 +271,8 @@ const showLegalModal = ref(false);
   z-index: 1;
   border-radius: 6px;
   background: rgba(10, 10, 12, 0.97);
-  box-shadow: 
-    inset 0 2px 8px rgba(0, 0, 0, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.015),
-    inset 0 1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.015), inset 0 1px 0 rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(35, 33, 30, 0.4);
 }
 
@@ -284,8 +280,7 @@ const showLegalModal = ref(false);
   position: relative;
   z-index: 10;
   background: rgba(10, 10, 12, 0.98);
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02),
     0 -4px 16px rgba(0, 0, 0, 0.4);
   border-top: 1px solid rgba(40, 38, 35, 0.35);
 }

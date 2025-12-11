@@ -8,6 +8,7 @@ export interface AltarEffectsOptions {
   isActive: Ref<boolean>; // isDraggingOrb in altar, isPlaying in replay
   isDestroying?: Ref<boolean>;
   autoWatch?: boolean;    // Whether to auto-watch cursor changes (default: true if cursorX/Y provided)
+  effectsLocked?: Ref<boolean>; // When true, effects are frozen (useful for replay after drop)
 }
 
 export interface CardInfo {
@@ -16,7 +17,7 @@ export interface CardInfo {
 }
 
 export function useAltarEffects(options: AltarEffectsOptions) {
-  const { cardRef, cursorX, cursorY, isActive, isDestroying, autoWatch = true } = options;
+  const { cardRef, cursorX, cursorY, isActive, isDestroying, autoWatch = true, effectsLocked } = options;
   
   // ==========================================
   // HEARTBEAT EFFECT
@@ -24,9 +25,18 @@ export function useAltarEffects(options: AltarEffectsOptions) {
   const heartbeatIntensity = ref(0);
   const isOrbOverCard = ref(false);
   
+  // Internal lock state (can be controlled externally via effectsLocked or internally via lockEffects/unlockEffects)
+  const internalLocked = ref(false);
+  
+  // Check if effects should be frozen
+  const isLocked = () => internalLocked.value || (effectsLocked?.value ?? false);
+  
   // Calculate heartbeat intensity based on distance from cursor to card center
   // Can be called manually with coordinates or uses refs if available
   const updateHeartbeat = (orbX?: number, orbY?: number) => {
+    // If effects are locked, don't update anything
+    if (isLocked()) return;
+    
     const x = orbX ?? cursorX?.value ?? 0;
     const y = orbY ?? cursorY?.value ?? 0;
     
@@ -142,7 +152,22 @@ export function useAltarEffects(options: AltarEffectsOptions) {
     };
   };
   
-  // Reset all effects
+  // Lock effects - prevents any updates to heartbeat/earthquake
+  // Use this when the outcome is triggered to freeze the altar state
+  const lockEffects = () => {
+    internalLocked.value = true;
+    // Also immediately reset the visual states
+    heartbeatIntensity.value = 0;
+    isOrbOverCard.value = false;
+  };
+  
+  // Unlock effects - allows updates again
+  const unlockEffects = () => {
+    internalLocked.value = false;
+  };
+  
+  // Reset all effects (does NOT affect lock state)
+  // Use unlockEffects() + resetEffects() if you want to fully reset
   const resetEffects = () => {
     heartbeatIntensity.value = 0;
     isOrbOverCard.value = false;
@@ -224,6 +249,8 @@ export function useAltarEffects(options: AltarEffectsOptions) {
     getAltarClasses,
     getEarthquakeClasses,
     resetEffects,
+    lockEffects,    // Lock effects after drop (prevents recalculation)
+    unlockEffects,  // Unlock effects (for replay restart)
   };
 }
 
