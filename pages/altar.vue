@@ -20,6 +20,7 @@ import {
   type VariationGroup,
 } from "~/composables/useCardGrouping";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
+import { useLocalStorageRef } from "~/composables/useLocalStorageRef";
 
 const { t } = useI18n();
 
@@ -338,45 +339,12 @@ const closeShareModal = () => {
   resetForNewRecording();
 };
 
-// Record preferences - saved in localStorage
-const recordOnNothing = ref(false);
-const recordOnFoil = ref(true);
-const recordOnDestroyed = ref(true);
-const recordOnTransform = ref(false);
-const recordOnDuplicate = ref(true);
-
-// Load preferences from localStorage on mount
-onMounted(() => {
-  const savedNothing = localStorage.getItem("record_nothing");
-  const savedFoil = localStorage.getItem("record_foil");
-  const savedDestroyed = localStorage.getItem("record_destroyed");
-  const savedTransform = localStorage.getItem("record_transform");
-  const savedDuplicate = localStorage.getItem("record_duplicate");
-
-  if (savedNothing !== null) recordOnNothing.value = savedNothing === "true";
-  if (savedFoil !== null) recordOnFoil.value = savedFoil === "true";
-  if (savedDestroyed !== null)
-    recordOnDestroyed.value = savedDestroyed === "true";
-  if (savedTransform !== null)
-    recordOnTransform.value = savedTransform === "true";
-  if (savedDuplicate !== null)
-    recordOnDuplicate.value = savedDuplicate === "true";
-});
-
-// Watch and save preferences to localStorage
-watch(recordOnNothing, (val) =>
-  localStorage.setItem("record_nothing", String(val))
-);
-watch(recordOnFoil, (val) => localStorage.setItem("record_foil", String(val)));
-watch(recordOnDestroyed, (val) =>
-  localStorage.setItem("record_destroyed", String(val))
-);
-watch(recordOnTransform, (val) =>
-  localStorage.setItem("record_transform", String(val))
-);
-watch(recordOnDuplicate, (val) =>
-  localStorage.setItem("record_duplicate", String(val))
-);
+// Record preferences - persisted in localStorage using composable
+const recordOnNothing = useLocalStorageRef("record_nothing", false);
+const recordOnFoil = useLocalStorageRef("record_foil", true);
+const recordOnDestroyed = useLocalStorageRef("record_destroyed", true);
+const recordOnTransform = useLocalStorageRef("record_transform", false);
+const recordOnDuplicate = useLocalStorageRef("record_duplicate", true);
 
 // Check if recording should happen for a given outcome
 const shouldRecordOutcome = (outcome: VaalOutcome): boolean => {

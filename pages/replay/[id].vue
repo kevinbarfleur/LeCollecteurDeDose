@@ -3,25 +3,13 @@ import { useReplayPlayer } from "~/composables/useReplayPlayer";
 import { useAltarEffects } from "~/composables/useAltarEffects";
 import { useAltarAura } from "~/composables/useAltarAura";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
+import { useVaalOutcomes } from "~/composables/useVaalOutcomes";
 import { getCardById } from "~/data/mockCards";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
-import type { CardTier } from "~/types/card";
+import type { Card, CardTier } from "~/types/card";
+import { TIER_COLORS, getTierColors } from "~/constants/colors";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
-
-// Tier-based colors for animations (consistent with useVaalOutcomes)
-const TIER_COLORS = {
-  T0: { primary: '#c9a227', secondary: '#f5d76e', glow: 'rgba(201, 162, 39, 0.8)' },
-  T1: { primary: '#7a6a8a', secondary: '#a294b0', glow: 'rgba(122, 106, 138, 0.7)' },
-  T2: { primary: '#5a7080', secondary: '#8aa0b0', glow: 'rgba(90, 112, 128, 0.6)' },
-  T3: { primary: '#5a5a5d', secondary: '#7a7a7d', glow: 'rgba(90, 90, 93, 0.5)' },
-} as const;
-
-const getTierColors = (tier?: string) => {
-  if (!tier) return TIER_COLORS.T3;
-  const key = tier.toUpperCase() as keyof typeof TIER_COLORS;
-  return TIER_COLORS[key] || TIER_COLORS.T3;
-};
 
 useHead({ title: "Replay - Le Collecteur de Dose" });
 
@@ -56,8 +44,15 @@ const altarPlatformRef = ref<HTMLElement | null>(null);
 const isLoaded = ref(false);
 const hasError = ref(false);
 const showOutcome = ref(false);
-const cardData = ref<any>(null);
+const cardData = ref<Card | null>(null);
 const isCardBeingDestroyed = ref(false);
+const isAnimating = ref(false);
+
+// Computed result card for transform outcomes
+const resultCard = computed<Card | null>(() => {
+  if (!resultCardId.value) return null;
+  return getCardById(resultCardId.value) || null;
+});
 
 // Use shared altar effects composable
 const {
@@ -146,6 +141,20 @@ useAltarAura({
   isVaalMode: isOrbOverCard,
   tier: computed(() => cardData.value?.tier),
   isFoil: isCurrentCardFoil,
+});
+
+// Vaal Outcomes - animations for foil, transform, duplicate (in visual-only mode for replay)
+const {
+  executeNothing: executeNothingEffect,
+  executeFoil: executeFoilEffect,
+  executeTransform: executeTransformEffect,
+  executeDuplicate: executeDuplicateEffect,
+} = useVaalOutcomes({
+  cardRef: altarCardRef,
+  displayCard: cardData,
+  isAnimating,
+  visualOnly: true,
+  resultCard,
 });
 
 const formattedDate = computed(() => {
@@ -237,7 +246,7 @@ const triggerOutcome = async () => {
   
   switch (outcome.value) {
     case 'nothing':
-      await showNothingEffect();
+      await executeNothingEffect();
       break;
       
     case 'foil':
@@ -262,64 +271,13 @@ const triggerOutcome = async () => {
   }, 800);
 };
 
-const showNothingEffect = async () => {
-  if (!altarCardRef.value) return;
-  
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1.3) saturate(0.8)",
-    duration: 0.15,
-    ease: "power2.out",
-    onComplete: () => {
-      gsap.to(altarCardRef.value, {
-        filter: "brightness(1) saturate(1)",
-        duration: 0.3,
-        ease: "power2.out",
-      });
-    },
-  });
-  
-  await new Promise(resolve => setTimeout(resolve, 400));
-};
-
+// Wrapper for foil effect that also updates cardData
 const transformToFoilEffect = async () => {
-  if (!altarCardRef.value) return;
-  
-  const tierColors = getTierColors(cardInfo.value?.tier);
-  const glowShadow = `0 0 30px ${tierColors.glow}, 0 0 60px ${tierColors.glow}`;
-  
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1.8) saturate(1.5)",
-    scale: 1.05,
-    boxShadow: glowShadow,
-    duration: 0.2,
-    ease: "power2.in",
-  });
-  
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(3) saturate(2)",
-    scale: 1.1,
-    boxShadow: `0 0 50px ${tierColors.glow}, 0 0 90px ${tierColors.glow}`,
-    duration: 0.1,
-    ease: "power2.out",
-  });
-  
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
+  await executeFoilEffect();
+  // Update cardData after animation (visualOnly mode doesn't modify data)
   if (cardData.value) {
     cardData.value = { ...cardData.value, foil: true };
   }
-  
-  gsap.to(altarCardRef.value, {
-    filter: "brightness(1) saturate(1)",
-    scale: 1,
-    boxShadow: 'none',
-    duration: 0.4,
-    ease: "power2.out",
-  });
-  
-  await new Promise(resolve => setTimeout(resolve, 400));
 };
 
 const destroyCardEffect = async () => {

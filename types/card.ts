@@ -55,34 +55,7 @@ export interface UserCollection {
   totalValue?: number
 }
 
-// Helper type for tier styling
-export interface TierConfig {
-  color: string
-  glowColor: string
-  label: string
-}
-
-// "Glyphes Éteints" palette - Dark, runic aesthetic
-export const TIER_CONFIG: Record<CardTier, TierConfig> = {
-  T0: {
-    color: '#6d5a2a',      // Ambre sombre
-    glowColor: '#c9a227',  // Lueur chaude
-    label: 'T0'
-  },
-  T1: {
-    color: '#3a3445',      // Obsidienne
-    glowColor: '#7a6a8a',  // Lueur froide
-    label: 'T1'
-  },
-  T2: {
-    color: '#3a4550',      // Ardoise
-    glowColor: '#5a7080',  // Éclat subtil
-    label: 'T2'
-  },
-  T3: {
-    color: '#2a2a2d',      // Basalte
-    glowColor: '#4a4a4d',
-    label: 'T3'
-  }
-}
+// Re-export tier config from centralized colors
+export { TIER_STYLE_CONFIG as TIER_CONFIG } from '~/constants/colors'
+export type { TierStyleConfig as TierConfig } from '~/constants/colors'
 

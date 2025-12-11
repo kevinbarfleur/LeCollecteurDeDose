@@ -12,21 +12,7 @@ import type { VaalOutcome } from '~/types/vaalOutcome';
 import type { Card, CardTier } from '~/types/card';
 import { isCardFoil } from '~/types/card';
 import { allCards } from '~/data/mockCards';
-
-// ==========================================
-// TIER-BASED COLORS
-// ==========================================
-
-const TIER_COLORS = {
-  T0: { primary: '#c9a227', secondary: '#f5d76e', glow: 'rgba(201, 162, 39, 0.8)' },
-  T1: { primary: '#7a6a8a', secondary: '#a294b0', glow: 'rgba(122, 106, 138, 0.7)' },
-  T2: { primary: '#5a7080', secondary: '#8aa0b0', glow: 'rgba(90, 112, 128, 0.6)' },
-  T3: { primary: '#5a5a5d', secondary: '#7a7a7d', glow: 'rgba(90, 90, 93, 0.5)' },
-} as const;
-
-const getTierColors = (tier: CardTier) => {
-  return TIER_COLORS[tier as keyof typeof TIER_COLORS] || TIER_COLORS.T3;
-};
+import { TIER_COLORS, getTierColors } from '~/constants/colors';
 
 // ==========================================
 // TYPES
@@ -36,9 +22,11 @@ export interface VaalOutcomeContext {
   cardRef: Ref<HTMLElement | null>;
   cardFrontRef?: Ref<HTMLElement | null>;
   displayCard: Ref<Card | null>;
-  localCollection: Ref<Card[]>;
+  localCollection?: Ref<Card[]>; // Optional - not needed for replay/visual-only mode
   isAnimating: Ref<boolean>;
   altarRef?: Ref<HTMLElement | null>; // Reference to altar for positioning duplicates
+  visualOnly?: boolean; // If true, skip data modifications (for replay)
+  resultCard?: Ref<Card | null>; // For transform in replay mode - the known result card
   onCardUpdate?: (card: Card) => void;
   onCardDestroyed?: (cardUid: string) => void;
   onCardDuplicated?: (originalCard: Card, newCard: Card) => void;
@@ -62,6 +50,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     localCollection,
     isAnimating,
     altarRef,
+    visualOnly = false,
+    resultCard,
     onCardUpdate,
     onCardDestroyed,
     onCardDuplicated,
@@ -118,18 +108,21 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     const cardElement = cardRef.value;
     const glowShadow = `0 0 30px ${tierColors.glow}, 0 0 60px ${tierColors.glow}`;
 
-    // Notify callback BEFORE modifying collection so UI can update selectedVariation
-    // This ensures displayCard stays valid during and after the animation
-    if (onCardUpdate) {
-      onCardUpdate({ ...currentCard, foil: true });
-    }
+    // Skip data modifications in visualOnly mode (replay)
+    if (!visualOnly && localCollection) {
+      // Notify callback BEFORE modifying collection so UI can update selectedVariation
+      // This ensures displayCard stays valid during and after the animation
+      if (onCardUpdate) {
+        onCardUpdate({ ...currentCard, foil: true });
+      }
 
-    // Now update the collection - the callback above should have updated selectedVariation
-    const cardIndex = localCollection.value.findIndex(
-      (c) => c.uid === currentCard.uid
-    );
-    if (cardIndex !== -1) {
-      localCollection.value[cardIndex].foil = true;
+      // Now update the collection - the callback above should have updated selectedVariation
+      const cardIndex = localCollection.value.findIndex(
+        (c) => c.uid === currentCard.uid
+      );
+      if (cardIndex !== -1) {
+        localCollection.value[cardIndex].foil = true;
+      }
     }
 
     // Phase 1: Build up glow with tier color
@@ -197,35 +190,42 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     const currentCard = displayCard.value;
     const currentTier = currentCard.tier as CardTier;
     const tierColors = getTierColors(currentTier);
-    
-    // Get all cards of the same tier (excluding current card)
-    const sameTierCards = allCards.filter(
-      (c) => c.tier === currentTier && c.id !== currentCard.id
-    );
-    
-    if (sameTierCards.length === 0) {
-      isAnimating.value = false;
-      return { success: false, message: 'No other cards in this tier' };
-    }
-    
-    // Pick a random card from the same tier
-    const randomIndex = Math.floor(Math.random() * sameTierCards.length);
-    const newCardTemplate = sameTierCards[randomIndex];
-    
     const cardElement = cardRef.value;
     
     // Apply tier-colored glow as box-shadow
     const glowShadow = `0 0 20px ${tierColors.glow}, 0 0 40px ${tierColors.glow}`;
     
-    // Create the new card early (keeping foil status if original was foil)
-    const newCard: Card = {
-      ...newCardTemplate,
-      uid: newCardTemplate.uid * 1000000 + (Date.now() % 1000000),
-      foil: isCardFoil(currentCard),
-    };
+    let newCard: Card;
+    let newImageUrl: string | undefined;
+    
+    // In visualOnly mode with resultCard, use the known result card
+    if (visualOnly && resultCard?.value) {
+      newCard = resultCard.value;
+      newImageUrl = newCard.gameData?.img;
+    } else {
+      // Normal mode: pick a random card from the same tier
+      const sameTierCards = allCards.filter(
+        (c) => c.tier === currentTier && c.id !== currentCard.id
+      );
+      
+      if (sameTierCards.length === 0) {
+        isAnimating.value = false;
+        return { success: false, message: 'No other cards in this tier' };
+      }
+      
+      const randomIndex = Math.floor(Math.random() * sameTierCards.length);
+      const newCardTemplate = sameTierCards[randomIndex];
+      
+      // Create the new card early (keeping foil status if original was foil)
+      newCard = {
+        ...newCardTemplate,
+        uid: newCardTemplate.uid * 1000000 + (Date.now() % 1000000),
+        foil: isCardFoil(currentCard),
+      };
+      newImageUrl = newCard.gameData?.img;
+    }
     
     // PRELOAD the new card's image BEFORE starting animation
-    const newImageUrl = newCard.gameData?.img;
     if (newImageUrl) {
       try {
         await preloadImage(newImageUrl);
@@ -236,7 +236,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     
     // Find all image elements in the card to swap them directly
     const cardImages = findCardImages(cardElement);
-    const originalImageUrls = cardImages.map(img => img.src);
     
     // Phase 1: Heartbeat vibration effect with synchronized transformation
     const timeline = gsap.timeline();
@@ -300,19 +299,22 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
           });
         }
         
-        // CRITICAL: Notify callback BEFORE modifying collection
-        // This allows the UI to update selectedCardId/selectedVariation first
-        // so displayCard stays valid when the computed recalculates
-        if (onCardTransformed) {
-          onCardTransformed(currentCard, newCard);
-        }
-        
-        // Now update collection - the callback above should have updated selection
-        const cardIndex = localCollection.value.findIndex(
-          (c) => c.uid === currentCard.uid
-        );
-        if (cardIndex !== -1) {
-          localCollection.value[cardIndex] = newCard;
+        // Skip data modifications in visualOnly mode (replay)
+        if (!visualOnly && localCollection) {
+          // CRITICAL: Notify callback BEFORE modifying collection
+          // This allows the UI to update selectedCardId/selectedVariation first
+          // so displayCard stays valid when the computed recalculates
+          if (onCardTransformed) {
+            onCardTransformed(currentCard, newCard);
+          }
+          
+          // Now update collection - the callback above should have updated selection
+          const cardIndex = localCollection.value.findIndex(
+            (c) => c.uid === currentCard.uid
+          );
+          if (cardIndex !== -1) {
+            localCollection.value[cardIndex] = newCard;
+          }
         }
       },
     });
@@ -503,14 +505,17 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       clearProps: 'filter,boxShadow',
     });
     
-    // Add duplicate to collection
-    localCollection.value.push(duplicateCard);
+    // Skip data modifications in visualOnly mode (replay)
+    if (!visualOnly && localCollection) {
+      // Add duplicate to collection
+      localCollection.value.push(duplicateCard);
+      
+      if (onCardDuplicated) {
+        onCardDuplicated(originalCard, duplicateCard);
+      }
+    }
     
     isAnimating.value = false;
-
-    if (onCardDuplicated) {
-      onCardDuplicated(originalCard, duplicateCard);
-    }
 
     return { success: true, newCard: duplicateCard };
   };
