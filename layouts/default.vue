@@ -151,6 +151,9 @@ const canSeeSettings = computed(() => {
 
     <!-- Activity Logs Panel -->
     <ActivityLogsPanel />
+
+    <!-- Activity Notifications (toast notifications when panel is closed) -->
+    <ActivityNotifications />
   </div>
 </template>
 
