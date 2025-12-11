@@ -93,6 +93,42 @@ export type Database = {
         }
         Relationships: []
       }
+      live_rooms: {
+        Row: {
+          id: string
+          host_id: string
+          host_name: string
+          host_avatar: string | null
+          room_code: string
+          is_active: boolean
+          spectator_count: number
+          created_at: string | null
+          closed_at: string | null
+        }
+        Insert: {
+          id?: string
+          host_id: string
+          host_name: string
+          host_avatar?: string | null
+          room_code?: string
+          is_active?: boolean
+          spectator_count?: number
+          created_at?: string | null
+          closed_at?: string | null
+        }
+        Update: {
+          id?: string
+          host_id?: string
+          host_name?: string
+          host_avatar?: string | null
+          room_code?: string
+          is_active?: boolean
+          spectator_count?: number
+          created_at?: string | null
+          closed_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -114,4 +150,7 @@ export type ReplayInsert = Database['public']['Tables']['replays']['Insert']
 
 export type ActivityLog = Database['public']['Tables']['activity_logs']['Row']
 export type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
+
+export type LiveRoom = Database['public']['Tables']['live_rooms']['Row']
+export type LiveRoomInsert = Database['public']['Tables']['live_rooms']['Insert']
 

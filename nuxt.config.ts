@@ -33,6 +33,8 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // Server-only keys (not exposed to client)
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     oauth: {
       twitch: {
         clientId: process.env.NUXT_OAUTH_TWITCH_CLIENT_ID,
@@ -42,6 +44,10 @@ export default defineNuxtConfig({
     },
     session: {
       maxAge: 60 * 60 * 24 * 7
+    },
+    // Public keys (exposed to client)
+    public: {
+      supabaseUrl: process.env.SUPABASE_URL || '',
     }
   },
 

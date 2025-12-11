@@ -21,6 +21,9 @@ import {
 } from "~/composables/useCardGrouping";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 import { useLocalStorageRef } from "~/composables/useLocalStorageRef";
+import { useLiveRoom } from "~/composables/useLiveRoom";
+import { useDebugSettings } from "~/composables/useDebugSettings";
+import type { LiveCardInfo } from "~/types/liveRoom";
 
 const { t } = useI18n();
 
@@ -288,6 +291,14 @@ const placeCardOnAltar = async () => {
         isAnimating.value = false;
         // Capture snapshot after card has landed and rendered
         captureCardSnapshot();
+        
+        // Broadcast to live spectators
+        if (isLive.value) {
+          const cardInfo = getLiveCardInfo();
+          if (cardInfo) {
+            broadcastCardPlaced(cardInfo);
+          }
+        }
       },
     });
   } else {
@@ -330,7 +341,83 @@ const {
 const showShareModal = ref(false);
 const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
+const showLiveModal = ref(false);
 const lastRecordedOutcome = ref<VaalOutcome | null>(null);
+const liveUrlCopied = ref(false);
+
+// ==========================================
+// LIVE STREAMING
+// ==========================================
+
+// Debug settings - live is disabled by default
+const { liveEnabled } = useDebugSettings();
+
+// Close live room if debug setting is disabled while live
+watch(liveEnabled, async (enabled) => {
+  if (!enabled && isLive.value) {
+    await closeLiveRoom();
+    showLiveModal.value = false;
+  }
+});
+
+const {
+  roomCode: liveRoomCode,
+  isLive,
+  isCreating: isCreatingLive,
+  isClosing: isClosingLive,
+  error: liveError,
+  spectatorCount,
+  getShareUrl: liveShareUrl,
+  createRoom: createLiveRoom,
+  closeRoom: closeLiveRoom,
+  copyShareUrl: copyLiveShareUrl,
+  broadcastCardPlaced,
+  broadcastCardEjected,
+  broadcastVaalStarted,
+  broadcastVaalPosition,
+  broadcastVaalCancelled,
+  broadcastVaalDropped,
+  broadcastOutcomeRevealed,
+} = useLiveRoom();
+
+// Start/stop live streaming
+const toggleLive = async () => {
+  if (isLive.value) {
+    await closeLiveRoom();
+    showLiveModal.value = false;
+  } else if (authUser.value) {
+    const code = await createLiveRoom(
+      authUser.value.id?.toString() || '',
+      authUser.value.displayName || 'Streamer',
+      authUser.value.avatar || null
+    );
+    if (code) {
+      liveUrlCopied.value = false;
+    }
+  }
+};
+
+const handleCopyLiveUrl = async () => {
+  const success = await copyLiveShareUrl();
+  if (success) {
+    liveUrlCopied.value = true;
+    setTimeout(() => {
+      liveUrlCopied.value = false;
+    }, 2000);
+  }
+};
+
+// Helper to create LiveCardInfo from displayCard
+const getLiveCardInfo = (): LiveCardInfo | null => {
+  if (!displayCard.value) return null;
+  return {
+    cardId: displayCard.value.id,
+    cardName: displayCard.value.name,
+    cardTier: displayCard.value.tier,
+    cardFoil: isCardFoil(displayCard.value),
+    cardImage: displayCard.value.gameData?.img || '',
+  };
+};
 
 // Close share modal and reset recording state to allow new recordings
 const closeShareModal = () => {
@@ -698,6 +785,11 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
       break;
   }
 
+  // Broadcast outcome to live spectators
+  if (isLive.value) {
+    broadcastOutcomeRevealed(outcome, resultCardId || null);
+  }
+
   // Handle recording AFTER the outcome so we have the result info
   if (shouldRecord) {
     // Full recording - will save replay AND activity log (with replay link)
@@ -731,6 +823,11 @@ const ejectCard = async () => {
 
   isCardAnimatingOut.value = true;
   isAltarActive.value = false;
+
+  // Broadcast to live spectators
+  if (isLive.value) {
+    broadcastCardEjected();
+  }
 
   const exit = getRandomExitPoint();
 
@@ -888,6 +985,11 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   currentX = clientX;
   currentY = clientY;
 
+  // Broadcast vaal started to live spectators
+  if (isLive.value) {
+    broadcastVaalStarted();
+  }
+
   // Record initial position relative to card center
   if (isRecording.value && altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
@@ -962,13 +1064,24 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
   updateHeartbeat(orbCenterX, orbCenterY);
 
   // Record position for replay relative to card center
-  if (isRecording.value && altarCardRef.value) {
+  if (altarCardRef.value) {
     const cardRect = altarCardRef.value.getBoundingClientRect();
     const cardCenter = {
       x: cardRect.left + cardRect.width / 2,
       y: cardRect.top + cardRect.height / 2,
     };
-    recordPosition(orbCenterX, orbCenterY, cardCenter);
+    
+    // Record for replay
+    if (isRecording.value) {
+      recordPosition(orbCenterX, orbCenterY, cardCenter);
+    }
+    
+    // Broadcast for live (throttled by the composable's recordPosition interval)
+    if (isLive.value) {
+      const relX = orbCenterX - cardCenter.x;
+      const relY = orbCenterY - cardCenter.y;
+      broadcastVaalPosition(relX, relY);
+    }
   }
 };
 
@@ -982,6 +1095,11 @@ const endDragOrb = async () => {
 
   // If orb was dropped on card, consume it and apply Vaal outcome
   if (isOrbOverCard.value && vaalOrbs.value > 0) {
+    // Broadcast vaal dropped to live spectators
+    if (isLive.value) {
+      broadcastVaalDropped();
+    }
+
     // Consume animation - orb shrinks and disappears with dramatic effect
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
@@ -1004,6 +1122,11 @@ const endDragOrb = async () => {
     const outcome = simulateVaalOutcome();
     await handleVaalOutcome(outcome);
   } else {
+    // Broadcast vaal cancelled to live spectators
+    if (isLive.value) {
+      broadcastVaalCancelled();
+    }
+
     // Cancel recording if orb not dropped on card
     if (isRecording.value) {
       cancelRecording();
@@ -1279,6 +1402,19 @@ const endDragOrb = async () => {
                     <span class="vaal-header__recording-text">REC</span>
                   </span>
                   <span class="vaal-header__count">{{ vaalOrbs }}</span>
+                  
+                  <!-- Live streaming button (only shown if enabled in debug settings) -->
+                  <button
+                    v-if="liveEnabled"
+                    class="vaal-header__live"
+                    :class="{ 'vaal-header__live--active': isLive }"
+                    :title="isLive ? `Live: ${spectatorCount} spectateur(s)` : 'Démarrer le live'"
+                    @click="showLiveModal = true"
+                  >
+                    <span class="vaal-header__live-dot"></span>
+                    <span class="vaal-header__live-text">{{ isLive ? spectatorCount : 'LIVE' }}</span>
+                  </button>
+
                   <RunicButton
                     variant="ghost"
                     size="sm"
@@ -1505,6 +1641,138 @@ const endDragOrb = async () => {
                           +
                         </button>
                       </div>
+                    </div>
+
+                    <div class="prefs-toggle prefs-toggle--live">
+                      <span class="prefs-toggle__label">Mode Live</span>
+                      <RunicRadio
+                        v-model="liveEnabled"
+                        :toggle="true"
+                        size="sm"
+                      />
+                    </div>
+                    <p class="prefs-field__hint prefs-field__hint--live">
+                      Active le bouton de partage en temps réel
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
+
+        <!-- Live Streaming Modal -->
+        <Teleport to="body">
+          <Transition name="modal">
+            <div
+              v-if="showLiveModal"
+              class="live-modal-overlay"
+              @click.self="showLiveModal = false"
+            >
+              <div class="live-modal">
+                <div class="live-modal__header">
+                  <h3 class="live-modal__title">
+                    <span class="live-modal__icon" :class="{ 'live-modal__icon--active': isLive }">●</span>
+                    {{ isLive ? 'Live en cours' : 'Streaming Live' }}
+                  </h3>
+                  <button
+                    type="button"
+                    class="live-modal__close"
+                    aria-label="Fermer"
+                    @click="showLiveModal = false"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="live-modal__content">
+                  <!-- Not logged in -->
+                  <div v-if="!loggedIn" class="live-modal__login">
+                    <p class="live-modal__login-text">Connecte-toi avec Twitch pour streamer tes ouvertures en live</p>
+                    <TwitchLoginBtn />
+                  </div>
+
+                  <!-- Live not started -->
+                  <div v-else-if="!isLive" class="live-modal__start">
+                    <p class="live-modal__description">
+                      Partage tes ouvertures de cartes en temps réel avec tes viewers. 
+                      Ils verront tout ce qui se passe sur ton autel et pourront réagir dans le chat !
+                    </p>
+                    
+                    <div class="live-modal__features">
+                      <div class="live-modal__feature">
+                        <span class="live-modal__feature-icon">👁</span>
+                        <span class="live-modal__feature-text">Tes viewers voient les cartes en temps réel</span>
+                      </div>
+                      <div class="live-modal__feature">
+                        <span class="live-modal__feature-icon">💬</span>
+                        <span class="live-modal__feature-text">Chat en direct pour les réactions</span>
+                      </div>
+                      <div class="live-modal__feature">
+                        <span class="live-modal__feature-icon">🎯</span>
+                        <span class="live-modal__feature-text">Suspense partagé lors des Vaal Orbs</span>
+                      </div>
+                    </div>
+
+                    <RunicButton
+                      variant="primary"
+                      size="lg"
+                      :loading="isCreatingLive"
+                      @click="toggleLive"
+                    >
+                      <span v-if="!isCreatingLive">🔴 Démarrer le live</span>
+                      <span v-else>Création de la room...</span>
+                    </RunicButton>
+
+                    <p v-if="liveError" class="live-modal__error">{{ liveError }}</p>
+                  </div>
+
+                  <!-- Live in progress -->
+                  <div v-else class="live-modal__active">
+                    <div class="live-modal__stats">
+                      <div class="live-modal__stat">
+                        <span class="live-modal__stat-value">{{ spectatorCount }}</span>
+                        <span class="live-modal__stat-label">spectateurs</span>
+                      </div>
+                    </div>
+
+                    <div class="live-modal__share">
+                      <label class="live-modal__share-label">Lien de partage</label>
+                      <div class="live-modal__share-row">
+                        <input
+                          type="text"
+                          :value="liveShareUrl || ''"
+                          readonly
+                          class="live-modal__share-input"
+                          @click="($event.target as HTMLInputElement).select()"
+                        />
+                        <RunicButton
+                          variant="primary"
+                          size="sm"
+                          :disabled="liveUrlCopied"
+                          @click="handleCopyLiveUrl"
+                        >
+                          {{ liveUrlCopied ? '✓ Copié' : 'Copier' }}
+                        </RunicButton>
+                      </div>
+                      <p class="live-modal__share-hint">
+                        Code: <strong>{{ liveRoomCode }}</strong>
+                      </p>
+                    </div>
+
+                    <div class="live-modal__actions">
+                      <RunicButton
+                        variant="danger"
+                        size="md"
+                        :loading="isClosingLive"
+                        :disabled="isClosingLive"
+                        @click="toggleLive"
+                      >
+                        <span v-if="!isClosingLive">Terminer le live</span>
+                        <span v-else>Fermeture...</span>
+                      </RunicButton>
                     </div>
                   </div>
                 </div>
@@ -2730,6 +2998,63 @@ const endDragOrb = async () => {
   display: none;
 }
 
+/* Live button */
+.vaal-header__live {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  background: rgba(60, 60, 60, 0.4);
+  border: 1px solid rgba(80, 80, 80, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vaal-header__live:hover {
+  background: rgba(80, 80, 80, 0.5);
+  border-color: rgba(100, 100, 100, 0.5);
+}
+
+.vaal-header__live--active {
+  background: rgba(220, 50, 50, 0.15);
+  border-color: rgba(220, 50, 50, 0.4);
+}
+
+.vaal-header__live--active:hover {
+  background: rgba(220, 50, 50, 0.25);
+}
+
+.vaal-header__live-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(150, 150, 150, 0.5);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.vaal-header__live--active .vaal-header__live-dot {
+  background: #e05050;
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+.vaal-header__live-text {
+  font-family: "Cinzel", serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(180, 170, 160, 0.7);
+  letter-spacing: 0.05em;
+}
+
+.vaal-header__live--active .vaal-header__live-text {
+  color: #e05050;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
 .vaal-header__edge {
   position: absolute;
   bottom: 0;
@@ -3159,6 +3484,18 @@ const endDragOrb = async () => {
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
+/* Live toggle styling */
+.prefs-toggle--live {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(60, 55, 50, 0.3);
+}
+
+.prefs-field__hint--live {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
 /* Modal transition */
 .modal-enter-active,
 .modal-leave-active {
@@ -3224,6 +3561,241 @@ const endDragOrb = async () => {
     opacity: 0.5;
     transform: scale(0.8);
   }
+}
+
+/* ==========================================
+   LIVE MODAL
+   ========================================== */
+.live-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+.live-modal {
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 22, 0.98) 0%,
+    rgba(12, 12, 15, 0.99) 50%,
+    rgba(14, 14, 18, 0.98) 100%
+  );
+  border: 1px solid rgba(60, 55, 50, 0.4);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(80, 75, 70, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.live-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(60, 55, 50, 0.3);
+}
+
+.live-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: "Cinzel", serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgba(200, 180, 160, 0.95);
+  margin: 0;
+}
+
+.live-modal__icon {
+  font-size: 0.875rem;
+  color: rgba(150, 150, 150, 0.5);
+}
+
+.live-modal__icon--active {
+  color: #e05050;
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+.live-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  border-radius: 6px;
+  color: rgba(180, 170, 160, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.live-modal__close:hover {
+  background: rgba(60, 55, 50, 0.3);
+  color: rgba(200, 180, 160, 0.95);
+}
+
+.live-modal__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.live-modal__content {
+  padding: 1.5rem;
+}
+
+.live-modal__login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.live-modal__login-text {
+  color: rgba(180, 170, 160, 0.7);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.live-modal__start {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.live-modal__description {
+  color: rgba(180, 170, 160, 0.75);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.live-modal__features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.live-modal__feature {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background: rgba(25, 22, 20, 0.6);
+  border: 1px solid rgba(50, 45, 40, 0.3);
+  border-radius: 6px;
+}
+
+.live-modal__feature-icon {
+  font-size: 1.25rem;
+}
+
+.live-modal__feature-text {
+  color: rgba(200, 180, 160, 0.85);
+  font-size: 0.875rem;
+}
+
+.live-modal__error {
+  color: #e05050;
+  font-size: 0.875rem;
+  text-align: center;
+  margin: 0;
+}
+
+.live-modal__active {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.live-modal__stats {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.live-modal__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.live-modal__stat-value {
+  font-family: "Cinzel", serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #e05050;
+}
+
+.live-modal__stat-label {
+  font-size: 0.75rem;
+  color: rgba(150, 140, 130, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.live-modal__share {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.live-modal__share-label {
+  font-family: "Cinzel", serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(180, 170, 160, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.live-modal__share-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.live-modal__share-input {
+  flex: 1;
+  background: rgba(20, 18, 16, 0.9);
+  border: 1px solid rgba(50, 45, 40, 0.5);
+  border-radius: 6px;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(200, 180, 160, 0.95);
+}
+
+.live-modal__share-input:focus {
+  outline: none;
+  border-color: rgba(175, 96, 37, 0.6);
+}
+
+.live-modal__share-hint {
+  font-size: 0.8rem;
+  color: rgba(150, 140, 130, 0.5);
+  margin: 0;
+}
+
+.live-modal__share-hint strong {
+  color: rgba(200, 180, 160, 0.8);
+  font-family: monospace;
+  letter-spacing: 0.1em;
+}
+
+.live-modal__actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
 }
 
 /* ==========================================
