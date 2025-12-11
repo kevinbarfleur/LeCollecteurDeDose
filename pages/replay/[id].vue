@@ -1119,69 +1119,72 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
       <Transition name="outcome">
         <div
           v-if="showOutcome"
-          class="fixed bottom-6 left-0 right-0 z-[10000] pointer-events-none flex justify-center px-4"
+          class="fixed bottom-6 left-0 right-0 z-[99999] pointer-events-none flex justify-center px-4"
         >
-          <RunicBox
-            padding="md"
-            class="w-full max-w-[420px] pointer-events-auto"
+          <div
+            class="replay-outcome-panel w-full max-w-[420px] pointer-events-auto"
             :class="outcomeClass"
           >
-            <div class="flex flex-col gap-3">
-              <!-- Header row: badge + title + card info -->
-              <div class="flex items-center gap-4">
-                <div
-                  class="w-11 h-11 flex-shrink-0 flex items-center justify-center"
-                >
-                  <img
-                    src="/images/card-back-logo.png"
-                    alt="Vaal Orb"
-                    class="w-full h-full object-contain replay-outcome__badge-img"
-                  />
-                </div>
+            <RunicBox padding="md">
+              <div class="flex flex-col gap-3">
+                <!-- Header row: badge + title + card info -->
+                <div class="flex items-center gap-4">
+                  <div
+                    class="w-11 h-11 flex-shrink-0 flex items-center justify-center"
+                  >
+                    <img
+                      src="/images/card-back-logo.png"
+                      alt="Vaal Orb"
+                      class="w-full h-full object-contain replay-outcome__badge-img"
+                    />
+                  </div>
 
-                <div class="flex-1 min-w-0">
-                  <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
 
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <!-- For transform: show before → after -->
-                    <template v-if="outcome === 'transform' && resultCardId">
-                      <span class="replay-outcome__card-name--old">{{
-                        getOriginalCardName()
-                      }}</span>
-                      <span class="text-[#50b0e0] text-sm font-semibold"
-                        >→</span
-                      >
-                      <span class="replay-outcome__card-name--new">{{
-                        getCardName()
-                      }}</span>
-                    </template>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <!-- For transform: show before → after -->
+                      <template v-if="outcome === 'transform' && resultCardId">
+                        <span class="replay-outcome__card-name--old">{{
+                          getOriginalCardName()
+                        }}</span>
+                        <span class="text-[#50b0e0] text-sm font-semibold"
+                          >→</span
+                        >
+                        <span class="replay-outcome__card-name--new">{{
+                          getCardName()
+                        }}</span>
+                      </template>
 
-                    <!-- For other outcomes: show single card -->
-                    <template v-else>
-                      <span class="replay-outcome__card-name">{{
-                        getCardName()
-                      }}</span>
-                      <RunicNumber
-                        :value="cardInfo?.tier || ''"
-                        :color="getTierColor()"
-                        size="sm"
-                      />
-                    </template>
+                      <!-- For other outcomes: show single card -->
+                      <template v-else>
+                        <span class="replay-outcome__card-name">{{
+                          getCardName()
+                        }}</span>
+                        <RunicNumber
+                          :value="cardInfo?.tier || ''"
+                          :color="getTierColor()"
+                          size="sm"
+                        />
+                      </template>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Actions row -->
-              <div class="flex gap-2 justify-end pt-2 border-t border-white/5">
-                <RunicButton variant="ghost" size="sm" @click="restartReplay">
-                  Revoir
-                </RunicButton>
-                <RunicButton variant="primary" size="sm" @click="goToAltar">
-                  Essayer l'autel
-                </RunicButton>
+                <!-- Actions row -->
+                <div
+                  class="flex gap-2 justify-end pt-2 border-t border-white/5"
+                >
+                  <RunicButton variant="ghost" size="sm" @click="restartReplay">
+                    Revoir
+                  </RunicButton>
+                  <RunicButton variant="primary" size="sm" @click="goToAltar">
+                    Essayer l'autel
+                  </RunicButton>
+                </div>
               </div>
-            </div>
-          </RunicBox>
+            </RunicBox>
+          </div>
         </div>
       </Transition>
 
@@ -1322,6 +1325,11 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 /* ===== OUTCOME PANEL ===== */
 /* Visual styles only - layout handled by Tailwind */
 
+.replay-outcome-panel {
+  position: relative;
+  border-radius: 6px;
+}
+
 .replay-outcome__badge-img {
   filter: drop-shadow(0 0 6px rgba(180, 50, 50, 0.4));
 }
@@ -1346,23 +1354,29 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
   color: #50b0e0;
 }
 
-/* Outcome Variants */
+/* ===== OUTCOME THEMES ===== */
+
+/* Nothing - Muted grey */
 .outcome--nothing .replay-outcome__badge-img {
   filter: grayscale(0.5) opacity(0.6);
 }
 
-.outcome--foil .replay-outcome__badge-img {
-  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)) brightness(1.2);
+.outcome--nothing .replay-outcome__title {
+  color: rgba(140, 135, 130, 0.75);
 }
 
-.outcome--foil .replay-outcome__title {
-  color: #ffd700;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
-}
-
-.outcome--foil .replay-outcome__card-visual {
-  border-color: rgba(255, 215, 0, 0.3);
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.2);
+/* Destroyed - Blood red */
+.outcome--destroyed .replay-outcome-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(200, 50, 50, 0.08) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
 }
 
 .outcome--destroyed .replay-outcome__badge-img {
@@ -1371,6 +1385,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 
 .outcome--destroyed .replay-outcome__title {
   color: #e05050;
+  text-shadow: 0 0 10px rgba(200, 50, 50, 0.3);
 }
 
 .outcome--destroyed .replay-outcome__card-name {
@@ -1378,31 +1393,113 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
   opacity: 0.5;
 }
 
-.outcome--destroyed .replay-outcome__card-img {
-  filter: grayscale(0.7) opacity(0.6);
+/* Foil - Prismatic rainbow effect */
+.outcome--foil .replay-outcome-panel {
+  overflow: hidden;
 }
 
-/* Transform Outcome */
+.outcome--foil .replay-outcome-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(192, 160, 255, 0.1) 0%,
+    rgba(255, 160, 192, 0.08) 25%,
+    rgba(160, 255, 192, 0.1) 50%,
+    rgba(160, 192, 255, 0.08) 75%,
+    rgba(192, 160, 255, 0.1) 100%
+  );
+  background-size: 200% 200%;
+  animation: outcomeFoilShimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.outcome--foil .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(192, 160, 255, 0.6))
+    drop-shadow(0 0 4px rgba(255, 160, 192, 0.4)) brightness(1.15);
+}
+
+.outcome--foil .replay-outcome__title {
+  background: linear-gradient(
+    90deg,
+    #c0a0ff,
+    #ffa0c0,
+    #a0ffc0,
+    #a0c0ff,
+    #c0a0ff
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: outcomeFoilTextShimmer 4s linear infinite;
+}
+
+@keyframes outcomeFoilShimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes outcomeFoilTextShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+/* Transform - Blue/Cyan mystical */
+.outcome--transform .replay-outcome-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(80, 176, 224, 0.08) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
 .outcome--transform .replay-outcome__badge-img {
   filter: drop-shadow(0 0 8px rgba(80, 176, 224, 0.7)) brightness(1.1);
 }
 
 .outcome--transform .replay-outcome__title {
   color: #50b0e0;
+  text-shadow: 0 0 10px rgba(80, 176, 224, 0.3);
 }
 
-/* Duplicate Outcome */
+/* Duplicate - Green miracle */
+.outcome--duplicate .replay-outcome-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(80, 224, 160, 0.08) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
 .outcome--duplicate .replay-outcome__badge-img {
   filter: drop-shadow(0 0 8px rgba(80, 224, 160, 0.7)) brightness(1.2);
 }
 
 .outcome--duplicate .replay-outcome__title {
   color: #50e0a0;
-}
-
-.outcome--duplicate .replay-outcome__card-visual {
-  border-color: rgba(80, 224, 160, 0.3);
-  box-shadow: 0 0 12px rgba(80, 224, 160, 0.3);
+  text-shadow: 0 0 10px rgba(80, 224, 160, 0.3);
 }
 
 /* ===== CURSOR ===== */
