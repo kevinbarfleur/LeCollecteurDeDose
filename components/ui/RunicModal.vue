@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * RunicModal Component
- * Reusable modal component with runic stone styling.
- * Used as a base for LegalModal, SettingsModal, and other dialogs.
- */
-
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
@@ -39,7 +33,6 @@ const handleOverlayClick = () => {
   }
 };
 
-// Close on escape key
 const handleKeydown = (e: KeyboardEvent) => {
   if (props.closeOnEscape && e.key === "Escape") {
     closeModal();
@@ -56,7 +49,6 @@ onUnmounted(() => {
   document.removeEventListener("keydown", handleKeydown);
 });
 
-// Watch for changes in closeOnEscape to manage listener
 watch(
   () => props.closeOnEscape,
   (enabled) => {
@@ -80,15 +72,11 @@ const maxWidthClasses: Record<string, string> = {
   <Teleport to="body">
     <Transition name="runic-modal">
       <div v-if="modelValue" class="runic-modal">
-        <!-- Overlay -->
         <div class="runic-modal__overlay" @click="handleOverlayClick" />
-
-        <!-- Modal content -->
         <div
           class="runic-modal__content runic-scrollbar"
           :class="maxWidthClasses[maxWidth]"
         >
-          <!-- Header (optional) -->
           <div v-if="title || $slots.header" class="runic-modal__header">
             <slot name="header">
               <h2 class="runic-modal__title">
@@ -108,12 +96,10 @@ const maxWidthClasses: Record<string, string> = {
             </button>
           </div>
 
-          <!-- Body -->
           <div class="runic-modal__body">
             <slot />
           </div>
 
-          <!-- Footer (optional) -->
           <div v-if="$slots.footer" class="runic-modal__footer">
             <slot name="footer" />
           </div>
@@ -157,7 +143,6 @@ const maxWidthClasses: Record<string, string> = {
 
   border-radius: 8px;
   border: 1px solid rgba(60, 55, 50, 0.4);
-
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(80, 75, 70, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
@@ -220,7 +205,6 @@ const maxWidthClasses: Record<string, string> = {
   border-top: 1px solid rgba(60, 55, 50, 0.3);
 }
 
-/* Animations */
 .runic-modal-enter-active,
 .runic-modal-leave-active {
   transition: all 0.3s ease;
@@ -242,7 +226,6 @@ const maxWidthClasses: Record<string, string> = {
   transform: scale(0.95) translateY(-10px);
 }
 
-/* Responsive */
 @media (max-width: 640px) {
   .runic-modal {
     padding: 0.5rem;

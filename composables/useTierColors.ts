@@ -1,10 +1,3 @@
-/**
- * useTierColors Composable
- *
- * Provides tier-based color utilities for components.
- * All colors are sourced from constants/colors.ts for consistency.
- */
-
 import { computed } from "vue";
 import type { CardTier } from "~/types/card";
 import {
@@ -16,25 +9,15 @@ import {
 } from "~/constants/colors";
 
 export interface TierColorUtils {
-  /** Get full color configuration for a tier */
   getConfig: (tier: CardTier) => TierColorConfig;
-  /** Get primary color for a tier */
   getPrimary: (tier: CardTier) => string;
-  /** Get glow color for a tier */
   getGlow: (tier: CardTier) => string;
-  /** Get background color for a tier */
   getBg: (tier: CardTier) => string;
-  /** Get CSS custom properties object for a tier */
   getCSSVars: (tier: CardTier) => Record<string, string>;
-  /** Get Tailwind-compatible class suffix for a tier */
   getClass: (tier: CardTier) => string;
-  /** Get box-shadow CSS for tier glow effect */
   getGlowShadow: (tier: CardTier, intensity?: number) => string;
 }
 
-/**
- * Composable for tier-based color utilities
- */
 export function useTierColors(): TierColorUtils {
   const getConfig = (tier: CardTier): TierColorConfig => {
     return getColors(tier);
@@ -77,9 +60,6 @@ export function useTierColors(): TierColorUtils {
   };
 }
 
-/**
- * Reactive composable that provides tier colors for a specific tier ref
- */
 export function useTierColorsReactive(tierRef: Ref<CardTier | undefined>) {
   const colors = computed(() => {
     const tier = tierRef.value || "T3";

@@ -1,10 +1,3 @@
-/**
- * useKeyboardShortcuts Composable
- *
- * Centralized keyboard shortcut management.
- * Used for modal closing, navigation, and other keyboard interactions.
- */
-
 import { onMounted, onUnmounted, type Ref } from "vue";
 
 export type KeyboardModifier = "ctrl" | "alt" | "shift" | "meta";
@@ -57,16 +50,10 @@ export function useKeyboardShortcuts(
   });
 
   return {
-    /** Manually trigger cleanup */
-    cleanup: () => {
-      document.removeEventListener("keydown", handleKeydown);
-    },
+    cleanup: () => document.removeEventListener("keydown", handleKeydown),
   };
 }
 
-/**
- * Simple escape key handler - commonly used for closing modals/dialogs
- */
 export function useEscapeKey(
   handler: () => void,
   options: { enabled?: boolean | Ref<boolean> } = {}
@@ -83,9 +70,6 @@ export function useEscapeKey(
   );
 }
 
-/**
- * Arrow key navigation
- */
 export function useArrowNavigation(
   handlers: {
     onUp?: () => void;
@@ -112,10 +96,6 @@ export function useArrowNavigation(
 
   return useKeyboardShortcuts(shortcuts, options);
 }
-
-// ==========================================
-// INTERNAL HELPERS
-// ==========================================
 
 function matchesShortcut(
   event: KeyboardEvent,

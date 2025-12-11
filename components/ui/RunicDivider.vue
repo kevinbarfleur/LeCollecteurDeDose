@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * RunicDivider Component
- * Decorative runic separator line with optional center rune.
- */
-
 withDefaults(
   defineProps<{
     rune?: string;
@@ -44,7 +39,6 @@ withDefaults(
   height: 1px;
 }
 
-/* Default variant */
 .runic-divider--default::before,
 .runic-divider--default::after {
   background: linear-gradient(
@@ -59,7 +53,6 @@ withDefaults(
   color: rgba(80, 70, 60, 0.4);
 }
 
-/* Subtle variant */
 .runic-divider--subtle::before,
 .runic-divider--subtle::after {
   background: linear-gradient(
@@ -74,7 +67,6 @@ withDefaults(
   color: rgba(80, 70, 60, 0.3);
 }
 
-/* Accent variant */
 .runic-divider--accent::before,
 .runic-divider--accent::after {
   background: linear-gradient(

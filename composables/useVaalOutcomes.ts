@@ -1,27 +1,10 @@
-/**
- * Vaal Outcomes Composable
- * 
- * Handles animations and logic for all Vaal orb outcomes.
- * Designed to be modular and reusable across altar and replay views.
- * All animations use tier-based colors for consistency.
- */
-
 import { ref, type Ref } from 'vue';
 import gsap from 'gsap';
 import type { VaalOutcome } from '~/types/vaalOutcome';
 import type { Card, CardTier } from '~/types/card';
 import { isCardFoil } from '~/types/card';
 import { allCards } from '~/data/mockCards';
-
-// ==========================================
-// TIER-BASED COLORS (from centralized constants)
-// ==========================================
-
 import { TIER_COLORS, getTierColors } from '~/constants/colors';
-
-// ==========================================
-// TYPES
-// ==========================================
 
 export interface VaalOutcomeContext {
   cardRef: Ref<HTMLElement | null>;

@@ -391,6 +391,31 @@ LeCollecteurDeDose/
 
 If styles exist in a global CSS file (`altar.css`, `cards.css`), don't duplicate them in scoped styles.
 
+### 6. Too Many Comments
+
+```typescript
+// ❌ Wrong - Obvious comments
+// Get the card count
+const cardCount = cards.length;
+
+// Loop through cards
+for (const card of cards) {
+  // Check if card is valid
+  if (card.isValid) {
+    // Add to list
+    validCards.push(card);
+  }
+}
+
+// ✅ Correct - Comment only complex logic
+// Weighted shuffle: higher tiers have lower probability of being first
+const weightedCards = cards.sort((a, b) => {
+  const weightA = TIER_WEIGHTS[a.tier] * Math.random();
+  const weightB = TIER_WEIGHTS[b.tier] * Math.random();
+  return weightB - weightA;
+});
+```
+
 ---
 
 ## 🌐 Internationalization

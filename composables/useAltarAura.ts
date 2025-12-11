@@ -1,19 +1,5 @@
-/**
- * Altar Aura System
- * 
- * Manages the visual aura effects around the altar:
- * - Outer energy rays that emanate BEHIND the altar
- * - Floating ember particles for Vaal mode
- * - Rim lighting effects
- * - Clean color transitions without muddy mixing
- */
-
 import { ref, computed, watch, onUnmounted, type Ref } from 'vue';
 import gsap from 'gsap';
-
-// ==========================================
-// TYPES
-// ==========================================
 
 export interface AltarAuraOptions {
   containerRef: Ref<HTMLElement | null>;
@@ -33,15 +19,7 @@ interface EnergyRay {
   angle: number;
 }
 
-// ==========================================
-// COLOR CONFIGURATION (from centralized constants)
-// ==========================================
-
 import { TIER_COLORS, VAAL_COLORS, FOIL_COLORS } from '~/constants/colors';
-
-// ==========================================
-// COMPOSABLE
-// ==========================================
 
 export function useAltarAura(options: AltarAuraOptions) {
   const { containerRef, isActive, isVaalMode, tier, isFoil } = options;

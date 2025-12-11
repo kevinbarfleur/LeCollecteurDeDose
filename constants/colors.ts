@@ -1,15 +1,4 @@
-/**
- * Centralized Color Definitions - Single Source of Truth
- *
- * All color values for the application are defined here.
- * This file exports both raw color values and Tailwind-compatible formats.
- */
-
 import type { CardTier } from "~/types/card";
-
-// ==========================================
-// TIER COLOR DEFINITIONS
-// ==========================================
 
 export interface TierColorConfig {
   primary: string;
@@ -50,10 +39,6 @@ export const TIER_COLORS: Record<CardTier, TierColorConfig> = {
   },
 } as const;
 
-// ==========================================
-// VAAL (CORRUPTION) COLORS
-// ==========================================
-
 export const VAAL_COLORS = {
   primary: "#c83232",
   secondary: "#ff6b6b",
@@ -61,10 +46,6 @@ export const VAAL_COLORS = {
   glow: "rgba(200, 50, 50, 0.7)",
   ember: "#ff4444",
 } as const;
-
-// ==========================================
-// FOIL (PRISMATIC) COLORS
-// ==========================================
 
 export interface FoilColorConfig {
   primary: string;
@@ -78,12 +59,7 @@ export const FOIL_COLORS: FoilColorConfig[] = [
   { primary: "#a0c0ff", glow: "rgba(160, 192, 255, 0.6)" },
 ] as const;
 
-// ==========================================
-// COMPLETE COLOR PALETTE
-// ==========================================
-
 export const COLORS = {
-  // Background colors
   bg: {
     primary: "#0a0a0c",
     DEFAULT: "#0c0c0e",
@@ -91,14 +67,10 @@ export const COLORS = {
     surfaceLight: "#1a1a1f",
     elevated: "#1a1a1f",
   },
-
-  // Border colors
   border: {
     DEFAULT: "#2a2a30",
     light: "#3a3a40",
   },
-
-  // Text colors
   text: {
     primary: "#e8e6e3",
     DEFAULT: "#c8c8c8",
@@ -106,8 +78,6 @@ export const COLORS = {
     muted: "#5a5a60",
     secondary: "rgba(140, 130, 120, 0.85)",
   },
-
-  // Accent color (PoE copper/bronze)
   accent: {
     DEFAULT: "#af6025",
     light: "#c97a3a",
@@ -115,34 +85,17 @@ export const COLORS = {
     glow: "rgba(175, 96, 37, 0.4)",
     glowSubtle: "rgba(175, 96, 37, 0.15)",
   },
-
-  // Tier colors
   tiers: TIER_COLORS,
-
-  // Vaal/Corruption colors
   vaal: VAAL_COLORS,
-
-  // Foil/Prismatic colors
   foil: FOIL_COLORS,
-
-  // Status colors
   status: {
     success: "#4a9f5a",
     error: "#c45050",
     warning: "#c9a227",
   },
-
-  // Unique rarity (alias for accent)
   unique: "#af6025",
 } as const;
 
-// ==========================================
-// TAILWIND-COMPATIBLE EXPORTS
-// ==========================================
-
-/**
- * Color configuration formatted for Tailwind CSS
- */
 export const tailwindColors = {
   poe: {
     bg: COLORS.bg.DEFAULT,
@@ -174,9 +127,6 @@ export const tailwindColors = {
   unique: COLORS.unique,
 };
 
-/**
- * Box shadow configuration for Tailwind CSS
- */
 export const tailwindBoxShadows = {
   card: "0 4px 20px rgba(0, 0, 0, 0.5)",
   "card-hover": "0 8px 40px rgba(0, 0, 0, 0.7)",
@@ -188,20 +138,10 @@ export const tailwindBoxShadows = {
   "glow-t3": `0 0 8px ${TIER_COLORS.T3.glow}`,
 };
 
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-/**
- * Get tier color configuration by tier name
- */
 export function getTierColors(tier: CardTier): TierColorConfig {
   return TIER_COLORS[tier] || TIER_COLORS.T3;
 }
 
-/**
- * Get CSS custom properties for a tier
- */
 export function getTierCSSVars(tier: CardTier): Record<string, string> {
   const colors = getTierColors(tier);
   return {
@@ -212,21 +152,10 @@ export function getTierCSSVars(tier: CardTier): Record<string, string> {
   };
 }
 
-/**
- * Get CSS class suffix for a tier (lowercase)
- */
 export function getTierClass(tier: CardTier): string {
   return tier.toLowerCase();
 }
 
-// ==========================================
-// CSS CUSTOM PROPERTIES (for :root)
-// ==========================================
-
-/**
- * CSS custom properties to be used in stylesheets
- * These match the legacy variable names for backwards compatibility
- */
 export const cssCustomProperties = {
   "--color-accent": COLORS.accent.DEFAULT,
   "--color-accent-light": COLORS.accent.light,
