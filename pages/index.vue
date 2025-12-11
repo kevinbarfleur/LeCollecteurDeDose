@@ -3,42 +3,6 @@ const { t } = useI18n();
 
 useHead({ title: t("meta.home.title") });
 
-const cardCount = 7;
-const cards = Array.from({ length: cardCount }, (_, i) => ({
-  id: i,
-  baseRotation: -30 + (60 / (cardCount - 1)) * i,
-  delay: i * 0.08,
-}));
-
-const hoveredCard = ref<number | null>(null);
-const cardBackLogoUrl = "/images/card-back-logo.png";
-
-const getCardStyle = (card: (typeof cards)[0], index: number) => {
-  const isHovered = hoveredCard.value === index;
-  const baseRotation = card.baseRotation;
-
-  let translateY = 0;
-  let translateX = 0;
-  let rotation = baseRotation;
-  let scale = 1;
-  let zIndex = index + 1;
-
-  if (isHovered) {
-    translateY = -20;
-    rotation = baseRotation * 0.9;
-    scale = 1.02;
-  }
-
-  return {
-    "--rotation": `${rotation}deg`,
-    "--translate-y": `${translateY}px`,
-    "--translate-x": `${translateX}px`,
-    "--scale": scale,
-    "--z-index": zIndex,
-    "--delay": `${card.delay}s`,
-  };
-};
-
 const isVisible = ref(false);
 onMounted(() => {
   setTimeout(() => {
@@ -49,18 +13,14 @@ onMounted(() => {
 
 <template>
   <NuxtLayout>
-    <div class="relative min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
+    <div class="hero-page">
       <div class="home-bg">
         <div class="home-bg__gradient"></div>
         <div class="home-bg__particles"></div>
       </div>
 
-      <div
-        class="relative z-10 min-h-[calc(100vh-80px)] flex items-center justify-center p-8"
-      >
-        <div
-          class="flex flex-col items-center gap-10 md:gap-4 max-w-4xl w-full"
-        >
+      <div class="hero-page__content">
+        <div class="hero-page__inner">
           <section class="hero-section">
             <div
               class="hero-mascot"
@@ -90,42 +50,12 @@ onMounted(() => {
             </div>
           </section>
 
-          <section class="flex justify-center w-full mb-[10%]">
-            <div class="card-fan" :class="{ 'card-fan--visible': isVisible }">
-              <div
-                v-for="(card, index) in cards"
-                :key="card.id"
-                class="fan-card"
-                :style="getCardStyle(card, index)"
-                @mouseenter="hoveredCard = index"
-                @mouseleave="hoveredCard = null"
-              >
-                <div class="fan-card__inner">
-                  <div class="fan-card__back">
-                    <div class="fan-card__frame">
-                      <div class="fan-card__bg"></div>
-                      <div class="fan-card__border"></div>
-                      <span class="fan-card__rune fan-card__rune--tl">✧</span>
-                      <span class="fan-card__rune fan-card__rune--tr">✧</span>
-                      <span class="fan-card__rune fan-card__rune--bl">✧</span>
-                      <span class="fan-card__rune fan-card__rune--br">✧</span>
-                    </div>
-                    <div class="fan-card__logo-wrapper">
-                      <img
-                        :src="cardBackLogoUrl"
-                        alt=""
-                        class="fan-card__logo"
-                      />
-                    </div>
-                    <div class="fan-card__decoration">
-                      <div class="fan-card__line fan-card__line--top"></div>
-                      <div class="fan-card__line fan-card__line--bottom"></div>
-                    </div>
-                    <div class="fan-card__hover-glow"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <!-- Card animation - Desktop only (hidden on mobile) -->
+          <section
+            class="carousel-section my-12"
+            :class="{ 'carousel-section--visible': isVisible }"
+          >
+            <HomeHeroCarousel />
           </section>
 
           <section
@@ -152,6 +82,72 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Hero page container */
+.hero-page {
+  position: relative;
+  width: 100%;
+  min-height: 500px;
+  overflow: hidden;
+}
+
+/* On desktop with sufficient height, fit exactly in viewport 
+   100vh - header(~80px) - main margins(~48px) - footer(~110px) = ~100vh - 240px */
+@media (min-width: 1024px) and (min-height: 800px) {
+  .hero-page {
+    height: calc(100vh - 240px);
+    min-height: 500px;
+    max-height: calc(100vh - 240px);
+    overflow: hidden;
+  }
+}
+
+/* For larger screens with more space */
+@media (min-width: 1024px) and (min-height: 900px) {
+  .hero-page {
+    height: calc(100vh - 240px);
+    min-height: 550px;
+  }
+}
+
+.hero-page__content {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .hero-page__content {
+    padding: 1rem 2rem;
+  }
+}
+
+.hero-page__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  max-width: 56rem;
+  width: 100%;
+  overflow: visible;
+}
+
+@media (min-width: 768px) {
+  .hero-page__inner {
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-page__inner {
+    gap: 0.75rem;
+  }
+}
+
 .home-bg {
   position: absolute;
   inset: 0;
@@ -230,7 +226,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
   width: 100%;
   text-align: center;
 }
@@ -240,15 +236,21 @@ onMounted(() => {
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
     text-align: left;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-section {
+    gap: 1.25rem;
   }
 }
 
 .hero-mascot {
   position: relative;
-  width: 140px;
-  height: 140px;
+  width: 100px;
+  height: 100px;
   opacity: 0;
   transform: scale(0.8) translateY(20px);
   transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -257,29 +259,29 @@ onMounted(() => {
 
 @media (min-width: 640px) {
   .hero-mascot {
-    width: 160px;
-    height: 160px;
+    width: 120px;
+    height: 120px;
   }
 }
 
 @media (min-width: 768px) {
   .hero-mascot {
-    width: 180px;
-    height: 180px;
+    width: 130px;
+    height: 130px;
   }
 }
 
 @media (min-width: 1024px) {
   .hero-mascot {
-    width: 180px;
-    height: 180px;
+    width: 120px;
+    height: 120px;
   }
 }
 
 @media (min-width: 1280px) {
   .hero-mascot {
-    width: 200px;
-    height: 200px;
+    width: 140px;
+    height: 140px;
   }
 }
 
@@ -337,7 +339,13 @@ onMounted(() => {
 }
 
 .hero-title {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .hero-title {
+    margin-bottom: 0.375rem;
+  }
 }
 
 .hero-title__main {
@@ -419,279 +427,33 @@ onMounted(() => {
   font-style: italic;
 }
 
-.card-fan {
+/* Carousel Section - Hidden on mobile, visible on desktop only */
+.carousel-section {
+  display: none;
   position: relative;
   width: 100%;
-  max-width: 600px;
-  height: 260px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  perspective: 1000px;
+  max-width: 700px;
   opacity: 0;
-  transform: translateY(30px);
+  transform: translateY(20px);
   transition: all 0.8s ease 0.4s;
+  z-index: 1;
+  overflow: visible;
 }
 
-.card-fan--visible {
+/* Show carousel only on desktop (1024px+) */
+@media (min-width: 1024px) {
+  .carousel-section {
+    display: block;
+  }
+}
+
+.carousel-section--visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-@media (min-width: 640px) {
-  .card-fan {
-    height: 300px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .card-fan {
-    height: 350px;
-    max-width: 750px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .card-fan {
-    height: 400px;
-    max-width: 850px;
-  }
-}
-
-.fan-card {
-  position: absolute;
-  bottom: 0;
-  width: 140px;
-  height: 196px;
-  transform-origin: bottom center;
-  transform: rotate(var(--rotation)) translateY(var(--translate-y))
-    translateX(var(--translate-x)) scale(var(--scale));
-  z-index: var(--z-index);
-  cursor: pointer;
-  transition: all 0.3s ease-out;
-  animation: card-entrance 0.6s ease backwards;
-  animation-delay: calc(0.5s + var(--delay));
-}
-
-@media (min-width: 640px) {
-  .fan-card {
-    width: 165px;
-    height: 231px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .fan-card {
-    width: 190px;
-    height: 266px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .fan-card {
-    width: 220px;
-    height: 308px;
-  }
-}
-
-@keyframes card-entrance {
-  from {
-    opacity: 0;
-    transform: rotate(var(--rotation)) translateY(50px) scale(0.8);
-  }
-}
-
-.fan-card__inner {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.3s ease;
-}
-
-.fan-card:hover .fan-card__inner {
-  transform: rotateY(2deg) rotateX(-2deg);
-}
-
-.fan-card__back {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(60, 50, 45, 0.3);
-  transition: box-shadow 0.3s ease;
-}
-
-.fan-card:hover .fan-card__back {
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 15px rgba(175, 96, 37, 0.1),
-    0 0 0 1px rgba(175, 96, 37, 0.3);
-}
-
-.fan-card__frame {
-  position: absolute;
-  inset: 0;
-}
-
-.fan-card__bg {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    160deg,
-    #0a0908 0%,
-    #060505 30%,
-    #030303 60%,
-    #080706 100%
-  );
-}
-
-.fan-card__bg::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 50% 50%,
-    rgba(20, 15, 12, 0.3) 0%,
-    transparent 70%
-  );
-}
-
-.fan-card__bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-}
-
-.fan-card__border {
-  position: absolute;
-  inset: 6px;
-  border: 1px solid rgba(60, 50, 45, 0.25);
-  border-radius: 5px;
-  pointer-events: none;
-}
-
-.fan-card__border::before {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border: 1px solid rgba(50, 40, 35, 0.2);
-  border-radius: 3px;
-}
-
-.fan-card__rune {
-  position: absolute;
-  font-size: 10px;
-  color: rgba(80, 65, 55, 0.4);
-  z-index: 2;
-  transition: color 0.3s ease;
-}
-
-.fan-card:hover .fan-card__rune {
-  color: rgba(175, 96, 37, 0.6);
-}
-
-.fan-card__rune--tl {
-  top: 10px;
-  left: 10px;
-}
-.fan-card__rune--tr {
-  top: 10px;
-  right: 10px;
-}
-.fan-card__rune--bl {
-  bottom: 10px;
-  left: 10px;
-}
-.fan-card__rune--br {
-  bottom: 10px;
-  right: 10px;
-}
-
-.fan-card__logo-wrapper {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3;
-  padding: 18%;
-}
-
-.fan-card__logo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  opacity: 0.9;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.fan-card:hover .fan-card__logo {
-  opacity: 1;
-  transform: scale(1.05);
-}
-
-.fan-card__decoration {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.fan-card__line {
-  position: absolute;
-  left: 15%;
-  right: 15%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(50, 40, 35, 0.3) 20%,
-    rgba(60, 50, 45, 0.4) 50%,
-    rgba(50, 40, 35, 0.3) 80%,
-    transparent 100%
-  );
-  transition: background 0.3s ease;
-}
-
-.fan-card:hover .fan-card__line {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(175, 96, 37, 0.3) 20%,
-    rgba(175, 96, 37, 0.5) 50%,
-    rgba(175, 96, 37, 0.3) 80%,
-    transparent 100%
-  );
-}
-
-.fan-card__line--top {
-  top: 30px;
-}
-.fan-card__line--bottom {
-  bottom: 30px;
-}
-
-.fan-card__hover-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(175, 96, 37, 0.15) 0%,
-    transparent 70%
-  );
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.fan-card:hover .fan-card__hover-glow {
-  opacity: 1;
-}
-
 .cta-section {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -700,6 +462,7 @@ onMounted(() => {
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.6s ease 0.8s;
+  z-index: 2;
 }
 
 .cta-section--visible {

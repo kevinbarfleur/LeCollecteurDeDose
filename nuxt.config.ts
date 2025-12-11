@@ -42,6 +42,12 @@ export default defineNuxtConfig({
     },
     session: {
       maxAge: 60 * 60 * 24 * 7
+    },
+    // Data API configuration
+    dataApiKey: process.env.DATA_API_KEY || '',
+    // Public runtime config (accessible client-side)
+    public: {
+      dataApiUrl: process.env.DATA_API_URL || 'http://localhost:3001',
     }
   },
 

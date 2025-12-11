@@ -1023,7 +1023,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
       <div v-else-if="hasError || playerError" class="replay-state">
         <div class="flex flex-col items-center text-center max-w-[400px]">
           <img
-            src="/images/card-back-logo.png"
+            src="/images/vaal-risitas.png"
             alt="Vaal Orb"
             class="w-16 h-16 object-contain mb-6 grayscale-[40%] opacity-60"
           />
@@ -1131,7 +1131,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
           class="fixed bottom-20 left-0 right-0 z-[100] pointer-events-none flex justify-center px-4"
         >
           <div
-            class="replay-outcome-panel w-full max-w-[420px] pointer-events-auto"
+            class="replay-outcome-panel w-full max-w-[480px] pointer-events-auto"
             :class="outcomeClass"
           >
             <RunicBox padding="md">
@@ -1142,7 +1142,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
                     class="w-11 h-11 flex-shrink-0 flex items-center justify-center"
                   >
                     <img
-                      src="/images/card-back-logo.png"
+                      src="/images/vaal-risitas.png"
                       alt="Vaal Orb"
                       class="w-full h-full object-contain replay-outcome__badge-img"
                     />
@@ -1218,7 +1218,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
         </div>
         <div class="replay-cursor__orb">
           <img
-            src="/images/card-back-logo.png"
+            src="/images/vaal-risitas.png"
             alt="Vaal Orb"
             class="replay-cursor__orb-img"
           />

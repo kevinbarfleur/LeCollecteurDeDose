@@ -48,7 +48,7 @@ const previewViewRef = ref<HTMLElement | null>(null);
 const detailViewRef = ref<HTMLElement | null>(null);
 
 const isOwned = computed(() => props.owned !== false);
-const cardBackLogoUrl = "/images/card-back-logo.png";
+const cardBackLogoUrl = "/images/orb.png";
 
 type AnimationState = "idle" | "animating" | "expanded";
 const animationState = ref<AnimationState>("idle");
@@ -1662,14 +1662,15 @@ const showOverlay = computed(() => animationState.value !== "idle");
   align-items: center;
   justify-content: center;
   z-index: 3;
-  padding: 20%;
+  padding: 30%;
 }
 
 .card-back__logo {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  opacity: 0.9;
+  opacity: 0.5;
+  filter: brightness(0.7);
 }
 
 .card-back__decoration {
