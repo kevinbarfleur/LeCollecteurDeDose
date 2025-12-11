@@ -11,7 +11,11 @@ import type { ApiResponse, PlayerCollection, CatalogueResponse, ApiError } from 
  */
 export function useApi() {
   const config = useRuntimeConfig()
-  const apiUrl = config.public.dataApiUrl as string
+  const externalApiUrl = config.public.dataApiUrl as string
+  
+  // Use local proxy to avoid CORS issues
+  // External API: /api/userCollection -> Local proxy: /api/data/userCollection
+  const apiUrl = '/api/data'
 
   // State
   const isLoading = ref(false)
@@ -19,9 +23,11 @@ export function useApi() {
 
   /**
    * Generic fetch wrapper with error handling
-   * @param endpoint - API endpoint (e.g., '/api/userCollection')
+   * Uses the local server proxy to avoid CORS issues
+   * 
+   * @param endpoint - API endpoint (e.g., '/api/userCollection' or 'userCollection')
    * @param options - Fetch options
-   * @param requiresAuth - If true, includes x-api-key header (for write operations)
+   * @param requiresAuth - If true, the server proxy will include x-api-key header
    */
   async function apiFetch<T>(
     endpoint: string,
@@ -31,32 +37,14 @@ export function useApi() {
     isLoading.value = true
     error.value = null
 
-    // Normalize the URL (remove trailing slash from base, ensure leading slash on endpoint)
-    const baseUrl = apiUrl.replace(/\/$/, '')
-    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
-    const url = `${baseUrl}${normalizedEndpoint}`
-
-    // Build headers
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      // Required for ngrok free tier
-      'ngrok-skip-browser-warning': 'true',
-      ...(options.headers as Record<string, string> || {}),
-    }
-
-    // Add API key for authenticated requests (write operations)
-    // Note: For client-side, we'll need to call a server route that has the key
-    if (requiresAuth) {
-      // The API key should be handled server-side for security
-      // This is a placeholder - actual implementation should use a server route
-      console.warn('[API] Authenticated request - should be routed through server')
-    }
+    // Remove /api/ prefix if present since our proxy adds it
+    const cleanEndpoint = endpoint.replace(/^\/api\//, '').replace(/^\//, '')
+    const url = `${apiUrl}/${cleanEndpoint}`
 
     try {
       const response = await $fetch(url, {
         method: (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET',
-        body: options.body,
-        headers,
+        body: options.body ? JSON.parse(options.body as string) : undefined,
       })
 
       return response as T
@@ -182,7 +170,7 @@ export function useApi() {
     // State
     isLoading: computed(() => isLoading.value),
     error: computed(() => error.value),
-    apiUrl,
+    apiUrl: externalApiUrl, // Expose external URL for debugging
 
     // Methods - Read operations
     fetchUserCollections,
