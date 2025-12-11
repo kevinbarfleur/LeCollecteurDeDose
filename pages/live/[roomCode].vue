@@ -44,23 +44,174 @@ const hasAttemptedJoin = ref(false);
 const showOutcome = ref(false);
 const isCardBeingDestroyed = ref(false);
 const isAnimating = ref(false);
+const isCardAnimatingIn = ref(false);
+const isCardAnimatingOut = ref(false);
+const isCardOnAltar = ref(false);
 
 // Computed card data from currentCard info
 const cardData = ref<Card | null>(null);
 
-// Update cardData when currentCard changes
-watch(currentCard, (newCard) => {
-  if (!newCard) {
+// ==========================================
+// CARD ENTRY/EXIT ANIMATIONS (same as altar)
+// ==========================================
+
+// Get random entry direction (from outside viewport)
+const getRandomEntryPoint = () => {
+  const side = Math.floor(Math.random() * 4);
+  const spin = (Math.random() - 0.5) * 540; // 1.5 spins max
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+  const horizontalOffset = vw + 100;
+  const verticalOffset = vh + 100;
+
+  switch (side) {
+    case 0: // From top
+      return { x: (Math.random() - 0.5) * 300, y: -verticalOffset, rotation: spin };
+    case 1: // From right
+      return { x: horizontalOffset, y: (Math.random() - 0.5) * 200, rotation: spin };
+    case 2: // From bottom
+      return { x: (Math.random() - 0.5) * 300, y: verticalOffset, rotation: spin };
+    case 3: // From left
+    default:
+      return { x: -horizontalOffset, y: (Math.random() - 0.5) * 200, rotation: spin };
+  }
+};
+
+// Get random exit direction
+const getRandomExitPoint = () => {
+  const angle = Math.random() * Math.PI * 2;
+  const distance = typeof window !== 'undefined' 
+    ? Math.max(window.innerWidth, window.innerHeight) + 200 
+    : 2000;
+  const spin = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 540);
+
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+    rotation: spin,
+  };
+};
+
+// Animate card flying in from outside the screen
+const animateCardIn = async () => {
+  isAnimating.value = true;
+  isCardAnimatingIn.value = true;
+  showOutcome.value = false;
+  
+  await nextTick();
+  isCardOnAltar.value = true;
+  await nextTick();
+
+  if (altarCardRef.value) {
+    gsap.killTweensOf(altarCardRef.value);
+
+    const entry = getRandomEntryPoint();
+
+    // Set initial position (offscreen with rotation)
+    gsap.set(altarCardRef.value, {
+      x: entry.x,
+      y: entry.y,
+      rotation: entry.rotation,
+      scale: 1,
+      opacity: 1,
+    });
+
+    // Fly in and land on altar
+    await new Promise<void>((resolve) => {
+      gsap.to(altarCardRef.value, {
+        x: 0,
+        y: 0,
+        rotation: 0,
+        duration: 0.85,
+        ease: 'expo.out',
+        onComplete: () => {
+          isCardAnimatingIn.value = false;
+          isAnimating.value = false;
+          
+          // Capture snapshot after landing
+          setTimeout(() => {
+            captureCardSnapshot();
+          }, 100);
+          
+          resolve();
+        },
+      });
+    });
+  } else {
+    isCardAnimatingIn.value = false;
+    isAnimating.value = false;
+  }
+};
+
+// Animate card flying out of the screen
+const animateCardOut = async () => {
+  if (!altarCardRef.value) return;
+
+  isCardAnimatingOut.value = true;
+
+  const exit = getRandomExitPoint();
+
+  await new Promise<void>((resolve) => {
+    gsap.to(altarCardRef.value, {
+      x: exit.x,
+      y: exit.y,
+      rotation: exit.rotation,
+      duration: 0.6,
+      ease: 'power2.in',
+      onComplete: () => {
+        isCardAnimatingOut.value = false;
+        isCardOnAltar.value = false;
+        resolve();
+      },
+    });
+  });
+  
+  clearSnapshots();
+};
+
+// Track previous card to handle transitions
+let previousCardId: string | null = null;
+
+// Update cardData when currentCard changes with animations
+watch(currentCard, async (newCard, oldCard) => {
+  // Card removed - animate out
+  if (!newCard && oldCard && isCardOnAltar.value && !isAnimating.value) {
+    await animateCardOut();
     cardData.value = null;
     showOutcome.value = false;
+    previousCardId = null;
     return;
   }
+  
+  if (!newCard) {
+    cardData.value = null;
+    isCardOnAltar.value = false;
+    showOutcome.value = false;
+    previousCardId = null;
+    return;
+  }
+  
   const card = getCardById(newCard.cardId);
-  if (card) {
-    cardData.value = {
-      ...card,
-      foil: newCard.cardFoil,
-    };
+  if (!card) return;
+  
+  const newCardWithFoil = {
+    ...card,
+    foil: newCard.cardFoil,
+  };
+  
+  // If there's a card on altar and it's a different card, animate out first
+  if (isCardOnAltar.value && previousCardId && previousCardId !== newCard.cardId && !isAnimating.value) {
+    await animateCardOut();
+  }
+  
+  // Set the new card data
+  cardData.value = newCardWithFoil;
+  previousCardId = newCard.cardId;
+  
+  // Animate card in if not already on altar
+  if (!isCardOnAltar.value && !isAnimating.value) {
+    await animateCardIn();
   }
 }, { immediate: true });
 
@@ -177,17 +328,7 @@ const {
   resultCard,
 });
 
-// Capture snapshot when card is loaded
-watch(cardData, async (newCard) => {
-  if (newCard) {
-    await nextTick();
-    setTimeout(() => {
-      captureCardSnapshot();
-    }, 500);
-  } else {
-    clearSnapshots();
-  }
-});
+// Note: Snapshot capture is now handled in animateCardIn after card lands
 
 // Handle outcome animation when received
 watch(lastOutcome, async (outcome) => {
@@ -518,11 +659,17 @@ onBeforeUnmount(() => {
             <span class="altar-rune altar-rune--s">✧</span>
             <span class="altar-rune altar-rune--w">✧</span>
 
-            <div ref="cardSlotRef" class="altar-card-slot altar-card-slot--active">
+            <div ref="cardSlotRef" class="altar-card-slot" :class="{ 'altar-card-slot--active': isCardOnAltar }">
               <div
+                v-if="isCardOnAltar && cardData"
                 ref="altarCardRef"
                 class="altar-card"
-                :class="cardClasses"
+                :class="{
+                  'altar-card--animating': isCardAnimatingIn || isCardAnimatingOut,
+                  'altar-card--heartbeat': !isCardAnimatingIn && !isCardAnimatingOut && !isCardBeingDestroyed && !isAnimating,
+                  'altar-card--panicking': isVaalActive && !isCardAnimatingIn && !isCardAnimatingOut,
+                  'altar-card--destroying': isCardBeingDestroyed,
+                }"
                 :style="heartbeatStyles"
               >
                 <div ref="cardFrontRef" class="altar-card__face altar-card__face--front">
@@ -1223,13 +1370,36 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
+/* Card Animation States */
+.altar-card--animating {
+  /* No heartbeat during entry/exit animations */
+  animation: none !important;
+}
+
 /* Heartbeat Animation */
 .altar-card--heartbeat {
   animation: cardHeartbeat var(--heartbeat-speed, 1s) ease-in-out infinite;
 }
 
 .altar-card--panicking {
-  animation: cardHeartbeat var(--heartbeat-speed, 0.5s) ease-in-out infinite;
+  animation: cardHeartbeatPanic var(--heartbeat-speed, 0.5s) ease-in-out infinite;
+}
+
+/* Panic glow effect */
+.altar-card--panicking::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 12px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(180, 50, 50, calc(var(--heartbeat-glow-intensity, 0.5) * 0.5)) 0%,
+    rgba(160, 40, 40, calc(var(--heartbeat-glow-intensity, 0.5) * 0.25)) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: -1;
+  animation: heartbeatGlow var(--heartbeat-speed, 0.5s) ease-in-out infinite;
 }
 
 @keyframes cardHeartbeat {
@@ -1237,8 +1407,22 @@ onBeforeUnmount(() => {
   50% { transform: scale(var(--heartbeat-scale, 1.02)); }
 }
 
+@keyframes cardHeartbeatPanic {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(var(--heartbeat-scale, 1.04)); }
+}
+
+@keyframes heartbeatGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 .altar-card--destroying {
   animation: none !important;
+}
+
+.altar-card--destroying::before {
+  display: none;
 }
 
 /* Disintegration Effect */
