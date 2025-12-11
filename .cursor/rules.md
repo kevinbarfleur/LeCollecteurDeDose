@@ -103,51 +103,150 @@ const colors = getTierColors("T0");
 
 ## 🎯 Tailwind CSS Rules
 
-### MUST Use Tailwind For
+### ⚠️ IMPORTANT: Always Prefer Tailwind
 
-| Property                  | Tailwind Class    |
-| ------------------------- | ----------------- |
-| `display: flex`           | `flex`            |
-| `display: grid`           | `grid`            |
-| `align-items: center`     | `items-center`    |
-| `justify-content: center` | `justify-center`  |
-| `gap: 0.5rem`             | `gap-2`           |
-| `padding: 1rem`           | `p-4`             |
-| `margin-bottom: 1rem`     | `mb-4`            |
-| `position: relative`      | `relative`        |
-| `position: absolute`      | `absolute`        |
-| `font-weight: 600`        | `font-semibold`   |
-| `border-radius: 8px`      | `rounded-lg`      |
-| `width: 100%`             | `w-full`          |
-| `overflow: hidden`        | `overflow-hidden` |
+**Use Tailwind classes directly in templates for all standard layouts and styling.**
+Only use scoped CSS for complex visual effects that Tailwind cannot express.
+
+### MUST Use Tailwind For (In Template)
+
+| Property                   | Tailwind Class        | Example                             |
+| -------------------------- | --------------------- | ----------------------------------- |
+| `display: flex`            | `flex`                | `<div class="flex">`                |
+| `display: grid`            | `grid`                | `<div class="grid">`                |
+| `flex-direction: column`   | `flex-col`            | `<div class="flex-col">`            |
+| `align-items: center`      | `items-center`        | `<div class="items-center">`        |
+| `justify-content: center`  | `justify-center`      | `<div class="justify-center">`      |
+| `justify-content: between` | `justify-between`     | `<div class="justify-between">`     |
+| `gap: 0.5rem`              | `gap-2`               | `<div class="gap-2">`               |
+| `padding: 1rem`            | `p-4`                 | `<div class="p-4">`                 |
+| `margin-bottom: 1rem`      | `mb-4`                | `<div class="mb-4">`                |
+| `position: relative`       | `relative`            | `<div class="relative">`            |
+| `position: absolute`       | `absolute`            | `<div class="absolute">`            |
+| `position: fixed`          | `fixed`               | `<div class="fixed">`               |
+| `font-weight: 600`         | `font-semibold`       | `<span class="font-semibold">`      |
+| `border-radius: 8px`       | `rounded-lg`          | `<div class="rounded-lg">`          |
+| `width: 100%`              | `w-full`              | `<div class="w-full">`              |
+| `max-width: 420px`         | `max-w-[420px]`       | `<div class="max-w-[420px]">`       |
+| `overflow: hidden`         | `overflow-hidden`     | `<div class="overflow-hidden">`     |
+| `flex-shrink: 0`           | `flex-shrink-0`       | `<div class="flex-shrink-0">`       |
+| `pointer-events: none`     | `pointer-events-none` | `<div class="pointer-events-none">` |
+| `z-index: 100`             | `z-[100]`             | `<div class="z-[100]">`             |
 
 ```html
-<!-- ✅ Correct -->
-<div class="flex items-center justify-between gap-4 p-6"></div>
+<!-- ✅ CORRECT: Layout in Tailwind -->
+<div
+  class="fixed bottom-6 left-0 right-0 z-[10000] pointer-events-none flex justify-center px-4"
+>
+  <div class="w-full max-w-[420px] pointer-events-auto">
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center gap-4">
+        <!-- Content -->
+      </div>
+      <div class="flex gap-2 justify-end pt-2 border-t border-white/5">
+        <!-- Actions -->
+      </div>
+    </div>
+  </div>
+</div>
 ```
 
 ```css
-/* ❌ Wrong - Don't use CSS for basic layout */
-.container {
+/* ❌ WRONG: Don't use CSS for basic layout */
+.modal-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 0;
+  right: 0;
+  z-index: 10000;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.5rem;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 ```
 
-### Keep in Scoped CSS
+### Using @apply for Hybrid Approach
+
+When you need Tailwind for layout but also custom visual styles, use `@apply`:
+
+```css
+/* ✅ CORRECT: Layout with @apply, visuals in CSS */
+.replay-header__avatar {
+  @apply w-10 h-10 rounded-full object-cover;
+  border: 2px solid rgba(175, 96, 37, 0.5);
+  box-shadow: 0 0 8px rgba(175, 96, 37, 0.2);
+}
+
+.outcome-title {
+  @apply font-display text-base font-semibold leading-tight mb-1;
+  color: rgba(200, 180, 160, 0.9);
+}
+```
+
+### Keep in Scoped CSS (No Tailwind Alternative)
 
 Complex visual effects that Tailwind can't express:
 
-- Multi-layer gradients (`linear-gradient`, `radial-gradient`)
-- Complex `box-shadow` with multiple layers
-- `@keyframes` animations
-- Pseudo-elements (`::before`, `::after`) for decorative effects
-- `transform-style: preserve-3d` and 3D effects
-- CSS variables with `calc()` operations
-- Foil/holographic effects
+- **Multi-layer gradients** (`linear-gradient`, `radial-gradient` combinations)
+- **Complex `box-shadow`** with multiple layers and insets
+- **`@keyframes` animations** (heartbeat, earthquake, spin, etc.)
+- **Pseudo-elements** (`::before`, `::after`) for decorative effects
+- **3D transforms** (`transform-style: preserve-3d`, perspective)
+- **CSS variables** with `calc()` operations
+- **Filter effects** (`filter: drop-shadow(...)`, `backdrop-filter`)
+- **Foil/holographic effects**
+- **Tier-based theming** (using CSS custom properties)
+
+```css
+/* ✅ CORRECT: Keep complex visuals in CSS */
+.altar-platform {
+  --altar-accent: #3a3530;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(25, 23, 20, 0.6) 0%,
+    rgba(18, 16, 14, 0.8) 50%,
+    rgba(10, 9, 8, 0.95) 100%
+  );
+  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(var(--heartbeat-scale, 1.02));
+  }
+}
+```
+
+### Responsive with Tailwind
+
+Use Tailwind breakpoint prefixes instead of media queries:
+
+```html
+<!-- ✅ CORRECT: Responsive in template -->
+<div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+  <span class="text-sm sm:text-base">Content</span>
+</div>
+```
+
+```css
+/* ❌ WRONG: Don't use media queries for simple responsive */
+@media (min-width: 640px) {
+  .container {
+    flex-direction: row;
+    gap: 1rem;
+  }
+}
+```
 
 ---
 

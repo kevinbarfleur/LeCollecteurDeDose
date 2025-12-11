@@ -1009,22 +1009,28 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
     <div class="replay-page">
       <!-- Loading State -->
       <div v-if="isLoading" class="replay-state">
-        <div class="replay-loading">
+        <div class="flex flex-col items-center gap-5">
           <div class="replay-loading__spinner"></div>
-          <p class="replay-loading__text">Chargement du replay...</p>
+          <p class="font-serif text-base text-stone-400/60">
+            Chargement du replay...
+          </p>
         </div>
       </div>
 
       <!-- Error State -->
       <div v-else-if="hasError || playerError" class="replay-state">
-        <div class="replay-error">
+        <div class="flex flex-col items-center text-center max-w-[400px]">
           <img
             src="/images/card-back-logo.png"
             alt="Vaal Orb"
-            class="replay-error__icon"
+            class="w-16 h-16 object-contain mb-6 grayscale-[40%] opacity-60"
           />
-          <h2 class="replay-error__title">Replay introuvable</h2>
-          <p class="replay-error__message">
+          <h2 class="font-display text-2xl text-stone-300/90 mb-3">
+            Replay introuvable
+          </h2>
+          <p
+            class="font-serif text-base text-stone-400/50 mb-8 leading-relaxed"
+          >
             {{ playerError || "Ce replay n'existe pas ou a été supprimé." }}
           </p>
           <RunicButton variant="primary" @click="goToAltar">
@@ -1043,19 +1049,19 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
         <!-- Compact Header -->
         <RunicBox
           padding="sm"
-          class="replay-header-box"
+          class="w-full"
           :class="headerEarthquakeClasses"
           :style="earthquakeHeaderStyles"
         >
-          <div class="replay-header">
-            <div class="replay-header__user">
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
               <img
                 v-if="userAvatar"
                 :src="userAvatar"
                 :alt="username"
                 class="replay-header__avatar"
               />
-              <div class="replay-header__info">
+              <div class="flex items-baseline gap-2 flex-wrap">
                 <span class="replay-header__name">{{ username }}</span>
                 <span class="replay-header__label">a utilisé une Vaal Orb</span>
               </div>
@@ -1111,38 +1117,43 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 
       <!-- Outcome Panel - Fixed position, outside replay-content -->
       <Transition name="outcome">
-        <div v-if="showOutcome" class="replay-outcome-container">
+        <div
+          v-if="showOutcome"
+          class="fixed bottom-6 left-0 right-0 z-[10000] pointer-events-none flex justify-center px-4"
+        >
           <RunicBox
             padding="md"
-            class="replay-outcome-box"
+            class="w-full max-w-[420px] pointer-events-auto"
             :class="outcomeClass"
           >
-            <div class="replay-outcome">
+            <div class="flex flex-col gap-3">
               <!-- Header row: badge + title + card info -->
-              <div class="replay-outcome__header">
-                <div class="replay-outcome__badge">
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-11 h-11 flex-shrink-0 flex items-center justify-center"
+                >
                   <img
                     src="/images/card-back-logo.png"
                     alt="Vaal Orb"
-                    class="replay-outcome__badge-img"
+                    class="w-full h-full object-contain replay-outcome__badge-img"
                   />
                 </div>
 
-                <div class="replay-outcome__info">
+                <div class="flex-1 min-w-0">
                   <h3 class="replay-outcome__title">{{ outcomeText }}</h3>
 
-                  <div class="replay-outcome__card">
+                  <div class="flex items-center gap-2 flex-wrap">
                     <!-- For transform: show before → after -->
                     <template v-if="outcome === 'transform' && resultCardId">
-                      <span
-                        class="replay-outcome__card-name replay-outcome__card-name--old"
-                        >{{ getOriginalCardName() }}</span
+                      <span class="replay-outcome__card-name--old">{{
+                        getOriginalCardName()
+                      }}</span>
+                      <span class="text-[#50b0e0] text-sm font-semibold"
+                        >→</span
                       >
-                      <span class="replay-outcome__transform-arrow">→</span>
-                      <span
-                        class="replay-outcome__card-name replay-outcome__card-name--new"
-                        >{{ getCardName() }}</span
-                      >
+                      <span class="replay-outcome__card-name--new">{{
+                        getCardName()
+                      }}</span>
                     </template>
 
                     <!-- For other outcomes: show single card -->
@@ -1161,7 +1172,7 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
               </div>
 
               <!-- Actions row -->
-              <div class="replay-outcome__actions">
+              <div class="flex gap-2 justify-end pt-2 border-t border-white/5">
                 <RunicButton variant="ghost" size="sm" @click="restartReplay">
                   Revoir
                 </RunicButton>
@@ -1237,27 +1248,13 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 }
 
 /* ===== LOADING STATE ===== */
-.replay-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-}
+/* Layout handled by Tailwind */
 
 .replay-loading__spinner {
-  width: 48px;
-  height: 48px;
+  @apply w-12 h-12 rounded-full;
   border: 2px solid rgba(60, 55, 50, 0.2);
   border-top-color: rgba(175, 96, 37, 0.8);
-  border-radius: 50%;
   animation: spin 0.8s linear infinite;
-}
-
-.replay-loading__text {
-  font-family: "Crimson Text", serif;
-  font-size: 1rem;
-  color: rgba(200, 180, 160, 0.6);
-  margin: 0;
 }
 
 @keyframes spin {
@@ -1266,74 +1263,17 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
   }
 }
 
-/* ===== ERROR STATE ===== */
-.replay-error {
-  text-align: center;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.replay-error__icon {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  margin-bottom: 1.5rem;
-  filter: grayscale(0.4) opacity(0.6);
-}
-
-.replay-error__title {
-  font-family: "Cinzel", serif;
-  font-size: 1.5rem;
-  color: rgba(200, 180, 160, 0.9);
-  margin: 0 0 0.75rem;
-}
-
-.replay-error__message {
-  font-family: "Crimson Text", serif;
-  font-size: 1rem;
-  color: rgba(200, 180, 160, 0.5);
-  margin: 0 0 2rem;
-  line-height: 1.5;
-}
-
 /* ===== HEADER ===== */
-.replay-header-box {
-  width: 100%;
-}
-
-.replay-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.replay-header__user {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
+/* Layout handled by Tailwind - only visual styles here */
 
 .replay-header__avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  @apply w-10 h-10 rounded-full object-cover;
   border: 2px solid rgba(175, 96, 37, 0.5);
-  object-fit: cover;
   box-shadow: 0 0 8px rgba(175, 96, 37, 0.2);
 }
 
-.replay-header__info {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
 .replay-header__name {
-  font-family: "Cinzel", serif;
+  @apply font-display;
   font-size: 1.1rem;
   font-weight: 600;
   color: rgba(200, 180, 160, 0.95);
@@ -1380,103 +1320,30 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 }
 
 /* ===== OUTCOME PANEL ===== */
-.replay-outcome-container {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 0;
-  right: 0;
-  z-index: 10000;
-  pointer-events: none;
-  display: flex;
-  justify-content: center;
-  padding: 0 1rem;
-}
-
-.replay-outcome-box {
-  width: 100%;
-  max-width: 420px;
-  pointer-events: auto;
-}
-
-.replay-outcome {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.replay-outcome__header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.replay-outcome__badge {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+/* Visual styles only - layout handled by Tailwind */
 
 .replay-outcome__badge-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
   filter: drop-shadow(0 0 6px rgba(180, 50, 50, 0.4));
 }
 
-.replay-outcome__info {
-  flex: 1;
-  min-width: 0;
-}
-
 .replay-outcome__title {
-  font-family: "Cinzel", serif;
-  font-size: 1rem;
-  font-weight: 600;
+  @apply font-display text-base font-semibold leading-tight mb-1;
   color: rgba(200, 180, 160, 0.9);
-  margin: 0 0 0.25rem;
-  line-height: 1.3;
-}
-
-.replay-outcome__card {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .replay-outcome__card-name {
-  font-family: "Cinzel", serif;
-  font-size: 0.875rem;
+  @apply font-display text-sm;
   color: rgba(180, 165, 150, 0.8);
 }
 
 .replay-outcome__card-name--old {
+  @apply text-xs line-through;
   color: rgba(150, 140, 130, 0.6);
-  font-size: 0.8rem;
-  text-decoration: line-through;
-}
-
-.replay-outcome__transform-arrow {
-  color: #50b0e0;
-  font-size: 0.875rem;
-  font-weight: 600;
 }
 
 .replay-outcome__card-name--new {
+  @apply text-sm font-semibold;
   color: #50b0e0;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.replay-outcome__actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  padding-top: 0.25rem;
-  border-top: 1px solid rgba(60, 55, 50, 0.2);
 }
 
 /* Outcome Variants */
@@ -1624,51 +1491,11 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 }
 
 /* ===== RESPONSIVE ===== */
+/* Most responsive styles now handled by Tailwind classes in template */
 @media (max-width: 640px) {
   .replay-content {
     padding: 1rem;
     gap: 1rem;
-  }
-
-  .replay-header {
-    flex-direction: column;
-    gap: 0.75rem;
-    text-align: center;
-  }
-
-  .replay-header__user {
-    justify-content: center;
-  }
-
-  .replay-header__info {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.125rem;
-  }
-
-  .replay-outcome {
-    flex-direction: column;
-    text-align: center;
-    gap: 1rem;
-  }
-
-  .replay-outcome__badge {
-    width: 44px;
-    height: 44px;
-  }
-
-  .replay-outcome__card {
-    justify-content: center;
-  }
-
-  .replay-outcome__card-info {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .replay-outcome__actions {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>
