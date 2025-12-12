@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          id: string
+          twitch_user_id: string
+          twitch_display_name: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          twitch_user_id: string
+          twitch_display_name: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          twitch_user_id?: string
+          twitch_display_name?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           id: string
@@ -42,6 +69,27 @@ export type Database = {
           result_card_id?: string | null
           replay_id?: string | null
           created_at?: string | null
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          key: string
+          value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          key: string
+          value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          key?: string
+          value?: Json
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -99,6 +147,19 @@ export type Database = {
     }
     Functions: {
       generate_short_id: { Args: never; Returns: string }
+      update_app_setting: {
+        Args: {
+          setting_key: string
+          setting_value: Json
+          twitch_user_id: string
+        }
+        Returns: {
+          key: string
+          value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+      }
     }
     Enums: {
       [_ in never]: never
@@ -114,4 +175,18 @@ export type ReplayInsert = Database['public']['Tables']['replays']['Insert']
 
 export type ActivityLog = Database['public']['Tables']['activity_logs']['Row']
 export type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
+
+export type AdminUser = Database['public']['Tables']['admin_users']['Row']
+export type AdminUserInsert = Database['public']['Tables']['admin_users']['Insert']
+
+export type AppSetting = Database['public']['Tables']['app_settings']['Row']
+
+// Typed app settings
+export interface AltarOpenSetting {
+  enabled: boolean
+}
+
+export interface DataSourceSetting {
+  source: 'mock' | 'api'
+}
 

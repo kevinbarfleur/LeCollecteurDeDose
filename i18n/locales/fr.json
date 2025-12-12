@@ -67,6 +67,11 @@
   "altar": {
     "title": "L'Autel (Playground)",
     "subtitle": "Approche, exile… et laisse la corruption juger ta dignité.",
+    "closed": {
+      "title": "L'Autel est Scellé",
+      "description": "Les forces obscures sommeillent… Patiente, exile. L'Autel rouvrira lors de la prochaine session rituelle.",
+      "hint": "Rejoins le stream pour participer aux prochaines corruptions."
+    },
     "auth": {
       "title": "Prouve ton existence",
       "description": "Les ténèbres ne reconnaissent que ceux qui osent affronter la vérité.",
@@ -246,6 +251,34 @@
       "api": "API Externe",
       "apiHint": "Récupère les données depuis l'API de production",
       "warning": "Changer la source rechargera les données. L'API doit être accessible."
+    }
+  },
+  "admin": {
+    "meta": {
+      "title": "Administration - Le Collecteur de Dose"
+    },
+    "title": "Chambre des Arcanes",
+    "subtitle": "Contrôle les forces obscures qui régissent ce domaine.",
+    "connected": "Connecté en temps réel",
+    "disconnected": "Déconnecté",
+    "altar": {
+      "title": "Contrôle de l'Autel",
+      "description": "Ouvre ou ferme l'accès à l'Autel de la Corruption pour les exilés.",
+      "status": "État actuel",
+      "open": "OUVERT",
+      "closed": "FERMÉ",
+      "activate": "Ouvrir l'Autel",
+      "deactivate": "Fermer l'Autel",
+      "hint": "L'état se synchronise en temps réel avec tous les exilés connectés."
+    },
+    "dataSource": {
+      "title": "Source des Données",
+      "description": "Définit la source des collections et du catalogue.",
+      "mock": "Données Mock",
+      "mockHint": "Utilise les données locales de test",
+      "api": "API Externe",
+      "apiHint": "Récupère les données depuis l'API de production",
+      "warning": "Changer la source affecte tous les exilés connectés."
     }
   },
   "footer": {

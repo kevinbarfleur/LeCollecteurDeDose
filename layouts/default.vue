@@ -2,7 +2,7 @@
 const { t } = useI18n();
 const route = useRoute();
 const { user, loggedIn } = useUserSession();
-const { isAllowedUser } = useDataSource();
+const { checkIsAdmin } = useDataSource();
 
 const navItems = computed(() => [
   { path: "/catalogue", label: t("nav.catalogue"), icon: "cards" },
@@ -11,14 +11,26 @@ const navItems = computed(() => [
   { path: "/about", label: t("nav.about"), icon: "info" },
 ]);
 
-const showSettings = ref(false);
 const showLegalModal = ref(false);
 
-// Check if current user can see the settings button
-const canSeeSettings = computed(() => {
-  if (!loggedIn.value || !user.value) return false;
-  return isAllowedUser(user.value.displayName);
-});
+// Check if current user is an admin (uses Twitch user ID from Supabase)
+const isAdmin = ref(false);
+
+// Watch for user changes and check admin status
+watch(
+  () => user.value?.id,
+  async (twitchUserId) => {
+    if (twitchUserId && loggedIn.value) {
+      isAdmin.value = await checkIsAdmin(twitchUserId);
+    } else {
+      isAdmin.value = false;
+    }
+  },
+  { immediate: true }
+);
+
+// Computed for template usage
+const canSeeAdminLink = computed(() => loggedIn.value && isAdmin.value);
 </script>
 
 <template>
@@ -67,13 +79,12 @@ const canSeeSettings = computed(() => {
 
         <div class="flex items-center gap-3">
           <TwitchLoginBtn />
-          <!-- Settings button - only visible for allowed users -->
-          <button
-            v-if="canSeeSettings"
-            type="button"
-            class="settings-btn"
-            :title="t('settings.title')"
-            @click="showSettings = true"
+          <!-- Admin link - only visible for admin users -->
+          <NuxtLink
+            v-if="canSeeAdminLink"
+            to="/admin"
+            class="admin-link"
+            :title="t('admin.title')"
           >
             <svg
               viewBox="0 0 24 24"
@@ -85,7 +96,7 @@ const canSeeSettings = computed(() => {
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
+                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"
               />
               <path
                 stroke-linecap="round"
@@ -93,7 +104,7 @@ const canSeeSettings = computed(() => {
                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-          </button>
+          </NuxtLink>
         </div>
       </div>
     </header>
@@ -145,9 +156,6 @@ const canSeeSettings = computed(() => {
 
     <!-- Legal Modal -->
     <LegalModal v-model="showLegalModal" />
-
-    <!-- Settings Modal - for admin users -->
-    <SettingsModal v-if="canSeeSettings" v-model="showSettings" />
 
     <!-- Activity Logs Panel -->
     <ActivityLogsPanel />
@@ -279,8 +287,8 @@ const canSeeSettings = computed(() => {
   color: #af6025;
 }
 
-/* Settings Button */
-.settings-btn {
+/* Admin Link */
+.admin-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -295,12 +303,12 @@ const canSeeSettings = computed(() => {
   border: 1px solid rgba(80, 70, 60, 0.4);
   border-radius: 4px;
   color: rgba(175, 96, 37, 0.7);
-  cursor: pointer;
+  text-decoration: none;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 85, 65, 0.1);
 }
 
-.settings-btn:hover {
+.admin-link:hover {
   background: linear-gradient(
     180deg,
     rgba(45, 40, 35, 0.95) 0%,
@@ -311,11 +319,11 @@ const canSeeSettings = computed(() => {
   box-shadow: 0 0 10px rgba(175, 96, 37, 0.2), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-.settings-btn svg {
+.admin-link svg {
   transition: transform 0.3s ease;
 }
 
-.settings-btn:hover svg {
+.admin-link:hover svg {
   transform: rotate(45deg);
 }
 

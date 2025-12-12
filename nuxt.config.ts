@@ -28,7 +28,7 @@ export default defineNuxtConfig({
     defaultLocale: 'fr',
     langDir: 'locales',
     strategy: 'no_prefix',
-    lazy: true,
+    lazy: false,
     detectBrowserLanguage: false,
   },
 
@@ -45,9 +45,16 @@ export default defineNuxtConfig({
     },
     // Data API configuration
     dataApiKey: process.env.DATA_API_KEY || '',
+    // Supabase configuration (server-side only)
+    supabaseUrl: process.env.SUPABASE_URL || '',
+    supabaseKey: process.env.SUPABASE_KEY || '',
     // Public runtime config (accessible client-side)
     public: {
       dataApiUrl: process.env.DATA_API_URL || 'http://localhost:3001',
+      supabase: {
+        url: process.env.SUPABASE_URL || '',
+        key: process.env.SUPABASE_KEY || '',
+      },
     }
   },
 

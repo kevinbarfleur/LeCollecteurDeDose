@@ -23,6 +23,11 @@ import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
 
 const { t } = useI18n();
 
+// ==========================================
+// ALTAR OPEN/CLOSED STATE (Real-time from Supabase)
+// ==========================================
+const { altarOpen, isLoading: isLoadingSettings } = useAppSettings();
+
 useHead({ title: t("meta.altar.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
@@ -1176,9 +1181,44 @@ const endDragOrb = async () => {
         </RunicBox>
       </div>
 
+      <!-- Altar Closed Message -->
+      <div
+        v-if="loggedIn && !altarOpen && !isLoadingSettings"
+        class="altar-closed"
+      >
+        <RunicBox padding="lg" max-width="500px" centered>
+          <div class="altar-closed__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+          </div>
+          <h1 class="altar-closed__title">
+            {{ t("altar.closed.title") }}
+          </h1>
+          <p class="altar-closed__description">
+            {{ t("altar.closed.description") }}
+          </p>
+          <div class="altar-closed__hint">
+            <span class="altar-closed__rune">◆</span>
+            <span>{{ t("altar.closed.hint") }}</span>
+            <span class="altar-closed__rune">◆</span>
+          </div>
+          <div class="altar-closed__actions">
+            <RunicButton
+              href="https://twitch.tv/les_doseurs"
+              :external="true"
+              variant="twitch"
+              icon="twitch"
+            >
+              Rejoindre le Stream
+            </RunicButton>
+          </div>
+        </RunicBox>
+      </div>
+
       <!-- Main altar content -->
       <div
-        v-if="loggedIn"
+        v-if="loggedIn && altarOpen"
         class="altar-page"
         :class="bodyEarthquakeClasses"
         :style="earthquakeBodyStyles"
@@ -3445,5 +3485,81 @@ const endDragOrb = async () => {
     width: 56px;
     height: 56px;
   }
+}
+
+/* ==========================================
+   ALTAR CLOSED STATE
+   ========================================== */
+.altar-closed {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.altar-closed__icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  color: rgba(175, 96, 37, 0.6);
+  animation: altarClosedPulse 3s ease-in-out infinite;
+}
+
+.altar-closed__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes altarClosedPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.altar-closed__title {
+  font-family: "Cinzel", serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #c9a227;
+  text-shadow: 0 0 20px rgba(201, 162, 39, 0.3);
+  margin: 0 0 1rem;
+}
+
+.altar-closed__description {
+  font-family: "Crimson Text", serif;
+  font-size: 1.125rem;
+  color: rgba(140, 130, 120, 0.85);
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+  max-width: 380px;
+}
+
+.altar-closed__hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-family: "Crimson Text", serif;
+  font-size: 0.9375rem;
+  font-style: italic;
+  color: rgba(120, 115, 110, 0.7);
+  margin-bottom: 2rem;
+}
+
+.altar-closed__rune {
+  font-size: 0.5rem;
+  color: rgba(175, 96, 37, 0.5);
+}
+
+.altar-closed__actions {
+  display: flex;
+  justify-content: center;
 }
 </style>
