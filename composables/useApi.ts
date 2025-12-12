@@ -69,7 +69,7 @@ export function useApi() {
    */
   async function fetchUserCollections(): Promise<Record<string, any> | null> {
     console.log('[API] Fetching user collections...')
-    const result = await apiFetch<Record<string, any>>('/api/userCollection')
+    const result = await apiFetch<Record<string, any>>('userCollection')
     
     if (result) {
       console.log('[API] User collections fetched:', result)
@@ -79,17 +79,78 @@ export function useApi() {
   }
 
   /**
-   * Fetch the global card catalogue (future endpoint)
+   * Fetch a specific user's collection
+   * Uses fetchUserCollections and extracts the user's data to handle case-insensitive matching
+   * Endpoint: GET /api/userCollection (then extract user data)
    */
-  async function fetchCatalogue(): Promise<CatalogueResponse | null> {
-    console.log('[API] Fetching catalogue...')
-    const result = await apiFetch<CatalogueResponse>('/api/catalogue')
+  async function fetchUserCollection(user: string): Promise<Record<string, any> | null> {
+    console.log(`[API] Fetching collection for user: ${user}`)
+    
+    // Fetch all collections and extract the user's data
+    // This handles case-insensitive matching since the bot server lowercases usernames
+    const allCollections = await fetchUserCollections()
+    
+    if (!allCollections) return null
+    
+    // Try to find the user's data (case-insensitive)
+    const userLower = user.toLowerCase()
+    const userKey = Object.keys(allCollections).find(
+      key => key.toLowerCase() === userLower
+    )
+    
+    if (userKey) {
+      const userData = allCollections[userKey]
+      console.log(`[API] User collection fetched for ${user}:`, userData)
+      return userData
+    }
+    
+    console.log(`[API] User ${user} not found in collections`)
+    return null
+  }
+
+  /**
+   * Fetch a specific user's cards (booster history)
+   * Endpoint: GET /api/usercards/:user
+   */
+  async function fetchUserCards(user: string): Promise<any[] | null> {
+    console.log(`[API] Fetching cards for user: ${user}`)
+    const result = await apiFetch<any[]>(`usercards/${user}`)
     
     if (result) {
-      console.log('[API] Catalogue fetched:', result)
+      console.log(`[API] User cards fetched for ${user}:`, result)
     }
     
     return result
+  }
+
+  /**
+   * Fetch all unique cards (catalogue)
+   * Endpoint: GET /api/uniques
+   */
+  async function fetchUniques(): Promise<any[] | null> {
+    console.log('[API] Fetching uniques...')
+    const result = await apiFetch<any[]>('uniques')
+    
+    if (result) {
+      console.log('[API] Uniques fetched:', result)
+    }
+    
+    return result
+  }
+
+  /**
+   * Fetch the global card catalogue from uniques endpoint
+   */
+  async function fetchCatalogue(): Promise<CatalogueResponse | null> {
+    console.log('[API] Fetching catalogue...')
+    const uniques = await fetchUniques()
+    
+    if (!uniques) return null
+    
+    return {
+      cards: uniques,
+      totalCards: uniques.length,
+    }
   }
 
   /**
@@ -126,7 +187,7 @@ export function useApi() {
     console.log('[API] Health check...')
     
     // Try the user collection endpoint as a health check
-    const result = await apiFetch<any>('/api/userCollection')
+    const result = await apiFetch<any>('userCollection')
     
     const isHealthy = result !== null
     console.log(`[API] Health check result: ${isHealthy ? '✓ OK' : '✗ FAILED'}`)
@@ -142,7 +203,7 @@ export function useApi() {
     console.group('🔌 [API] Testing connection to:', apiUrl)
     
     // Try fetching user collections
-    console.log('[API] Fetching user collections from /api/userCollection...')
+    console.log('[API] Fetching user collections from userCollection...')
     const collections = await fetchUserCollections()
     
     if (collections) {
@@ -174,6 +235,9 @@ export function useApi() {
 
     // Methods - Read operations
     fetchUserCollections,
+    fetchUserCollection,
+    fetchUserCards,
+    fetchUniques,
     fetchCatalogue,
     healthCheck,
     testConnection,

@@ -34,8 +34,8 @@ const dataSourceOptions = computed(() => [
 // Computed for data source v-model - now enabled
 const dataSourceModel = computed({
   get: () => dataSource.value,
-  set: (value: "mock" | "api") => {
-    setDataSource(value);
+  set: async (value: "mock" | "api") => {
+    await setDataSource(value, user.value?.id);
   },
 });
 

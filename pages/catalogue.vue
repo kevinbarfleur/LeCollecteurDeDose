@@ -3,10 +3,95 @@ import { allCards, mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG, VARIATION_CONFIG, getCardVariation } from "~/types/card";
 import { useCardSorting, type SortOption } from "~/composables/useCardSorting";
+import { mergeUserDataToCards, transformUniquesToCards } from "~/utils/dataTransform";
 
 const { t } = useI18n();
 
 useHead({ title: t("meta.catalogue.title") });
+
+const { loggedIn, user: authUser } = useUserSession();
+const { isApiData, isInitializing } = useDataSource();
+const { fetchUniques, fetchUserCollection, fetchUserCards } = useApi();
+
+// Fetch real data when using API
+const apiAllCards = ref<Card[]>([]);
+const apiUserCollection = ref<Card[]>([]);
+const isLoadingCatalogue = ref(false);
+
+watch([isApiData, isInitializing], async ([isApi, initializing]) => {
+  // Don't do anything while initializing
+  if (initializing) {
+    apiAllCards.value = [];
+    apiUserCollection.value = [];
+    return;
+  }
+
+  if (isApi) {
+    isLoadingCatalogue.value = true;
+    try {
+      // Fetch uniques for catalogue
+      const uniques = await fetchUniques();
+      if (uniques) {
+        apiAllCards.value = transformUniquesToCards(uniques);
+      } else {
+        apiAllCards.value = allCards;
+      }
+      
+      // Fetch user collection if logged in
+      if (loggedIn.value && authUser.value?.displayName) {
+        const [userCollectionData, userCardsData] = await Promise.all([
+          fetchUserCollection(authUser.value.displayName),
+          fetchUserCards(authUser.value.displayName),
+        ]);
+        
+        if (userCollectionData || userCardsData) {
+          apiUserCollection.value = mergeUserDataToCards(
+            userCollectionData || {},
+            userCardsData || null,
+            authUser.value.displayName
+          );
+        } else {
+          apiUserCollection.value = [];
+        }
+      } else {
+        apiUserCollection.value = [];
+      }
+    } catch (error) {
+      console.error('[Catalogue] Error fetching data:', error);
+      apiAllCards.value = allCards;
+      apiUserCollection.value = [];
+    } finally {
+      isLoadingCatalogue.value = false;
+    }
+  } else {
+    apiAllCards.value = [];
+    apiUserCollection.value = [];
+  }
+}, { immediate: true });
+
+const currentAllCards = computed(() => {
+  // Don't return mock data if we're initializing or using API
+  if (isInitializing.value || (isApiData.value && apiAllCards.value.length > 0)) {
+    return apiAllCards.value;
+  }
+  // Only return allCards if we're sure we're using mock data
+  if (!isInitializing.value && !isApiData.value) {
+    return allCards;
+  }
+  return [];
+});
+
+const currentUserCollection = computed(() => {
+  // Don't return mock data if we're initializing or using API
+  if (isInitializing.value || isApiData.value) {
+    return apiUserCollection.value;
+  }
+  // Only return mockUserCollection if we're sure we're using mock data
+  if (!isInitializing.value && !isApiData.value) {
+    return mockUserCollection;
+  }
+  return [];
+});
 
 const ownedCardsWithBestVariation = computed(() => {
   const map = new Map<
@@ -14,11 +99,11 @@ const ownedCardsWithBestVariation = computed(() => {
     { owned: boolean; bestVariation: CardVariation | null; card: Card | null }
   >();
 
-  allCards.forEach((card) => {
+  currentAllCards.value.forEach((card) => {
     map.set(card.id, { owned: false, bestVariation: null, card: null });
   });
 
-  mockUserCollection.forEach((card) => {
+  currentUserCollection.value.forEach((card) => {
     const variation: CardVariation = getCardVariation(card);
     const existing = map.get(card.id);
 
@@ -64,7 +149,7 @@ const { sortCards, SORT_OPTIONS: sortOptions } = useCardSorting();
 const categoryOptions = computed(() => {
   const categoryMap = new Map<string, number>();
 
-  allCards.forEach((card) => {
+  currentAllCards.value.forEach((card) => {
     const current = categoryMap.get(card.itemClass) || 0;
     categoryMap.set(card.itemClass, current + 1);
   });
@@ -91,7 +176,7 @@ const tierOptions = computed(() => [
 ]);
 
 const filteredCards = computed(() => {
-  let cards = allCards.map((card) => {
+  let cards = currentAllCards.value.map((card) => {
     const ownedData = ownedCardsWithBestVariation.value.get(card.id);
 
     if (ownedData?.owned && ownedData.card) {
@@ -134,18 +219,18 @@ const filteredCards = computed(() => {
 });
 
 const stats = computed(() => ({
-  total: allCards.length,
-  t0: allCards.filter((c) => c.tier === "T0").length,
-  t1: allCards.filter((c) => c.tier === "T1").length,
-  t2: allCards.filter((c) => c.tier === "T2").length,
-  t3: allCards.filter((c) => c.tier === "T3").length,
+  total: currentAllCards.value.length,
+  t0: currentAllCards.value.filter((c) => c.tier === "T0").length,
+  t1: currentAllCards.value.filter((c) => c.tier === "T1").length,
+  t2: currentAllCards.value.filter((c) => c.tier === "T2").length,
+  t3: currentAllCards.value.filter((c) => c.tier === "T3").length,
 }));
 </script>
 
 <template>
   <NuxtLayout>
     <div class="page-container">
-      <div class="mb-4 sm:mb-8">
+      <div v-if="!isInitializing && !isLoadingCatalogue" class="mb-4 sm:mb-8">
         <RunicHeader
           :title="t('catalogue.title')"
           :subtitle="t('catalogue.subtitle')"
@@ -227,6 +312,8 @@ const stats = computed(() => ({
         :cards="filteredCards"
         :owned-card-ids="ownedCardIds"
         :empty-message="t('catalogue.empty')"
+        :is-loading="isInitializing || isLoadingCatalogue"
+        :loading-message="t('catalogue.loading')"
       />
     </div>
   </NuxtLayout>

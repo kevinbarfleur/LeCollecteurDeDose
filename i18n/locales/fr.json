@@ -58,6 +58,7 @@
       "sort": "Trier par…"
     },
     "empty": "Aucune carte n'a daigné répondre à ton appel, pauvre exile.",
+    "loading": "Chargement du registre des âmes…",
     "auth": {
       "title": "Prouve ton existence",
       "description": "Les ténèbres n'accordent audience qu'aux identités vérifiées.",
@@ -136,6 +137,7 @@
       "sort": "Trier par…"
     },
     "empty": "Ton inventaire est aussi vide que tes résistances. Retourne farmer, exile.",
+    "loading": "Chargement de ta collection maudite…",
     "tiers": {
       "all": "Tous",
       "t0": "T0",
