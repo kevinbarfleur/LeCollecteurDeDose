@@ -81,7 +81,6 @@ export function useAppSettings() {
           table: 'app_settings',
         },
         (payload) => {
-          console.log('[AppSettings] Real-time update received:', payload)
           if (payload.new) {
             applySettingValue(
               payload.new.key as string,
@@ -92,7 +91,6 @@ export function useAppSettings() {
       )
       .subscribe((status) => {
         isConnected.value = status === 'SUBSCRIBED'
-        console.log('[AppSettings] Realtime status:', status)
       })
   }
 

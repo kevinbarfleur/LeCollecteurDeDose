@@ -12,40 +12,11 @@ export default defineNuxtPlugin(async () => {
     return
   }
 
-  const { testConnection, fetchUserCollections, apiUrl } = useApi()
-
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('🎴 Le Collecteur de Dose - Data API Test')
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log(`📡 Data API URL: ${apiUrl}`)
-  console.log('')
+  const { testConnection } = useApi()
 
   // Small delay to let the app initialize
   await new Promise(resolve => setTimeout(resolve, 500))
 
-  // Fetch user collections directly
-  console.log('[API Test] Fetching /api/userCollection...')
-  const collections = await fetchUserCollections()
-  
-  if (collections) {
-    console.log('[API Test] ✓ User Collections Response:')
-    console.log(collections)
-    
-    // Log some stats
-    const users = Object.keys(collections)
-    console.log(`[API Test] Found ${users.length} user(s):`, users)
-    
-    // Show structure of first user if available
-    if (users.length > 0) {
-      const firstUser = users[0]
-      console.log(`[API Test] Sample user data for "${firstUser}":`, collections[firstUser])
-    }
-  } else {
-    console.log('[API Test] ✗ Could not fetch user collections')
-  }
-
-  console.log('')
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('✅ Data API Test Complete')
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  // Test connection (responses are logged by useApi)
+  await testConnection()
 })

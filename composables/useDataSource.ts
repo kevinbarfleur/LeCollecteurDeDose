@@ -131,7 +131,6 @@ export function useDataSource() {
     if (import.meta.client) {
       localStorage.setItem('dataSource', source)
     }
-    console.log(`[DataSource] Switched to: ${source}`)
     
     // Update Supabase settings if userId provided (admin only)
     if (userId) {

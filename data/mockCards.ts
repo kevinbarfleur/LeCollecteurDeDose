@@ -444,7 +444,3 @@ export const collectionStats = {
   uniqueCards: new Set(mockUserCollection.map(c => c.id)).size
 }
 
-// Log stats in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('📊 Collection Stats:', collectionStats)
-}

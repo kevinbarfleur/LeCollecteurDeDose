@@ -194,7 +194,6 @@ export function useReplayRecorder() {
     
     // Log compression stats in dev
     if (import.meta.dev) {
-      console.log(`[Replay] Compressed ${originalCount} points to ${compressedPositions.length} (${Math.round((1 - compressedPositions.length / originalCount) * 100)}% reduction)`);
     }
     
     // Save to Supabase in the background after a short delay
