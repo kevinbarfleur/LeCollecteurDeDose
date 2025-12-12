@@ -25,25 +25,17 @@ const handleAltarToggle = async () => {
   }
 };
 
-// Data source is disabled for now - always use mock
-// Force mock as default and prevent changes
-onMounted(() => {
-  if (dataSource.value !== "mock") {
-    setDataSource("mock");
-  }
-});
-
 // Data source options for RunicRadio
 const dataSourceOptions = computed(() => [
   { value: "mock", label: t("admin.dataSource.mock"), color: "default" },
   { value: "api", label: t("admin.dataSource.api"), color: "default" },
 ]);
 
-// Computed for data source v-model - disabled, always returns 'mock'
+// Computed for data source v-model - now enabled
 const dataSourceModel = computed({
-  get: () => "mock", // Always return 'mock'
-  set: () => {
-    // Do nothing - disabled
+  get: () => dataSource.value,
+  set: (value: "mock" | "api") => {
+    setDataSource(value);
   },
 });
 
@@ -171,18 +163,17 @@ const altarOpenModel = computed({
               {{ t("admin.dataSource.description") }}
             </p>
 
-            <div class="admin-data-source" style="pointer-events: none">
+            <div class="admin-data-source">
               <RunicRadio
                 v-model="dataSourceModel"
                 :options="dataSourceOptions"
                 size="md"
-                :disabled="true"
                 class="admin-data-source__radio"
               />
             </div>
 
-            <p class="admin-section__hint admin-section__hint--coming-soon">
-              🔒 {{ t("admin.dataSource.comingSoon") }}
+            <p class="admin-section__hint">
+              {{ t("admin.dataSource.warning") }}
             </p>
           </section>
         </div>
