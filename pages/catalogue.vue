@@ -11,63 +11,119 @@ useHead({ title: t("meta.catalogue.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
 const { isApiData, isInitializing } = useDataSource();
-const { fetchUniques, fetchUserCollection, fetchUserCards } = useApi();
+const { fetchUserCollection, fetchUserCards } = useApi();
+const { loadCatalogue, getCachedCatalogue, isLoading: isCatalogueLoading } = useCatalogueCache();
 
 // Fetch real data when using API
 const apiAllCards = ref<Card[]>([]);
 const apiUserCollection = ref<Card[]>([]);
 const isLoadingCatalogue = ref(false);
 
+// Load catalogue data once on mount (cached, only fetches once per page session)
+onMounted(async () => {
+  if (isApiData.value && !isInitializing.value) {
+    isLoadingCatalogue.value = true;
+    try {
+      // Load catalogue from cache (or fetch if cache is empty)
+      // This will only fetch once per page session, then use cache
+      const cachedCards = await loadCatalogue(false);
+      if (cachedCards) {
+        apiAllCards.value = cachedCards;
+      } else {
+        // Fallback to mock data if API fails
+        apiAllCards.value = allCards;
+      }
+    } catch (error) {
+      console.error('[Catalogue] Error loading catalogue:', error);
+      // Try to use cached data on error
+      const cached = getCachedCatalogue();
+      apiAllCards.value = cached || allCards;
+    } finally {
+      isLoadingCatalogue.value = false;
+    }
+  }
+});
+
+// Watch for data source changes (only when switching from mock to API or vice versa)
 watch([isApiData, isInitializing], async ([isApi, initializing]) => {
   // Don't do anything while initializing
   if (initializing) {
-    apiAllCards.value = [];
-    apiUserCollection.value = [];
+    if (!isApi) {
+      apiAllCards.value = [];
+      apiUserCollection.value = [];
+    }
     return;
   }
 
   if (isApi) {
-    isLoadingCatalogue.value = true;
-    try {
-      // Fetch uniques for catalogue
-      const uniques = await fetchUniques();
-      if (uniques) {
-        apiAllCards.value = transformUniquesToCards(uniques);
-      } else {
-        apiAllCards.value = allCards;
+    // Only load if we don't have cached data yet
+    if (apiAllCards.value.length === 0) {
+      isLoadingCatalogue.value = true;
+      try {
+        const cachedCards = await loadCatalogue(false);
+        if (cachedCards) {
+          apiAllCards.value = cachedCards;
+        } else {
+          apiAllCards.value = allCards;
+        }
+      } catch (error) {
+        console.error('[Catalogue] Error loading catalogue:', error);
+        const cached = getCachedCatalogue();
+        apiAllCards.value = cached || allCards;
+      } finally {
+        isLoadingCatalogue.value = false;
       }
-      
-      // Fetch user collection if logged in
-      if (loggedIn.value && authUser.value?.displayName) {
+    }
+  } else {
+    apiAllCards.value = [];
+    apiUserCollection.value = [];
+  }
+});
+
+// Watch for user collection changes (this can change, so we always fetch it)
+watch([loggedIn, () => authUser.value?.displayName, isApiData, isInitializing], 
+  async ([isLoggedIn, displayName, isApi, initializing]) => {
+    // Don't do anything while initializing
+    if (initializing) {
+      if (!isApi) {
+        apiUserCollection.value = [];
+      }
+      return;
+    }
+
+    if (isApi && isLoggedIn && displayName) {
+      try {
         const [userCollectionData, userCardsData] = await Promise.all([
-          fetchUserCollection(authUser.value.displayName),
-          fetchUserCards(authUser.value.displayName),
+          fetchUserCollection(displayName),
+          fetchUserCards(displayName),
         ]);
         
         if (userCollectionData || userCardsData) {
           apiUserCollection.value = mergeUserDataToCards(
             userCollectionData || {},
             userCardsData || null,
-            authUser.value.displayName
+            displayName
           );
         } else {
           apiUserCollection.value = [];
         }
-      } else {
+      } catch (error) {
+        console.error('[Catalogue] Error fetching user collection:', error);
         apiUserCollection.value = [];
       }
-    } catch (error) {
-      console.error('[Catalogue] Error fetching data:', error);
-      apiAllCards.value = allCards;
+    } else {
       apiUserCollection.value = [];
-    } finally {
-      isLoadingCatalogue.value = false;
     }
-  } else {
-    apiAllCards.value = [];
-    apiUserCollection.value = [];
+  },
+  { immediate: true }
+);
+
+// Also watch for catalogue loading state
+watch(isCatalogueLoading, (loading) => {
+  if (loading && isApiData.value) {
+    isLoadingCatalogue.value = true;
   }
-}, { immediate: true });
+});
 
 const currentAllCards = computed(() => {
   // Don't return mock data if we're initializing or using API

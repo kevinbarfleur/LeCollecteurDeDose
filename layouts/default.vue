@@ -159,10 +159,20 @@ const canSeeAdminLink = computed(() => loggedIn.value && isAdmin.value);
     <LegalModal v-model="showLegalModal" />
 
     <!-- Activity Logs Panel -->
-    <ActivityLogsPanel v-if="activityLogsEnabled" />
+    <ClientOnly>
+      <ActivityLogsPanel v-if="activityLogsEnabled" />
+      <template #fallback>
+        <div v-if="activityLogsEnabled" style="display: none;"></div>
+      </template>
+    </ClientOnly>
 
     <!-- Activity Notifications (toast notifications when panel is closed) -->
-    <ActivityNotifications v-if="activityLogsEnabled" />
+    <ClientOnly>
+      <ActivityNotifications v-if="activityLogsEnabled" />
+      <template #fallback>
+        <div v-if="activityLogsEnabled" style="display: none;"></div>
+      </template>
+    </ClientOnly>
   </div>
 </template>
 
