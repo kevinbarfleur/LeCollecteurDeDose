@@ -5,13 +5,14 @@ definePageMeta({
 
 const { t } = useI18n();
 const { user } = useUserSession();
-const { altarOpen, isLoading, isConnected, toggleAltar } = useAppSettings();
+const { altarOpen, isLoading, isConnected, toggleAltar, activityLogsEnabled, toggleActivityLogs } = useAppSettings();
 const { dataSource, setDataSource } = useDataSource();
 
 useHead({ title: t("admin.meta.title") });
 
 // Local state for optimistic updates
 const isTogglingAltar = ref(false);
+const isTogglingActivityLogs = ref(false);
 
 // Handle altar toggle
 const handleAltarToggle = async () => {
@@ -25,13 +26,17 @@ const handleAltarToggle = async () => {
   }
 };
 
-// Data source is disabled for now - always use mock
-// Force mock as default and prevent changes
-onMounted(() => {
-  if (dataSource.value !== "mock") {
-    setDataSource("mock");
+// Handle activity logs toggle
+const handleActivityLogsToggle = async () => {
+  if (isTogglingActivityLogs.value) return;
+  isTogglingActivityLogs.value = true;
+
+  try {
+    await toggleActivityLogs(user.value?.id);
+  } finally {
+    isTogglingActivityLogs.value = false;
   }
-});
+};
 
 // Data source options for RunicRadio
 const dataSourceOptions = computed(() => [
@@ -39,11 +44,11 @@ const dataSourceOptions = computed(() => [
   { value: "api", label: t("admin.dataSource.api"), color: "default" },
 ]);
 
-// Computed for data source v-model - disabled, always returns 'mock'
+// Computed for data source v-model - now enabled
 const dataSourceModel = computed({
-  get: () => "mock", // Always return 'mock'
-  set: () => {
-    // Do nothing - disabled
+  get: () => dataSource.value,
+  set: async (value: "mock" | "api") => {
+    await setDataSource(value, user.value?.id);
   },
 });
 
@@ -58,6 +63,21 @@ const altarOpenModel = computed({
       !isLoading.value
     ) {
       await handleAltarToggle();
+    }
+  },
+});
+
+// Computed for activity logs toggle v-model
+const activityLogsEnabledModel = computed({
+  get: () => activityLogsEnabled.value,
+  set: async (value: boolean) => {
+    // Only trigger if value actually changed and not already processing
+    if (
+      value !== activityLogsEnabled.value &&
+      !isTogglingActivityLogs.value &&
+      !isLoading.value
+    ) {
+      await handleActivityLogsToggle();
     }
   },
 });
@@ -108,83 +128,224 @@ const altarOpenModel = computed({
           <RunicDivider />
 
           <!-- Altar Control Panel -->
-          <section class="admin-section">
-            <h2 class="admin-section__title">
-              <span class="admin-section__rune">◆</span>
-              {{ t("admin.altar.title") }}
-              <span class="admin-section__rune">◆</span>
-            </h2>
-            <p class="admin-section__desc">
-              {{ t("admin.altar.description") }}
-            </p>
+          <ClientOnly>
+            <section class="admin-section">
+              <h2 class="admin-section__title">
+                <span class="admin-section__rune">◆</span>
+                {{ t("admin.altar.title") }}
+                <span class="admin-section__rune">◆</span>
+              </h2>
+              <p class="admin-section__desc">
+                {{ t("admin.altar.description") }}
+              </p>
 
-            <div class="admin-toggle-panel">
-              <div class="admin-toggle-panel__info">
-                <span class="admin-toggle-panel__label">{{
-                  t("admin.altar.status")
-                }}</span>
-                <span
-                  class="admin-toggle-panel__status"
-                  :class="
-                    altarOpen
-                      ? 'admin-toggle-panel__status--open'
-                      : 'admin-toggle-panel__status--closed'
-                  "
+              <div class="admin-toggle-panel">
+                <div class="admin-toggle-panel__info">
+                  <span class="admin-toggle-panel__label">{{
+                    t("admin.altar.status")
+                  }}</span>
+                  <span
+                    class="admin-toggle-panel__status"
+                    :class="
+                      altarOpen
+                        ? 'admin-toggle-panel__status--open'
+                        : 'admin-toggle-panel__status--closed'
+                    "
+                  >
+                    {{
+                      altarOpen ? t("admin.altar.open") : t("admin.altar.closed")
+                    }}
+                  </span>
+                </div>
+
+                <div
+                  class="admin-toggle-panel__control"
+                  :class="{
+                    'admin-toggle-panel__control--disabled':
+                      isLoading || isTogglingAltar,
+                  }"
                 >
-                  {{
-                    altarOpen ? t("admin.altar.open") : t("admin.altar.closed")
-                  }}
-                </span>
+                  <RunicRadio
+                    v-model="altarOpenModel"
+                    :toggle="true"
+                    size="md"
+                    toggle-color="default"
+                  />
+                </div>
               </div>
 
-              <div
-                class="admin-toggle-panel__control"
-                :class="{
-                  'admin-toggle-panel__control--disabled':
-                    isLoading || isTogglingAltar,
-                }"
-              >
-                <RunicRadio
-                  v-model="altarOpenModel"
-                  :toggle="true"
-                  size="md"
-                  toggle-color="default"
-                />
-              </div>
-            </div>
+              <p class="admin-section__hint">
+                {{ t("admin.altar.hint") }}
+              </p>
+            </section>
+            <template #fallback>
+              <section class="admin-section">
+                <h2 class="admin-section__title">
+                  <span class="admin-section__rune">◆</span>
+                  {{ t("admin.altar.title") }}
+                  <span class="admin-section__rune">◆</span>
+                </h2>
+                <p class="admin-section__desc">
+                  {{ t("admin.altar.description") }}
+                </p>
+                <div class="admin-toggle-panel">
+                  <div class="admin-toggle-panel__info">
+                    <span class="admin-toggle-panel__label">{{
+                      t("admin.altar.status")
+                    }}</span>
+                    <span class="admin-toggle-panel__status admin-toggle-panel__status--closed">
+                      {{ t("admin.altar.closed") }}
+                    </span>
+                  </div>
+                  <div class="admin-toggle-panel__control admin-toggle-panel__control--disabled">
+                    <RunicRadio
+                      :model-value="false"
+                      :toggle="true"
+                      size="md"
+                      toggle-color="default"
+                      disabled
+                    />
+                  </div>
+                </div>
+              </section>
+            </template>
+          </ClientOnly>
 
-            <p class="admin-section__hint">
-              {{ t("admin.altar.hint") }}
-            </p>
-          </section>
+          <RunicDivider />
+
+          <!-- Activity Logs Panel -->
+          <ClientOnly>
+            <section class="admin-section">
+              <h2 class="admin-section__title">
+                <span class="admin-section__rune">◆</span>
+                {{ t("admin.activityLogs.title") }}
+                <span class="admin-section__rune">◆</span>
+              </h2>
+              <p class="admin-section__desc">
+                {{ t("admin.activityLogs.description") }}
+              </p>
+
+              <div class="admin-toggle-panel">
+                <div class="admin-toggle-panel__info">
+                  <span class="admin-toggle-panel__label">{{
+                    t("admin.activityLogs.status")
+                  }}</span>
+                  <span
+                    class="admin-toggle-panel__status"
+                    :class="
+                      activityLogsEnabled
+                        ? 'admin-toggle-panel__status--open'
+                        : 'admin-toggle-panel__status--closed'
+                    "
+                  >
+                    {{
+                      activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled")
+                    }}
+                  </span>
+                </div>
+
+                <div
+                  class="admin-toggle-panel__control"
+                  :class="{
+                    'admin-toggle-panel__control--disabled':
+                      isLoading || isTogglingActivityLogs,
+                  }"
+                >
+                  <RunicRadio
+                    v-model="activityLogsEnabledModel"
+                    :toggle="true"
+                    size="md"
+                    toggle-color="default"
+                  />
+                </div>
+              </div>
+
+              <p class="admin-section__hint">
+                {{ t("admin.activityLogs.hint") }}
+              </p>
+            </section>
+            <template #fallback>
+              <section class="admin-section">
+                <h2 class="admin-section__title">
+                  <span class="admin-section__rune">◆</span>
+                  {{ t("admin.activityLogs.title") }}
+                  <span class="admin-section__rune">◆</span>
+                </h2>
+                <p class="admin-section__desc">
+                  {{ t("admin.activityLogs.description") }}
+                </p>
+                <div class="admin-toggle-panel">
+                  <div class="admin-toggle-panel__info">
+                    <span class="admin-toggle-panel__label">{{
+                      t("admin.activityLogs.status")
+                    }}</span>
+                    <span class="admin-toggle-panel__status admin-toggle-panel__status--open">
+                      {{ t("admin.activityLogs.enabled") }}
+                    </span>
+                  </div>
+                  <div class="admin-toggle-panel__control admin-toggle-panel__control--disabled">
+                    <RunicRadio
+                      :model-value="true"
+                      :toggle="true"
+                      size="md"
+                      toggle-color="default"
+                      disabled
+                    />
+                  </div>
+                </div>
+              </section>
+            </template>
+          </ClientOnly>
 
           <RunicDivider />
 
           <!-- Data Source Panel -->
-          <section class="admin-section">
-            <h2 class="admin-section__title">
-              <span class="admin-section__rune">◆</span>
-              {{ t("admin.dataSource.title") }}
-              <span class="admin-section__rune">◆</span>
-            </h2>
-            <p class="admin-section__desc">
-              {{ t("admin.dataSource.description") }}
-            </p>
+          <ClientOnly>
+            <section class="admin-section">
+              <h2 class="admin-section__title">
+                <span class="admin-section__rune">◆</span>
+                {{ t("admin.dataSource.title") }}
+                <span class="admin-section__rune">◆</span>
+              </h2>
+              <p class="admin-section__desc">
+                {{ t("admin.dataSource.description") }}
+              </p>
 
-            <div class="admin-data-source" style="pointer-events: none">
-              <RunicRadio
-                v-model="dataSourceModel"
-                :options="dataSourceOptions"
-                size="md"
-                :disabled="true"
-                class="admin-data-source__radio"
-              />
-            </div>
+              <div class="admin-data-source">
+                <RunicRadio
+                  v-model="dataSourceModel"
+                  :options="dataSourceOptions"
+                  size="md"
+                  class="admin-data-source__radio"
+                />
+              </div>
 
-            <p class="admin-section__hint admin-section__hint--coming-soon">
-              🔒 {{ t("admin.dataSource.comingSoon") }}
-            </p>
-          </section>
+              <p class="admin-section__hint">
+                {{ t("admin.dataSource.warning") }}
+              </p>
+            </section>
+            <template #fallback>
+              <section class="admin-section">
+                <h2 class="admin-section__title">
+                  <span class="admin-section__rune">◆</span>
+                  {{ t("admin.dataSource.title") }}
+                  <span class="admin-section__rune">◆</span>
+                </h2>
+                <p class="admin-section__desc">
+                  {{ t("admin.dataSource.description") }}
+                </p>
+                <div class="admin-data-source admin-data-source--disabled">
+                  <RunicRadio
+                    :model-value="'mock'"
+                    :options="dataSourceOptions"
+                    size="md"
+                    class="admin-data-source__radio"
+                    disabled
+                  />
+                </div>
+              </section>
+            </template>
+          </ClientOnly>
         </div>
       </RunicBox>
     </div>

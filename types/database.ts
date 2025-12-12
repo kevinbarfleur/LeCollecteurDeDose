@@ -190,3 +190,7 @@ export interface DataSourceSetting {
   source: 'mock' | 'api'
 }
 
+export interface ActivityLogsEnabledSetting {
+  enabled: boolean
+}
+

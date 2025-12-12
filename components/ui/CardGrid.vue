@@ -24,10 +24,16 @@ const props = defineProps<{
   groupedCards?: CardGroup[];
   emptyMessage?: string;
   ownedCardIds?: string[];
+  isLoading?: boolean;
+  loadingMessage?: string;
 }>();
 
 const displayEmptyMessage = computed(
   () => props.emptyMessage || t("cards.empty")
+);
+
+const displayLoadingMessage = computed(
+  () => props.loadingMessage || t("common.loading")
 );
 
 const isCardOwned = (cardId: string): boolean => {
@@ -98,6 +104,33 @@ const [gridRef] = useAutoAnimate({
       </div>
     </div>
 
+    <!-- Loading state -->
+    <div
+      v-else-if="isLoading"
+      class="flex flex-col items-center justify-center py-16 px-8 text-center"
+    >
+      <div class="w-16 h-16 mb-6 text-poe-border animate-spin">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          class="w-full h-full"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+            d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364 6.364l-2.121-2.121M6.343 6.343L4.22 4.22m15.556 0l-2.122 2.122M6.343 17.657l-2.121 2.121M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      </div>
+      <p class="font-body text-lg text-poe-text-dim">
+        {{ displayLoadingMessage }}
+      </p>
+    </div>
+
+    <!-- Empty state -->
     <div
       v-else
       class="flex flex-col items-center justify-center py-16 px-8 text-center"

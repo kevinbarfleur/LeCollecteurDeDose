@@ -3,6 +3,7 @@ const { t } = useI18n();
 const route = useRoute();
 const { user, loggedIn } = useUserSession();
 const { checkIsAdmin } = useDataSource();
+const { activityLogsEnabled } = useAppSettings();
 
 const navItems = computed(() => [
   { path: "/catalogue", label: t("nav.catalogue"), icon: "cards" },
@@ -158,10 +159,20 @@ const canSeeAdminLink = computed(() => loggedIn.value && isAdmin.value);
     <LegalModal v-model="showLegalModal" />
 
     <!-- Activity Logs Panel -->
-    <ActivityLogsPanel />
+    <ClientOnly>
+      <ActivityLogsPanel v-if="activityLogsEnabled" />
+      <template #fallback>
+        <div v-if="activityLogsEnabled" style="display: none;"></div>
+      </template>
+    </ClientOnly>
 
     <!-- Activity Notifications (toast notifications when panel is closed) -->
-    <ActivityNotifications />
+    <ClientOnly>
+      <ActivityNotifications v-if="activityLogsEnabled" />
+      <template #fallback>
+        <div v-if="activityLogsEnabled" style="display: none;"></div>
+      </template>
+    </ClientOnly>
   </div>
 </template>
 

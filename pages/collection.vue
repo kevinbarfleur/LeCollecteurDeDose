@@ -6,12 +6,15 @@ import {
   type CardGroupWithVariations,
 } from "~/composables/useCardGrouping";
 import { useCardSorting, type SortOption } from "~/composables/useCardSorting";
+import { mergeUserDataToCards } from "~/utils/dataTransform";
 
 const { t } = useI18n();
 
 useHead({ title: t("meta.collection.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
+const { isApiData, isInitializing } = useDataSource();
+const { fetchUserCollection, fetchUserCards } = useApi();
 
 const user = computed(() => ({
   name: authUser.value?.displayName || "Test User",
@@ -20,7 +23,53 @@ const user = computed(() => ({
     "https://static-cdn.jtvnw.net/jtv_user_pictures/default-profile_image-300x300.png",
 }));
 
-const collection = computed(() => mockUserCollection);
+// Fetch real data when using API
+const apiCollection = ref<Card[]>([]);
+const isLoadingCollection = ref(false);
+
+// Watch for data source changes and fetch accordingly
+watch([isApiData, isInitializing, () => authUser.value?.displayName], async ([isApi, initializing, displayName]) => {
+  // Don't do anything while initializing
+  if (initializing) {
+    apiCollection.value = [];
+    return;
+  }
+
+  if (isApi && displayName && loggedIn.value) {
+    isLoadingCollection.value = true;
+    try {
+      const [userCollectionData, userCardsData] = await Promise.all([
+        fetchUserCollection(displayName),
+        fetchUserCards(displayName),
+      ]);
+      
+      if (userCollectionData || userCardsData) {
+        apiCollection.value = mergeUserDataToCards(
+          userCollectionData || {},
+          userCardsData || null,
+          displayName
+        );
+      } else {
+        apiCollection.value = [];
+      }
+    } catch (error) {
+      console.error('[Collection] Error fetching user data:', error);
+      apiCollection.value = [];
+    } finally {
+      isLoadingCollection.value = false;
+    }
+  } else if (!isApi) {
+    apiCollection.value = [];
+  }
+}, { immediate: true });
+
+const collection = computed(() => {
+  // Don't return mock data if we're initializing or using API
+  if (isInitializing.value || isApiData.value) {
+    return apiCollection.value;
+  }
+  return mockUserCollection;
+});
 
 // Use shared card grouping composable
 const { groupedCards } = useCardGrouping(collection, {
@@ -183,7 +232,7 @@ const filteredIndividualCards = computed(() => {
       </div>
 
       <div v-if="loggedIn">
-        <div class="mb-8">
+        <div v-if="!isInitializing && !isLoadingCollection" class="mb-8">
           <RunicHeader
             :title="t('collection.title')"
             :subtitle="t('collection.subtitle')"
@@ -323,12 +372,16 @@ const filteredIndividualCards = computed(() => {
           v-if="!showDuplicates"
           :grouped-cards="filteredGroupedCards"
           :empty-message="t('collection.empty')"
+          :is-loading="isInitializing || isLoadingCollection"
+          :loading-message="t('collection.loading')"
         />
 
         <CardGrid
           v-else
           :cards="filteredIndividualCards"
           :empty-message="t('collection.empty')"
+          :is-loading="isInitializing || isLoadingCollection"
+          :loading-message="t('collection.loading')"
         />
       </div>
     </div>

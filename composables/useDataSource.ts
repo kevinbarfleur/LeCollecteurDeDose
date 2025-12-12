@@ -20,14 +20,66 @@ const adminCache = ref<Map<string, boolean>>(new Map())
 const adminCacheExpiry = ref<Map<string, number>>(new Map())
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
+// Track if data source is being initialized
+const isInitializing = ref(true)
+
 export function useDataSource() {
   const supabase = useSupabaseClient()
+  
+  // Lazy load useAppSettings to avoid circular dependency
+  let appSettingsDataSource: ComputedRef<DataSource> | null = null
+  let appSettingsIsLoading: ComputedRef<boolean> | null = null
+  try {
+    const appSettings = useAppSettings()
+    appSettingsDataSource = appSettings.dataSource
+    appSettingsIsLoading = appSettings.isLoading
+  } catch (e) {
+    // useAppSettings might not be available yet
+    console.warn('[DataSource] useAppSettings not available:', e)
+  }
 
-  // Initialize from localStorage if available
+  // Initialize from localStorage first (fastest, synchronous)
   if (import.meta.client) {
     const stored = localStorage.getItem('dataSource') as DataSource | null
     if (stored && (stored === 'mock' || stored === 'api')) {
       dataSource.value = stored
+    }
+  }
+
+  // Sync with app settings (from Supabase) if available
+  if (appSettingsDataSource && appSettingsIsLoading) {
+    // Watch for loading state - when settings finish loading, we're initialized
+    watch(appSettingsIsLoading, (loading) => {
+      if (!loading) {
+        // Settings loaded, sync the data source
+        if (appSettingsDataSource) {
+          const newValue = appSettingsDataSource.value
+          if (newValue && (newValue === 'mock' || newValue === 'api')) {
+            dataSource.value = newValue
+            if (import.meta.client) {
+              localStorage.setItem('dataSource', newValue)
+            }
+          }
+        }
+        isInitializing.value = false
+      }
+    }, { immediate: true })
+
+    // Also watch for data source changes
+    if (appSettingsDataSource) {
+      watch(appSettingsDataSource, (newValue) => {
+        if (newValue && (newValue === 'mock' || newValue === 'api')) {
+          dataSource.value = newValue
+          if (import.meta.client) {
+            localStorage.setItem('dataSource', newValue)
+          }
+        }
+      }, { immediate: true })
+    }
+  } else {
+    // No app settings available, use localStorage value and mark as initialized
+    if (import.meta.client) {
+      isInitializing.value = false
     }
   }
 
@@ -72,13 +124,23 @@ export function useDataSource() {
 
   /**
    * Set the data source and persist to localStorage
+   * Also updates Supabase settings if user is admin
    */
-  const setDataSource = (source: DataSource) => {
+  const setDataSource = async (source: DataSource, userId?: string) => {
     dataSource.value = source
     if (import.meta.client) {
       localStorage.setItem('dataSource', source)
     }
-    console.log(`[DataSource] Switched to: ${source}`)
+    
+    // Update Supabase settings if userId provided (admin only)
+    if (userId) {
+      try {
+        const { setDataSourceSetting } = useAppSettings()
+        await setDataSourceSetting(source, userId)
+      } catch (e) {
+        console.warn('[DataSource] Could not update app settings:', e)
+      }
+    }
   }
 
   /**
@@ -102,6 +164,7 @@ export function useDataSource() {
     dataSource: computed(() => dataSource.value),
     isMockData,
     isApiData,
+    isInitializing: computed(() => isInitializing.value),
     setDataSource,
     toggleDataSource,
     checkIsAdmin,

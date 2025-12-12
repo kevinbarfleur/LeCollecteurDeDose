@@ -42,14 +42,14 @@ export function useApi() {
     const url = `${apiUrl}/${cleanEndpoint}`
 
     try {
+      const method = (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET'
       const response = await $fetch(url, {
-        method: (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET',
+        method,
         body: options.body ? JSON.parse(options.body as string) : undefined,
       })
 
       return response as T
     } catch (err: any) {
-      console.error(`[API Error] ${endpoint}:`, err)
       
       error.value = {
         status: err.status || err.statusCode || 500,
@@ -68,28 +68,65 @@ export function useApi() {
    * Endpoint: GET /api/userCollection
    */
   async function fetchUserCollections(): Promise<Record<string, any> | null> {
-    console.log('[API] Fetching user collections...')
-    const result = await apiFetch<Record<string, any>>('/api/userCollection')
-    
-    if (result) {
-      console.log('[API] User collections fetched:', result)
-    }
-    
+    const result = await apiFetch<Record<string, any>>('userCollection')
     return result
   }
 
   /**
-   * Fetch the global card catalogue (future endpoint)
+   * Fetch a specific user's collection
+   * Uses fetchUserCollections and extracts the user's data to handle case-insensitive matching
+   * Endpoint: GET /api/userCollection (then extract user data)
    */
-  async function fetchCatalogue(): Promise<CatalogueResponse | null> {
-    console.log('[API] Fetching catalogue...')
-    const result = await apiFetch<CatalogueResponse>('/api/catalogue')
+  async function fetchUserCollection(user: string): Promise<Record<string, any> | null> {
+    // Fetch all collections and extract the user's data
+    // This handles case-insensitive matching since the bot server lowercases usernames
+    const allCollections = await fetchUserCollections()
     
-    if (result) {
-      console.log('[API] Catalogue fetched:', result)
+    if (!allCollections) return null
+    
+    // Try to find the user's data (case-insensitive)
+    const userLower = user.toLowerCase()
+    const userKey = Object.keys(allCollections).find(
+      key => key.toLowerCase() === userLower
+    )
+    
+    if (userKey) {
+      return allCollections[userKey]
     }
     
+    return null
+  }
+
+  /**
+   * Fetch a specific user's cards (booster history)
+   * Endpoint: GET /api/usercards/:user
+   */
+  async function fetchUserCards(user: string): Promise<any[] | null> {
+    const result = await apiFetch<any[]>(`usercards/${user}`)
     return result
+  }
+
+  /**
+   * Fetch all unique cards (catalogue)
+   * Endpoint: GET /api/uniques
+   */
+  async function fetchUniques(): Promise<any[] | null> {
+    const result = await apiFetch<any[]>('uniques')
+    return result
+  }
+
+  /**
+   * Fetch the global card catalogue from uniques endpoint
+   */
+  async function fetchCatalogue(): Promise<CatalogueResponse | null> {
+    const uniques = await fetchUniques()
+    
+    if (!uniques) return null
+    
+    return {
+      cards: uniques,
+      totalCards: uniques.length,
+    }
   }
 
   /**
@@ -103,8 +140,6 @@ export function useApi() {
     pseudo: string,
     data: { cards: any[]; vaalOrb?: number }
   ): Promise<boolean> {
-    console.log(`[API] Updating collection for: ${pseudo}`)
-    
     const result = await apiFetch<any>(
       '/api/collection/update',
       {
@@ -123,15 +158,9 @@ export function useApi() {
    * Health check - try to reach the API
    */
   async function healthCheck(): Promise<boolean> {
-    console.log('[API] Health check...')
-    
     // Try the user collection endpoint as a health check
-    const result = await apiFetch<any>('/api/userCollection')
-    
-    const isHealthy = result !== null
-    console.log(`[API] Health check result: ${isHealthy ? '✓ OK' : '✗ FAILED'}`)
-    
-    return isHealthy
+    const result = await apiFetch<any>('userCollection')
+    return result !== null
   }
 
   /**
@@ -139,30 +168,21 @@ export function useApi() {
    * Useful for development and debugging
    */
   async function testConnection(): Promise<void> {
-    console.group('🔌 [API] Testing connection to:', apiUrl)
-    
     // Try fetching user collections
-    console.log('[API] Fetching user collections from /api/userCollection...')
     const collections = await fetchUserCollections()
     
     if (collections) {
       const userCount = Object.keys(collections).length
-      console.log(`[API] ✓ User collections available with ${userCount} users`)
-      
-      // Log structure for debugging
-      console.log('[API] Data structure:', collections)
+      console.log(`[API Test] ✓ User collections available with ${userCount} users`)
     } else {
-      console.log('[API] ✗ Could not fetch user collections')
+      console.log('[API Test] ✗ Could not fetch user collections')
     }
-
-    console.groupEnd()
   }
 
   /**
    * Get the raw API response for any endpoint (for debugging)
    */
   async function fetchRaw<T = any>(endpoint: string): Promise<T | null> {
-    console.log(`[API] Raw fetch: ${endpoint}`)
     return await apiFetch<T>(endpoint)
   }
 
@@ -174,6 +194,9 @@ export function useApi() {
 
     // Methods - Read operations
     fetchUserCollections,
+    fetchUserCollection,
+    fetchUserCards,
+    fetchUniques,
     fetchCatalogue,
     healthCheck,
     testConnection,

@@ -58,6 +58,7 @@
       "sort": "Trier par…"
     },
     "empty": "Aucune carte n'a daigné répondre à ton appel, pauvre exile.",
+    "loading": "Chargement du registre des âmes…",
     "auth": {
       "title": "Prouve ton existence",
       "description": "Les ténèbres n'accordent audience qu'aux identités vérifiées.",
@@ -136,6 +137,7 @@
       "sort": "Trier par…"
     },
     "empty": "Ton inventaire est aussi vide que tes résistances. Retourne farmer, exile.",
+    "loading": "Chargement de ta collection maudite…",
     "tiers": {
       "all": "Tous",
       "t0": "T0",
@@ -280,6 +282,14 @@
       "apiHint": "Récupère les données depuis l'API de production",
       "comingSoon": "Cette fonctionnalité sera disponible prochainement.",
       "warning": "Changer la source affecte tous les exilés connectés."
+    },
+    "activityLogs": {
+      "title": "Panneau de Logs d'Activité",
+      "description": "Active ou désactive l'affichage du panneau de logs et des notifications pour les replays.",
+      "status": "État actuel",
+      "enabled": "ACTIVÉ",
+      "disabled": "DÉSACTIVÉ",
+      "hint": "Quand désactivé, le panneau et les notifications ne s'affichent plus pour aucun exilé."
     }
   },
   "footer": {
