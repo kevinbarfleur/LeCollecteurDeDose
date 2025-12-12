@@ -25,9 +25,7 @@ export default defineNuxtPlugin(() => {
         is_active: true
       }
 
-      // Simple output, no fancy formatting
-      console.log(userInfo)
-
+      // Return the object - console will display it automatically
       return userInfo
     }
 
