@@ -1,166 +1,192 @@
 <script setup lang="ts">
 definePageMeta({
-  middleware: ['admin'],
-})
+  middleware: ["admin"],
+});
 
-const { t } = useI18n()
-const { user } = useUserSession()
-const { altarOpen, isLoading, isConnected, toggleAltar } = useAppSettings()
-const { dataSource, setDataSource } = useDataSource()
+const { t } = useI18n();
+const { user } = useUserSession();
+const { altarOpen, isLoading, isConnected, toggleAltar } = useAppSettings();
+const { dataSource, setDataSource } = useDataSource();
 
-useHead({ title: t('admin.meta.title') })
+useHead({ title: t("admin.meta.title") });
 
 // Local state for optimistic updates
-const isTogglingAltar = ref(false)
+const isTogglingAltar = ref(false);
 
 // Handle altar toggle
 const handleAltarToggle = async () => {
-  if (isTogglingAltar.value) return
-  isTogglingAltar.value = true
-  
-  try {
-    await toggleAltar(user.value?.id)
-  } finally {
-    isTogglingAltar.value = false
-  }
-}
+  if (isTogglingAltar.value) return;
+  isTogglingAltar.value = true;
 
-// Handle data source change - uses localStorage, no Supabase needed
-const handleDataSourceChange = (source: 'mock' | 'api') => {
-  if (dataSource.value === source) return
-  setDataSource(source)
-}
+  try {
+    await toggleAltar(user.value?.id);
+  } finally {
+    isTogglingAltar.value = false;
+  }
+};
+
+// Data source is disabled for now - always use mock
+// Force mock as default and prevent changes
+onMounted(() => {
+  if (dataSource.value !== "mock") {
+    setDataSource("mock");
+  }
+});
 
 // Data source options for RunicRadio
 const dataSourceOptions = computed(() => [
-  { value: 'mock', label: t('admin.dataSource.mock'), color: 'default' },
-  { value: 'api', label: t('admin.dataSource.api'), color: 'default' },
-])
+  { value: "mock", label: t("admin.dataSource.mock"), color: "default" },
+  { value: "api", label: t("admin.dataSource.api"), color: "default" },
+]);
 
-// Computed for data source v-model
+// Computed for data source v-model - disabled, always returns 'mock'
 const dataSourceModel = computed({
-  get: () => dataSource.value,
-  set: (value: 'mock' | 'api') => {
-    handleDataSourceChange(value)
-  }
-})
+  get: () => "mock", // Always return 'mock'
+  set: () => {
+    // Do nothing - disabled
+  },
+});
 
 // Computed for altar toggle v-model
 const altarOpenModel = computed({
   get: () => altarOpen.value,
   set: async (value: boolean) => {
     // Only trigger if value actually changed and not already processing
-    if (value !== altarOpen.value && !isTogglingAltar.value && !isLoading.value) {
-      await handleAltarToggle()
+    if (
+      value !== altarOpen.value &&
+      !isTogglingAltar.value &&
+      !isLoading.value
+    ) {
+      await handleAltarToggle();
     }
-  }
-})
+  },
+});
 </script>
 
 <template>
   <NuxtLayout>
     <div class="page-container admin-page">
       <!-- Header -->
-      <RunicHeader 
-        :title="t('admin.title')" 
+      <RunicHeader
+        :title="t('admin.title')"
         :subtitle="t('admin.subtitle')"
         attached
       />
 
       <!-- Main content -->
       <RunicBox attached padding="lg">
-      <div class="admin-content">
-        <!-- Connection status -->
-        <div class="admin-status">
-          <span 
-            class="admin-status__indicator"
-            :class="isConnected ? 'admin-status__indicator--connected' : 'admin-status__indicator--disconnected'"
-          />
-          <span class="admin-status__text">
-            {{ isConnected ? t('admin.connected') : t('admin.disconnected') }}
-          </span>
-        </div>
-
-        <!-- User info -->
-        <div class="admin-user-info">
-          <img 
-            v-if="user?.avatar" 
-            :src="user.avatar" 
-            :alt="user.displayName"
-            class="admin-user-info__avatar"
-          />
-          <div class="admin-user-info__details">
-            <span class="admin-user-info__name">{{ user?.displayName }}</span>
-            <span class="admin-user-info__id">ID: {{ user?.id }}</span>
+        <div class="admin-content">
+          <!-- Connection status -->
+          <div class="admin-status">
+            <span
+              class="admin-status__indicator"
+              :class="
+                isConnected
+                  ? 'admin-status__indicator--connected'
+                  : 'admin-status__indicator--disconnected'
+              "
+            />
+            <span class="admin-status__text">
+              {{ isConnected ? t("admin.connected") : t("admin.disconnected") }}
+            </span>
           </div>
-        </div>
 
-        <RunicDivider />
-
-        <!-- Altar Control Panel -->
-        <section class="admin-section">
-          <h2 class="admin-section__title">
-            <span class="admin-section__rune">◆</span>
-            {{ t('admin.altar.title') }}
-            <span class="admin-section__rune">◆</span>
-          </h2>
-          <p class="admin-section__desc">{{ t('admin.altar.description') }}</p>
-
-          <div class="admin-toggle-panel">
-            <div class="admin-toggle-panel__info">
-              <span class="admin-toggle-panel__label">{{ t('admin.altar.status') }}</span>
-              <span 
-                class="admin-toggle-panel__status"
-                :class="altarOpen ? 'admin-toggle-panel__status--open' : 'admin-toggle-panel__status--closed'"
-              >
-                {{ altarOpen ? t('admin.altar.open') : t('admin.altar.closed') }}
-              </span>
+          <!-- User info -->
+          <div class="admin-user-info">
+            <img
+              v-if="user?.avatar"
+              :src="user.avatar"
+              :alt="user.displayName"
+              class="admin-user-info__avatar"
+            />
+            <div class="admin-user-info__details">
+              <span class="admin-user-info__name">{{ user?.displayName }}</span>
+              <span class="admin-user-info__id">ID: {{ user?.id }}</span>
             </div>
-            
-            <div 
-              class="admin-toggle-panel__control"
-              :class="{ 'admin-toggle-panel__control--disabled': isLoading || isTogglingAltar }"
-            >
+          </div>
+
+          <RunicDivider />
+
+          <!-- Altar Control Panel -->
+          <section class="admin-section">
+            <h2 class="admin-section__title">
+              <span class="admin-section__rune">◆</span>
+              {{ t("admin.altar.title") }}
+              <span class="admin-section__rune">◆</span>
+            </h2>
+            <p class="admin-section__desc">
+              {{ t("admin.altar.description") }}
+            </p>
+
+            <div class="admin-toggle-panel">
+              <div class="admin-toggle-panel__info">
+                <span class="admin-toggle-panel__label">{{
+                  t("admin.altar.status")
+                }}</span>
+                <span
+                  class="admin-toggle-panel__status"
+                  :class="
+                    altarOpen
+                      ? 'admin-toggle-panel__status--open'
+                      : 'admin-toggle-panel__status--closed'
+                  "
+                >
+                  {{
+                    altarOpen ? t("admin.altar.open") : t("admin.altar.closed")
+                  }}
+                </span>
+              </div>
+
+              <div
+                class="admin-toggle-panel__control"
+                :class="{
+                  'admin-toggle-panel__control--disabled':
+                    isLoading || isTogglingAltar,
+                }"
+              >
+                <RunicRadio
+                  v-model="altarOpenModel"
+                  :toggle="true"
+                  size="md"
+                  toggle-color="default"
+                />
+              </div>
+            </div>
+
+            <p class="admin-section__hint">
+              {{ t("admin.altar.hint") }}
+            </p>
+          </section>
+
+          <RunicDivider />
+
+          <!-- Data Source Panel -->
+          <section class="admin-section">
+            <h2 class="admin-section__title">
+              <span class="admin-section__rune">◆</span>
+              {{ t("admin.dataSource.title") }}
+              <span class="admin-section__rune">◆</span>
+            </h2>
+            <p class="admin-section__desc">
+              {{ t("admin.dataSource.description") }}
+            </p>
+
+            <div class="admin-data-source" style="pointer-events: none">
               <RunicRadio
-                v-model="altarOpenModel"
-                :toggle="true"
+                v-model="dataSourceModel"
+                :options="dataSourceOptions"
                 size="md"
-                toggle-color="default"
+                :disabled="true"
+                class="admin-data-source__radio"
               />
             </div>
-          </div>
 
-          <p class="admin-section__hint">
-            {{ t('admin.altar.hint') }}
-          </p>
-        </section>
-
-        <RunicDivider />
-
-        <!-- Data Source Panel -->
-        <section class="admin-section">
-          <h2 class="admin-section__title">
-            <span class="admin-section__rune">◆</span>
-            {{ t('admin.dataSource.title') }}
-            <span class="admin-section__rune">◆</span>
-          </h2>
-          <p class="admin-section__desc">{{ t('admin.dataSource.description') }}</p>
-
-          <div class="admin-data-source">
-            <RunicRadio
-              v-model="dataSourceModel"
-              :options="dataSourceOptions"
-              size="md"
-              class="admin-data-source__radio"
-            />
-          </div>
-
-          <p class="admin-section__hint">
-            ⚠️ {{ t('admin.dataSource.warning') }}
-          </p>
-        </section>
-      </div>
-    </RunicBox>
+            <p class="admin-section__hint admin-section__hint--coming-soon">
+              🔒 {{ t("admin.dataSource.comingSoon") }}
+            </p>
+          </section>
+        </div>
+      </RunicBox>
     </div>
   </NuxtLayout>
 </template>
@@ -199,8 +225,13 @@ const altarOpenModel = computed({
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .admin-status__text {
@@ -298,6 +329,11 @@ const altarOpenModel = computed({
   color: rgba(120, 115, 110, 0.6);
   text-align: center;
   font-style: italic;
+}
+
+.admin-section__hint--coming-soon {
+  color: rgba(201, 162, 39, 0.7);
+  font-weight: 500;
 }
 
 /* ==========================================
@@ -422,4 +458,3 @@ const altarOpenModel = computed({
   }
 }
 </style>
-

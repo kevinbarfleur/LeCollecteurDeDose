@@ -278,6 +278,7 @@
       "mockHint": "Utilise les données locales de test",
       "api": "API Externe",
       "apiHint": "Récupère les données depuis l'API de production",
+      "comingSoon": "Cette fonctionnalité sera disponible prochainement.",
       "warning": "Changer la source affecte tous les exilés connectés."
     }
   },

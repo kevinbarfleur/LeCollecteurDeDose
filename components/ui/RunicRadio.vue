@@ -11,12 +11,14 @@ interface Props {
   size?: "sm" | "md" | "lg";
   toggle?: boolean; // Simple on/off toggle mode
   toggleColor?: string; // Color when toggle is on
+  disabled?: boolean; // Disable the radio component
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: "md",
   toggle: false,
   toggleColor: "default",
+  disabled: false,
 });
 
 const emit = defineEmits<{
@@ -68,6 +70,9 @@ const selectedColor = computed(() => {
 });
 
 const selectOption = (value: string) => {
+  if (props.disabled) {
+    return; // Prevent any updates when disabled
+  }
   if (props.toggle) {
     emit("update:modelValue", value === "on");
   } else {
@@ -77,6 +82,9 @@ const selectOption = (value: string) => {
 
 // Toggle mode: flip the current state
 const handleToggleClick = () => {
+  if (props.disabled) {
+    return; // Prevent any updates when disabled
+  }
   if (props.toggle) {
     emit("update:modelValue", !props.modelValue);
   }
@@ -86,15 +94,23 @@ const handleToggleClick = () => {
 <template>
   <div
     class="runic-radio"
-    :class="[`runic-radio--${size}`, { 'runic-radio--toggle': toggle }]"
+    :class="[
+      `runic-radio--${size}`,
+      { 'runic-radio--toggle': toggle },
+      { 'runic-radio--disabled': disabled },
+    ]"
     :role="toggle ? 'switch' : 'radiogroup'"
     :aria-checked="toggle ? (modelValue as boolean) : undefined"
+    :aria-disabled="disabled"
   >
     <!-- The carved groove/crevice background -->
     <div
       class="runic-radio__groove"
-      :class="{ 'runic-radio__groove--clickable': toggle }"
-      @click="handleToggleClick"
+      :class="{
+        'runic-radio__groove--clickable': toggle && !disabled,
+        'runic-radio__groove--disabled': disabled,
+      }"
+      @click="!disabled && handleToggleClick()"
     >
       <!-- Engraved labels at the bottom of the groove (only for radio mode) -->
       <button
@@ -109,7 +125,7 @@ const handleToggleClick = () => {
           { 'runic-radio__option--selected': internalValue === option.value },
           option.color ? `runic-radio__option--${option.color}` : '',
         ]"
-        @click.stop="!toggle && selectOption(option.value)"
+        @click.stop="!disabled && !toggle && selectOption(option.value)"
       >
         <span v-if="!toggle" class="runic-radio__label">{{
           option.label
@@ -185,6 +201,24 @@ const handleToggleClick = () => {
   box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.9),
     inset 0 2px 3px rgba(0, 0, 0, 0.95), inset 0 -1px 1px rgba(60, 55, 50, 0.08),
     0 1px 0 rgba(40, 35, 30, 0.2);
+}
+
+/* Disabled state */
+.runic-radio--disabled {
+  opacity: 0.5;
+  pointer-events: none !important;
+  cursor: not-allowed;
+}
+
+.runic-radio--disabled * {
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.runic-radio__groove--disabled {
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  pointer-events: none !important;
 }
 
 /* Decorative groove texture */
