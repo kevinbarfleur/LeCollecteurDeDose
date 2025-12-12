@@ -1,5 +1,4 @@
 import type { ApiResponse, PlayerCollection, CatalogueResponse, ApiError } from '~/types/api'
-import { logApiResponse, logApiError } from '~/utils/apiLogger'
 
 /**
  * Composable for interacting with Le Collecteur de Dose Data API
@@ -49,19 +48,8 @@ export function useApi() {
         body: options.body ? JSON.parse(options.body as string) : undefined,
       })
 
-      const result = response as T
-      
-      // Log API response for documentation (temporary)
-      // Use the original endpoint (with /api/ prefix) for clarity
-      const docEndpoint = endpoint.startsWith('/api/') ? endpoint : `/api/${endpoint}`
-      logApiResponse(docEndpoint, method, result, 200)
-      
-      return result
+      return response as T
     } catch (err: any) {
-      // Log API error for documentation (temporary)
-      const method = (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET'
-      const docEndpoint = endpoint.startsWith('/api/') ? endpoint : `/api/${endpoint}`
-      logApiError(docEndpoint, method, err)
       
       error.value = {
         status: err.status || err.statusCode || 500,
@@ -103,10 +91,7 @@ export function useApi() {
     )
     
     if (userKey) {
-      const userData = allCollections[userKey]
-      // Log the extracted user data for documentation
-      logApiResponse(`userCollection/${user}`, 'GET', userData)
-      return userData
+      return allCollections[userKey]
     }
     
     return null
