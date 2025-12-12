@@ -1188,9 +1188,11 @@ const endDragOrb = async () => {
       >
         <RunicBox padding="lg" max-width="500px" centered>
           <div class="altar-closed__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-            </svg>
+            <img
+              src="/images/vaal-risitas.png"
+              alt="Vaal Orb"
+              class="altar-closed__icon-image"
+            />
           </div>
           <h1 class="altar-closed__title">
             {{ t("altar.closed.title") }}
@@ -3502,17 +3504,19 @@ const endDragOrb = async () => {
   width: 80px;
   height: 80px;
   margin: 0 auto 1.5rem;
-  color: rgba(175, 96, 37, 0.6);
   animation: altarClosedPulse 3s ease-in-out infinite;
 }
 
-.altar-closed__icon svg {
+.altar-closed__icon-image {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(175, 96, 37, 0.4));
 }
 
 @keyframes altarClosedPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(1);
   }
