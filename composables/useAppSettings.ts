@@ -6,11 +6,12 @@
  */
 
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import type { AltarOpenSetting, DataSourceSetting } from '~/types/database'
+import type { AltarOpenSetting, DataSourceSetting, ActivityLogsEnabledSetting } from '~/types/database'
 
 // Shared state across all components
 const altarOpen = ref(false)
 const dataSource = ref<'mock' | 'api'>('mock')
+const activityLogsEnabled = ref(true)
 const isLoading = ref(true)
 const isConnected = ref(false)
 
@@ -61,6 +62,10 @@ export function useAppSettings() {
       case 'data_source':
         const dsValue = value as DataSourceSetting
         dataSource.value = dsValue?.source ?? 'mock'
+        break
+      case 'activity_logs_enabled':
+        const logsValue = value as ActivityLogsEnabledSetting
+        activityLogsEnabled.value = logsValue?.enabled ?? true
         break
     }
   }
@@ -139,6 +144,21 @@ export function useAppSettings() {
   }
 
   /**
+   * Toggle activity logs enabled/disabled
+   */
+  const toggleActivityLogs = async (userId?: string) => {
+    const newValue = !activityLogsEnabled.value
+    return await updateSetting('activity_logs_enabled', { enabled: newValue }, userId)
+  }
+
+  /**
+   * Set activity logs enabled state
+   */
+  const setActivityLogsEnabled = async (enabled: boolean, userId?: string) => {
+    return await updateSetting('activity_logs_enabled', { enabled }, userId)
+  }
+
+  /**
    * Initialize the settings (fetch + subscribe)
    * Should be called once on app mount
    */
@@ -170,12 +190,15 @@ export function useAppSettings() {
     // State
     altarOpen: computed(() => altarOpen.value),
     dataSource: computed(() => dataSource.value),
+    activityLogsEnabled: computed(() => activityLogsEnabled.value),
     isLoading: computed(() => isLoading.value),
     isConnected: computed(() => isConnected.value),
     
     // Actions
     toggleAltar,
     setDataSourceSetting,
+    toggleActivityLogs,
+    setActivityLogsEnabled,
     fetchSettings,
     initialize,
     cleanup,

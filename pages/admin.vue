@@ -5,13 +5,14 @@ definePageMeta({
 
 const { t } = useI18n();
 const { user } = useUserSession();
-const { altarOpen, isLoading, isConnected, toggleAltar } = useAppSettings();
+const { altarOpen, isLoading, isConnected, toggleAltar, activityLogsEnabled, toggleActivityLogs } = useAppSettings();
 const { dataSource, setDataSource } = useDataSource();
 
 useHead({ title: t("admin.meta.title") });
 
 // Local state for optimistic updates
 const isTogglingAltar = ref(false);
+const isTogglingActivityLogs = ref(false);
 
 // Handle altar toggle
 const handleAltarToggle = async () => {
@@ -22,6 +23,18 @@ const handleAltarToggle = async () => {
     await toggleAltar(user.value?.id);
   } finally {
     isTogglingAltar.value = false;
+  }
+};
+
+// Handle activity logs toggle
+const handleActivityLogsToggle = async () => {
+  if (isTogglingActivityLogs.value) return;
+  isTogglingActivityLogs.value = true;
+
+  try {
+    await toggleActivityLogs(user.value?.id);
+  } finally {
+    isTogglingActivityLogs.value = false;
   }
 };
 
@@ -50,6 +63,21 @@ const altarOpenModel = computed({
       !isLoading.value
     ) {
       await handleAltarToggle();
+    }
+  },
+});
+
+// Computed for activity logs toggle v-model
+const activityLogsEnabledModel = computed({
+  get: () => activityLogsEnabled.value,
+  set: async (value: boolean) => {
+    // Only trigger if value actually changed and not already processing
+    if (
+      value !== activityLogsEnabled.value &&
+      !isTogglingActivityLogs.value &&
+      !isLoading.value
+    ) {
+      await handleActivityLogsToggle();
     }
   },
 });
@@ -147,6 +175,59 @@ const altarOpenModel = computed({
 
             <p class="admin-section__hint">
               {{ t("admin.altar.hint") }}
+            </p>
+          </section>
+
+          <RunicDivider />
+
+          <!-- Activity Logs Panel -->
+          <section class="admin-section">
+            <h2 class="admin-section__title">
+              <span class="admin-section__rune">◆</span>
+              {{ t("admin.activityLogs.title") }}
+              <span class="admin-section__rune">◆</span>
+            </h2>
+            <p class="admin-section__desc">
+              {{ t("admin.activityLogs.description") }}
+            </p>
+
+            <div class="admin-toggle-panel">
+              <div class="admin-toggle-panel__info">
+                <span class="admin-toggle-panel__label">{{
+                  t("admin.activityLogs.status")
+                }}</span>
+                <span
+                  class="admin-toggle-panel__status"
+                  :class="
+                    activityLogsEnabled
+                      ? 'admin-toggle-panel__status--open'
+                      : 'admin-toggle-panel__status--closed'
+                  "
+                >
+                  {{
+                    activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled")
+                  }}
+                </span>
+              </div>
+
+              <div
+                class="admin-toggle-panel__control"
+                :class="{
+                  'admin-toggle-panel__control--disabled':
+                    isLoading || isTogglingActivityLogs,
+                }"
+              >
+                <RunicRadio
+                  v-model="activityLogsEnabledModel"
+                  :toggle="true"
+                  size="md"
+                  toggle-color="default"
+                />
+              </div>
+            </div>
+
+            <p class="admin-section__hint">
+              {{ t("admin.activityLogs.hint") }}
             </p>
           </section>
 
