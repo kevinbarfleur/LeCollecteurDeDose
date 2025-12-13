@@ -112,38 +112,84 @@ export function useDataSource() {
     await setDataSource(dataSource.value === 'api' ? 'test' : 'api')
   }
 
+  // Track admin status (will be checked when needed)
+  const isAdminUser = ref(false)
+
+  // Check admin status on mount and whenever user changes
+  if (import.meta.client) {
+    // Initial check
+    if (user.value?.id) {
+      checkIsAdmin(user.value.id).then(isAdmin => {
+        isAdminUser.value = isAdmin
+        // Force API for non-admins - ALWAYS
+        if (!isAdmin) {
+          if (dataSource.value === 'test') {
+            console.log('[DataSource] Non-admin user detected, forcing API mode')
+            dataSource.value = 'api'
+            localStorage.removeItem('dataSource')
+          }
+        }
+      })
+    }
+
+    // Watch for user changes
+    watch(() => user.value?.id, async (twitchUserId) => {
+      if (twitchUserId) {
+        const isAdmin = await checkIsAdmin(twitchUserId)
+        isAdminUser.value = isAdmin
+        // Force API for non-admins - ALWAYS
+        if (!isAdmin) {
+          if (dataSource.value === 'test') {
+            console.log('[DataSource] Non-admin user detected, forcing API mode')
+            dataSource.value = 'api'
+            localStorage.removeItem('dataSource')
+          }
+        }
+      } else {
+        isAdminUser.value = false
+        // Not logged in, force API
+        if (dataSource.value === 'test') {
+          dataSource.value = 'api'
+          localStorage.removeItem('dataSource')
+        }
+      }
+    }, { immediate: true })
+  }
+
   /**
    * Check if we're using test data (Supabase)
+   * CRITICAL: Only returns true if user is admin AND dataSource is 'test'
+   * Non-admins ALWAYS get false, even if localStorage is manipulated
    */
   const isTestData = computed(() => {
+    // Non-admins can NEVER use test data
+    if (!isAdminUser.value) {
+      return false
+    }
     return dataSource.value === 'test'
   })
 
   /**
    * Check if we're using the real API
+   * CRITICAL: Returns true if dataSource is 'api' OR if user is not admin
+   * Non-admins ALWAYS use API
    */
   const isApiData = computed(() => {
+    // Non-admins ALWAYS use API
+    if (!isAdminUser.value) {
+      return true
+    }
     return dataSource.value === 'api'
   })
 
-  // Track admin status (will be checked when needed)
-  const isAdminUser = ref(false)
-
-  // Check admin status on mount (but don't change dataSource unless user is not admin)
-  if (import.meta.client && user.value?.id) {
-    checkIsAdmin(user.value.id).then(isAdmin => {
-      isAdminUser.value = isAdmin
-      // Force API for non-admins ONLY if they somehow have 'test' set
-      if (!isAdmin && dataSource.value === 'test') {
-        console.log('[DataSource] Non-admin user detected, forcing API mode')
-        dataSource.value = 'api'
-        localStorage.removeItem('dataSource')
-      }
-    })
-  }
-
   return {
-    dataSource: computed(() => dataSource.value),
+    // CRITICAL: Non-admins ALWAYS get 'api', even if localStorage is manipulated
+    dataSource: computed(() => {
+      if (!isAdminUser.value) {
+        return 'api'
+      }
+      return dataSource.value
+    }),
     isTestData,
     isApiData,
     isInitializing: computed(() => false), // No initialization needed, value is ready immediately
