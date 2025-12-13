@@ -1,91 +1,40 @@
 /**
- * Composable to manage the data source (Mock vs API)
+ * Composable to manage the data source (API vs Test)
  * 
- * This allows admins to toggle between mock data and the real API
- * for testing purposes.
- * 
- * Admin users are now managed in Supabase (admin_users table) instead of hardcoded.
- * We use the Twitch user ID (unique and permanent) to identify admins.
+ * Simple implementation: reads from localStorage on mount, allows admins to change it.
+ * The value NEVER changes automatically - only when the admin explicitly changes it.
  */
 
 import type { AdminUser } from '~/types/database'
 
-export type DataSource = 'mock' | 'api'
+export type DataSource = 'api' | 'test'
+
+// Initialize dataSource from localStorage ONCE at module load
+let initialDataSource: DataSource = 'api'
+if (import.meta.client) {
+  const stored = localStorage.getItem('dataSource') as DataSource | null
+  if (stored && (stored === 'api' || stored === 'test')) {
+    initialDataSource = stored
+    console.log('[DataSource] Initialized from localStorage:', stored)
+  } else {
+    console.log('[DataSource] No localStorage value, defaulting to:', initialDataSource)
+  }
+}
 
 // Shared state across all components
-const dataSource = ref<DataSource>('mock')
+const dataSource = ref<DataSource>(initialDataSource)
 
 // Cache for admin status to avoid repeated DB calls
 const adminCache = ref<Map<string, boolean>>(new Map())
 const adminCacheExpiry = ref<Map<string, number>>(new Map())
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-// Track if data source is being initialized
-const isInitializing = ref(true)
-
 export function useDataSource() {
   const supabase = useSupabaseClient()
+  const { user } = useUserSession()
   
-  // Lazy load useAppSettings to avoid circular dependency
-  let appSettingsDataSource: ComputedRef<DataSource> | null = null
-  let appSettingsIsLoading: ComputedRef<boolean> | null = null
-  try {
-    const appSettings = useAppSettings()
-    appSettingsDataSource = appSettings.dataSource
-    appSettingsIsLoading = appSettings.isLoading
-  } catch (e) {
-    // useAppSettings might not be available yet
-    console.warn('[DataSource] useAppSettings not available:', e)
-  }
-
-  // Initialize from localStorage first (fastest, synchronous)
-  if (import.meta.client) {
-    const stored = localStorage.getItem('dataSource') as DataSource | null
-    if (stored && (stored === 'mock' || stored === 'api')) {
-      dataSource.value = stored
-    }
-  }
-
-  // Sync with app settings (from Supabase) if available
-  if (appSettingsDataSource && appSettingsIsLoading) {
-    // Watch for loading state - when settings finish loading, we're initialized
-    watch(appSettingsIsLoading, (loading) => {
-      if (!loading) {
-        // Settings loaded, sync the data source
-        if (appSettingsDataSource) {
-          const newValue = appSettingsDataSource.value
-          if (newValue && (newValue === 'mock' || newValue === 'api')) {
-            dataSource.value = newValue
-            if (import.meta.client) {
-              localStorage.setItem('dataSource', newValue)
-            }
-          }
-        }
-        isInitializing.value = false
-      }
-    }, { immediate: true })
-
-    // Also watch for data source changes
-    if (appSettingsDataSource) {
-      watch(appSettingsDataSource, (newValue) => {
-        if (newValue && (newValue === 'mock' || newValue === 'api')) {
-          dataSource.value = newValue
-          if (import.meta.client) {
-            localStorage.setItem('dataSource', newValue)
-          }
-        }
-      }, { immediate: true })
-    }
-  } else {
-    // No app settings available, use localStorage value and mark as initialized
-    if (import.meta.client) {
-      isInitializing.value = false
-    }
-  }
-
   /**
    * Check if a user is an active admin by their Twitch user ID
-   * Uses caching to avoid repeated database calls
    */
   const checkIsAdmin = async (twitchUserId: string | undefined | null): Promise<boolean> => {
     if (!twitchUserId) return false
@@ -115,7 +64,7 @@ export function useDataSource() {
   }
 
   /**
-   * Clear the admin cache (useful when admin status changes)
+   * Clear the admin cache
    */
   const clearAdminCache = () => {
     adminCache.value.clear()
@@ -124,50 +73,130 @@ export function useDataSource() {
 
   /**
    * Set the data source and persist to localStorage
-   * Also updates Supabase settings if user is admin
+   * Only works for admins - non-admins are always forced to 'api'
    */
-  const setDataSource = async (source: DataSource, userId?: string) => {
+  const setDataSource = async (source: DataSource, userId?: string): Promise<void> => {
+    console.log('[DataSource] setDataSource called:', { source, userId, currentValue: dataSource.value })
+    
+    // Check if user is admin before allowing change
+    const userIdToCheck = userId || user.value?.id
+    if (userIdToCheck) {
+      const isAdmin = await checkIsAdmin(userIdToCheck)
+      if (!isAdmin) {
+        console.warn('[DataSource] Only admins can change data source')
+        dataSource.value = 'api'
+        if (import.meta.client) {
+          localStorage.removeItem('dataSource')
+        }
+        return
+      }
+    } else {
+      // No user ID available, reject change
+      console.warn('[DataSource] No user ID available, cannot change data source')
+      return
+    }
+    
+    // Admin confirmed, allow change
+    const oldValue = dataSource.value
     dataSource.value = source
     if (import.meta.client) {
       localStorage.setItem('dataSource', source)
+      console.log('[DataSource] Value set successfully:', { oldValue, newValue: source })
     }
-    
-    // Update Supabase settings if userId provided (admin only)
-    if (userId) {
-      try {
-        const { setDataSourceSetting } = useAppSettings()
-        await setDataSourceSetting(source, userId)
-      } catch (e) {
-        console.warn('[DataSource] Could not update app settings:', e)
+  }
+
+  /**
+   * Toggle between API and Test
+   */
+  const toggleDataSource = async () => {
+    await setDataSource(dataSource.value === 'api' ? 'test' : 'api')
+  }
+
+  // Track admin status (will be checked when needed)
+  const isAdminUser = ref(false)
+
+  // Check admin status on mount and whenever user changes
+  if (import.meta.client) {
+    // Initial check
+    if (user.value?.id) {
+      checkIsAdmin(user.value.id).then(isAdmin => {
+        isAdminUser.value = isAdmin
+        // Force API for non-admins - ALWAYS
+        if (!isAdmin) {
+          if (dataSource.value === 'test') {
+            console.log('[DataSource] Non-admin user detected, forcing API mode')
+            dataSource.value = 'api'
+            localStorage.removeItem('dataSource')
+          }
+        }
+      })
+    }
+
+    // Watch for user changes
+    watch(() => user.value?.id, async (twitchUserId) => {
+      if (twitchUserId) {
+        const isAdmin = await checkIsAdmin(twitchUserId)
+        isAdminUser.value = isAdmin
+        // Force API for non-admins - ALWAYS
+        if (!isAdmin) {
+          if (dataSource.value === 'test') {
+            console.log('[DataSource] Non-admin user detected, forcing API mode')
+            dataSource.value = 'api'
+            localStorage.removeItem('dataSource')
+          }
+        }
+      } else {
+        isAdminUser.value = false
+        // Not logged in, force API
+        if (dataSource.value === 'test') {
+          dataSource.value = 'api'
+          localStorage.removeItem('dataSource')
+        }
       }
+    }, { immediate: true })
+  }
+
+  /**
+   * Check if we're using test data (Supabase)
+   * CRITICAL: Only returns true if user is admin AND dataSource is 'test'
+   * Non-admins ALWAYS get false, even if localStorage is manipulated
+   */
+  const isTestData = computed(() => {
+    // Non-admins can NEVER use test data
+    if (!isAdminUser.value) {
+      return false
     }
-  }
+    return dataSource.value === 'test'
+  })
 
   /**
-   * Toggle between mock and API
+   * Check if we're using the real API
+   * CRITICAL: Returns true if dataSource is 'api' OR if user is not admin
+   * Non-admins ALWAYS use API
    */
-  const toggleDataSource = () => {
-    setDataSource(dataSource.value === 'mock' ? 'api' : 'mock')
-  }
-
-  /**
-   * Check if we're using mock data
-   */
-  const isMockData = computed(() => dataSource.value === 'mock')
-
-  /**
-   * Check if we're using the API
-   */
-  const isApiData = computed(() => dataSource.value === 'api')
+  const isApiData = computed(() => {
+    // Non-admins ALWAYS use API
+    if (!isAdminUser.value) {
+      return true
+    }
+    return dataSource.value === 'api'
+  })
 
   return {
-    dataSource: computed(() => dataSource.value),
-    isMockData,
+    // CRITICAL: Non-admins ALWAYS get 'api', even if localStorage is manipulated
+    dataSource: computed(() => {
+      if (!isAdminUser.value) {
+        return 'api'
+      }
+      return dataSource.value
+    }),
+    isTestData,
     isApiData,
-    isInitializing: computed(() => isInitializing.value),
+    isInitializing: computed(() => false), // No initialization needed, value is ready immediately
     setDataSource,
     toggleDataSource,
     checkIsAdmin,
     clearAdminCache,
+    isAdmin: computed(() => isAdminUser.value),
   }
 }

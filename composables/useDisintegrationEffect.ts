@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
 import html2canvas from 'html2canvas';
+import gsap from 'gsap';
 import { DISINTEGRATION } from '~/constants/timing';
 
 /**
@@ -33,6 +34,25 @@ export interface CapturedDimensions {
  * Used for dramatic card destruction animations
  */
 export function useDisintegrationEffect() {
+  // Get disintegrate from window (initialized by plugin)
+  const getDisintegrate = () => {
+    if (typeof window === 'undefined') return null;
+    return (window as any).disintegrate || null;
+  };
+  
+  // Ensure disintegrate is initialized
+  const ensureDisintegrateInitialized = () => {
+    const disintegrate = getDisintegrate();
+    if (disintegrate && disintegrate.init && typeof disintegrate.init === 'function') {
+      try {
+        disintegrate.init();
+      } catch (e) {
+        console.warn('[DisintegrationEffect] Failed to initialize disintegrate:', e);
+      }
+    }
+    return disintegrate;
+  };
+
   // Snapshot state
   const cardSnapshot = ref<HTMLCanvasElement | null>(null);
   const imageSnapshot = ref<HTMLCanvasElement | null>(null);
@@ -127,6 +147,7 @@ export function useDisintegrationEffect() {
       return newCanvas;
     });
   };
+
 
   /**
    * Create and animate the disintegration effect
@@ -263,21 +284,182 @@ export function useDisintegrationEffect() {
 
       // Capture the full card
       const cardRect = cardFrontRef.value.getBoundingClientRect();
+      
+      // Verify element has valid dimensions
+      if (cardRect.width === 0 || cardRect.height === 0) {
+        console.warn('[DisintegrationEffect] Card element has invalid dimensions, skipping capture');
+        cardSnapshot.value = null;
+        isCapturingSnapshot.value = false;
+        return;
+      }
+
+      // Wait a bit more to ensure all images are loaded
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Verify element still exists and has dimensions
+      if (!cardFrontRef.value) {
+        isCapturingSnapshot.value = false;
+        return;
+      }
+
+      const finalRect = cardFrontRef.value.getBoundingClientRect();
+      if (finalRect.width === 0 || finalRect.height === 0) {
+        console.warn('[DisintegrationEffect] Card element lost dimensions, skipping capture');
+        cardSnapshot.value = null;
+        isCapturingSnapshot.value = false;
+        return;
+      }
+
+      const originalSrcs: Map<HTMLImageElement, string> = new Map();
+      if (cardFrontRef.value) {
+        const images = cardFrontRef.value.querySelectorAll('img');
+        
+        images.forEach((img) => {
+          const htmlImg = img as HTMLImageElement;
+          const currentSrc = htmlImg.getAttribute('src') || htmlImg.src;
+          
+          if (currentSrc && 
+              !currentSrc.startsWith('/api/image-proxy') && 
+              !currentSrc.startsWith('data:') &&
+              !currentSrc.startsWith('blob:')) {
+            try {
+              const url = new URL(currentSrc, window.location.href);
+              if (url.origin !== window.location.origin) {
+                originalSrcs.set(htmlImg, currentSrc);
+                const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
+                htmlImg.crossOrigin = 'anonymous';
+                htmlImg.setAttribute('src', proxyUrl);
+                htmlImg.src = proxyUrl;
+              }
+            } catch (e) {
+              // Invalid URL, skip
+            }
+          }
+        });
+        
+        if (images.length > 0) {
+          await Promise.all(Array.from(images).map((img) => {
+            return new Promise<void>((resolve) => {
+              const htmlImg = img as HTMLImageElement;
+              if (htmlImg.complete && htmlImg.naturalWidth > 0) {
+                resolve();
+                return;
+              }
+              htmlImg.onload = () => resolve();
+              htmlImg.onerror = () => resolve();
+              setTimeout(() => resolve(), 3000);
+            });
+          }));
+        }
+      }
+
+      // Now capture with html2canvas - images are already proxied and loaded
       const canvas = await html2canvas(cardFrontRef.value, {
         backgroundColor: null,
         scale: 2,
         logging: false,
         useCORS: true,
-        allowTaint: true,
-        imageTimeout: 10000,
+        allowTaint: false,
+        imageTimeout: 15000,
+        foreignObjectRendering: false,
+        onclone: (clonedDoc, element) => {
+          try {
+            const clonedElement = element || clonedDoc.body;
+            const images = clonedElement.querySelectorAll('img');
+            
+            images.forEach((img) => {
+              const htmlImg = img as HTMLImageElement;
+              htmlImg.crossOrigin = 'anonymous';
+              if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
+                htmlImg.style.display = 'none';
+                htmlImg.src = '';
+              }
+            });
+            
+            const allElements = clonedElement.querySelectorAll('*');
+            allElements.forEach((el) => {
+              const htmlEl = el as HTMLElement;
+              const computedStyle = window.getComputedStyle(htmlEl);
+              const bgImage = computedStyle.backgroundImage;
+              
+              if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+                const bgImageMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+                if (bgImageMatch && bgImageMatch[1]) {
+                  const bgUrl = bgImageMatch[1];
+                  
+                  if (bgUrl.startsWith('data:')) {
+                    const width = parseInt(computedStyle.width) || 0;
+                    const height = parseInt(computedStyle.height) || 0;
+                    if (width === 0 || height === 0) {
+                      htmlEl.style.backgroundImage = 'none';
+                    }
+                  } else if (!bgUrl.includes('/api/image-proxy') && !bgUrl.startsWith('blob:')) {
+                    try {
+                      const url = new URL(bgUrl, window.location.href);
+                      if (url.origin !== window.location.origin) {
+                        htmlEl.style.backgroundImage = `url(/api/image-proxy?url=${encodeURIComponent(bgUrl)})`;
+                      }
+                    } catch (e) {
+                      htmlEl.style.backgroundImage = 'none';
+                    }
+                  }
+                }
+              }
+              
+              const width = parseInt(computedStyle.width) || 0;
+              const height = parseInt(computedStyle.height) || 0;
+              if ((width === 0 || height === 0) && computedStyle.backgroundImage !== 'none') {
+                htmlEl.style.backgroundImage = 'none';
+              }
+            });
+          } catch (e) {
+            console.error('[DisintegrationEffect] Error in onclone:', e);
+          }
+        },
+        ignoreElements: (element) => {
+          if (element instanceof HTMLImageElement) {
+            if (element.naturalWidth === 0 || element.naturalHeight === 0) {
+              return true;
+            }
+          }
+          
+          if (element instanceof HTMLElement) {
+            const computedStyle = window.getComputedStyle(element);
+            const bgImage = computedStyle.backgroundImage;
+            if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+              const width = parseInt(computedStyle.width) || 0;
+              const height = parseInt(computedStyle.height) || 0;
+              if (width === 0 || height === 0) {
+                return true;
+              }
+            }
+          }
+          
+          return false;
+        },
       });
 
-      cardSnapshot.value = canvas;
-      capturedCardDimensions.value = {
-        width: cardRect.width,
-        height: cardRect.height,
-      };
+      // Restore original srcs after capture
+      originalSrcs.forEach((originalSrc, img) => {
+        img.setAttribute('src', originalSrc);
+        img.src = originalSrc;
+        img.removeAttribute('crossorigin');
+      });
+      originalSrcs.clear();
+
+      // Verify canvas has valid dimensions
+      if (canvas.width === 0 || canvas.height === 0) {
+        console.warn('[DisintegrationEffect] Captured canvas has invalid dimensions');
+        cardSnapshot.value = null;
+      } else {
+        cardSnapshot.value = canvas;
+        capturedCardDimensions.value = {
+          width: finalRect.width,
+          height: finalRect.height,
+        };
+      }
     } catch (error) {
+      console.error('[DisintegrationEffect] Failed to capture card snapshot:', error);
       cardSnapshot.value = null;
     }
 

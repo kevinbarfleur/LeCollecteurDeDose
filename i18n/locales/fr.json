@@ -96,7 +96,9 @@
       "foilMessage": "✦ Cette carte brille déjà plus que ton DPS.",
       "empty": "Tu n'as plus de Vaal Orbs. Skill issue.",
       "recording": "Sacrifice consigné…",
-      "rec": "REC"
+      "rec": "REC",
+      "loading": "Chargement…",
+      "syncing": "Synchronisation en cours…"
     },
     "preferences": {
       "title": "Préférences",
@@ -175,6 +177,7 @@
   "common": {
     "loading": "Chargement des ténèbres…",
     "close": "Fermer",
+    "cancel": "Annuler",
     "search": "Rechercher dans le néant…",
     "clear": "Effacer",
     "select": "Sélectionner…",
@@ -276,12 +279,27 @@
     "dataSource": {
       "title": "Source des Données",
       "description": "Définit la source des collections et du catalogue.",
-      "mock": "Données Mock",
-      "mockHint": "Utilise les données locales de test",
-      "api": "API Externe",
-      "apiHint": "Récupère les données depuis l'API de production",
-      "comingSoon": "Cette fonctionnalité sera disponible prochainement.",
-      "warning": "Changer la source affecte tous les exilés connectés."
+      "api": "API",
+      "apiHint": "Utilise l'API de production (expérience réelle pour tous)",
+      "test": "Données de Test",
+      "testHint": "Utilise les données de test stockées dans Supabase",
+      "warning": "Ce réglage n'affecte que ta propre session d'administration.",
+      "confirmTitle": "Changer ta source de données",
+      "confirmMessage": "Tu vas passer de {from} à {to}. Cette action ne changera la source de données que pour toi, pauvre admin. Les autres exilés continueront de souffrir avec l'API réelle. Es-tu sûr de vouloir continuer ?",
+      "confirmButton": "Confirmer",
+      "syncButton": "Synchroniser les données de test depuis l'API réelle",
+      "syncing": "Synchronisation en cours...",
+      "syncConfirmTitle": "Synchroniser les données de test",
+      "syncConfirmMessage": "Voulez-vous vraiment synchroniser les données de test depuis l'API réelle ? Cela remplacera toutes les données de test actuelles dans Supabase.",
+      "syncSuccess": "✅ Données de test synchronisées avec succès depuis l'API réelle !",
+      "syncStats": "Utilisateurs: {usersCount}, Cartes uniques: {uniquesCount}, Historiques: {userCardsCount}",
+      "syncError": "❌ Erreur lors de la synchronisation des données de test.",
+      "backupButton": "Créer un Backup",
+      "backingUp": "Création du backup en cours...",
+      "backupConfirmTitle": "Créer un Backup",
+      "backupConfirmMessage": "Tu vas créer un backup des données actuelles de l'API dans Supabase. Cette action récupère toutes les données depuis l'API externe et les sauvegarde dans la table backup. Es-tu sûr de vouloir continuer ?",
+      "backupSuccess": "✅ Backup créé avec succès !",
+      "backupError": "❌ Erreur lors de la création du backup."
     },
     "activityLogs": {
       "title": "Panneau de Logs d'Activité",
@@ -290,11 +308,37 @@
       "enabled": "ACTIVÉ",
       "disabled": "DÉSACTIVÉ",
       "hint": "Quand désactivé, le panneau et les notifications ne s'affichent plus pour aucun exilé."
+    },
+    "altarDebug": {
+      "apiModeHint": "En mode API, les Vaal Orbs sont synchronisés avec le serveur et ne peuvent pas être modifiés depuis ici."
+    },
+    "devTestMode": {
+      "title": "Mode Développement (Localhost)",
+      "description": "En mode test, utilise les données de test stockées dans Supabase au lieu de l'API de production.",
+      "real": "Données Réelles",
+      "test": "Données de Test",
+      "syncButton": "Synchroniser les données de test depuis l'API réelle",
+      "syncConfirm": "Voulez-vous vraiment synchroniser les données de test depuis l'API réelle ? Cela remplacera toutes les données de test actuelles dans Supabase.",
+      "syncing": "Synchronisation en cours...",
+      "syncSuccess": "✅ Données de test synchronisées avec succès depuis l'API réelle !",
+      "syncStats": "Utilisateurs: {usersCount}, Cartes uniques: {uniquesCount}, Historiques: {userCardsCount}",
+      "syncError": "❌ Erreur lors de la synchronisation des données de test.",
+      "localhostOnly": "Cette fonctionnalité n'est disponible qu'en localhost.",
+      "hint": "Cette option n'est disponible qu'en localhost. En mode test, toutes les modifications sont effectuées sur les données de test dans Supabase, pas sur les données de production. Cliquez sur le bouton ci-dessus pour récupérer les dernières données de l'API réelle.",
+      "confirmTitle": "Changer le mode de développement",
+      "confirmMessage": "Vous allez passer de {from} à {to}. Cette action changera la source de données utilisée pour le développement. Êtes-vous sûr de vouloir continuer ?",
+      "confirmButton": "Confirmer"
     }
   },
   "footer": {
     "disclaimer": "Fansite non officiel — Non affilié à Grinding Gear Games",
     "legal_link": "Mentions légales"
+  },
+  "gameOffline": {
+    "title": "Les Ténèbres se Moquent de Toi",
+    "description": "Le serveur de données a décidé de prendre une pause. Probablement pour te faire comprendre que ta collection n'a aucune importance. Il reviendra quand il aura envie… ou jamais.",
+    "hint": "En attendant que la RNG daigne te pardonner, va pleurer sur le stream.",
+    "button": "Rejoindre le Stream"
   },
   "activityLogs": {
     "title": "Activité des Exilés",

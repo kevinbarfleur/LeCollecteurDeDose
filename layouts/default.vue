@@ -2,8 +2,9 @@
 const { t } = useI18n();
 const route = useRoute();
 const { user, loggedIn } = useUserSession();
-const { checkIsAdmin } = useDataSource();
+const { checkIsAdmin, isApiData } = useDataSource();
 const { activityLogsEnabled } = useAppSettings();
+const { isApiOffline } = useApiStatus();
 
 const navItems = computed(() => [
   { path: "/catalogue", label: t("nav.catalogue"), icon: "cards" },
@@ -32,6 +33,14 @@ watch(
 
 // Computed for template usage
 const canSeeAdminLink = computed(() => loggedIn.value && isAdmin.value);
+
+// Show game offline message when API is offline, but NOT on admin, about, or home pages
+const showGameOfflineMessage = computed(() => {
+  // Never show on admin, about, or home pages
+  if (route.path === '/admin' || route.path === '/about' || route.path === '/') return false;
+  // Only show if API mode is active and API is offline
+  return isApiData.value && isApiOffline.value;
+});
 </script>
 
 <template>
@@ -118,7 +127,16 @@ const canSeeAdminLink = computed(() => loggedIn.value && isAdmin.value);
         <div class="page-backdrop__corner page-backdrop__corner--br"></div>
       </div>
       <div class="main-content__inner">
-        <slot />
+        <!-- Game Offline Message (shown on all pages except admin when API is offline) -->
+        <ClientOnly>
+          <GameOfflineMessage v-if="showGameOfflineMessage" />
+          <template #fallback>
+            <slot />
+          </template>
+        </ClientOnly>
+        <div v-if="!showGameOfflineMessage">
+          <slot />
+        </div>
       </div>
     </main>
 
@@ -173,6 +191,9 @@ const canSeeAdminLink = computed(() => loggedIn.value && isAdmin.value);
         <div v-if="activityLogsEnabled" style="display: none;"></div>
       </template>
     </ClientOnly>
+
+    <!-- Global Confirmation Modal -->
+    <RunicConfirmModal />
   </div>
 </template>
 

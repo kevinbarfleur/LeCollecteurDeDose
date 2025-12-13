@@ -141,6 +141,36 @@ export type Database = {
         }
         Relationships: []
       }
+      dev_test_data: {
+        Row: {
+          id: string
+          test_set_name: string
+          user_collection: Json
+          user_cards: Json
+          uniques: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          test_set_name?: string
+          user_collection?: Json
+          user_cards?: Json
+          uniques?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          test_set_name?: string
+          user_collection?: Json
+          user_cards?: Json
+          uniques?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -187,10 +217,14 @@ export interface AltarOpenSetting {
 }
 
 export interface DataSourceSetting {
-  source: 'mock' | 'api'
+  source: 'api' | 'test'
 }
 
 export interface ActivityLogsEnabledSetting {
+  enabled: boolean
+}
+
+export interface DevTestModeSetting {
   enabled: boolean
 }
 

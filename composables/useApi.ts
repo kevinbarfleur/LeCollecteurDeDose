@@ -12,10 +12,28 @@ import type { ApiResponse, PlayerCollection, CatalogueResponse, ApiError } from 
 export function useApi() {
   const config = useRuntimeConfig()
   const externalApiUrl = config.public.dataApiUrl as string
+  const { isTestData } = useDataSource() // Use isTestData from useDataSource
+  
+  // Determine which API to use
+  // In test mode, use Supabase Edge Function
+  // Otherwise, use the real API via local proxy
+  const supabaseUrl = config.public.supabase?.url || ''
   
   // Use local proxy to avoid CORS issues
   // External API: /api/userCollection -> Local proxy: /api/data/userCollection
-  const apiUrl = '/api/data'
+  // Test API: Supabase Edge Function -> /functions/v1/dev-test-api/api/...
+  const apiUrl = computed(() => {
+    return isTestData.value
+      ? `${supabaseUrl}/functions/v1/dev-test-api`
+      : '/api/data'
+  })
+
+  // Log when API mode changes
+  if (import.meta.client) {
+    watch(isTestData, (isTest) => {
+      console.log('[API] Data source mode changed:', { isTestData: isTest, apiUrl: apiUrl.value })
+    })
+  }
 
   // State
   const isLoading = ref(false)
@@ -23,7 +41,7 @@ export function useApi() {
 
   /**
    * Generic fetch wrapper with error handling
-   * Uses the local server proxy to avoid CORS issues
+   * Uses the local server proxy to avoid CORS issues (or Supabase Edge Function in test mode)
    * 
    * @param endpoint - API endpoint (e.g., '/api/userCollection' or 'userCollection')
    * @param options - Fetch options
@@ -37,14 +55,45 @@ export function useApi() {
     isLoading.value = true
     error.value = null
 
-    // Remove /api/ prefix if present since our proxy adds it
-    const cleanEndpoint = endpoint.replace(/^\/api\//, '').replace(/^\//, '')
-    const url = `${apiUrl}/${cleanEndpoint}`
+    // For test mode, use the full path with /api prefix
+    // For real mode, remove /api/ prefix since our proxy adds it
+    const currentApiUrl = apiUrl.value
+    const useTestApi = isTestData.value
+    
+    let cleanEndpoint: string
+    if (useTestApi) {
+      // Test mode: endpoint should be like "/api/userCollection"
+      cleanEndpoint = endpoint.startsWith('/api') ? endpoint : `/api/${endpoint.replace(/^\//, '')}`
+    } else {
+      // Real mode: remove /api/ prefix, endpoint should be like "userCollection"
+      cleanEndpoint = endpoint.replace(/^\/api\//, '').replace(/^\//, '')
+    }
+    
+    // Ensure proper URL construction with slash separator
+    // apiUrl is either '/api/data' or 'https://.../functions/v1/dev-test-api'
+    const url = currentApiUrl.endsWith('/') 
+      ? `${currentApiUrl}${cleanEndpoint.replace(/^\//, '')}`
+      : `${currentApiUrl}${cleanEndpoint.startsWith('/') ? '' : '/'}${cleanEndpoint}`
 
     try {
       const method = (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET'
+      
+      // Prepare headers
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      
+      // For test mode, add Supabase anon key for authentication
+      if (useTestApi) {
+        const supabaseKey = config.public.supabase?.key || ''
+        if (supabaseKey) {
+          headers['Authorization'] = `Bearer ${supabaseKey}`
+        }
+      }
+      
       const response = await $fetch(url, {
         method,
+        headers,
         body: options.body ? JSON.parse(options.body as string) : undefined,
       })
 
@@ -86,6 +135,14 @@ export function useApi() {
     
     // Try to find the user's data (case-insensitive)
     const userLower = user.toLowerCase()
+    
+    // Prefer lowercase key if it exists (this is what we use for updates)
+    // This ensures we read the same entry we write to
+    if (allCollections[userLower]) {
+      return allCollections[userLower]
+    }
+    
+    // Fallback to case-insensitive search
     const userKey = Object.keys(allCollections).find(
       key => key.toLowerCase() === userLower
     )
@@ -131,27 +188,50 @@ export function useApi() {
 
   /**
    * Update a player's collection
-   * Endpoint: POST /api/collection/update
+   * Endpoint: POST /api/userCollection/update
    * Requires x-api-key header
    * 
-   * Note: This should be called from a server route for security
+   * Format: { "username": { "uid": {...}, "vaalOrbs": N } }
+   * The server merges this with existing data
    */
-  async function updatePlayerCollection(
-    pseudo: string,
-    data: { cards: any[]; vaalOrb?: number }
+  async function updateUserCollection(
+    username: string,
+    collectionData: Record<string, any>
   ): Promise<boolean> {
+    // Lowercase username to match server behavior
+    const userKey = username.toLowerCase()
+    
+    const payload = {
+      [userKey]: collectionData
+    }
+    
     const result = await apiFetch<any>(
-      '/api/collection/update',
+      'userCollection/update',
       {
         method: 'POST',
-        body: JSON.stringify({
-          [pseudo]: data
-        }),
+        body: JSON.stringify(payload),
       },
       true // requiresAuth
     )
     
     return !!result
+  }
+
+  /**
+   * Update a player's collection (legacy function, kept for compatibility)
+   * @deprecated Use updateUserCollection instead
+   */
+  async function updatePlayerCollection(
+    pseudo: string,
+    data: { cards: any[]; vaalOrb?: number }
+  ): Promise<boolean> {
+    // Convert legacy format to new format
+    const collectionData: Record<string, any> = {}
+    if (data.vaalOrb !== undefined) {
+      collectionData.vaalOrbs = data.vaalOrb
+    }
+    // Note: cards array is not used in the new format
+    return await updateUserCollection(pseudo, collectionData)
   }
 
   /**
@@ -169,14 +249,7 @@ export function useApi() {
    */
   async function testConnection(): Promise<void> {
     // Try fetching user collections
-    const collections = await fetchUserCollections()
-    
-    if (collections) {
-      const userCount = Object.keys(collections).length
-      console.log(`[API Test] ✓ User collections available with ${userCount} users`)
-    } else {
-      console.log('[API Test] ✗ Could not fetch user collections')
-    }
+    await fetchUserCollections()
   }
 
   /**
@@ -203,6 +276,7 @@ export function useApi() {
     fetchRaw,
 
     // Methods - Write operations (require auth)
-    updatePlayerCollection,
+    updateUserCollection,
+    updatePlayerCollection, // Legacy, deprecated
   }
 }

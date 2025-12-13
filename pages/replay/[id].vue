@@ -383,6 +383,31 @@ const destroyCardEffect = async () => {
 
   isCardBeingDestroyed.value = true;
 
+  const cardSlot = cardSlotRef.value;
+  if (!cardSlot) {
+    gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return;
+  }
+
+  // Get card dimensions for DOM-based disintegration
+  let cardWidth: number;
+  let cardHeight: number;
+  
+  // Get dimensions
+  if (capturedCardDimensions.value) {
+    cardWidth = capturedCardDimensions.value.width;
+    cardHeight = capturedCardDimensions.value.height;
+  } else if (altarCardRef.value) {
+    const cardRect = altarCardRef.value.getBoundingClientRect();
+    cardWidth = cardRect.width;
+    cardHeight = cardRect.height;
+  } else {
+    cardWidth = 0;
+    cardHeight = 0;
+  }
+
+  // Start visual effects
   const shakeTl = gsap.timeline();
   for (let i = 0; i < 6; i++) {
     shakeTl.to(altarCardRef.value, {
@@ -400,87 +425,114 @@ const destroyCardEffect = async () => {
 
   await new Promise((resolve) => setTimeout(resolve, 300));
 
-  const cardSlot = cardSlotRef.value;
-  if (!cardSlot) {
-    gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return;
-  }
-
   try {
-    const containers: HTMLElement[] = [];
-    const imageElement = findCardImageElement();
-    const hasImageSnapshot =
-      imageSnapshot.value && canvasHasContent(imageSnapshot.value);
-
-    if (hasImageSnapshot && imageElement && altarCardRef.value) {
-      const imgTag = imageElement.querySelector(
-        ".game-card__image"
-      ) as HTMLImageElement | null;
-      const imgRect = imgTag?.getBoundingClientRect();
-      const actualWidth = imgRect?.width || imageElement.clientWidth;
-      const actualHeight = imgRect?.height || imageElement.clientHeight;
-      const altarRect = altarCardRef.value.getBoundingClientRect();
-      const relativeTop = imgRect
-        ? imgRect.top - altarRect.top
-        : imageElement.getBoundingClientRect().top - altarRect.top;
-      const relativeLeft = imgRect
-        ? imgRect.left - altarRect.left
-        : imageElement.getBoundingClientRect().left - altarRect.left;
-
-      const imgContainer = document.createElement("div");
-      imgContainer.className = "disintegration-container";
-      imgContainer.style.cssText = `
+    let cardCanvas = cardSnapshot.value;
+    if (!cardCanvas) {
+      console.warn('[Replay] ⚠️ No pre-captured snapshot found! This should not happen if captureCardSnapshot was called.');
+      if (cardFrontRef.value && cardWidth > 0 && cardHeight > 0) {
+        try {
+          cardCanvas = await html2canvas(cardFrontRef.value, {
+            backgroundColor: null,
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: false,
+            imageTimeout: 15000,
+            onclone: (clonedDoc, element) => {
+              try {
+                const clonedElement = element || clonedDoc.body;
+                const images = clonedElement.querySelectorAll('img');
+                images.forEach((img) => {
+                  const htmlImg = img as HTMLImageElement;
+                  htmlImg.crossOrigin = 'anonymous';
+                  if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
+                    htmlImg.style.display = 'none';
+                    htmlImg.src = '';
+                  }
+                });
+                
+                const allElements = clonedElement.querySelectorAll('*');
+                allElements.forEach((el) => {
+                  const htmlEl = el as HTMLElement;
+                  const computedStyle = window.getComputedStyle(htmlEl);
+                  const bgImage = computedStyle.backgroundImage;
+                  
+                  if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+                    const bgImageMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+                    if (bgImageMatch && bgImageMatch[1]) {
+                      const bgUrl = bgImageMatch[1];
+                      if (bgUrl.startsWith('data:')) {
+                        const width = parseInt(computedStyle.width) || 0;
+                        const height = parseInt(computedStyle.height) || 0;
+                        if (width === 0 || height === 0) {
+                          htmlEl.style.backgroundImage = 'none';
+                        }
+                      } else if (!bgUrl.includes('/api/image-proxy') && !bgUrl.startsWith('blob:')) {
+                        try {
+                          const url = new URL(bgUrl, window.location.href);
+                          if (url.origin !== window.location.origin) {
+                            htmlEl.style.backgroundImage = `url(/api/image-proxy?url=${encodeURIComponent(bgUrl)})`;
+                          }
+                        } catch (e) {
+                          htmlEl.style.backgroundImage = 'none';
+                        }
+                      }
+                    }
+                  }
+                  
+                  const width = parseInt(computedStyle.width) || 0;
+                  const height = parseInt(computedStyle.height) || 0;
+                  if ((width === 0 || height === 0) && computedStyle.backgroundImage !== 'none') {
+                    htmlEl.style.backgroundImage = 'none';
+                  }
+                });
+              } catch (e) {
+                console.error('[Replay] Error in onclone:', e);
+              }
+            },
+            ignoreElements: (element) => {
+              if (element instanceof HTMLImageElement) {
+                if (element.naturalWidth === 0 || element.naturalHeight === 0) {
+                  return true;
+                }
+              }
+              
+              if (element instanceof HTMLElement) {
+                const computedStyle = window.getComputedStyle(element);
+                const bgImage = computedStyle.backgroundImage;
+                if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+                  const width = parseInt(computedStyle.width) || 0;
+                  const height = parseInt(computedStyle.height) || 0;
+                  if (width === 0 || height === 0) {
+                    return true;
+                  }
+                }
+              }
+              
+              return false;
+            },
+          });
+        } catch (e) {
+          console.error('[Replay] Fallback capture failed:', e);
+        }
+      }
+    }
+    
+    if (cardCanvas && cardWidth > 0 && cardHeight > 0) {
+      
+      const cardContainer = document.createElement("div");
+      cardContainer.className = "disintegration-container";
+      
+      // Position container relative to card slot
+      const cardRect = altarCardRef.value.getBoundingClientRect();
+      const slotRect = cardSlot.getBoundingClientRect();
+      const relativeTop = cardRect.top - slotRect.top;
+      const relativeLeft = cardRect.left - slotRect.left;
+      
+      cardContainer.style.cssText = `
         position: absolute;
         top: ${relativeTop}px;
         left: ${relativeLeft}px;
-        width: ${actualWidth}px;
-        height: ${actualHeight}px;
-        pointer-events: none;
-        z-index: 101;
-        overflow: visible;
-      `;
-
-      altarCardRef.value.appendChild(imgContainer);
-      containers.push(imgContainer);
-
-      await createDisintegrationEffect(imageSnapshot.value!, imgContainer, {
-        frameCount: 48,
-        direction: "up",
-        duration: 0.8,
-        delayMultiplier: 0.4,
-        targetWidth: actualWidth,
-        targetHeight: actualHeight,
-      });
-
-      if (imgTag) imgTag.style.opacity = "0";
-
-      await new Promise((resolve) => setTimeout(resolve, 800));
-    }
-
-    let cardCanvas = cardSnapshot.value;
-    if (!cardCanvas && cardFrontRef.value) {
-      try {
-        cardCanvas = await html2canvas(cardFrontRef.value, {
-          backgroundColor: null,
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-        });
-      } catch (e) {}
-    }
-
-    if (cardCanvas && altarCardRef.value && capturedCardDimensions.value) {
-      const { width: cardWidth, height: cardHeight } =
-        capturedCardDimensions.value;
-
-      const cardContainer = document.createElement("div");
-      cardContainer.className = "disintegration-container";
-      cardContainer.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
         width: ${cardWidth}px;
         height: ${cardHeight}px;
         pointer-events: none;
@@ -489,25 +541,43 @@ const destroyCardEffect = async () => {
       `;
 
       cardSlot.appendChild(cardContainer);
-      containers.push(cardContainer);
 
+      // Hide the original card before disintegration
       gsap.set(altarCardRef.value, { opacity: 0 });
 
       await createDisintegrationEffect(cardCanvas, cardContainer, {
         frameCount: 64,
         direction: "out",
-        duration: 0.9,
+        duration: 1.2,
         delayMultiplier: 0.7,
         targetWidth: cardWidth,
         targetHeight: cardHeight,
       });
+      
+      console.log('[Replay] ✅ Card disintegration started');
+      
+      // Wait for disintegration to complete
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      cardContainer.remove();
+    } else {
+      console.warn('[Replay] ❌ Could not disintegrate card:', {
+        hasCardCanvas: !!cardCanvas,
+        cardWidth,
+        cardHeight,
+        hasCardFrontRef: !!cardFrontRef.value,
+      });
+      // Fallback: at least hide the card
+      if (altarCardRef.value) {
+        gsap.set(altarCardRef.value, { opacity: 0 });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    containers.forEach((c) => c.remove());
   } catch (error) {
-    gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    console.error('[Replay] Error during card destruction:', error);
+    if (altarCardRef.value) {
+      gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
   }
 };
 
