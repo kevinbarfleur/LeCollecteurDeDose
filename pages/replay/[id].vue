@@ -458,7 +458,12 @@ const destroyCardEffect = async () => {
       await new Promise((resolve) => setTimeout(resolve, 800));
     }
 
+    // Capture or use existing card snapshot for full card disintegration
     let cardCanvas = cardSnapshot.value;
+    let cardWidth: number;
+    let cardHeight: number;
+    
+    // If we don't have a snapshot, capture it now
     if (!cardCanvas && cardFrontRef.value) {
       try {
         cardCanvas = await html2canvas(cardFrontRef.value, {
@@ -468,13 +473,26 @@ const destroyCardEffect = async () => {
           useCORS: true,
           allowTaint: true,
         });
-      } catch (e) {}
+      } catch (e) {
+        console.error('[Replay] Failed to capture card snapshot:', e);
+      }
+    }
+    
+    // Use captured dimensions if available, otherwise get from card element
+    if (capturedCardDimensions.value) {
+      cardWidth = capturedCardDimensions.value.width;
+      cardHeight = capturedCardDimensions.value.height;
+    } else if (altarCardRef.value) {
+      const cardRect = altarCardRef.value.getBoundingClientRect();
+      cardWidth = cardRect.width;
+      cardHeight = cardRect.height;
+    } else {
+      cardWidth = 0;
+      cardHeight = 0;
     }
 
-    if (cardCanvas && altarCardRef.value && capturedCardDimensions.value) {
-      const { width: cardWidth, height: cardHeight } =
-        capturedCardDimensions.value;
-
+    // Perform full card disintegration if we have a canvas and dimensions
+    if (cardCanvas && altarCardRef.value && cardWidth && cardHeight) {
       const cardContainer = document.createElement("div");
       cardContainer.className = "disintegration-container";
       cardContainer.style.cssText = `
@@ -501,6 +519,17 @@ const destroyCardEffect = async () => {
         targetWidth: cardWidth,
         targetHeight: cardHeight,
       });
+    } else {
+      // Fallback: if we can't do full disintegration, at least hide the card
+      console.warn('[Replay] Could not perform full card disintegration:', {
+        hasCanvas: !!cardCanvas,
+        hasAltarRef: !!altarCardRef.value,
+        hasDimensions: !!(cardWidth && cardHeight),
+        capturedDimensions: capturedCardDimensions.value
+      });
+      if (altarCardRef.value) {
+        gsap.set(altarCardRef.value, { opacity: 0 });
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1200));

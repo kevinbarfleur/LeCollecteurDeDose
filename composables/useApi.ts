@@ -12,10 +12,20 @@ import type { ApiResponse, PlayerCollection, CatalogueResponse, ApiError } from 
 export function useApi() {
   const config = useRuntimeConfig()
   const externalApiUrl = config.public.dataApiUrl as string
+  const { isTestMode, isLocalhost } = useDevTestMode()
+  
+  // Determine which API to use
+  // In test mode (localhost only), use Supabase Edge Function
+  // Otherwise, use the real API via local proxy
+  const supabaseUrl = config.public.supabase?.url || ''
+  const useTestApi = isLocalhost.value && isTestMode.value
   
   // Use local proxy to avoid CORS issues
   // External API: /api/userCollection -> Local proxy: /api/data/userCollection
-  const apiUrl = '/api/data'
+  // Test API: Supabase Edge Function -> /functions/v1/dev-test-api/api/...
+  const apiUrl = useTestApi 
+    ? `${supabaseUrl}/functions/v1/dev-test-api`
+    : '/api/data'
 
   // State
   const isLoading = ref(false)
@@ -23,7 +33,7 @@ export function useApi() {
 
   /**
    * Generic fetch wrapper with error handling
-   * Uses the local server proxy to avoid CORS issues
+   * Uses the local server proxy to avoid CORS issues (or Supabase Edge Function in test mode)
    * 
    * @param endpoint - API endpoint (e.g., '/api/userCollection' or 'userCollection')
    * @param options - Fetch options
@@ -37,14 +47,33 @@ export function useApi() {
     isLoading.value = true
     error.value = null
 
-    // Remove /api/ prefix if present since our proxy adds it
-    const cleanEndpoint = endpoint.replace(/^\/api\//, '').replace(/^\//, '')
-    const url = `${apiUrl}/${cleanEndpoint}`
+    // For test mode, use the full path with /api prefix
+    // For real mode, remove /api/ prefix since our proxy adds it
+    const cleanEndpoint = useTestApi
+      ? endpoint.startsWith('/api') ? endpoint : `/api/${endpoint.replace(/^\//, '')}`
+      : endpoint.replace(/^\/api\//, '').replace(/^\//, '')
+    
+    const url = `${apiUrl}${cleanEndpoint}`
 
     try {
       const method = (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET'
+      
+      // Prepare headers
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      
+      // For test mode, add Supabase anon key for authentication
+      if (useTestApi) {
+        const supabaseKey = config.public.supabase?.key || ''
+        if (supabaseKey) {
+          headers['Authorization'] = `Bearer ${supabaseKey}`
+        }
+      }
+      
       const response = await $fetch(url, {
         method,
+        headers,
         body: options.body ? JSON.parse(options.body as string) : undefined,
       })
 
@@ -86,11 +115,20 @@ export function useApi() {
     
     // Try to find the user's data (case-insensitive)
     const userLower = user.toLowerCase()
+    
+    // Prefer lowercase key if it exists (this is what we use for updates)
+    // This ensures we read the same entry we write to
+    if (allCollections[userLower]) {
+      return allCollections[userLower]
+    }
+    
+    // Fallback to case-insensitive search
     const userKey = Object.keys(allCollections).find(
       key => key.toLowerCase() === userLower
     )
     
     if (userKey) {
+      console.warn(`[API] Found user collection with non-lowercase key: "${userKey}" (expected "${userLower}"). Server may have duplicate entries.`)
       return allCollections[userKey]
     }
     
@@ -131,27 +169,72 @@ export function useApi() {
 
   /**
    * Update a player's collection
-   * Endpoint: POST /api/collection/update
+   * Endpoint: POST /api/userCollection/update
    * Requires x-api-key header
    * 
-   * Note: This should be called from a server route for security
+   * Format: { "username": { "uid": {...}, "vaalOrbs": N } }
+   * The server merges this with existing data
+   */
+  async function updateUserCollection(
+    username: string,
+    collectionData: Record<string, any>
+  ): Promise<boolean> {
+    // Lowercase username to match server behavior
+    const userKey = username.toLowerCase()
+    
+    const payload = {
+      [userKey]: collectionData
+    }
+    
+    console.log('[API] Sending update payload:', {
+      userKey,
+      payload,
+      vaalOrbs: collectionData.vaalOrbs,
+      cardKeys: Object.keys(collectionData).filter(k => k !== 'vaalOrbs')
+    })
+    
+    const result = await apiFetch<any>(
+      'userCollection/update',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      true // requiresAuth
+    )
+    
+    console.log('[API] Update response:', result)
+    if (result?.updated) {
+      console.log('[API] Updated object keys:', Object.keys(result.updated))
+      if (result.updated[userKey]) {
+        const userData = result.updated[userKey]
+        console.log('[API] Updated user data:', {
+          vaalOrbs: userData.vaalOrbs,
+          cardCount: Object.keys(userData).filter(k => k !== 'vaalOrbs').length,
+          cardKeys: Object.keys(userData).filter(k => k !== 'vaalOrbs').slice(0, 5)
+        })
+      } else {
+        console.warn('[API] ⚠️ User key not found in updated response:', userKey)
+      }
+    }
+    
+    return !!result
+  }
+
+  /**
+   * Update a player's collection (legacy function, kept for compatibility)
+   * @deprecated Use updateUserCollection instead
    */
   async function updatePlayerCollection(
     pseudo: string,
     data: { cards: any[]; vaalOrb?: number }
   ): Promise<boolean> {
-    const result = await apiFetch<any>(
-      '/api/collection/update',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          [pseudo]: data
-        }),
-      },
-      true // requiresAuth
-    )
-    
-    return !!result
+    // Convert legacy format to new format
+    const collectionData: Record<string, any> = {}
+    if (data.vaalOrb !== undefined) {
+      collectionData.vaalOrbs = data.vaalOrb
+    }
+    // Note: cards array is not used in the new format
+    return await updateUserCollection(pseudo, collectionData)
   }
 
   /**
@@ -203,6 +286,7 @@ export function useApi() {
     fetchRaw,
 
     // Methods - Write operations (require auth)
-    updatePlayerCollection,
+    updateUserCollection,
+    updatePlayerCollection, // Legacy, deprecated
   }
 }

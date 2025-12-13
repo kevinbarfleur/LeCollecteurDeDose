@@ -290,6 +290,23 @@
       "enabled": "ACTIVÉ",
       "disabled": "DÉSACTIVÉ",
       "hint": "Quand désactivé, le panneau et les notifications ne s'affichent plus pour aucun exilé."
+    },
+    "altarDebug": {
+      "apiModeHint": "En mode API, les Vaal Orbs sont synchronisés avec le serveur et ne peuvent pas être modifiés depuis ici."
+    },
+    "devTestMode": {
+      "title": "Mode Développement (Localhost)",
+      "description": "En mode test, utilise les données de test stockées dans Supabase au lieu de l'API de production.",
+      "real": "Données Réelles",
+      "test": "Données de Test",
+      "syncButton": "Synchroniser les données de test depuis l'API réelle",
+      "syncConfirm": "Voulez-vous vraiment synchroniser les données de test depuis l'API réelle ? Cela remplacera toutes les données de test actuelles dans Supabase.",
+      "syncing": "Synchronisation en cours...",
+      "syncSuccess": "✅ Données de test synchronisées avec succès depuis l'API réelle !",
+      "syncStats": "Utilisateurs: {usersCount}, Cartes uniques: {uniquesCount}, Historiques: {userCardsCount}",
+      "syncError": "❌ Erreur lors de la synchronisation des données de test.",
+      "localhostOnly": "Cette fonctionnalité n'est disponible qu'en localhost.",
+      "hint": "Cette option n'est disponible qu'en localhost. En mode test, toutes les modifications sont effectuées sur les données de test dans Supabase, pas sur les données de production. Cliquez sur le bouton ci-dessus pour récupérer les dernières données de l'API réelle."
     }
   },
   "footer": {

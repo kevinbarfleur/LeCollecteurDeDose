@@ -20,6 +20,12 @@ import {
   type VariationGroup,
 } from "~/composables/useCardGrouping";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
+import { useCollectionSync } from "~/composables/useCollectionSync";
+import { useSyncQueue } from "~/composables/useSyncQueue";
+import { useAltarDebug } from "~/composables/useAltarDebug";
+import { transformUserCollectionToCards } from "~/utils/dataTransform";
+import { initTestRunner } from "~/test-scenarios/console";
+import { logCollectionState, logCollectionStateComparison } from "~/utils/collectionLogger";
 
 const { t } = useI18n();
 
@@ -31,6 +37,10 @@ const { altarOpen, isLoading: isLoadingSettings } = useAppSettings();
 useHead({ title: t("meta.altar.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
+const { isApiData, isInitializing } = useDataSource();
+const { fetchUserCollection } = useApi();
+const { syncCollectionToApi, updateCardCounts, isSyncing: isCollectionSyncing } = useCollectionSync();
+const { isTestMode, isLocalhost } = useDevTestMode();
 
 const user = computed(() => ({
   name: authUser.value?.displayName || "Guest",
@@ -43,17 +53,153 @@ const user = computed(() => ({
 // USER DATA - Vaal Orbs & Collection (Local Session Copy)
 // ==========================================
 
-// Mock user Vaal Orbs (in real app, this would come from user state/API)
+// Vaal Orbs - loaded from API or mock
 const vaalOrbs = ref(14);
 
 // Local session copy of the collection - persists during the session
-// Deep clone to avoid mutating the original mockUserCollection
 const localCollection = ref<Card[]>([]);
+const isLoadingCollection = ref(false);
 
-// Initialize local collection on mount
-onMounted(() => {
-  // Deep clone the mock collection for this session
-  localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
+// Load collection from API or use mock data
+const loadCollection = async () => {
+  if (!isApiData.value || !loggedIn.value || !authUser.value?.displayName) {
+    // Use mock data
+    localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
+    vaalOrbs.value = 14;
+    return;
+  }
+
+  console.log('[Altar] Loading collection from API...', {
+    username: authUser.value.displayName,
+    isApiData: isApiData.value
+  });
+
+  isLoadingCollection.value = true;
+  try {
+    const userCollectionData = await fetchUserCollection(authUser.value.displayName);
+    
+    // Debug: Check which key was used (to detect duplicate entries)
+    const { fetchUserCollections } = useApi();
+    const allCollections = await fetchUserCollections();
+    const userLower = authUser.value.displayName.toLowerCase();
+    const matchingKeys = allCollections ? Object.keys(allCollections).filter(
+      key => key.toLowerCase() === userLower
+    ) : [];
+    
+    const receivedInfo = {
+      hasData: !!userCollectionData,
+      vaalOrbs: userCollectionData?.vaalOrbs,
+      cardCount: userCollectionData ? Object.keys(userCollectionData).filter(k => k !== 'vaalOrbs').length : 0,
+      matchingKeys: matchingKeys.length > 1 ? `⚠️ Found ${matchingKeys.length} entries: ${matchingKeys.join(', ')}` : matchingKeys[0] || 'none'
+    };
+    console.log('[Altar] Collection data received:')
+    console.log(JSON.stringify(receivedInfo, null, 2))
+    
+    if (userCollectionData) {
+      // Transform API data to Card[]
+      const userLower = authUser.value.displayName.toLowerCase()
+      const collectionWrapper = { [userLower]: userCollectionData }
+      const transformInfo = {
+        username: authUser.value.displayName,
+        userLower,
+        wrapperKeys: Object.keys(collectionWrapper),
+        userDataKeys: Object.keys(userCollectionData),
+        vaalOrbs: userCollectionData.vaalOrbs,
+        cardKeys: Object.keys(userCollectionData).filter(k => k !== 'vaalOrbs').slice(0, 5)
+      };
+      console.log('[Altar] Transforming collection:')
+      console.log(JSON.stringify(transformInfo, null, 2))
+      
+      // Log collection state BEFORE loading (if we have a previous state)
+      const collectionBeforeLoad = localCollection.value.length > 0 
+        ? JSON.parse(JSON.stringify(localCollection.value)) as Card[]
+        : [];
+      const vaalOrbsBeforeLoad = vaalOrbs.value;
+      
+      localCollection.value = transformUserCollectionToCards(
+        collectionWrapper,
+        authUser.value.displayName
+      );
+      
+      // Extract vaalOrbs - use the value from API, not the local optimistic value
+      const apiVaalOrbs = typeof userCollectionData.vaalOrbs === 'number' ? userCollectionData.vaalOrbs : 0;
+      const vaalOrbsInfo = {
+        apiValue: apiVaalOrbs,
+        previousLocalValue: vaalOrbs.value
+      };
+      console.log('[Altar] Setting vaalOrbs from API:')
+      console.log(JSON.stringify(vaalOrbsInfo, null, 2))
+      vaalOrbs.value = apiVaalOrbs;
+      
+      // Log collection state AFTER loading
+      if (collectionBeforeLoad.length > 0) {
+        logCollectionStateComparison(
+          'LoadCollection: Comparison',
+          collectionBeforeLoad,
+          vaalOrbsBeforeLoad,
+          localCollection.value,
+          vaalOrbs.value,
+          { source: 'API' }
+        );
+      } else {
+        logCollectionState('LoadCollection: After (initial load)', localCollection.value, vaalOrbs.value, {
+          source: 'API',
+        });
+      }
+      
+      const loadedInfo = {
+        cardsCount: localCollection.value.length,
+        vaalOrbs: vaalOrbs.value
+      };
+      console.log('[Altar] Collection loaded:')
+      console.log(JSON.stringify(loadedInfo, null, 2))
+      
+      if (localCollection.value.length === 0) {
+        console.warn('[Altar] ⚠️ Collection is empty after transformation!', {
+          userCollectionData,
+          collectionWrapper,
+          username: authUser.value.displayName
+        });
+      }
+    } else {
+      console.warn('[Altar] No collection data received, using fallback');
+      // Fallback to mock data if API fails
+      localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
+      vaalOrbs.value = 14;
+    }
+  } catch (error) {
+    console.error('[Altar] Error loading collection:', error);
+    // Fallback to mock data
+    localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
+    vaalOrbs.value = 14;
+  } finally {
+    isLoadingCollection.value = false;
+  }
+};
+
+// Initialize collection on mount
+onMounted(async () => {
+  // Wait for initialization to complete
+  if (isInitializing.value) {
+    await new Promise<void>((resolve) => {
+      const unwatch = watch(isInitializing, (init) => {
+        if (!init) {
+          unwatch();
+          loadCollection();
+          resolve();
+        }
+      });
+    });
+  } else {
+    await loadCollection();
+  }
+  
+  // Listen for vaalOrbs updates from admin page (mock mode only)
+  if (!isApiData.value && import.meta.client) {
+    window.addEventListener('altar:updateVaalOrbs', ((e: CustomEvent<{ value: number }>) => {
+      vaalOrbs.value = e.detail.value;
+    }) as EventListener);
+  }
 });
 
 onBeforeUnmount(() => {
@@ -67,6 +213,11 @@ onBeforeUnmount(() => {
   // Clean up scroll lock classes
   document.documentElement.classList.remove("no-scroll-during-drag");
   document.body.classList.remove("no-scroll-during-drag");
+  
+  // Remove event listener
+  if (import.meta.client) {
+    window.removeEventListener('altar:updateVaalOrbs', (() => {}) as EventListener);
+  }
 });
 
 // User's collection - points to local session copy
@@ -334,13 +485,11 @@ const placeCardOnAltar = async () => {
 // ==========================================
 // VAAL ORB OUTCOMES
 // ==========================================
-type ForcedOutcome = "random" | VaalOutcome;
-
 // State for destruction animation
 const isCardBeingDestroyed = ref(false);
 
-// Admin/Debug settings
-const forcedOutcome = ref<ForcedOutcome>("random");
+// Admin/Debug settings (shared via composable)
+const { forcedOutcome } = useAltarDebug();
 
 // Replay Recording
 const {
@@ -513,6 +662,226 @@ const {
 const findCardImageElement = () => findCardImageElementBase(cardFrontRef);
 const captureCardSnapshot = () => captureCardSnapshotBase(cardFrontRef);
 
+// Sync callback for API updates
+type CardUpdate = { normalDelta: number; foilDelta: number; currentNormal?: number; currentFoil?: number; cardData?: Partial<Card> };
+
+// Sync queue for managing concurrent syncs
+const { enqueue: enqueueSync, queueStatus: syncQueueStatus, isProcessing: isSyncProcessing } = useSyncQueue()
+
+// Auto-credit vaalOrbs in localhost test mode when reaching 0
+const isAutoCrediting = ref(false);
+watch(vaalOrbs, async (newValue, oldValue) => {
+  // Only trigger when vaalOrbs reaches 0 (not when loading from API or initializing)
+  if (newValue === 0 && oldValue !== undefined && oldValue > 0 && !isAutoCrediting.value && !isLoadingCollection.value) {
+    // Check if we're in localhost + test mode + API data
+    if (isLocalhost.value && isTestMode.value && isApiData.value && loggedIn.value && authUser.value?.displayName) {
+      isAutoCrediting.value = true;
+      console.log('[Altar] 🎁 Auto-crediting 5 vaalOrbs (localhost test mode)');
+      
+      // Credit locally first (optimistic update)
+      const vaalOrbsBefore = vaalOrbs.value;
+      vaalOrbs.value = 5;
+      
+      // Sync with API using the sync queue
+      try {
+        const updates = new Map<number, CardUpdate>();
+        const operationId = `auto-credit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        await enqueueSync({
+          id: operationId,
+          username: authUser.value.displayName,
+          cardUpdates: updates,
+          vaalOrbsNewValue: 5,
+          outcomeType: 'auto-credit',
+          rollbackData: {
+            vaalOrbsBefore,
+            localCollectionBefore: JSON.parse(JSON.stringify(localCollection.value)) as Card[],
+          },
+          onSuccess: async () => {
+            console.log('[Altar] ✅ Auto-credit sync completed');
+          },
+          onError: (error) => {
+            console.error('[Altar] ❌ Auto-credit sync failed:', error);
+            // Rollback on error
+            vaalOrbs.value = vaalOrbsBefore;
+          },
+        });
+      } catch (error) {
+        console.error('[Altar] ❌ Auto-credit sync error:', error);
+        // Rollback on error
+        vaalOrbs.value = vaalOrbsBefore;
+      }
+      
+      isAutoCrediting.value = false;
+    }
+  }
+});
+
+// Expose sync queue status for tests (update it reactively)
+if (import.meta.client) {
+  watch([syncQueueStatus, isSyncProcessing], () => {
+    if (typeof window !== 'undefined') {
+      ;(window as any).__syncQueueStatus = {
+        size: syncQueueStatus.value.size,
+        isProcessing: isSyncProcessing.value,
+        currentOperation: syncQueueStatus.value.currentOperation,
+      }
+    }
+  }, { immediate: true, deep: true })
+}
+
+const handleSyncRequired = async (
+  updates: Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>,
+  vaalOrbsDelta: number,
+  outcomeType?: string
+) => {
+  if (!loggedIn.value || !authUser.value?.displayName) {
+    console.log('[Altar] Skipping sync (not logged in)')
+    return;
+  }
+  
+  const syncStartInfo = {
+    vaalOrbsBefore: vaalOrbs.value,
+    vaalOrbsDelta,
+    updatesCount: updates.size
+  };
+  console.log(`[Altar] 🔄 Starting sync for outcome: ${outcomeType || 'unknown'}`)
+  console.log(JSON.stringify(syncStartInfo, null, 2))
+  
+  // Save state for rollback (BEFORE optimistic update)
+  const vaalOrbsBefore = vaalOrbs.value;
+  const localCollectionBefore = JSON.parse(JSON.stringify(localCollection.value)) as Card[];
+  
+  // Log collection state BEFORE sync
+  logCollectionState(`Sync: Before (${outcomeType || 'unknown'})`, localCollectionBefore, vaalOrbsBefore, {
+    vaalOrbsDelta,
+    updatesCount: updates.size,
+  });
+  
+  // Update vaalOrbs locally first (optimistic update)
+  const newVaalOrbsValue = Math.max(0, vaalOrbs.value + vaalOrbsDelta);
+  vaalOrbs.value = newVaalOrbsValue;
+  
+  // Calculate current counts for each card to compute absolute values
+  // Note: localCollection has already been modified by useVaalOutcomes, so we need to
+  // calculate the counts AFTER the modification (which are the new absolute values)
+  const updatesWithCurrentCounts = new Map<number, CardUpdate>();
+  
+  for (const [uid, changes] of updates.entries()) {
+    const baseUid = Math.floor(uid);
+    // Find current counts for this card AFTER local modification
+    // The localCollection has already been modified by useVaalOutcomes
+    // So currentNormal/currentFoil are the NEW counts (after applying the delta)
+    const matchingCards = localCollection.value.filter(c => Math.floor(c.uid) === baseUid);
+    const currentNormal = matchingCards.filter(c => !c.foil).length;
+    const currentFoil = matchingCards.filter(c => c.foil).length;
+    
+    // The currentNormal/currentFoil are already the NEW values (after delta applied)
+    // So we use them directly as the absolute values to send to the server
+    // The deltas are still needed for createCardUpdate to understand the change direction
+    
+    const cardInfo = {
+      normalDelta: changes.normalDelta,
+      foilDelta: changes.foilDelta,
+      currentNormalAfterModification: currentNormal,
+      currentFoilAfterModification: currentFoil,
+      cardName: changes.cardData?.name || changes.cardData?.id || `UID ${baseUid}`,
+      cardId: changes.cardData?.id,
+      matchingCardsCount: matchingCards.length,
+      allMatchingCards: matchingCards.map(c => ({ uid: c.uid, foil: c.foil, name: c.name }))
+    };
+    console.log(`[Altar] Card ${baseUid}:`)
+    console.log(JSON.stringify(cardInfo, null, 2))
+    
+    // Use currentNormal/currentFoil as the absolute values (they're already the new values)
+    updatesWithCurrentCounts.set(baseUid, {
+      normalDelta: changes.normalDelta,
+      foilDelta: changes.foilDelta,
+      currentNormal, // Already the new value after modification
+      currentFoil, // Already the new value after modification
+      cardData: changes.cardData,
+    });
+  }
+  
+  // Rollback function to restore previous state
+  const rollback = () => {
+    console.warn(`[Altar] 🔄 Rolling back changes for ${outcomeType || 'unknown'}`)
+    vaalOrbs.value = vaalOrbsBefore
+    localCollection.value = localCollectionBefore
+    console.log(`[Altar] ✅ Rollback completed. vaalOrbs: ${vaalOrbs.value}, cards: ${localCollection.value.length}`)
+  }
+  
+  // Enqueue sync operation with rollback support
+  try {
+    const operationId = `${outcomeType || 'unknown'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
+    await enqueueSync({
+      id: operationId,
+      username: authUser.value.displayName,
+      cardUpdates: updatesWithCurrentCounts,
+      vaalOrbsNewValue: newVaalOrbsValue,
+      outcomeType,
+      rollbackData: {
+        vaalOrbsBefore,
+        localCollectionBefore,
+      },
+      onSuccess: async () => {
+        console.log(`[Altar] ✅ Sync successful for ${outcomeType || 'unknown'}. Reloading collection...`);
+        
+        // Log collection state AFTER sync (before reload)
+        logCollectionState(`Sync: After (${outcomeType || 'unknown'})`, localCollection.value, vaalOrbs.value, {
+          syncCompleted: true,
+        });
+        
+        // Mark that reload is starting (for test runner to wait)
+        if (typeof window !== 'undefined') {
+          (window as any).__isReloadingCollection = true
+        }
+        
+        try {
+          // Wait longer to ensure Supabase has processed the update
+          // Supabase may need time to propagate the update, especially in test mode
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Reload collection to ensure UI is up to date with server state
+          await loadCollection();
+          console.log(`[Altar] ✅ Collection reloaded. New vaalOrbs: ${vaalOrbs.value}, Cards count: ${localCollection.value.length}`);
+          
+          // Verify vaalOrbs match expected value
+          const expectedVaalOrbs = newVaalOrbsValue;
+          if (vaalOrbs.value !== expectedVaalOrbs) {
+            console.warn(`[Altar] ⚠️ VaalOrbs mismatch! Expected: ${expectedVaalOrbs}, Got: ${vaalOrbs.value}. Server may not have updated yet or there's a merge issue.`);
+            console.warn(`[Altar] This could indicate the server merge didn't work correctly for vaalOrbs.`);
+          } else {
+            console.log(`[Altar] ✅ VaalOrbs match expected value: ${expectedVaalOrbs}`);
+          }
+          
+          // Verify collection is not empty
+          if (localCollection.value.length === 0) {
+            console.error(`[Altar] ❌ Collection is empty after reload! This indicates a problem with data fetching or transformation.`);
+          }
+        } finally {
+          // Mark that reload is complete
+          if (typeof window !== 'undefined') {
+            (window as any).__isReloadingCollection = false
+          }
+        }
+      },
+      onError: (error) => {
+        console.error(`[Altar] ❌ Sync failed for ${outcomeType || 'unknown'}:`, error.message);
+        // Rollback optimistic updates
+        rollback();
+        // Show user-friendly error message
+        // TODO: Could show a toast notification here
+      },
+    });
+  } catch (error: any) {
+    console.error(`[Altar] ❌ Sync error for ${outcomeType || 'unknown'}:`, error);
+    // Rollback optimistic updates
+    rollback();
+  }
+};
+
 // Vaal Outcomes composable for modular animations
 const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
   useVaalOutcomes({
@@ -549,14 +918,304 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
       // Re-capture snapshot
       nextTick(() => captureCardSnapshot());
     },
+    onSyncRequired: handleSyncRequired,
   });
 
-const cleanupAfterDestruction = (destroyedCardUid: number) => {
+// Initialize test runner (for console testing)
+onMounted(() => {
+  // Calculate card counts helper
+  const calculateCardCounts = (): Map<number, { normal: number; foil: number }> => {
+    const counts = new Map<number, { normal: number; foil: number }>()
+    for (const card of localCollection.value) {
+      const baseUid = Math.floor(card.uid)
+      if (!counts.has(baseUid)) {
+        counts.set(baseUid, { normal: 0, foil: 0 })
+      }
+      const count = counts.get(baseUid)!
+      if (card.foil) {
+        count.foil++
+      } else {
+        count.normal++
+      }
+    }
+    return counts
+  }
+
+  // Get collection state helper
+  const getCollectionState = () => {
+    const state = {
+      cards: localCollection.value,
+      vaalOrbs: vaalOrbs.value,
+      cardCounts: calculateCardCounts(),
+    }
+    console.log('[TestRunner] getCollectionState called:', {
+      cardCount: state.cards.length,
+      vaalOrbs: state.vaalOrbs,
+      cardCountsSize: state.cardCounts.size
+    })
+    return state
+  }
+
+  // Simulate outcome helper
+  const simulateOutcome = async (outcome: string, cardUid?: number): Promise<void> => {
+    console.log(`[TestRunner] simulateOutcome called with outcome: ${outcome}`, { cardUid })
+    
+    // If a specific card UID is provided, select that card
+    if (cardUid !== undefined) {
+      const targetCard = localCollection.value.find(c => Math.floor(c.uid) === Math.floor(cardUid))
+      if (!targetCard) {
+        throw new Error(`Card with UID ${cardUid} not found in collection`)
+      }
+      selectedCardId.value = targetCard.id
+      selectedVariation.value = targetCard.foil ? 'foil' : 'standard'
+      isCardOnAltar.value = true
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve, 100))
+      const selectedCardInfo = {
+        cardName: targetCard.name,
+        hasCardRef: !!altarCardRef.value,
+        hasDisplayCard: !!displayCard.value,
+        isFoil: targetCard.foil
+      };
+      console.log(`[TestRunner] Selected card for test: ${targetCard.name}`)
+      console.log(JSON.stringify(selectedCardInfo, null, 2))
+    } else if (!isCardOnAltar.value) {
+      // Put a card on the altar if none
+      if (localCollection.value.length > 0) {
+        const firstCard = localCollection.value[0]
+        selectedCardId.value = firstCard.id
+        selectedVariation.value = firstCard.foil ? 'foil' : 'standard'
+        isCardOnAltar.value = true
+        // Wait for DOM to update so cardRef is available
+        await nextTick()
+        // Additional wait to ensure card element is rendered
+        await new Promise(resolve => setTimeout(resolve, 100))
+        const placedCardInfo = {
+          cardName: firstCard.name,
+          hasCardRef: !!altarCardRef.value,
+          hasDisplayCard: !!displayCard.value
+        };
+        console.log(`[TestRunner] Card placed on altar: ${firstCard.name}`)
+        console.log(JSON.stringify(placedCardInfo, null, 2))
+      } else {
+        throw new Error('No cards available for testing')
+      }
+    } else {
+      // Card already on altar, but ensure cardRef is available
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve, 100))
+      console.log(`[TestRunner] Card already on altar`, {
+        hasCardRef: !!altarCardRef.value,
+        hasDisplayCard: !!displayCard.value
+      })
+    }
+
+    // Verify cardRef is available for outcomes that need it
+    if (outcome !== 'nothing' && !altarCardRef.value) {
+      console.warn(`[TestRunner] ⚠️ cardRef not available for outcome: ${outcome}. Retrying...`)
+      // Retry after a bit more time
+      await new Promise(resolve => setTimeout(resolve, 200))
+      if (!altarCardRef.value) {
+        throw new Error(`cardRef not available for outcome: ${outcome}. Cannot execute animation.`)
+      }
+    }
+
+    // Check vaalOrbs
+    if (vaalOrbs.value <= 0 && outcome !== 'nothing') {
+      throw new Error('Not enough vaalOrbs for this outcome')
+    }
+
+    console.log(`[TestRunner] Executing outcome: ${outcome}, vaalOrbs: ${vaalOrbs.value}`)
+
+    // Execute outcome using the functions from useVaalOutcomes
+    // These functions will call onSyncRequired which is handleSyncRequired
+    switch (outcome.toLowerCase()) {
+      case 'nothing':
+        console.log(`[TestRunner] Calling executeNothing()`)
+        await executeNothing()
+        // For nothing, sync is handled manually in handleVaalOutcome
+        // But simulateOutcome calls executeNothing directly, so we need to sync manually
+        if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
+          console.log('[TestRunner] NOTHING: Syncing to API...')
+          const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
+          await handleSyncRequired(updates, -1, 'nothing');
+          console.log('[TestRunner] NOTHING: Sync completed')
+        }
+        break
+      case 'foil':
+        if (isCurrentCardFoil.value) {
+          throw new Error('Card is already foil')
+        }
+        console.log(`[TestRunner] Calling executeFoil()`, { hasCardRef: !!altarCardRef.value })
+        await executeFoil()
+        // Sync is handled by executeFoil via onSyncRequired callback
+        break
+      case 'duplicate':
+        console.log(`[TestRunner] Calling executeDuplicate()`, { hasCardRef: !!altarCardRef.value })
+        await executeDuplicate()
+        // Sync is handled by executeDuplicate via onSyncRequired callback
+        break
+      case 'destroyed':
+        console.log(`[TestRunner] Calling destroyCard()`, { hasCardRef: !!altarCardRef.value })
+        await destroyCard()
+        // Sync is handled by cleanupAfterDestruction
+        break
+      case 'transform':
+        console.log(`[TestRunner] Calling executeTransform()`, { hasCardRef: !!altarCardRef.value })
+        await executeTransform()
+        // Sync is handled by executeTransform via onSyncRequired callback
+        break
+      default:
+        throw new Error(`Unknown outcome: ${outcome}`)
+    }
+    
+    console.log(`[TestRunner] Outcome ${outcome} execution completed`)
+  }
+
+  // Get card by UID helper
+  const getCardByUid = (uid: number): Card | null => {
+    return localCollection.value.find(c => Math.floor(c.uid) === Math.floor(uid)) || null
+  }
+
+  // Add vaalOrbs helper (for testing)
+  const addVaalOrbs = (amount: number) => {
+    vaalOrbs.value = Math.max(0, vaalOrbs.value + amount)
+    console.log(`[TestRunner] Added ${amount} vaalOrbs. New total: ${vaalOrbs.value}`)
+  }
+
+  // Ensure we're using API data (not mock) and test mode (Supabase) for testing
+  const { setDataSource } = useDataSource()
+  const { setDevTestMode, isLocalhost } = useDevTestMode()
+  
+  // Force API mode and test mode for testing (localhost only)
+  if (isLocalhost.value) {
+    // Set to API mode (not mock)
+    setDataSource('api')
+    // Set to test mode (Supabase Edge Function, not real API)
+    setDevTestMode('test')
+    console.log('[TestRunner] ✅ Test environment configured: API mode + Test data (Supabase)')
+  }
+
+  // Initialize test runner
+  initTestRunner({
+    getCollectionState,
+    simulateOutcome,
+    getCardByUid,
+    addVaalOrbs,
+  })
+})
+
+const cleanupAfterDestruction = async (destroyedCardUid: number) => {
   const cardIndex = localCollection.value.findIndex(
     (c) => c.uid === destroyedCardUid
   );
+  
   if (cardIndex !== -1) {
+    const destroyedCard = localCollection.value[cardIndex];
+    
+    // Save state for rollback (BEFORE removal)
+    const vaalOrbsBefore = vaalOrbs.value;
+    const localCollectionBefore = JSON.parse(JSON.stringify(localCollection.value)) as Card[];
+    
+    // Log collection state BEFORE destruction
+    logCollectionState('DESTROYED: Before modification', localCollectionBefore, vaalOrbsBefore, {
+      cardToDestroy: {
+        uid: destroyedCard.uid,
+        name: destroyedCard.name,
+        foil: destroyedCard.foil,
+      }
+    });
+    
+    // Remove card from collection (optimistic update)
     localCollection.value.splice(cardIndex, 1);
+    
+    // Update vaalOrbs locally (optimistic update)
+    const newVaalOrbsValue = Math.max(0, vaalOrbs.value - 1);
+    vaalOrbs.value = newVaalOrbsValue;
+    
+    // Log collection state AFTER destruction
+    logCollectionState('DESTROYED: After modification', localCollection.value, vaalOrbs.value, {
+      destroyedCard: {
+        uid: destroyedCard.uid,
+        name: destroyedCard.name,
+        foil: destroyedCard.foil,
+      }
+    });
+    
+    // Sync with API: remove card (normal: -1 or foil: -1)
+    if (loggedIn.value && authUser.value?.displayName) {
+      const destroyedInfo = {
+        card: destroyedCard.name,
+        uid: destroyedCard.uid,
+        isFoil: isCardFoil(destroyedCard)
+      };
+      console.log('[Altar] DESTROYED: Syncing to API...')
+      console.log(JSON.stringify(destroyedInfo, null, 2))
+      const baseUid = Math.floor(destroyedCard.uid);
+      const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
+      
+      // Calculate current counts after removal (card already removed from localCollection)
+      const matchingCards = localCollection.value.filter(c => Math.floor(c.uid) === baseUid);
+      const currentNormal = matchingCards.filter(c => !c.foil).length;
+      const currentFoil = matchingCards.filter(c => c.foil).length;
+      
+      const updatesWithCurrentCounts = new Map<number, CardUpdate>();
+      if (isCardFoil(destroyedCard)) {
+        updatesWithCurrentCounts.set(baseUid, { 
+          normalDelta: 0, 
+          foilDelta: -1, 
+          currentNormal,
+          currentFoil,
+          cardData: destroyedCard 
+        });
+      } else {
+        updatesWithCurrentCounts.set(baseUid, { 
+          normalDelta: -1, 
+          foilDelta: 0,
+          currentNormal,
+          currentFoil,
+          cardData: destroyedCard 
+        });
+      }
+      
+      // Rollback function to restore previous state
+      const rollback = () => {
+        console.warn('[Altar] 🔄 Rolling back DESTROYED changes')
+        vaalOrbs.value = vaalOrbsBefore
+        localCollection.value = localCollectionBefore
+        console.log(`[Altar] ✅ Rollback completed. vaalOrbs: ${vaalOrbs.value}, cards: ${localCollection.value.length}`)
+      }
+      
+      // Enqueue sync operation with rollback support
+      try {
+        const operationId = `destroyed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        
+        await enqueueSync({
+          id: operationId,
+          username: authUser.value.displayName,
+          cardUpdates: updatesWithCurrentCounts,
+          vaalOrbsNewValue: newVaalOrbsValue,
+          outcomeType: 'destroyed',
+          rollbackData: {
+            vaalOrbsBefore,
+            localCollectionBefore,
+          },
+          onSuccess: async () => {
+            console.log('[Altar] ✅ DESTROYED sync successful. Reloading collection...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await loadCollection();
+            console.log(`[Altar] ✅ Collection reloaded. New vaalOrbs: ${vaalOrbs.value}, Cards count: ${localCollection.value.length}`);
+          },
+          onError: (error) => {
+            console.error('[Altar] ❌ DESTROYED sync failed:', error.message);
+            rollback();
+          },
+        });
+      } catch (error: any) {
+        console.error('[Altar] ❌ DESTROYED sync error:', error);
+        rollback();
+      }
+    }
   }
 
   clearSnapshots();
@@ -666,7 +1325,12 @@ const destroyCard = async () => {
       await new Promise((resolve) => setTimeout(resolve, 800));
     }
 
+    // Capture or use existing card snapshot for full card disintegration
     let cardCanvas = cardSnapshot.value;
+    let cardWidth: number;
+    let cardHeight: number;
+    
+    // If we don't have a snapshot, capture it now
     if (!cardCanvas && cardFrontRef.value) {
       try {
         cardCanvas = await html2canvas(cardFrontRef.value, {
@@ -676,13 +1340,26 @@ const destroyCard = async () => {
           useCORS: true,
           allowTaint: true,
         });
-      } catch (e) {}
+      } catch (e) {
+        console.error('[Altar] Failed to capture card snapshot:', e);
+      }
+    }
+    
+    // Use captured dimensions if available, otherwise get from card element
+    if (capturedCardDimensions.value) {
+      cardWidth = capturedCardDimensions.value.width;
+      cardHeight = capturedCardDimensions.value.height;
+    } else if (altarCardRef.value) {
+      const cardRect = altarCardRef.value.getBoundingClientRect();
+      cardWidth = cardRect.width;
+      cardHeight = cardRect.height;
+    } else {
+      cardWidth = 0;
+      cardHeight = 0;
     }
 
-    if (cardCanvas && altarCardRef.value && capturedCardDimensions.value) {
-      const { width: cardWidth, height: cardHeight } =
-        capturedCardDimensions.value;
-
+    // Perform full card disintegration if we have a canvas and dimensions
+    if (cardCanvas && altarCardRef.value && cardWidth && cardHeight) {
       const cardContainer = document.createElement("div");
       cardContainer.className = "disintegration-container";
       cardContainer.style.cssText = `
@@ -709,6 +1386,17 @@ const destroyCard = async () => {
         targetWidth: cardWidth,
         targetHeight: cardHeight,
       });
+    } else {
+      // Fallback: if we can't do full disintegration, at least hide the card
+      console.warn('[Altar] Could not perform full card disintegration:', {
+        hasCanvas: !!cardCanvas,
+        hasAltarRef: !!altarCardRef.value,
+        hasDimensions: !!(cardWidth && cardHeight),
+        capturedDimensions: capturedCardDimensions.value
+      });
+      if (altarCardRef.value) {
+        gsap.set(altarCardRef.value, { opacity: 0 });
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -743,15 +1431,25 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   // Execute the outcome animation first (for outcomes that produce a result)
   switch (outcome) {
     case "nothing":
+      console.log('[Altar] NOTHING: Starting outcome...')
       await executeNothing();
+      // Sync: consume vaalOrb only
+      if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
+        console.log('[Altar] NOTHING: Syncing to API...')
+        const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
+        await handleSyncRequired(updates, -1, 'nothing'); // Consume 1 vaalOrb
+        console.log('[Altar] NOTHING: Sync completed')
+      }
       break;
 
     case "foil":
       await executeFoil();
+      // Sync handled by executeFoil via onSyncRequired callback
       break;
 
     case "destroyed":
       await destroyCard();
+      // Sync handled by cleanupAfterDestruction
       break;
 
     case "transform":
@@ -760,10 +1458,12 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
       if (transformResult.newCard) {
         resultCardId = transformResult.newCard.id;
       }
+      // Sync handled by executeTransform via onSyncRequired callback
       break;
 
     case "duplicate":
       await executeDuplicate();
+      // Sync handled by executeDuplicate via onSyncRequired callback
       break;
   }
 
@@ -1096,7 +1796,8 @@ const endDragOrb = async () => {
       });
     }
 
-    vaalOrbs.value--;
+    // NOTE: Don't decrement vaalOrbs here - it's handled by handleSyncRequired
+    // via vaalOrbsDelta in each outcome (duplicate, destroyed, transform, etc.)
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
     resetHeartbeatEffects(); // Reset heartbeat and isOrbOverCard
@@ -1608,52 +2309,6 @@ const endDragOrb = async () => {
                     </div>
                   </div>
 
-                  <div class="prefs-divider"></div>
-
-                  <!-- Admin/Debug Section -->
-                  <div class="prefs-section">
-                    <h4 class="prefs-section__title">
-                      {{ t("altar.preferences.adminTitle") }}
-                    </h4>
-
-                    <div class="prefs-field">
-                      <RunicSelect
-                        v-model="forcedOutcome"
-                        :options="forcedOutcomeOptions"
-                        :label="t('altar.preferences.forceOutcome')"
-                        size="md"
-                      />
-                      <p class="prefs-field__hint">
-                        {{ t("altar.preferences.forceOutcomeHint") }}
-                      </p>
-                    </div>
-
-                    <div class="prefs-field">
-                      <label class="prefs-field__label">{{
-                        t("altar.preferences.vaalOrbsLabel")
-                      }}</label>
-                      <p class="prefs-field__hint">
-                        {{ t("altar.preferences.vaalOrbsHint") }}
-                      </p>
-                      <div class="prefs-field__number">
-                        <button
-                          class="prefs-field__btn"
-                          :disabled="vaalOrbs <= 0"
-                          @click="vaalOrbs = Math.max(0, vaalOrbs - 1)"
-                        >
-                          −
-                        </button>
-                        <span class="prefs-field__value">{{ vaalOrbs }}</span>
-                        <button
-                          class="prefs-field__btn"
-                          :disabled="vaalOrbs >= 99"
-                          @click="vaalOrbs = Math.min(99, vaalOrbs + 1)"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
