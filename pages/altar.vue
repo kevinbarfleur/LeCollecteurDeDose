@@ -653,6 +653,7 @@ const {
   capturedCardDimensions,
   canvasHasContent,
   createDisintegrationEffect,
+  createDisintegrationEffectDOM,
   findCardImageElement: findCardImageElementBase,
   captureCardSnapshot: captureCardSnapshotBase,
   clearSnapshots,
@@ -1274,78 +1275,12 @@ const destroyCard = async () => {
   }
 
   try {
-    const containers: HTMLElement[] = [];
-    const imageElement = findCardImageElement();
-    const hasImageSnapshot =
-      imageSnapshot.value && canvasHasContent(imageSnapshot.value);
-
-    if (hasImageSnapshot && imageElement && altarCardRef.value) {
-      const imgTag = imageElement.querySelector(
-        ".game-card__image"
-      ) as HTMLImageElement | null;
-      const imgRect = imgTag?.getBoundingClientRect();
-      const actualWidth = imgRect?.width || imageElement.clientWidth;
-      const actualHeight = imgRect?.height || imageElement.clientHeight;
-      const altarRect = altarCardRef.value.getBoundingClientRect();
-      const relativeTop = imgRect
-        ? imgRect.top - altarRect.top
-        : imageElement.getBoundingClientRect().top - altarRect.top;
-      const relativeLeft = imgRect
-        ? imgRect.left - altarRect.left
-        : imageElement.getBoundingClientRect().left - altarRect.left;
-
-      const imgContainer = document.createElement("div");
-      imgContainer.className = "disintegration-container";
-      imgContainer.style.cssText = `
-        position: absolute;
-        top: ${relativeTop}px;
-        left: ${relativeLeft}px;
-        width: ${actualWidth}px;
-        height: ${actualHeight}px;
-        pointer-events: none;
-        z-index: 101;
-        overflow: visible;
-      `;
-
-      altarCardRef.value.appendChild(imgContainer);
-      containers.push(imgContainer);
-
-      await createDisintegrationEffect(imageSnapshot.value!, imgContainer, {
-        frameCount: 48,
-        direction: "up",
-        duration: 0.8,
-        delayMultiplier: 0.4,
-        targetWidth: actualWidth,
-        targetHeight: actualHeight,
-      });
-
-      if (imgTag) imgTag.style.opacity = "0";
-
-      // Wait for image disintegration to finish (duration + max delay)
-      await new Promise((resolve) => setTimeout(resolve, 800));
-    }
-
-    // Capture or use existing card snapshot for full card disintegration
-    let cardCanvas = cardSnapshot.value;
+    console.log('[Altar] Starting card destruction - single disintegration');
+    
+    // Get card dimensions
     let cardWidth: number;
     let cardHeight: number;
     
-    // If we don't have a snapshot, capture it now
-    if (!cardCanvas && cardFrontRef.value) {
-      try {
-        cardCanvas = await html2canvas(cardFrontRef.value, {
-          backgroundColor: null,
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-        });
-      } catch (e) {
-        console.error('[Altar] Failed to capture card snapshot:', e);
-      }
-    }
-    
-    // Use captured dimensions if available, otherwise get from card element
     if (capturedCardDimensions.value) {
       cardWidth = capturedCardDimensions.value.width;
       cardHeight = capturedCardDimensions.value.height;
@@ -1357,15 +1292,73 @@ const destroyCard = async () => {
       cardWidth = 0;
       cardHeight = 0;
     }
-
-    // Perform full card disintegration if we have a canvas and dimensions
-    if (cardCanvas && altarCardRef.value && cardWidth && cardHeight) {
+    
+    console.log('[Altar] Card dimensions:', { cardWidth, cardHeight });
+    
+    // Use pre-captured snapshot (should always exist if captureCardSnapshot was called)
+    let cardCanvas = cardSnapshot.value;
+    if (!cardCanvas) {
+      console.warn('[Altar] ⚠️ No pre-captured snapshot found! This should not happen if captureCardSnapshot was called.');
+      console.warn('[Altar] Attempting fallback capture (may fail due to CORS)...');
+      // Fallback: try to capture now (will likely fail due to CORS, but better than nothing)
+      if (cardFrontRef.value && cardWidth > 0 && cardHeight > 0) {
+        try {
+          cardCanvas = await html2canvas(cardFrontRef.value, {
+            backgroundColor: null,
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: false,
+            imageTimeout: 15000,
+            onclone: (clonedDoc, element) => {
+              try {
+                console.log('[Altar] onclone: Processing cloned document...');
+                const clonedElement = element || clonedDoc.body;
+                const images = clonedElement.querySelectorAll('img');
+                images.forEach((img) => {
+                  const htmlImg = img as HTMLImageElement;
+                  htmlImg.crossOrigin = 'anonymous';
+                  if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
+                    htmlImg.style.display = 'none';
+                    htmlImg.src = '';
+                  }
+                });
+              } catch (e) {
+                console.error('[Altar] Error in onclone:', e);
+              }
+            },
+            ignoreElements: (element) => {
+              if (element instanceof HTMLImageElement) {
+                if (element.naturalWidth === 0 || element.naturalHeight === 0) {
+                  return true;
+                }
+              }
+              return false;
+            },
+          });
+        } catch (e) {
+          console.error('[Altar] Fallback capture failed:', e);
+        }
+      }
+    }
+    
+    // Single disintegration of entire card
+    if (cardCanvas && cardWidth > 0 && cardHeight > 0) {
+      console.log('[Altar] Starting single disintegration of entire card...');
+      
       const cardContainer = document.createElement("div");
       cardContainer.className = "disintegration-container";
+      
+      // Position container relative to card slot
+      const cardRect = altarCardRef.value.getBoundingClientRect();
+      const slotRect = cardSlot.getBoundingClientRect();
+      const relativeTop = cardRect.top - slotRect.top;
+      const relativeLeft = cardRect.left - slotRect.left;
+      
       cardContainer.style.cssText = `
         position: absolute;
-        top: 0;
-        left: 0;
+        top: ${relativeTop}px;
+        left: ${relativeLeft}px;
         width: ${cardWidth}px;
         height: ${cardHeight}px;
         pointer-events: none;
@@ -1374,33 +1367,39 @@ const destroyCard = async () => {
       `;
 
       cardSlot.appendChild(cardContainer);
-      containers.push(cardContainer);
 
+      // Hide the original card before disintegration
       gsap.set(altarCardRef.value, { opacity: 0 });
 
       await createDisintegrationEffect(cardCanvas, cardContainer, {
         frameCount: 64,
         direction: "out",
-        duration: 0.9,
+        duration: 1.2,
         delayMultiplier: 0.7,
         targetWidth: cardWidth,
         targetHeight: cardHeight,
       });
+      
+      console.log('[Altar] ✅ Card disintegration started');
+      
+      // Wait for disintegration to complete
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      cardContainer.remove();
     } else {
-      // Fallback: if we can't do full disintegration, at least hide the card
-      console.warn('[Altar] Could not perform full card disintegration:', {
-        hasCanvas: !!cardCanvas,
-        hasAltarRef: !!altarCardRef.value,
-        hasDimensions: !!(cardWidth && cardHeight),
-        capturedDimensions: capturedCardDimensions.value
+      console.warn('[Altar] ❌ Could not disintegrate card:', {
+        hasCardCanvas: !!cardCanvas,
+        cardWidth,
+        cardHeight,
+        hasCardFrontRef: !!cardFrontRef.value,
       });
+      // Fallback: at least hide the card
       if (altarCardRef.value) {
         gsap.set(altarCardRef.value, { opacity: 0 });
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1200));
-    containers.forEach((c) => c.remove());
   } catch (error) {
     gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
     await new Promise((resolve) => setTimeout(resolve, 500));

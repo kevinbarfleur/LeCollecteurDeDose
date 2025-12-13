@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
 import html2canvas from 'html2canvas';
+import gsap from 'gsap';
 import { DISINTEGRATION } from '~/constants/timing';
 
 /**
@@ -33,6 +34,25 @@ export interface CapturedDimensions {
  * Used for dramatic card destruction animations
  */
 export function useDisintegrationEffect() {
+  // Get disintegrate from window (initialized by plugin)
+  const getDisintegrate = () => {
+    if (typeof window === 'undefined') return null;
+    return (window as any).disintegrate || null;
+  };
+  
+  // Ensure disintegrate is initialized
+  const ensureDisintegrateInitialized = () => {
+    const disintegrate = getDisintegrate();
+    if (disintegrate && disintegrate.init && typeof disintegrate.init === 'function') {
+      try {
+        disintegrate.init();
+      } catch (e) {
+        console.warn('[DisintegrationEffect] Failed to initialize disintegrate:', e);
+      }
+    }
+    return disintegrate;
+  };
+
   // Snapshot state
   const cardSnapshot = ref<HTMLCanvasElement | null>(null);
   const imageSnapshot = ref<HTMLCanvasElement | null>(null);
@@ -125,6 +145,194 @@ export function useDisintegrationEffect() {
       newCanvas.height = height;
       newCanvas.getContext('2d')?.putImageData(data, 0, 0);
       return newCanvas;
+    });
+  };
+
+  /**
+   * Create disintegration effect using the disintegrate.js library
+   * This library uses html2canvas to create fine canvas particles
+   * Optimized for performance with fine ash-like particles
+   */
+  const createDisintegrationEffectDOM = (
+    sourceElement: HTMLElement,
+    container: HTMLElement,
+    options: DisintegrationOptions = {}
+  ): Promise<HTMLElement[]> => {
+    const {
+      frameCount = 111, // Fine particles (reduction factor - lower = more particles)
+      direction = 'out',
+      duration = 1.1,
+      delayMultiplier = 0.8,
+      targetWidth,
+      targetHeight,
+    } = options;
+
+    return new Promise((resolve) => {
+      try {
+        // Ensure disintegrate is initialized and available
+        const disintegrate = ensureDisintegrateInitialized();
+        
+        // Check if disintegrate is available
+        if (!disintegrate || !disintegrate.getDisObj || !disintegrate.createSimultaneousParticles) {
+          console.warn('[DisintegrationEffect] disintegrate library not available or incomplete', {
+            hasDisintegrate: !!disintegrate,
+            hasGetDisObj: !!(disintegrate && disintegrate.getDisObj),
+            hasCreateSimultaneousParticles: !!(disintegrate && disintegrate.createSimultaneousParticles)
+          });
+          resolve([]);
+          return;
+        }
+
+        // Ensure element is in DOM and visible
+        if (!sourceElement.parentNode || !document.body.contains(sourceElement)) {
+          console.warn('[DisintegrationEffect] Source element is not in DOM');
+          resolve([]);
+          return;
+        }
+
+        // Set up the source element with disintegrate attributes
+        // We'll add them temporarily to the original element
+        const originalDisType = sourceElement.getAttribute('data-dis-type');
+        const originalParticleType = sourceElement.getAttribute('data-dis-particle-type');
+        const originalReductionFactor = sourceElement.getAttribute('data-dis-reduction-factor');
+
+        sourceElement.setAttribute('data-dis-type', 'simultaneous');
+        sourceElement.setAttribute('data-dis-particle-type', 'WindParticle'); // Custom wind particle type
+        sourceElement.setAttribute('data-dis-reduction-factor', frameCount.toString());
+        // Explicitly don't set data-dis-color to keep original card colors
+        // Remove any existing color override
+        sourceElement.removeAttribute('data-dis-color');
+
+        // Re-initialize disintegrate to process this new element
+        disintegrate.init();
+
+        // Wait for the screenshot to be loaded (particlesReady event)
+        const particlesReadyHandler = () => {
+          try {
+            // Get disintegrate object
+            const disObj = disintegrate.getDisObj(sourceElement);
+            
+            if (!disObj) {
+              console.warn('[DisintegrationEffect] Failed to get disintegrate object after init', {
+                element: sourceElement,
+                hasAttributes: {
+                  disType: sourceElement.getAttribute('data-dis-type'),
+                  particleType: sourceElement.getAttribute('data-dis-particle-type'),
+                  reductionFactor: sourceElement.getAttribute('data-dis-reduction-factor')
+                },
+                inDOM: document.body.contains(sourceElement),
+                visible: sourceElement.offsetWidth > 0 && sourceElement.offsetHeight > 0,
+                disesLength: disintegrate.dises ? disintegrate.dises.length : 0
+              });
+              // Restore original attributes
+              if (originalDisType) sourceElement.setAttribute('data-dis-type', originalDisType);
+              else sourceElement.removeAttribute('data-dis-type');
+              if (originalParticleType) sourceElement.setAttribute('data-dis-particle-type', originalParticleType);
+              else sourceElement.removeAttribute('data-dis-particle-type');
+              if (originalReductionFactor) sourceElement.setAttribute('data-dis-reduction-factor', originalReductionFactor);
+              else sourceElement.removeAttribute('data-dis-reduction-factor');
+              window.removeEventListener('particlesReady', particlesReadyHandler);
+              resolve([]);
+              return;
+            }
+
+            // Create particles
+            disintegrate.createSimultaneousParticles(disObj);
+
+            // Wait for animation to complete
+            const animationDuration = duration * 1000;
+            setTimeout(() => {
+              // Clean up
+              try {
+                // Remove canvas if it exists
+                if (disObj.canvas && disObj.canvas.parentNode) {
+                  disObj.canvas.parentNode.removeChild(disObj.canvas);
+                }
+                // Remove from dises array
+                const index = disintegrate.dises.indexOf(disObj);
+                if (index > -1) {
+                  disintegrate.dises.splice(index, 1);
+                }
+              } catch (e) {
+                console.warn('[DisintegrationEffect] Error cleaning up disintegrate object:', e);
+              }
+              
+              // Restore original attributes
+              if (originalDisType) sourceElement.setAttribute('data-dis-type', originalDisType);
+              else sourceElement.removeAttribute('data-dis-type');
+              if (originalParticleType) sourceElement.setAttribute('data-dis-particle-type', originalParticleType);
+              else sourceElement.removeAttribute('data-dis-particle-type');
+              if (originalReductionFactor) sourceElement.setAttribute('data-dis-reduction-factor', originalReductionFactor);
+              else sourceElement.removeAttribute('data-dis-reduction-factor');
+              
+              window.removeEventListener('particlesReady', particlesReadyHandler);
+              resolve([]);
+            }, animationDuration);
+          } catch (error) {
+            console.error('[DisintegrationEffect] Error in disintegrate animation:', error);
+            // Restore original attributes
+            if (originalDisType) sourceElement.setAttribute('data-dis-type', originalDisType);
+            else sourceElement.removeAttribute('data-dis-type');
+            if (originalParticleType) sourceElement.setAttribute('data-dis-particle-type', originalParticleType);
+            else sourceElement.removeAttribute('data-dis-particle-type');
+            if (originalReductionFactor) sourceElement.setAttribute('data-dis-reduction-factor', originalReductionFactor);
+            else sourceElement.removeAttribute('data-dis-reduction-factor');
+            window.removeEventListener('particlesReady', particlesReadyHandler);
+            resolve([]);
+          }
+        };
+
+        // Listen for particlesReady event
+        window.addEventListener('particlesReady', particlesReadyHandler);
+        
+        // Fallback timeout in case particlesReady never fires
+        setTimeout(() => {
+          window.removeEventListener('particlesReady', particlesReadyHandler);
+          // Try to get disObj anyway
+          const disObj = disintegrate.getDisObj(sourceElement);
+          if (disObj && disObj.scrnCanvas) {
+            // Screenshot is ready, create particles
+            try {
+              disintegrate.createSimultaneousParticles(disObj);
+              setTimeout(() => {
+                // Clean up
+                if (disObj.canvas && disObj.canvas.parentNode) {
+                  disObj.canvas.parentNode.removeChild(disObj.canvas);
+                }
+                const index = disintegrate.dises.indexOf(disObj);
+                if (index > -1) {
+                  disintegrate.dises.splice(index, 1);
+                }
+                // Restore attributes
+                if (originalDisType) sourceElement.setAttribute('data-dis-type', originalDisType);
+                else sourceElement.removeAttribute('data-dis-type');
+                if (originalParticleType) sourceElement.setAttribute('data-dis-particle-type', originalParticleType);
+                else sourceElement.removeAttribute('data-dis-particle-type');
+                if (originalReductionFactor) sourceElement.setAttribute('data-dis-reduction-factor', originalReductionFactor);
+                else sourceElement.removeAttribute('data-dis-reduction-factor');
+                resolve([]);
+              }, duration * 1000);
+            } catch (e) {
+              console.error('[DisintegrationEffect] Error creating particles:', e);
+              resolve([]);
+            }
+          } else {
+            console.warn('[DisintegrationEffect] Screenshot not ready after timeout');
+            // Restore attributes
+            if (originalDisType) sourceElement.setAttribute('data-dis-type', originalDisType);
+            else sourceElement.removeAttribute('data-dis-type');
+            if (originalParticleType) sourceElement.setAttribute('data-dis-particle-type', originalParticleType);
+            else sourceElement.removeAttribute('data-dis-particle-type');
+            if (originalReductionFactor) sourceElement.setAttribute('data-dis-reduction-factor', originalReductionFactor);
+            else sourceElement.removeAttribute('data-dis-reduction-factor');
+            resolve([]);
+          }
+        }, 5000); // 5 second timeout
+
+      } catch (error) {
+        console.error('[DisintegrationEffect] Error creating disintegration effect:', error);
+        resolve([]);
+      }
     });
   };
 
@@ -263,21 +471,212 @@ export function useDisintegrationEffect() {
 
       // Capture the full card
       const cardRect = cardFrontRef.value.getBoundingClientRect();
+      
+      // Verify element has valid dimensions
+      if (cardRect.width === 0 || cardRect.height === 0) {
+        console.warn('[DisintegrationEffect] Card element has invalid dimensions, skipping capture');
+        cardSnapshot.value = null;
+        isCapturingSnapshot.value = false;
+        return;
+      }
+
+      // Wait a bit more to ensure all images are loaded
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Verify element still exists and has dimensions
+      if (!cardFrontRef.value) {
+        isCapturingSnapshot.value = false;
+        return;
+      }
+
+      const finalRect = cardFrontRef.value.getBoundingClientRect();
+      if (finalRect.width === 0 || finalRect.height === 0) {
+        console.warn('[DisintegrationEffect] Card element lost dimensions, skipping capture');
+        cardSnapshot.value = null;
+        isCapturingSnapshot.value = false;
+        return;
+      }
+
+      // Replace image src attributes with proxy URLs BEFORE html2canvas
+      // This ensures images are already loaded via proxy when html2canvas processes them
+      const originalSrcs: Map<HTMLImageElement, string> = new Map();
+      if (cardFrontRef.value) {
+        console.log('[DisintegrationEffect] Pre-proxying images before capture...');
+        const images = cardFrontRef.value.querySelectorAll('img');
+        
+        images.forEach((img, index) => {
+          const htmlImg = img as HTMLImageElement;
+          const currentSrc = htmlImg.getAttribute('src') || htmlImg.src;
+          
+          if (currentSrc && 
+              !currentSrc.startsWith('/api/image-proxy') && 
+              !currentSrc.startsWith('data:') &&
+              !currentSrc.startsWith('blob:')) {
+            try {
+              const url = new URL(currentSrc, window.location.href);
+              if (url.origin !== window.location.origin) {
+                // Store original src
+                originalSrcs.set(htmlImg, currentSrc);
+                
+                // Replace with proxy URL
+                const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
+                console.log(`[DisintegrationEffect] Pre-proxying image ${index + 1}`);
+                htmlImg.crossOrigin = 'anonymous';
+                htmlImg.setAttribute('src', proxyUrl);
+                htmlImg.src = proxyUrl;
+              }
+            } catch (e) {
+              console.warn(`[DisintegrationEffect] Invalid URL for image ${index + 1}:`, e);
+            }
+          }
+        });
+        
+        // Wait for images to load via proxy
+        if (images.length > 0) {
+          console.log(`[DisintegrationEffect] Waiting for ${images.length} images to load via proxy...`);
+          await Promise.all(Array.from(images).map((img, index) => {
+            return new Promise<void>((resolve) => {
+              const htmlImg = img as HTMLImageElement;
+              if (htmlImg.complete && htmlImg.naturalWidth > 0) {
+                resolve();
+                return;
+              }
+              
+              htmlImg.onload = () => resolve();
+              htmlImg.onerror = () => resolve(); // Resolve anyway
+              setTimeout(() => resolve(), 3000); // Timeout
+            });
+          }));
+          console.log('[DisintegrationEffect] Images pre-loaded via proxy');
+        }
+      }
+
+      // Now capture with html2canvas - images are already proxied and loaded
       const canvas = await html2canvas(cardFrontRef.value, {
         backgroundColor: null,
         scale: 2,
         logging: false,
         useCORS: true,
-        allowTaint: true,
-        imageTimeout: 10000,
+        allowTaint: false,
+        imageTimeout: 15000,
+        foreignObjectRendering: false,
+        onclone: (clonedDoc, element) => {
+          try {
+            console.log('[DisintegrationEffect] onclone: Processing cloned document...');
+            const clonedElement = element || clonedDoc.body;
+            
+            // Ensure crossOrigin is set on all images in the clone
+            const images = clonedElement.querySelectorAll('img');
+            console.log(`[DisintegrationEffect] onclone: Found ${images.length} images`);
+            images.forEach((img, index) => {
+              const htmlImg = img as HTMLImageElement;
+              htmlImg.crossOrigin = 'anonymous';
+              
+              // Remove images with invalid dimensions to avoid createPattern errors
+              if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
+                console.warn(`[DisintegrationEffect] onclone: Image ${index + 1} has invalid dimensions, hiding it`);
+                htmlImg.style.display = 'none';
+                htmlImg.src = '';
+              }
+            });
+            
+            // Handle background images in computed styles - remove problematic ones
+            const allElements = clonedElement.querySelectorAll('*');
+            allElements.forEach((el) => {
+              const htmlEl = el as HTMLElement;
+              const computedStyle = window.getComputedStyle(htmlEl);
+              const bgImage = computedStyle.backgroundImage;
+              
+              if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+                const bgImageMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+                if (bgImageMatch && bgImageMatch[1]) {
+                  const bgUrl = bgImageMatch[1];
+                  
+                  // For data URLs (SVG noise), keep them but ensure they're valid
+                  if (bgUrl.startsWith('data:')) {
+                    // Data URLs should be fine, but check if element has valid dimensions
+                    const width = parseInt(computedStyle.width) || 0;
+                    const height = parseInt(computedStyle.height) || 0;
+                    if (width === 0 || height === 0) {
+                      // Element has no dimensions, remove background to avoid createPattern error
+                      htmlEl.style.backgroundImage = 'none';
+                    }
+                  } else if (!bgUrl.includes('/api/image-proxy') && 
+                             !bgUrl.startsWith('blob:')) {
+                    // External URL - try to proxy it
+                    try {
+                      const url = new URL(bgUrl, window.location.href);
+                      if (url.origin !== window.location.origin) {
+                        const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(bgUrl)}`;
+                        htmlEl.style.backgroundImage = `url(${proxyUrl})`;
+                      }
+                    } catch (e) {
+                      // Invalid URL or element has no dimensions - remove background
+                      htmlEl.style.backgroundImage = 'none';
+                    }
+                  }
+                }
+              }
+              
+              // Check if element has valid dimensions - if not, remove background images
+              const width = parseInt(computedStyle.width) || 0;
+              const height = parseInt(computedStyle.height) || 0;
+              if ((width === 0 || height === 0) && computedStyle.backgroundImage !== 'none') {
+                htmlEl.style.backgroundImage = 'none';
+              }
+            });
+            
+            console.log('[DisintegrationEffect] onclone: Processing complete');
+          } catch (e) {
+            console.error('[DisintegrationEffect] Error in onclone callback:', e);
+          }
+        },
+        ignoreElements: (element) => {
+          // Ignore images with invalid dimensions to avoid createPattern errors
+          if (element instanceof HTMLImageElement) {
+            if (element.naturalWidth === 0 || element.naturalHeight === 0) {
+              return true;
+            }
+          }
+          
+          // Ignore elements with background images but no valid dimensions
+          if (element instanceof HTMLElement) {
+            const computedStyle = window.getComputedStyle(element);
+            const bgImage = computedStyle.backgroundImage;
+            if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+              const width = parseInt(computedStyle.width) || 0;
+              const height = parseInt(computedStyle.height) || 0;
+              if (width === 0 || height === 0) {
+                return true; // Ignore elements with background images but no dimensions
+              }
+            }
+          }
+          
+          return false;
+        },
       });
 
-      cardSnapshot.value = canvas;
-      capturedCardDimensions.value = {
-        width: cardRect.width,
-        height: cardRect.height,
-      };
+      // Restore original srcs after capture
+      originalSrcs.forEach((originalSrc, img) => {
+        img.setAttribute('src', originalSrc);
+        img.src = originalSrc;
+        img.removeAttribute('crossorigin');
+      });
+      originalSrcs.clear();
+
+      // Verify canvas has valid dimensions
+      if (canvas.width === 0 || canvas.height === 0) {
+        console.warn('[DisintegrationEffect] Captured canvas has invalid dimensions');
+        cardSnapshot.value = null;
+      } else {
+        cardSnapshot.value = canvas;
+        capturedCardDimensions.value = {
+          width: finalRect.width,
+          height: finalRect.height,
+        };
+      }
     } catch (error) {
+      console.error('[DisintegrationEffect] Failed to capture card snapshot:', error);
       cardSnapshot.value = null;
     }
 
@@ -307,6 +706,7 @@ export function useDisintegrationEffect() {
     canvasHasContent,
     generateDisintegrationFrames,
     createDisintegrationEffect,
+    createDisintegrationEffectDOM,
     findCardImageElement,
     captureCardSnapshot,
     clearSnapshots,
