@@ -96,7 +96,9 @@
       "foilMessage": "✦ Cette carte brille déjà plus que ton DPS.",
       "empty": "Tu n'as plus de Vaal Orbs. Skill issue.",
       "recording": "Sacrifice consigné…",
-      "rec": "REC"
+      "rec": "REC",
+      "loading": "Chargement…",
+      "syncing": "Synchronisation en cours…"
     },
     "preferences": {
       "title": "Préférences",

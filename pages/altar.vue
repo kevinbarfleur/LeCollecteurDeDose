@@ -59,6 +59,7 @@ const vaalOrbs = ref(14);
 // Local session copy of the collection - persists during the session
 const localCollection = ref<Card[]>([]);
 const isLoadingCollection = ref(false);
+const isReloadingCollection = ref(false);
 
 // Load collection from API or use mock data
 const loadCollection = async () => {
@@ -330,6 +331,11 @@ const altarClasses = computed(() => ({
 
 // Watch for card selection changes
 watch(selectedCardId, async (newId, oldId) => {
+  if (isBlockingInteractions.value) {
+    // Prevent card changes during critical operations
+    return;
+  }
+
   if (newId) {
     const group = groupedCards.value.find((g) => g.cardId === newId);
     if (group && group.variations.length > 0) {
@@ -834,6 +840,7 @@ const handleSyncRequired = async (
         });
         
         // Mark that reload is starting (for test runner to wait)
+        isReloadingCollection.value = true;
         if (typeof window !== 'undefined') {
           (window as any).__isReloadingCollection = true
         }
@@ -862,6 +869,7 @@ const handleSyncRequired = async (
           }
         } finally {
           // Mark that reload is complete
+          isReloadingCollection.value = false;
           if (typeof window !== 'undefined') {
             (window as any).__isReloadingCollection = false
           }
@@ -1202,9 +1210,20 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
           },
           onSuccess: async () => {
             console.log('[Altar] ✅ DESTROYED sync successful. Reloading collection...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await loadCollection();
-            console.log(`[Altar] ✅ Collection reloaded. New vaalOrbs: ${vaalOrbs.value}, Cards count: ${localCollection.value.length}`);
+            isReloadingCollection.value = true;
+            if (typeof window !== 'undefined') {
+              (window as any).__isReloadingCollection = true;
+            }
+            try {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await loadCollection();
+              console.log(`[Altar] ✅ Collection reloaded. New vaalOrbs: ${vaalOrbs.value}, Cards count: ${localCollection.value.length}`);
+            } finally {
+              isReloadingCollection.value = false;
+              if (typeof window !== 'undefined') {
+                (window as any).__isReloadingCollection = false;
+              }
+            }
           },
           onError: (error) => {
             console.error('[Altar] ❌ DESTROYED sync failed:', error.message);
@@ -1493,7 +1512,7 @@ const ejectCard = async () => {
 
 // Remove card from altar
 const removeCardFromAltar = async () => {
-  if (!altarCardRef.value || isAnimating.value || !isCardOnAltar.value) return;
+  if (!altarCardRef.value || isBlockingInteractions.value || !isCardOnAltar.value) return;
 
   isAnimating.value = true;
   await ejectCard();
@@ -1529,6 +1548,22 @@ let clickOffsetY = 0;
 const isAnimatingRef = computed(
   () => isAnimating.value || !isCardOnAltar.value
 );
+
+// Global state to block interactions during critical operations
+const isBlockingInteractions = computed(() => {
+  return (
+    isLoadingCollection.value ||
+    isReloadingCollection.value ||
+    isSyncProcessing.value ||
+    isCollectionSyncing.value ||
+    isAnimating.value ||
+    isCardBeingDestroyed.value ||
+    isCardAnimatingIn.value ||
+    isCardAnimatingOut.value ||
+    isDraggingOrb.value ||
+    isReturningOrb.value
+  );
+});
 
 const {
   heartbeatIntensity,
@@ -1602,11 +1637,11 @@ const setOrbRef = (el: HTMLElement | null, index: number) => {
 };
 
 const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
-  // Cannot use Vaal Orb on already foil cards
+  // Cannot use Vaal Orb during critical operations or on already foil cards
   if (
     vaalOrbs.value <= 0 ||
     !isCardOnAltar.value ||
-    isAnimating.value ||
+    isBlockingInteractions.value ||
     isReturningOrb.value ||
     isCurrentCardFoil.value
   )
@@ -1920,6 +1955,7 @@ const endDragOrb = async () => {
                   :placeholder="t('altar.selector.selectCard')"
                   size="md"
                   :searchable="true"
+                  :disabled="isBlockingInteractions"
                 />
               </div>
 
@@ -1936,6 +1972,7 @@ const endDragOrb = async () => {
                   :options="variationOptions"
                   :placeholder="t('altar.selector.chooseVariant')"
                   size="md"
+                  :disabled="isBlockingInteractions"
                 />
               </div>
 
@@ -1948,6 +1985,7 @@ const endDragOrb = async () => {
                   size="md"
                   rune-left="✕"
                   rune-right="✕"
+                  :disabled="isBlockingInteractions"
                   @click="removeCardFromAltar"
                 >
                   {{ t("altar.selector.remove") }}
@@ -2123,11 +2161,12 @@ const endDragOrb = async () => {
                 :class="{
                   'vaal-orb--disabled':
                     !isCardOnAltar ||
-                    isAnimating ||
+                    isBlockingInteractions ||
                     isReturningOrb ||
                     isCurrentCardFoil,
                   'vaal-orb--dragging': draggedOrbIndex === index,
                 }"
+                :disabled="isBlockingInteractions"
                 @mousedown="(e) => startDragOrb(e, index)"
                 @touchstart="(e) => startDragOrb(e, index)"
               >
@@ -2143,6 +2182,20 @@ const endDragOrb = async () => {
                 <span class="vaal-orbs-empty__icon">◇</span>
                 <span class="vaal-orbs-empty__text">{{
                   t("altar.vaalOrbs.empty")
+                }}</span>
+              </div>
+              
+              <!-- Loading state indicator -->
+              <div
+                v-if="isBlockingInteractions && vaalOrbs > 0"
+                class="vaal-orbs-loading"
+                :title="t('altar.vaalOrbs.syncing')"
+              >
+                <span class="vaal-orbs-loading__spinner">⟳</span>
+                <span class="vaal-orbs-loading__text">{{
+                  isLoadingCollection || isReloadingCollection
+                    ? t("altar.vaalOrbs.loading")
+                    : t("altar.vaalOrbs.syncing")
                 }}</span>
               </div>
             </div>
@@ -3143,6 +3196,37 @@ const endDragOrb = async () => {
   font-family: "Crimson Text", serif;
   font-size: 1.0625rem;
   font-style: italic;
+}
+
+.vaal-orbs-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: rgba(100, 90, 80, 0.7);
+  width: 100%;
+}
+
+.vaal-orbs-loading__spinner {
+  font-size: 1.5rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vaal-orbs-loading__text {
+  font-family: "Crimson Text", serif;
+  font-size: 0.875rem;
+  font-style: italic;
+  opacity: 0.8;
 }
 
 /* ==========================================
