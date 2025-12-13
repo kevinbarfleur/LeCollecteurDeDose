@@ -1101,13 +1101,6 @@ onMounted(() => {
     console.log(`[TestRunner] Added ${amount} vaalOrbs. New total: ${vaalOrbs.value}`)
   }
 
-  // Ensure we're using test mode (Supabase) for testing
-  const { setDataSource } = useDataSource()
-  
-  // Force test mode for testing
-  setDataSource('test')
-  console.log('[TestRunner] ✅ Test environment configured: Test data (Supabase)')
-
   // Initialize test runner
   initTestRunner({
     getCollectionState,

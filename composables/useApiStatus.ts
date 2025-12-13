@@ -40,7 +40,6 @@ export function useApiStatus() {
       
       return isOnline
     } catch (error) {
-      console.warn('[ApiStatus] API check failed:', error)
       isApiOffline.value = true
       lastApiCheck.value = new Date()
       return false
@@ -49,8 +48,14 @@ export function useApiStatus() {
 
   /**
    * Start periodic API status checks
+   * Only works on client side
    */
   const startMonitoring = () => {
+    // Only run on client side
+    if (!import.meta.client) {
+      return
+    }
+
     // Clear existing interval
     if (checkInterval.value) {
       clearInterval(checkInterval.value)
@@ -81,15 +86,17 @@ export function useApiStatus() {
     }
   }
 
-  // Auto-start monitoring when in API mode
-  watch(isApiData, (isApi) => {
-    if (isApi) {
-      startMonitoring()
-    } else {
-      stopMonitoring()
-      isApiOffline.value = false
-    }
-  }, { immediate: true })
+  // Auto-start monitoring when in API mode (only on client)
+  if (import.meta.client) {
+    watch(isApiData, (isApi) => {
+      if (isApi) {
+        startMonitoring()
+      } else {
+        stopMonitoring()
+        isApiOffline.value = false
+      }
+    }, { immediate: true })
+  }
 
   // Cleanup on unmount
   if (import.meta.client) {

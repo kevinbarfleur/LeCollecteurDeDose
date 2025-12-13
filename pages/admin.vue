@@ -477,23 +477,20 @@ const updateDebugVaalOrbs = (delta: number) => {
           <ClientOnly>
             <RunicBox padding="lg">
               <div class="admin-section-enhanced__header">
-                <div class="admin-section-enhanced__icon">
+                <div class="admin-section-enhanced__icon admin-section-enhanced__icon--activity-logs">
+                  <!-- Users icon (same as ActivityLogsPanel) -->
                   <svg
                     class="admin-section-enhanced__icon-image"
                     viewBox="0 0 24 24"
                     fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
                     stroke="currentColor"
-                    stroke-width="2"
+                    stroke-width="1.5"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <!-- Journal/Logs icon -->
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="9" y1="13" x2="15" y2="13" />
-                    <line x1="9" y1="17" x2="15" y2="17" />
-                    <line x1="9" y1="9" x2="15" y2="9" />
+                    <path
+                      d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+                    />
                   </svg>
                 </div>
                 <div class="admin-section-enhanced__content">
@@ -537,23 +534,20 @@ const updateDebugVaalOrbs = (delta: number) => {
             <template #fallback>
               <RunicBox padding="lg">
                 <div class="admin-section-enhanced__header">
-                  <div class="admin-section-enhanced__icon">
+                  <div class="admin-section-enhanced__icon admin-section-enhanced__icon--activity-logs">
+                    <!-- Users icon (same as ActivityLogsPanel) -->
                     <svg
                       class="admin-section-enhanced__icon-image"
                       viewBox="0 0 24 24"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
                       stroke="currentColor"
-                      stroke-width="2"
+                      stroke-width="1.5"
                       stroke-linecap="round"
                       stroke-linejoin="round"
                     >
-                      <!-- Journal/Logs icon -->
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="9" y1="13" x2="15" y2="13" />
-                      <line x1="9" y1="17" x2="15" y2="17" />
-                      <line x1="9" y1="9" x2="15" y2="9" />
+                      <path
+                        d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+                      />
                     </svg>
                   </div>
                   <div class="admin-section-enhanced__content">
@@ -1001,6 +995,7 @@ const updateDebugVaalOrbs = (delta: number) => {
   border-radius: 8px;
   border: 1px solid rgba(248, 113, 113, 0.2);
   padding: 0.75rem;
+  position: relative;
 }
 
 .admin-section-enhanced__icon-image {
@@ -1011,12 +1006,12 @@ const updateDebugVaalOrbs = (delta: number) => {
   color: rgba(248, 113, 113, 0.8);
 }
 
-/* SVG icons in activity logs */
-.admin-section-enhanced__icon svg {
+/* SVG icons in activity logs - using accent color from design system */
+.admin-section-enhanced__icon--activity-logs svg {
   width: 100%;
   height: 100%;
-  color: rgba(139, 92, 246, 0.8);
-  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+  color: var(--color-accent);
+  filter: drop-shadow(0 0 8px var(--color-accent-glow));
 }
 
 .admin-section-enhanced__content {
@@ -1211,8 +1206,19 @@ const updateDebugVaalOrbs = (delta: number) => {
   z-index: 1;
 }
 
+/* Ensure dropdown appears above RunicBox and other admin content */
 .admin-debug-field__select :deep(.runic-select__dropdown) {
   z-index: 10002 !important; /* Above admin page content */
+  position: fixed !important; /* Use fixed positioning to escape RunicBox overflow */
+}
+
+/* Ensure RunicBox doesn't clip the dropdown */
+.admin-debug-panel :deep(.runic-box) {
+  overflow: visible;
+}
+
+.admin-debug-panel :deep(.runic-box__content) {
+  overflow: visible;
 }
 
 .admin-debug-field__select :deep(.runic-radio) {

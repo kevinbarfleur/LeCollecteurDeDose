@@ -28,6 +28,13 @@ export function useApi() {
       : '/api/data'
   })
 
+  // Log when API mode changes
+  if (import.meta.client) {
+    watch(isTestData, (isTest) => {
+      console.log('[API] Data source mode changed:', { isTestData: isTest, apiUrl: apiUrl.value })
+    })
+  }
+
   // State
   const isLoading = ref(false)
   const error = ref<ApiError | null>(null)
@@ -141,7 +148,6 @@ export function useApi() {
     )
     
     if (userKey) {
-      console.warn(`[API] Found user collection with non-lowercase key: "${userKey}" (expected "${userLower}"). Server may have duplicate entries.`)
       return allCollections[userKey]
     }
     
@@ -199,13 +205,6 @@ export function useApi() {
       [userKey]: collectionData
     }
     
-    console.log('[API] Sending update payload:', {
-      userKey,
-      payload,
-      vaalOrbs: collectionData.vaalOrbs,
-      cardKeys: Object.keys(collectionData).filter(k => k !== 'vaalOrbs')
-    })
-    
     const result = await apiFetch<any>(
       'userCollection/update',
       {
@@ -214,21 +213,6 @@ export function useApi() {
       },
       true // requiresAuth
     )
-    
-    console.log('[API] Update response:', result)
-    if (result?.updated) {
-      console.log('[API] Updated object keys:', Object.keys(result.updated))
-      if (result.updated[userKey]) {
-        const userData = result.updated[userKey]
-        console.log('[API] Updated user data:', {
-          vaalOrbs: userData.vaalOrbs,
-          cardCount: Object.keys(userData).filter(k => k !== 'vaalOrbs').length,
-          cardKeys: Object.keys(userData).filter(k => k !== 'vaalOrbs').slice(0, 5)
-        })
-      } else {
-        console.warn('[API] ⚠️ User key not found in updated response:', userKey)
-      }
-    }
     
     return !!result
   }
@@ -265,14 +249,7 @@ export function useApi() {
    */
   async function testConnection(): Promise<void> {
     // Try fetching user collections
-    const collections = await fetchUserCollections()
-    
-    if (collections) {
-      const userCount = Object.keys(collections).length
-      console.log(`[API Test] ✓ User collections available with ${userCount} users`)
-    } else {
-      console.log('[API Test] ✗ Could not fetch user collections')
-    }
+    await fetchUserCollections()
   }
 
   /**

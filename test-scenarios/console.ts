@@ -95,15 +95,6 @@ export function initTestRunner(helpers: {
       }
     }
     
-    // Ensure test mode is enabled for testing
-    try {
-      const { setDataSource } = useDataSource()
-      setDataSource('test')
-      console.log('[TestRunner] ✅ Test mode enabled (using Supabase test data)')
-    } catch (e) {
-      console.warn('[TestRunner] Could not set test mode:', e)
-    }
-    
     console.log('[TestRunner] ✅ Test runner initialized')
     console.log('[TestRunner] Available commands:')
     console.log('  window.runTests()      - Run all test scenarios')
