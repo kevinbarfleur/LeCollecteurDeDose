@@ -152,7 +152,6 @@ const {
   capturedCardDimensions,
   canvasHasContent,
   createDisintegrationEffect,
-  createDisintegrationEffectDOM,
   findCardImageElement: findCardImageElementBase,
   captureCardSnapshot: captureCardSnapshotBase,
   clearSnapshots,
@@ -427,239 +426,99 @@ const destroyCardEffect = async () => {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   try {
-    console.log('[Replay] Starting card destruction - single disintegration');
-    
-    // Replace image src attributes with proxy URLs BEFORE html2canvas
-    const originalSrcs: Map<HTMLImageElement, string> = new Map();
-    if (cardFrontRef.value) {
-      console.log('[Replay] Replacing image srcs with proxy URLs...');
-      const images = cardFrontRef.value.querySelectorAll('img');
-      
-      images.forEach((img, index) => {
-        const htmlImg = img as HTMLImageElement;
-        const currentSrc = htmlImg.getAttribute('src') || htmlImg.src;
-        
-        if (currentSrc && 
-            !currentSrc.startsWith('/api/image-proxy') && 
-            !currentSrc.startsWith('data:') &&
-            !currentSrc.startsWith('blob:')) {
-          try {
-            const url = new URL(currentSrc, window.location.href);
-            if (url.origin !== window.location.origin) {
-              // Store original src
-              originalSrcs.set(htmlImg, currentSrc);
-              
-              // Replace with proxy URL
-              const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
-              console.log(`[Replay] Replacing image ${index + 1} src with proxy: ${proxyUrl.substring(0, 80)}...`);
-              htmlImg.crossOrigin = 'anonymous';
-              htmlImg.setAttribute('src', proxyUrl);
-              htmlImg.src = proxyUrl; // Also set property
-            }
-          } catch (e) {
-            console.warn(`[Replay] Invalid URL for image ${index + 1}:`, e);
-          }
-        }
-      });
-      
-      // Wait for images to load via proxy
-      console.log(`[Replay] Waiting for ${images.length} images to load via proxy...`);
-      const loadPromises = Array.from(images).map((img, index) => {
-        return new Promise<void>((resolve) => {
-          const htmlImg = img as HTMLImageElement;
-          if (htmlImg.complete && htmlImg.naturalWidth > 0) {
-            console.log(`[Replay] Image ${index + 1} already loaded`);
-            resolve();
-            return;
-          }
-          
-          htmlImg.onload = () => {
-            console.log(`[Replay] Image ${index + 1} loaded successfully`);
-            resolve();
-          };
-          
-          htmlImg.onerror = () => {
-            console.warn(`[Replay] Failed to load image ${index + 1}`);
-            resolve(); // Resolve anyway
-          };
-          
-          // Timeout after 3 seconds
-          setTimeout(() => {
-            console.warn(`[Replay] Image ${index + 1} load timeout`);
-            resolve();
-          }, 3000);
-        });
-      });
-      
-      await Promise.all(loadPromises);
-      console.log('[Replay] All images loaded');
-    }
-    
-    // Capture full card snapshot (single disintegration)
     let cardCanvas = cardSnapshot.value;
-    if (!cardCanvas && cardFrontRef.value && cardWidth > 0 && cardHeight > 0) {
-      try {
-        console.log('[Replay] Capturing full card snapshot...');
-        cardCanvas = await html2canvas(cardFrontRef.value, {
-          backgroundColor: null,
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: false,
-          imageTimeout: 15000,
-          onclone: (clonedDoc, element) => {
-            try {
-              console.log('[Replay] onclone: Processing cloned document...');
-              const clonedElement = element || clonedDoc.body;
-              
-              // Replace ALL image srcs in the clone BEFORE html2canvas processes them
-              const images = clonedElement.querySelectorAll('img');
-              console.log(`[Replay] onclone: Found ${images.length} images to process`);
-              
-              images.forEach((img, index) => {
-                const htmlImg = img as HTMLImageElement;
-                // Use getAttribute to get the original src attribute (before browser resolves it)
-                const originalSrcAttr = htmlImg.getAttribute('src');
-                const currentSrc = htmlImg.src;
-                
-                console.log(`[Replay] onclone: Image ${index + 1} - attr: ${originalSrcAttr?.substring(0, 60)}, src: ${currentSrc.substring(0, 60)}`);
-                
-                // If the src is already proxied, ensure crossOrigin is set
-                if (currentSrc.includes('/api/image-proxy') || originalSrcAttr?.includes('/api/image-proxy')) {
+    if (!cardCanvas) {
+      console.warn('[Replay] ⚠️ No pre-captured snapshot found! This should not happen if captureCardSnapshot was called.');
+      if (cardFrontRef.value && cardWidth > 0 && cardHeight > 0) {
+        try {
+          cardCanvas = await html2canvas(cardFrontRef.value, {
+            backgroundColor: null,
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: false,
+            imageTimeout: 15000,
+            onclone: (clonedDoc, element) => {
+              try {
+                const clonedElement = element || clonedDoc.body;
+                const images = clonedElement.querySelectorAll('img');
+                images.forEach((img) => {
+                  const htmlImg = img as HTMLImageElement;
                   htmlImg.crossOrigin = 'anonymous';
-                  return;
-                }
-                
-                // Skip data URLs and blobs
-                if (currentSrc.startsWith('data:') || currentSrc.startsWith('blob:')) {
-                  htmlImg.crossOrigin = 'anonymous';
-                  return;
-                }
-                
-                // If it's an external URL, replace with proxy
-                try {
-                  const url = new URL(currentSrc, window.location.href);
-                  if (url.origin !== window.location.origin) {
-                    const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
-                    console.log(`[Replay] onclone: Replacing image ${index + 1} src with proxy`);
-                    htmlImg.crossOrigin = 'anonymous';
-                    htmlImg.setAttribute('src', proxyUrl);
-                    htmlImg.src = proxyUrl;
-                  } else {
-                    htmlImg.crossOrigin = 'anonymous';
+                  if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
+                    htmlImg.style.display = 'none';
+                    htmlImg.src = '';
                   }
-                } catch (e) {
-                  console.warn(`[Replay] onclone: Invalid URL for image ${index + 1}`);
-                  htmlImg.style.display = 'none';
-                  htmlImg.src = '';
-                }
+                });
                 
-                // Remove images with invalid dimensions to avoid createPattern errors
-                if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
-                  console.warn(`[Replay] onclone: Image ${index + 1} has invalid dimensions, hiding it`);
-                  htmlImg.style.display = 'none';
-                  htmlImg.src = '';
-                }
-              });
-              
-              // Handle background images in computed styles - remove problematic ones
-              const allElements = clonedElement.querySelectorAll('*');
-              allElements.forEach((el) => {
-                const htmlEl = el as HTMLElement;
-                const computedStyle = window.getComputedStyle(htmlEl);
-                const bgImage = computedStyle.backgroundImage;
-                
-                if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
-                  const bgImageMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
-                  if (bgImageMatch && bgImageMatch[1]) {
-                    const bgUrl = bgImageMatch[1];
-                    
-                    // For data URLs (SVG noise), keep them but ensure element has valid dimensions
-                    if (bgUrl.startsWith('data:')) {
-                      const width = parseInt(computedStyle.width) || 0;
-                      const height = parseInt(computedStyle.height) || 0;
-                      if (width === 0 || height === 0) {
-                        htmlEl.style.backgroundImage = 'none';
-                      }
-                    } else if (!bgUrl.includes('/api/image-proxy') && 
-                               !bgUrl.startsWith('blob:')) {
-                      try {
-                        const url = new URL(bgUrl, window.location.href);
-                        if (url.origin !== window.location.origin) {
-                          const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(bgUrl)}`;
-                          htmlEl.style.backgroundImage = `url(${proxyUrl})`;
+                const allElements = clonedElement.querySelectorAll('*');
+                allElements.forEach((el) => {
+                  const htmlEl = el as HTMLElement;
+                  const computedStyle = window.getComputedStyle(htmlEl);
+                  const bgImage = computedStyle.backgroundImage;
+                  
+                  if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+                    const bgImageMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+                    if (bgImageMatch && bgImageMatch[1]) {
+                      const bgUrl = bgImageMatch[1];
+                      if (bgUrl.startsWith('data:')) {
+                        const width = parseInt(computedStyle.width) || 0;
+                        const height = parseInt(computedStyle.height) || 0;
+                        if (width === 0 || height === 0) {
+                          htmlEl.style.backgroundImage = 'none';
                         }
-                      } catch (e) {
-                        htmlEl.style.backgroundImage = 'none';
+                      } else if (!bgUrl.includes('/api/image-proxy') && !bgUrl.startsWith('blob:')) {
+                        try {
+                          const url = new URL(bgUrl, window.location.href);
+                          if (url.origin !== window.location.origin) {
+                            htmlEl.style.backgroundImage = `url(/api/image-proxy?url=${encodeURIComponent(bgUrl)})`;
+                          }
+                        } catch (e) {
+                          htmlEl.style.backgroundImage = 'none';
+                        }
                       }
                     }
                   }
+                  
+                  const width = parseInt(computedStyle.width) || 0;
+                  const height = parseInt(computedStyle.height) || 0;
+                  if ((width === 0 || height === 0) && computedStyle.backgroundImage !== 'none') {
+                    htmlEl.style.backgroundImage = 'none';
+                  }
+                });
+              } catch (e) {
+                console.error('[Replay] Error in onclone:', e);
+              }
+            },
+            ignoreElements: (element) => {
+              if (element instanceof HTMLImageElement) {
+                if (element.naturalWidth === 0 || element.naturalHeight === 0) {
+                  return true;
                 }
-                
-                // Check if element has valid dimensions - if not, remove background images
-                const width = parseInt(computedStyle.width) || 0;
-                const height = parseInt(computedStyle.height) || 0;
-                if ((width === 0 || height === 0) && computedStyle.backgroundImage !== 'none') {
-                  htmlEl.style.backgroundImage = 'none';
-                }
-              });
+              }
               
-              console.log('[Replay] onclone: Processing complete');
-            } catch (e) {
-              console.error('[Replay] Error in onclone:', e);
-            }
-          },
-          ignoreElements: (element) => {
-            // Ignore images with invalid dimensions to avoid createPattern errors
-            if (element instanceof HTMLImageElement) {
-              if (element.naturalWidth === 0 || element.naturalHeight === 0) {
-                return true;
-              }
-            }
-            
-            // Ignore elements with background images but no valid dimensions
-            if (element instanceof HTMLElement) {
-              const computedStyle = window.getComputedStyle(element);
-              const bgImage = computedStyle.backgroundImage;
-              if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
-                const width = parseInt(computedStyle.width) || 0;
-                const height = parseInt(computedStyle.height) || 0;
-                if (width === 0 || height === 0) {
-                  return true; // Ignore elements with background images but no dimensions
+              if (element instanceof HTMLElement) {
+                const computedStyle = window.getComputedStyle(element);
+                const bgImage = computedStyle.backgroundImage;
+                if (bgImage && bgImage !== 'none' && bgImage.includes('url(')) {
+                  const width = parseInt(computedStyle.width) || 0;
+                  const height = parseInt(computedStyle.height) || 0;
+                  if (width === 0 || height === 0) {
+                    return true;
+                  }
                 }
               }
-            }
-            
-            return false;
-          },
-        });
-        
-        // Restore original srcs after capture
-        originalSrcs.forEach((originalSrc, img) => {
-          img.setAttribute('src', originalSrc);
-          img.src = originalSrc;
-        });
-        originalSrcs.clear();
-        
-        if (cardCanvas) {
-          capturedCardDimensions.value = { width: cardWidth, height: cardHeight };
-          console.log('[Replay] ✅ Card snapshot captured successfully:', { 
-            canvasWidth: cardCanvas.width, 
-            canvasHeight: cardCanvas.height,
-            displayWidth: cardWidth, 
-            displayHeight: cardHeight 
+              
+              return false;
+            },
           });
-        } else {
-          console.error('[Replay] ❌ Failed to capture card snapshot - canvas is null');
+        } catch (e) {
+          console.error('[Replay] Fallback capture failed:', e);
         }
-      } catch (e) {
-        console.error('[Replay] ❌ Failed to capture card snapshot:', e);
       }
     }
     
-    // Single disintegration of entire card
     if (cardCanvas && cardWidth > 0 && cardHeight > 0) {
-      console.log('[Replay] Starting single disintegration of entire card...');
       
       const cardContainer = document.createElement("div");
       cardContainer.className = "disintegration-container";

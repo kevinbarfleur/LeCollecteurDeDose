@@ -653,7 +653,6 @@ const {
   capturedCardDimensions,
   canvasHasContent,
   createDisintegrationEffect,
-  createDisintegrationEffectDOM,
   findCardImageElement: findCardImageElementBase,
   captureCardSnapshot: captureCardSnapshotBase,
   clearSnapshots,
@@ -1275,9 +1274,6 @@ const destroyCard = async () => {
   }
 
   try {
-    console.log('[Altar] Starting card destruction - single disintegration');
-    
-    // Get card dimensions
     let cardWidth: number;
     let cardHeight: number;
     
@@ -1293,63 +1289,50 @@ const destroyCard = async () => {
       cardHeight = 0;
     }
     
-    console.log('[Altar] Card dimensions:', { cardWidth, cardHeight });
-    
-    // Use pre-captured snapshot (should always exist if captureCardSnapshot was called)
     let cardCanvas = cardSnapshot.value;
-    if (!cardCanvas) {
-      console.warn('[Altar] ⚠️ No pre-captured snapshot found! This should not happen if captureCardSnapshot was called.');
-      console.warn('[Altar] Attempting fallback capture (may fail due to CORS)...');
-      // Fallback: try to capture now (will likely fail due to CORS, but better than nothing)
-      if (cardFrontRef.value && cardWidth > 0 && cardHeight > 0) {
-        try {
-          cardCanvas = await html2canvas(cardFrontRef.value, {
-            backgroundColor: null,
-            scale: 2,
-            logging: false,
-            useCORS: true,
-            allowTaint: false,
-            imageTimeout: 15000,
-            onclone: (clonedDoc, element) => {
-              try {
-                console.log('[Altar] onclone: Processing cloned document...');
-                const clonedElement = element || clonedDoc.body;
-                const images = clonedElement.querySelectorAll('img');
-                images.forEach((img) => {
-                  const htmlImg = img as HTMLImageElement;
-                  htmlImg.crossOrigin = 'anonymous';
-                  if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
-                    htmlImg.style.display = 'none';
-                    htmlImg.src = '';
-                  }
-                });
-              } catch (e) {
-                console.error('[Altar] Error in onclone:', e);
-              }
-            },
-            ignoreElements: (element) => {
-              if (element instanceof HTMLImageElement) {
-                if (element.naturalWidth === 0 || element.naturalHeight === 0) {
-                  return true;
+    if (!cardCanvas && cardFrontRef.value && cardWidth > 0 && cardHeight > 0) {
+      try {
+        cardCanvas = await html2canvas(cardFrontRef.value, {
+          backgroundColor: null,
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: false,
+          imageTimeout: 15000,
+          onclone: (clonedDoc, element) => {
+            try {
+              const clonedElement = element || clonedDoc.body;
+              const images = clonedElement.querySelectorAll('img');
+              images.forEach((img) => {
+                const htmlImg = img as HTMLImageElement;
+                htmlImg.crossOrigin = 'anonymous';
+                if (htmlImg.naturalWidth === 0 || htmlImg.naturalHeight === 0) {
+                  htmlImg.style.display = 'none';
+                  htmlImg.src = '';
                 }
+              });
+            } catch (e) {
+              console.error('[Altar] Error in onclone:', e);
+            }
+          },
+          ignoreElements: (element) => {
+            if (element instanceof HTMLImageElement) {
+              if (element.naturalWidth === 0 || element.naturalHeight === 0) {
+                return true;
               }
-              return false;
-            },
-          });
-        } catch (e) {
-          console.error('[Altar] Fallback capture failed:', e);
-        }
+            }
+            return false;
+          },
+        });
+      } catch (e) {
+        console.error('[Altar] Fallback capture failed:', e);
       }
     }
     
-    // Single disintegration of entire card
     if (cardCanvas && cardWidth > 0 && cardHeight > 0) {
-      console.log('[Altar] Starting single disintegration of entire card...');
-      
       const cardContainer = document.createElement("div");
       cardContainer.className = "disintegration-container";
       
-      // Position container relative to card slot
       const cardRect = altarCardRef.value.getBoundingClientRect();
       const slotRect = cardSlot.getBoundingClientRect();
       const relativeTop = cardRect.top - slotRect.top;
@@ -1367,8 +1350,6 @@ const destroyCard = async () => {
       `;
 
       cardSlot.appendChild(cardContainer);
-
-      // Hide the original card before disintegration
       gsap.set(altarCardRef.value, { opacity: 0 });
 
       await createDisintegrationEffect(cardCanvas, cardContainer, {
@@ -1380,19 +1361,9 @@ const destroyCard = async () => {
         targetHeight: cardHeight,
       });
       
-      console.log('[Altar] ✅ Card disintegration started');
-      
-      // Wait for disintegration to complete
       await new Promise((resolve) => setTimeout(resolve, 1500));
       cardContainer.remove();
     } else {
-      console.warn('[Altar] ❌ Could not disintegrate card:', {
-        hasCardCanvas: !!cardCanvas,
-        cardWidth,
-        cardHeight,
-        hasCardFrontRef: !!cardFrontRef.value,
-      });
-      // Fallback: at least hide the card
       if (altarCardRef.value) {
         gsap.set(altarCardRef.value, { opacity: 0 });
         await new Promise((resolve) => setTimeout(resolve, 500));
