@@ -95,15 +95,13 @@ export function initTestRunner(helpers: {
       }
     }
     
-    // Ensure test mode is enabled for testing (localhost only)
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      try {
-        const { setDevTestMode } = useDevTestMode()
-        setDevTestMode('test')
-        console.log('[TestRunner] ✅ Test mode enabled (using Supabase test data)')
-      } catch (e) {
-        console.warn('[TestRunner] Could not set test mode:', e)
-      }
+    // Ensure test mode is enabled for testing
+    try {
+      const { setDataSource } = useDataSource()
+      setDataSource('test')
+      console.log('[TestRunner] ✅ Test mode enabled (using Supabase test data)')
+    } catch (e) {
+      console.warn('[TestRunner] Could not set test mode:', e)
     }
     
     console.log('[TestRunner] ✅ Test runner initialized')

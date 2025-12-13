@@ -10,7 +10,7 @@ import type { AltarOpenSetting, DataSourceSetting, ActivityLogsEnabledSetting } 
 
 // Shared state across all components
 const altarOpen = ref(false)
-const dataSource = ref<'mock' | 'api'>('mock')
+const dataSource = ref<'api' | 'test'>('test') // Default to test for safety
 const activityLogsEnabled = ref(true)
 const isLoading = ref(true)
 const isConnected = ref(false)
@@ -61,7 +61,7 @@ export function useAppSettings() {
         break
       case 'data_source':
         const dsValue = value as DataSourceSetting
-        dataSource.value = dsValue?.source ?? 'mock'
+        dataSource.value = dsValue?.source ?? 'test'
         break
       case 'activity_logs_enabled':
         const logsValue = value as ActivityLogsEnabledSetting
@@ -138,9 +138,13 @@ export function useAppSettings() {
 
   /**
    * Set the data source
+   * NOTE: This should NOT be used anymore - data source is now per-admin-session only
+   * Kept for backward compatibility but should always be 'api' in production
    */
-  const setDataSourceSetting = async (source: 'mock' | 'api', userId?: string) => {
-    return await updateSetting('data_source', { source }, userId)
+  const setDataSourceSetting = async (source: 'api' | 'test', userId?: string) => {
+    // In production, always keep global setting as 'api'
+    // Admin's local toggle is handled in useDataSource via localStorage
+    return await updateSetting('data_source', { source: 'api' }, userId)
   }
 
   /**

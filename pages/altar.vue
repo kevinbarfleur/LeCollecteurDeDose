@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
 import type { VaalOutcome } from "~/types/vaalOutcome";
@@ -40,7 +39,7 @@ const { loggedIn, user: authUser } = useUserSession();
 const { isApiData, isInitializing } = useDataSource();
 const { fetchUserCollection } = useApi();
 const { syncCollectionToApi, updateCardCounts, isSyncing: isCollectionSyncing } = useCollectionSync();
-const { isTestMode, isLocalhost } = useDevTestMode();
+const { isTestMode } = useDevTestMode();
 
 const user = computed(() => ({
   name: authUser.value?.displayName || "Guest",
@@ -61,12 +60,12 @@ const localCollection = ref<Card[]>([]);
 const isLoadingCollection = ref(false);
 const isReloadingCollection = ref(false);
 
-// Load collection from API or use mock data
+// Load collection from API or test data
 const loadCollection = async () => {
-  if (!isApiData.value || !loggedIn.value || !authUser.value?.displayName) {
-    // Use mock data
-    localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
-    vaalOrbs.value = 14;
+  if (!loggedIn.value || !authUser.value?.displayName) {
+    // Not logged in, can't load collection
+    localCollection.value = [];
+    vaalOrbs.value = 0;
     return;
   }
 
@@ -163,20 +162,31 @@ const loadCollection = async () => {
         });
       }
     } else {
-      console.warn('[Altar] No collection data received, using fallback');
-      // Fallback to mock data if API fails
-      localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
-      vaalOrbs.value = 14;
+      console.warn('[Altar] No collection data received');
+      localCollection.value = [];
+      vaalOrbs.value = 0;
     }
   } catch (error) {
     console.error('[Altar] Error loading collection:', error);
-    // Fallback to mock data
-    localCollection.value = JSON.parse(JSON.stringify(mockUserCollection));
-    vaalOrbs.value = 14;
+    localCollection.value = [];
+    vaalOrbs.value = 0;
   } finally {
     isLoadingCollection.value = false;
   }
 };
+
+// Watch for data source changes and reload collection
+watch([isApiData, isInitializing, () => authUser.value?.displayName, loggedIn], async ([isApi, initializing, displayName, isLoggedIn]) => {
+  // Don't reload while initializing
+  if (initializing) {
+    return;
+  }
+  
+  // Reload collection when data source changes or user changes
+  if (isLoggedIn && displayName) {
+    await loadCollection();
+  }
+}, { immediate: false });
 
 // Initialize collection on mount
 onMounted(async () => {
@@ -195,7 +205,7 @@ onMounted(async () => {
     await loadCollection();
   }
   
-  // Listen for vaalOrbs updates from admin page (mock mode only)
+  // Listen for vaalOrbs updates from admin page (test mode only)
   if (!isApiData.value && import.meta.client) {
     window.addEventListener('altar:updateVaalOrbs', ((e: CustomEvent<{ value: number }>) => {
       vaalOrbs.value = e.detail.value;
@@ -679,10 +689,10 @@ const isAutoCrediting = ref(false);
 watch(vaalOrbs, async (newValue, oldValue) => {
   // Only trigger when vaalOrbs reaches 0 (not when loading from API or initializing)
   if (newValue === 0 && oldValue !== undefined && oldValue > 0 && !isAutoCrediting.value && !isLoadingCollection.value) {
-    // Check if we're in localhost + test mode + API data
-    if (isLocalhost.value && isTestMode.value && isApiData.value && loggedIn.value && authUser.value?.displayName) {
+    // Check if we're in test mode (auto-credit vaalOrbs when reaching 0)
+    if (isTestMode.value && loggedIn.value && authUser.value?.displayName) {
       isAutoCrediting.value = true;
-      console.log('[Altar] 🎁 Auto-crediting 5 vaalOrbs (localhost test mode)');
+      console.log('[Altar] 🎁 Auto-crediting 5 vaalOrbs (test mode)');
       
       // Credit locally first (optimistic update)
       const vaalOrbsBefore = vaalOrbs.value;
@@ -1091,18 +1101,12 @@ onMounted(() => {
     console.log(`[TestRunner] Added ${amount} vaalOrbs. New total: ${vaalOrbs.value}`)
   }
 
-  // Ensure we're using API data (not mock) and test mode (Supabase) for testing
+  // Ensure we're using test mode (Supabase) for testing
   const { setDataSource } = useDataSource()
-  const { setDevTestMode, isLocalhost } = useDevTestMode()
   
-  // Force API mode and test mode for testing (localhost only)
-  if (isLocalhost.value) {
-    // Set to API mode (not mock)
-    setDataSource('api')
-    // Set to test mode (Supabase Edge Function, not real API)
-    setDevTestMode('test')
-    console.log('[TestRunner] ✅ Test environment configured: API mode + Test data (Supabase)')
-  }
+  // Force test mode for testing
+  setDataSource('test')
+  console.log('[TestRunner] ✅ Test environment configured: Test data (Supabase)')
 
   // Initialize test runner
   initTestRunner({

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { allCards, mockUserCollection } from "~/data/mockCards";
+import { allCards } from "~/data/mockCards";
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG, VARIATION_CONFIG, getCardVariation } from "~/types/card";
 import { useCardSorting, type SortOption } from "~/composables/useCardSorting";
@@ -30,53 +30,42 @@ onMounted(async () => {
       if (cachedCards) {
         apiAllCards.value = cachedCards;
       } else {
-        // Fallback to mock data if API fails
-        apiAllCards.value = allCards;
+        // No data from API
+        apiAllCards.value = [];
       }
     } catch (error) {
       console.error('[Catalogue] Error loading catalogue:', error);
       // Try to use cached data on error
       const cached = getCachedCatalogue();
-      apiAllCards.value = cached || allCards;
+      apiAllCards.value = cached || [];
     } finally {
       isLoadingCatalogue.value = false;
     }
   }
 });
 
-// Watch for data source changes (only when switching from mock to API or vice versa)
+// Watch for data source changes - reload data when switching between API and test
 watch([isApiData, isInitializing], async ([isApi, initializing]) => {
   // Don't do anything while initializing
   if (initializing) {
-    if (!isApi) {
-      apiAllCards.value = [];
-      apiUserCollection.value = [];
-    }
     return;
   }
 
-  if (isApi) {
-    // Only load if we don't have cached data yet
-    if (apiAllCards.value.length === 0) {
-      isLoadingCatalogue.value = true;
-      try {
-        const cachedCards = await loadCatalogue(false);
-        if (cachedCards) {
-          apiAllCards.value = cachedCards;
-        } else {
-          apiAllCards.value = allCards;
-        }
-      } catch (error) {
-        console.error('[Catalogue] Error loading catalogue:', error);
-        const cached = getCachedCatalogue();
-        apiAllCards.value = cached || allCards;
-      } finally {
-        isLoadingCatalogue.value = false;
-      }
+  // Always load catalogue data (works for both API and test mode)
+  isLoadingCatalogue.value = true;
+  try {
+    const cachedCards = await loadCatalogue(false);
+    if (cachedCards) {
+      apiAllCards.value = cachedCards;
+    } else {
+      apiAllCards.value = [];
     }
-  } else {
-    apiAllCards.value = [];
-    apiUserCollection.value = [];
+  } catch (error) {
+    console.error('[Catalogue] Error loading catalogue:', error);
+    const cached = getCachedCatalogue();
+    apiAllCards.value = cached || [];
+  } finally {
+    isLoadingCatalogue.value = false;
   }
 });
 
@@ -85,13 +74,11 @@ watch([loggedIn, () => authUser.value?.displayName, isApiData, isInitializing],
   async ([isLoggedIn, displayName, isApi, initializing]) => {
     // Don't do anything while initializing
     if (initializing) {
-      if (!isApi) {
-        apiUserCollection.value = [];
-      }
       return;
     }
 
-    if (isApi && isLoggedIn && displayName) {
+    // Always fetch user collection if logged in (works for both API and test mode)
+    if (isLoggedIn && displayName) {
       try {
         const [userCollectionData, userCardsData] = await Promise.all([
           fetchUserCollection(displayName),
@@ -126,27 +113,11 @@ watch(isCatalogueLoading, (loading) => {
 });
 
 const currentAllCards = computed(() => {
-  // Don't return mock data if we're initializing or using API
-  if (isInitializing.value || (isApiData.value && apiAllCards.value.length > 0)) {
-    return apiAllCards.value;
-  }
-  // Only return allCards if we're sure we're using mock data
-  if (!isInitializing.value && !isApiData.value) {
-    return allCards;
-  }
-  return [];
+  return apiAllCards.value;
 });
 
 const currentUserCollection = computed(() => {
-  // Don't return mock data if we're initializing or using API
-  if (isInitializing.value || isApiData.value) {
-    return apiUserCollection.value;
-  }
-  // Only return mockUserCollection if we're sure we're using mock data
-  if (!isInitializing.value && !isApiData.value) {
-    return mockUserCollection;
-  }
-  return [];
+  return apiUserCollection.value;
 });
 
 const ownedCardsWithBestVariation = computed(() => {

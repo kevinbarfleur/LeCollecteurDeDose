@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { mockUserCollection } from "~/data/mockCards";
 import type { Card, CardTier } from "~/types/card";
 import {
   useCardGrouping,
@@ -28,14 +27,15 @@ const apiCollection = ref<Card[]>([]);
 const isLoadingCollection = ref(false);
 
 // Watch for data source changes and fetch accordingly
-watch([isApiData, isInitializing, () => authUser.value?.displayName], async ([isApi, initializing, displayName]) => {
+watch([isApiData, isInitializing, () => authUser.value?.displayName, loggedIn], async ([isApi, initializing, displayName, isLoggedIn]) => {
   // Don't do anything while initializing
   if (initializing) {
     apiCollection.value = [];
     return;
   }
 
-  if (isApi && displayName && loggedIn.value) {
+  // Always fetch data if logged in (works for both API and test mode)
+  if (isLoggedIn && displayName) {
     isLoadingCollection.value = true;
     try {
       const [userCollectionData, userCardsData] = await Promise.all([
@@ -58,17 +58,13 @@ watch([isApiData, isInitializing, () => authUser.value?.displayName], async ([is
     } finally {
       isLoadingCollection.value = false;
     }
-  } else if (!isApi) {
+  } else {
     apiCollection.value = [];
   }
 }, { immediate: true });
 
 const collection = computed(() => {
-  // Don't return mock data if we're initializing or using API
-  if (isInitializing.value || isApiData.value) {
-    return apiCollection.value;
-  }
-  return mockUserCollection;
+  return apiCollection.value;
 });
 
 // Use shared card grouping composable

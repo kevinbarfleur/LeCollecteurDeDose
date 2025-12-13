@@ -12,20 +12,21 @@ import type { ApiResponse, PlayerCollection, CatalogueResponse, ApiError } from 
 export function useApi() {
   const config = useRuntimeConfig()
   const externalApiUrl = config.public.dataApiUrl as string
-  const { isTestMode, isLocalhost } = useDevTestMode()
+  const { isTestData } = useDataSource() // Use isTestData from useDataSource
   
   // Determine which API to use
-  // In test mode (localhost only), use Supabase Edge Function
+  // In test mode, use Supabase Edge Function
   // Otherwise, use the real API via local proxy
   const supabaseUrl = config.public.supabase?.url || ''
-  const useTestApi = isLocalhost.value && isTestMode.value
   
   // Use local proxy to avoid CORS issues
   // External API: /api/userCollection -> Local proxy: /api/data/userCollection
   // Test API: Supabase Edge Function -> /functions/v1/dev-test-api/api/...
-  const apiUrl = useTestApi 
-    ? `${supabaseUrl}/functions/v1/dev-test-api`
-    : '/api/data'
+  const apiUrl = computed(() => {
+    return isTestData.value
+      ? `${supabaseUrl}/functions/v1/dev-test-api`
+      : '/api/data'
+  })
 
   // State
   const isLoading = ref(false)
@@ -49,11 +50,23 @@ export function useApi() {
 
     // For test mode, use the full path with /api prefix
     // For real mode, remove /api/ prefix since our proxy adds it
-    const cleanEndpoint = useTestApi
-      ? endpoint.startsWith('/api') ? endpoint : `/api/${endpoint.replace(/^\//, '')}`
-      : endpoint.replace(/^\/api\//, '').replace(/^\//, '')
+    const currentApiUrl = apiUrl.value
+    const useTestApi = isTestData.value
     
-    const url = `${apiUrl}${cleanEndpoint}`
+    let cleanEndpoint: string
+    if (useTestApi) {
+      // Test mode: endpoint should be like "/api/userCollection"
+      cleanEndpoint = endpoint.startsWith('/api') ? endpoint : `/api/${endpoint.replace(/^\//, '')}`
+    } else {
+      // Real mode: remove /api/ prefix, endpoint should be like "userCollection"
+      cleanEndpoint = endpoint.replace(/^\/api\//, '').replace(/^\//, '')
+    }
+    
+    // Ensure proper URL construction with slash separator
+    // apiUrl is either '/api/data' or 'https://.../functions/v1/dev-test-api'
+    const url = currentApiUrl.endsWith('/') 
+      ? `${currentApiUrl}${cleanEndpoint.replace(/^\//, '')}`
+      : `${currentApiUrl}${cleanEndpoint.startsWith('/') ? '' : '/'}${cleanEndpoint}`
 
     try {
       const method = (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET'

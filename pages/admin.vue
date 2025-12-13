@@ -6,10 +6,9 @@ definePageMeta({
 const { t } = useI18n();
 const { user } = useUserSession();
 const { altarOpen, isLoading, isConnected, toggleAltar, activityLogsEnabled, toggleActivityLogs } = useAppSettings();
-const { dataSource, setDataSource, isApiData } = useDataSource();
+const { dataSource, setDataSource, isApiData, isTestData } = useDataSource();
 const { forcedOutcome } = useAltarDebug();
 const { getForcedOutcomeOptions } = await import('~/types/vaalOutcome');
-const { devTestMode, isLocalhost, isTestMode, setDevTestMode } = useDevTestMode();
 const { fetchUserCollections, fetchUniques, fetchUserCards } = useApi();
 
 useHead({ title: t("admin.meta.title") });
@@ -44,28 +43,70 @@ const handleActivityLogsToggle = async () => {
 
 // Data source options for RunicRadio
 const dataSourceOptions = computed(() => [
-  { value: "mock", label: t("admin.dataSource.mock"), color: "default" },
   { value: "api", label: t("admin.dataSource.api"), color: "default" },
+  { value: "test", label: t("admin.dataSource.test"), color: "default" },
 ]);
 
-// Dev/Test mode options for RunicRadio
-const devTestModeOptions = computed(() => [
-  { value: "real", label: t("admin.devTestMode.real"), color: "default" },
-  { value: "test", label: t("admin.devTestMode.test"), color: "default" },
-]);
 
-// Computed for dev/test mode v-model
-const devTestModeModel = computed({
-  get: () => devTestMode.value,
-  set: (value: "real" | "test") => {
-    setDevTestMode(value);
-  },
-});
+// Create manual backup
+const isCreatingBackup = ref(false);
+const createBackup = async () => {
+  if (isCreatingBackup.value) return;
+  
+  // Check if user is authenticated
+  if (!user.value?.id) {
+    alert('Vous devez être connecté pour créer un backup.');
+    return;
+  }
+  
+  // Confirm action
+  const confirmed = await confirm({
+    title: t("admin.dataSource.backupConfirmTitle"),
+    message: t("admin.dataSource.backupConfirmMessage"),
+    confirmText: t("admin.dataSource.backupButton"),
+    cancelText: t("common.cancel"),
+    variant: "default",
+  });
+  
+  if (!confirmed) {
+    return;
+  }
+  
+  isCreatingBackup.value = true;
+  try {
+    const config = useRuntimeConfig();
+    const supabaseUrl = config.public.supabase?.url || '';
+    const supabaseKey = config.public.supabase?.key || '';
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Configuration Supabase manquante');
+    }
+    
+    // Call the daily-backup Edge Function
+    const response = await $fetch(`${supabaseUrl}/functions/v1/daily-backup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
+      body: {},
+    });
+    
+    console.log('[Admin] ✅ Backup created successfully!', response);
+    alert(t("admin.dataSource.backupSuccess"));
+  } catch (error: any) {
+    console.error('[Admin] Error creating backup:', error);
+    const errorMessage = error.data?.message || error.message || 'Erreur inconnue';
+    alert(`${t("admin.dataSource.backupError")}\n\n${errorMessage}`);
+  } finally {
+    isCreatingBackup.value = false;
+  }
+};
 
 // Sync test data from real API
 const isSyncingTestData = ref(false);
 const syncTestData = async () => {
-  if (isSyncingTestData.value || !isLocalhost.value) return;
+  if (isSyncingTestData.value) return;
   
   // Check if user is authenticated
   if (!user.value?.id) {
@@ -74,7 +115,15 @@ const syncTestData = async () => {
   }
   
   // Confirm action
-  if (!confirm(t("admin.devTestMode.syncConfirm"))) {
+  const confirmed = await confirm({
+    title: t("admin.dataSource.syncConfirmTitle"),
+    message: t("admin.dataSource.syncConfirmMessage"),
+    confirmText: t("admin.dataSource.confirmButton"),
+    cancelText: t("common.cancel"),
+    variant: "warning",
+  });
+  
+  if (!confirmed) {
     return;
   }
   
@@ -176,7 +225,7 @@ const syncTestData = async () => {
         details: error.details,
         hint: error.hint
       });
-      alert(`${t("admin.devTestMode.syncError")}\n\n${error.message}`);
+      alert(`${t("admin.dataSource.syncError")}\n\n${error.message}`);
     } else {
       console.log('[Admin] ✅ Sync successful!', data);
       const stats = {
@@ -184,22 +233,43 @@ const syncTestData = async () => {
         uniquesCount: uniques?.length || 0,
         userCardsCount: Object.keys(userCardsMap).length
       };
-      alert(`${t("admin.devTestMode.syncSuccess")}\n\n${t("admin.devTestMode.syncStats", stats)}`);
+      alert(`${t("admin.dataSource.syncSuccess")}\n\n${t("admin.dataSource.syncStats", stats)}`);
     }
-    
-    // Note: We don't need to restore test mode since we're fetching directly from real API
   } catch (error: any) {
     console.error('[Admin] Error syncing test data:', error);
-    alert(`${t("admin.devTestMode.syncError")}\n\n${error.message || error}`);
+    alert(`${t("admin.dataSource.syncError")}\n\n${error.message || error}`);
   } finally {
     isSyncingTestData.value = false;
   }
 };
 
-// Computed for data source v-model - now enabled
+// Confirmation modal composable
+const { confirm } = useConfirmModal();
+
+// Computed for data source v-model - now with confirmation
 const dataSourceModel = computed({
   get: () => dataSource.value,
-  set: async (value: "mock" | "api") => {
+  set: async (value: "api" | "test") => {
+    // Ask for confirmation for any change
+    if (value !== dataSource.value) {
+      const confirmed = await confirm({
+        title: t("admin.dataSource.confirmTitle"),
+        message: t("admin.dataSource.confirmMessage", {
+          from: dataSource.value === "api" ? t("admin.dataSource.api") : t("admin.dataSource.test"),
+          to: value === "api" ? t("admin.dataSource.api") : t("admin.dataSource.test"),
+        }),
+        confirmText: t("admin.dataSource.confirmButton"),
+        cancelText: t("common.cancel"),
+        variant: value === "api" ? "warning" : "default", // Warning when switching to API (production)
+      });
+      
+      if (!confirmed) {
+        // User cancelled, don't change the value
+        return;
+      }
+    }
+    
+    // User confirmed, proceed with change
     await setDataSource(value, user.value?.id);
   },
 });
@@ -282,74 +352,76 @@ const updateDebugVaalOrbs = (delta: number) => {
       />
 
       <!-- Main content -->
-      <RunicBox attached padding="lg">
+      <RunicBox attached padding="md">
         <div class="admin-content">
-          <!-- Connection status -->
-          <div class="admin-status">
-            <span
-              class="admin-status__indicator"
-              :class="
-                isConnected
-                  ? 'admin-status__indicator--connected'
-                  : 'admin-status__indicator--disconnected'
-              "
-            />
-            <span class="admin-status__text">
-              {{ isConnected ? t("admin.connected") : t("admin.disconnected") }}
-            </span>
-          </div>
-
-          <!-- User info -->
-          <div class="admin-user-info">
-            <img
-              v-if="user?.avatar"
-              :src="user.avatar"
-              :alt="user.displayName"
-              class="admin-user-info__avatar"
-            />
-            <div class="admin-user-info__details">
-              <span class="admin-user-info__name">{{ user?.displayName }}</span>
-              <span class="admin-user-info__id">ID: {{ user?.id }}</span>
+          <!-- Compact header with status and user -->
+          <div class="admin-header-compact">
+            <div class="admin-status-compact">
+              <span
+                class="admin-status__indicator"
+                :class="
+                  isConnected
+                    ? 'admin-status__indicator--connected'
+                    : 'admin-status__indicator--disconnected'
+                "
+              />
+              <span class="admin-status__text">
+                {{ isConnected ? t("admin.connected") : t("admin.disconnected") }}
+              </span>
+            </div>
+            <div class="admin-user-info-compact">
+              <img
+                v-if="user?.avatar"
+                :src="user.avatar"
+                :alt="user.displayName"
+                class="admin-user-info__avatar"
+              />
+              <div class="admin-user-info__details">
+                <span class="admin-user-info__name">{{ user?.displayName }}</span>
+                <span class="admin-user-info__id">ID: {{ user?.id }}</span>
+              </div>
             </div>
           </div>
 
           <RunicDivider />
 
-          <!-- Altar Control Panel -->
+          <!-- Altar Control -->
           <ClientOnly>
-            <section class="admin-section">
-              <h2 class="admin-section__title">
-                <span class="admin-section__rune">◆</span>
-                {{ t("admin.altar.title") }}
-                <span class="admin-section__rune">◆</span>
-              </h2>
-              <p class="admin-section__desc">
-                {{ t("admin.altar.description") }}
-              </p>
-
-              <div class="admin-toggle-panel">
-                <div class="admin-toggle-panel__info">
-                  <span class="admin-toggle-panel__label">{{
-                    t("admin.altar.status")
-                  }}</span>
-                  <span
-                    class="admin-toggle-panel__status"
-                    :class="
-                      altarOpen
-                        ? 'admin-toggle-panel__status--open'
-                        : 'admin-toggle-panel__status--closed'
-                    "
-                  >
-                    {{
-                      altarOpen ? t("admin.altar.open") : t("admin.altar.closed")
-                    }}
-                  </span>
+            <RunicBox padding="lg">
+              <div class="admin-section-enhanced__header">
+                <div class="admin-section-enhanced__icon">
+                  <img
+                    src="/images/vaal-risitas.png"
+                    alt="Vaal Orb"
+                    class="admin-section-enhanced__icon-image"
+                  />
                 </div>
-
+                <div class="admin-section-enhanced__content">
+                  <h3 class="admin-section-enhanced__title">
+                    {{ t("admin.altar.title") }}
+                  </h3>
+                  <p class="admin-section-enhanced__description">
+                    {{ t("admin.altar.description") }}
+                  </p>
+                </div>
+              </div>
+              <div class="admin-section-enhanced__footer">
+                <span
+                  class="admin-section-enhanced__status"
+                  :class="
+                    altarOpen
+                      ? 'admin-section-enhanced__status--open'
+                      : 'admin-section-enhanced__status--closed'
+                  "
+                >
+                  {{
+                    altarOpen ? t("admin.altar.open") : t("admin.altar.closed")
+                  }}
+                </span>
                 <div
-                  class="admin-toggle-panel__control"
+                  class="admin-section-enhanced__control"
                   :class="{
-                    'admin-toggle-panel__control--disabled':
+                    'admin-section-enhanced__control--disabled':
                       isLoading || isTogglingAltar,
                   }"
                 >
@@ -361,31 +433,31 @@ const updateDebugVaalOrbs = (delta: number) => {
                   />
                 </div>
               </div>
-
-              <p class="admin-section__hint">
-                {{ t("admin.altar.hint") }}
-              </p>
-            </section>
+            </RunicBox>
             <template #fallback>
-              <section class="admin-section">
-                <h2 class="admin-section__title">
-                  <span class="admin-section__rune">◆</span>
-                  {{ t("admin.altar.title") }}
-                  <span class="admin-section__rune">◆</span>
-                </h2>
-                <p class="admin-section__desc">
-                  {{ t("admin.altar.description") }}
-                </p>
-                <div class="admin-toggle-panel">
-                  <div class="admin-toggle-panel__info">
-                    <span class="admin-toggle-panel__label">{{
-                      t("admin.altar.status")
-                    }}</span>
-                    <span class="admin-toggle-panel__status admin-toggle-panel__status--closed">
-                      {{ t("admin.altar.closed") }}
-                    </span>
+              <RunicBox padding="lg">
+                <div class="admin-section-enhanced__header">
+                  <div class="admin-section-enhanced__icon">
+                    <img
+                      src="/images/vaal-risitas.png"
+                      alt="Vaal Orb"
+                      class="admin-section-enhanced__icon-image"
+                    />
                   </div>
-                  <div class="admin-toggle-panel__control admin-toggle-panel__control--disabled">
+                  <div class="admin-section-enhanced__content">
+                    <h3 class="admin-section-enhanced__title">
+                      {{ t("admin.altar.title") }}
+                    </h3>
+                    <p class="admin-section-enhanced__description">
+                      {{ t("admin.altar.description") }}
+                    </p>
+                  </div>
+                </div>
+                <div class="admin-section-enhanced__footer">
+                  <span class="admin-section-enhanced__status admin-section-enhanced__status--closed">
+                    {{ t("admin.altar.closed") }}
+                  </span>
+                  <div class="admin-section-enhanced__control admin-section-enhanced__control--disabled">
                     <RunicRadio
                       :model-value="false"
                       :toggle="true"
@@ -395,47 +467,61 @@ const updateDebugVaalOrbs = (delta: number) => {
                     />
                   </div>
                 </div>
-              </section>
+              </RunicBox>
             </template>
           </ClientOnly>
 
           <RunicDivider />
 
-          <!-- Activity Logs Panel -->
+          <!-- Activity Logs Control -->
           <ClientOnly>
-            <section class="admin-section">
-              <h2 class="admin-section__title">
-                <span class="admin-section__rune">◆</span>
-                {{ t("admin.activityLogs.title") }}
-                <span class="admin-section__rune">◆</span>
-              </h2>
-              <p class="admin-section__desc">
-                {{ t("admin.activityLogs.description") }}
-              </p>
-
-              <div class="admin-toggle-panel">
-                <div class="admin-toggle-panel__info">
-                  <span class="admin-toggle-panel__label">{{
-                    t("admin.activityLogs.status")
-                  }}</span>
-                  <span
-                    class="admin-toggle-panel__status"
-                    :class="
-                      activityLogsEnabled
-                        ? 'admin-toggle-panel__status--open'
-                        : 'admin-toggle-panel__status--closed'
-                    "
+            <RunicBox padding="lg">
+              <div class="admin-section-enhanced__header">
+                <div class="admin-section-enhanced__icon">
+                  <svg
+                    class="admin-section-enhanced__icon-image"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
-                    {{
-                      activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled")
-                    }}
-                  </span>
+                    <!-- Journal/Logs icon -->
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="9" y1="13" x2="15" y2="13" />
+                    <line x1="9" y1="17" x2="15" y2="17" />
+                    <line x1="9" y1="9" x2="15" y2="9" />
+                  </svg>
                 </div>
-
+                <div class="admin-section-enhanced__content">
+                  <h3 class="admin-section-enhanced__title">
+                    {{ t("admin.activityLogs.title") }}
+                  </h3>
+                  <p class="admin-section-enhanced__description">
+                    {{ t("admin.activityLogs.description") }}
+                  </p>
+                </div>
+              </div>
+              <div class="admin-section-enhanced__footer">
+                <span
+                  class="admin-section-enhanced__status"
+                  :class="
+                    activityLogsEnabled
+                      ? 'admin-section-enhanced__status--open'
+                      : 'admin-section-enhanced__status--closed'
+                  "
+                >
+                  {{
+                    activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled")
+                  }}
+                </span>
                 <div
-                  class="admin-toggle-panel__control"
+                  class="admin-section-enhanced__control"
                   :class="{
-                    'admin-toggle-panel__control--disabled':
+                    'admin-section-enhanced__control--disabled':
                       isLoading || isTogglingActivityLogs,
                   }"
                 >
@@ -447,31 +533,43 @@ const updateDebugVaalOrbs = (delta: number) => {
                   />
                 </div>
               </div>
-
-              <p class="admin-section__hint">
-                {{ t("admin.activityLogs.hint") }}
-              </p>
-            </section>
+            </RunicBox>
             <template #fallback>
-              <section class="admin-section">
-                <h2 class="admin-section__title">
-                  <span class="admin-section__rune">◆</span>
-                  {{ t("admin.activityLogs.title") }}
-                  <span class="admin-section__rune">◆</span>
-                </h2>
-                <p class="admin-section__desc">
-                  {{ t("admin.activityLogs.description") }}
-                </p>
-                <div class="admin-toggle-panel">
-                  <div class="admin-toggle-panel__info">
-                    <span class="admin-toggle-panel__label">{{
-                      t("admin.activityLogs.status")
-                    }}</span>
-                    <span class="admin-toggle-panel__status admin-toggle-panel__status--open">
-                      {{ t("admin.activityLogs.enabled") }}
-                    </span>
+              <RunicBox padding="lg">
+                <div class="admin-section-enhanced__header">
+                  <div class="admin-section-enhanced__icon">
+                    <svg
+                      class="admin-section-enhanced__icon-image"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <!-- Journal/Logs icon -->
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="9" y1="13" x2="15" y2="13" />
+                      <line x1="9" y1="17" x2="15" y2="17" />
+                      <line x1="9" y1="9" x2="15" y2="9" />
+                    </svg>
                   </div>
-                  <div class="admin-toggle-panel__control admin-toggle-panel__control--disabled">
+                  <div class="admin-section-enhanced__content">
+                    <h3 class="admin-section-enhanced__title">
+                      {{ t("admin.activityLogs.title") }}
+                    </h3>
+                    <p class="admin-section-enhanced__description">
+                      {{ t("admin.activityLogs.description") }}
+                    </p>
+                  </div>
+                </div>
+                <div class="admin-section-enhanced__footer">
+                  <span class="admin-section-enhanced__status admin-section-enhanced__status--open">
+                    {{ t("admin.activityLogs.enabled") }}
+                  </span>
+                  <div class="admin-section-enhanced__control admin-section-enhanced__control--disabled">
                     <RunicRadio
                       :model-value="true"
                       :toggle="true"
@@ -481,155 +579,102 @@ const updateDebugVaalOrbs = (delta: number) => {
                     />
                   </div>
                 </div>
-              </section>
+              </RunicBox>
             </template>
           </ClientOnly>
 
           <RunicDivider />
 
-          <!-- Data Source Panel -->
+          <!-- Admin Debug Panel -->
           <ClientOnly>
-            <section class="admin-section">
-              <h2 class="admin-section__title">
-                <span class="admin-section__rune">◆</span>
-                {{ t("admin.dataSource.title") }}
-                <span class="admin-section__rune">◆</span>
-              </h2>
-              <p class="admin-section__desc">
-                {{ t("admin.dataSource.description") }}
-              </p>
-
-              <div class="admin-data-source">
-                <RunicRadio
-                  v-model="dataSourceModel"
-                  :options="dataSourceOptions"
-                  size="md"
-                  class="admin-data-source__radio"
-                />
-              </div>
-
-              <p class="admin-section__hint">
-                {{ t("admin.dataSource.warning") }}
-              </p>
-            </section>
-            <template #fallback>
-              <section class="admin-section">
-                <h2 class="admin-section__title">
-                  <span class="admin-section__rune">◆</span>
-                  {{ t("admin.dataSource.title") }}
-                  <span class="admin-section__rune">◆</span>
-                </h2>
-                <p class="admin-section__desc">
-                  {{ t("admin.dataSource.description") }}
-                </p>
-                <div class="admin-data-source admin-data-source--disabled">
-                  <RunicRadio
-                    :model-value="'mock'"
-                    :options="dataSourceOptions"
-                    size="md"
-                    class="admin-data-source__radio"
-                    disabled
-                  />
-                </div>
-              </section>
-            </template>
-          </ClientOnly>
-
-          <!-- Dev/Test Mode Panel (localhost only) -->
-          <ClientOnly v-if="isLocalhost">
-            <RunicDivider />
-            <section class="admin-section">
-              <h2 class="admin-section__title">
-                <span class="admin-section__rune">◆</span>
-                {{ t("admin.devTestMode.title") }}
-                <span class="admin-section__rune">◆</span>
-              </h2>
-              <p class="admin-section__desc">
-                {{ t("admin.devTestMode.description") }}
-              </p>
-
-              <div class="admin-data-source">
-                <RunicRadio
-                  v-model="devTestModeModel"
-                  :options="devTestModeOptions"
-                  size="md"
-                  class="admin-data-source__radio"
-                />
-              </div>
-
-              <div class="admin-section__actions mt-4">
-                <button
-                  class="runic-button runic-button--primary runic-button--md"
-                  :disabled="isSyncingTestData || !isLocalhost"
-                  @click="syncTestData"
-                >
-                  <span v-if="isSyncingTestData" class="flex items-center gap-2">
-                    <span class="loader ease-linear rounded-full border-2 border-t-2 border-current h-4 w-4"></span>
-                    {{ t("admin.devTestMode.syncing") }}
-                  </span>
-                  <span v-else>
-                    {{ t("admin.devTestMode.syncButton") }}
-                  </span>
-                </button>
-                <p v-if="!isLocalhost" class="admin-section__hint mt-2 text-amber-400">
-                  {{ t("admin.devTestMode.localhostOnly") }}
-                </p>
-              </div>
-
-              <p class="admin-section__hint">
-                {{ t("admin.devTestMode.hint") }}
-              </p>
-            </section>
-          </ClientOnly>
-
-          <RunicDivider />
-
-          <!-- Altar Debug Panel -->
-          <ClientOnly>
-            <section class="admin-section">
-              <h2 class="admin-section__title">
+            <section class="admin-section admin-section--compact">
+              <h2 class="admin-section__title admin-section__title--compact">
                 <span class="admin-section__rune">◆</span>
                 {{ t("altar.preferences.adminTitle") }}
                 <span class="admin-section__rune">◆</span>
               </h2>
-              <p class="admin-section__desc">
-                {{ t("altar.preferences.forceOutcomeHint") }}
-              </p>
 
-              <div class="admin-debug-panel">
-                <div class="admin-debug-field">
-                  <label class="admin-debug-field__label">
+              <div class="admin-debug-panel admin-debug-panel--compact">
+                <!-- Data Source Configuration -->
+                <div class="admin-debug-field admin-debug-field--compact">
+                  <label class="admin-debug-field__label admin-debug-field__label--compact">
+                    {{ t("admin.dataSource.title") }}
+                  </label>
+                  <RunicRadio
+                    v-model="dataSourceModel"
+                    :options="dataSourceOptions"
+                    size="sm"
+                    class="admin-debug-field__select"
+                  />
+                </div>
+
+                <!-- Create Backup Button (always visible) -->
+                <div class="admin-debug-field admin-debug-field--compact">
+                  <RunicButton
+                    size="sm"
+                    variant="secondary"
+                    :disabled="isCreatingBackup"
+                    @click="createBackup"
+                    class="admin-debug-field__sync-btn"
+                  >
+                    <span v-if="isCreatingBackup" class="flex items-center gap-2">
+                      <span class="loader ease-linear rounded-full border-2 border-t-2 border-current h-3 w-3"></span>
+                      {{ t("admin.dataSource.backingUp") }}
+                    </span>
+                    <span v-else>
+                      {{ t("admin.dataSource.backupButton") }}
+                    </span>
+                  </RunicButton>
+                </div>
+
+                <!-- Sync Test Data Button (only visible in test mode) -->
+                <div v-if="isTestData" class="admin-debug-field admin-debug-field--compact">
+                  <RunicButton
+                    size="sm"
+                    variant="secondary"
+                    :disabled="isSyncingTestData"
+                    @click="syncTestData"
+                    class="admin-debug-field__sync-btn"
+                  >
+                    <span v-if="isSyncingTestData" class="flex items-center gap-2">
+                      <span class="loader ease-linear rounded-full border-2 border-t-2 border-current h-3 w-3"></span>
+                      {{ t("admin.dataSource.syncing") }}
+                    </span>
+                    <span v-else>
+                      {{ t("admin.dataSource.syncButton") }}
+                    </span>
+                  </RunicButton>
+                </div>
+
+                <!-- Force Outcome -->
+                <div class="admin-debug-field admin-debug-field--compact">
+                  <label class="admin-debug-field__label admin-debug-field__label--compact">
                     {{ t("altar.preferences.forceOutcome") }}
                   </label>
                   <RunicSelect
                     v-model="forcedOutcome"
                     :options="forcedOutcomeOptions"
-                    size="md"
+                    size="sm"
                     class="admin-debug-field__select"
                   />
-                  <p class="admin-section__hint">
-                    {{ t("altar.preferences.forceOutcomeHint") }}
-                  </p>
                 </div>
 
-                <div v-if="!isApiData" class="admin-debug-field">
-                  <label class="admin-debug-field__label">
+                <!-- Vaal Orbs Debug (test mode only) -->
+                <div v-if="isTestData" class="admin-debug-field admin-debug-field--compact">
+                  <label class="admin-debug-field__label admin-debug-field__label--compact">
                     {{ t("altar.preferences.vaalOrbsLabel") }}
                   </label>
-                  <p class="admin-section__hint">
-                    {{ t("altar.preferences.vaalOrbsHint") }}
-                  </p>
-                  <div class="admin-debug-field__number">
+                  <div class="admin-debug-field__number admin-debug-field__number--compact">
                     <button
-                      class="admin-debug-field__btn"
+                      class="admin-debug-field__btn admin-debug-field__btn--compact"
                       :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
                       @click="updateDebugVaalOrbs(-1)"
                     >
                       −
                     </button>
-                    <span class="admin-debug-field__value">{{ debugVaalOrbs }}</span>
+                    <span class="admin-debug-field__value admin-debug-field__value--compact">{{ debugVaalOrbs }}</span>
                     <button
-                      class="admin-debug-field__btn"
+                      class="admin-debug-field__btn admin-debug-field__btn--compact"
                       :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
                       @click="updateDebugVaalOrbs(1)"
                     >
@@ -637,23 +682,20 @@ const updateDebugVaalOrbs = (delta: number) => {
                     </button>
                   </div>
                 </div>
-                <div v-else class="admin-debug-field">
-                  <p class="admin-section__hint">
+                <div v-else class="admin-debug-field admin-debug-field--compact">
+                  <p class="admin-section__hint admin-section__hint--compact">
                     {{ t("admin.altarDebug.apiModeHint") }}
                   </p>
                 </div>
               </div>
             </section>
             <template #fallback>
-              <section class="admin-section">
-                <h2 class="admin-section__title">
+              <section class="admin-section admin-section--compact">
+                <h2 class="admin-section__title admin-section__title--compact">
                   <span class="admin-section__rune">◆</span>
                   {{ t("altar.preferences.adminTitle") }}
                   <span class="admin-section__rune">◆</span>
                 </h2>
-                <p class="admin-section__desc">
-                  {{ t("altar.preferences.forceOutcomeHint") }}
-                </p>
               </section>
             </template>
           </ClientOnly>
@@ -669,13 +711,39 @@ const updateDebugVaalOrbs = (delta: number) => {
 }
 
 /* ==========================================
+   COMPACT HEADER
+   ========================================== */
+.admin-header-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  border-radius: 6px;
+}
+
+.admin-status-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-user-info-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ==========================================
    STATUS INDICATOR
    ========================================== */
 .admin-status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
 }
 
 .admin-status__indicator {
@@ -715,20 +783,9 @@ const updateDebugVaalOrbs = (delta: number) => {
 /* ==========================================
    USER INFO
    ========================================== */
-.admin-user-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(60, 55, 50, 0.3);
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-}
-
 .admin-user-info__avatar {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 2px solid rgba(175, 96, 37, 0.5);
 }
@@ -741,14 +798,14 @@ const updateDebugVaalOrbs = (delta: number) => {
 
 .admin-user-info__name {
   font-family: "Cinzel", serif;
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: rgba(200, 190, 180, 0.9);
 }
 
 .admin-user-info__id {
   font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: rgba(120, 115, 110, 0.7);
   font-style: italic;
 }
@@ -763,6 +820,15 @@ const updateDebugVaalOrbs = (delta: number) => {
 
 .admin-section {
   padding: 1.5rem 0;
+}
+
+.admin-section--compact {
+  padding: 1rem 0;
+}
+
+.admin-section__title--compact {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .admin-section__title {
@@ -803,19 +869,36 @@ const updateDebugVaalOrbs = (delta: number) => {
   font-style: italic;
 }
 
+.admin-section__hint--compact {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+}
+
 .admin-section__hint--coming-soon {
   color: rgba(201, 162, 39, 0.7);
   font-weight: 500;
 }
 
 /* ==========================================
-   TOGGLE PANEL (for Altar)
+   GRID LAYOUT FOR QUICK CONTROLS
    ========================================== */
-.admin-toggle-panel {
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ==========================================
+   COMPACT SECTION (for grid items)
+   ========================================== */
+.admin-section-compact {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
   background: linear-gradient(
     180deg,
     rgba(8, 8, 10, 0.95) 0%,
@@ -831,75 +914,244 @@ const updateDebugVaalOrbs = (delta: number) => {
   border-bottom-color: rgba(55, 50, 45, 0.3);
 }
 
-.admin-toggle-panel__info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.admin-section-compact--full {
+  width: 100%;
 }
 
-.admin-toggle-panel__label {
+.admin-section-compact__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex: 1;
+}
+
+.admin-section-compact__title {
   font-family: "Cinzel", serif;
   font-size: 0.875rem;
   font-weight: 600;
   color: rgba(180, 170, 160, 0.9);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  margin: 0;
 }
 
-.admin-toggle-panel__status {
+.admin-section-compact__status {
   font-family: "Cinzel", serif;
-  font-size: 1.25rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
 }
 
-.admin-toggle-panel__status--open {
+.admin-section-compact__status--open {
   color: #4ade80;
-  text-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.1);
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
 }
 
-.admin-toggle-panel__status--closed {
+.admin-section-compact__status--closed {
   color: #f87171;
-  text-shadow: 0 0 15px rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.1);
+  text-shadow: 0 0 10px rgba(248, 113, 113, 0.3);
 }
 
-.admin-toggle-panel__control {
+.admin-section-compact__control {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
-.admin-toggle-panel__control--disabled {
+.admin-section-compact__control--disabled {
   opacity: 0.5;
   pointer-events: none;
   cursor: not-allowed;
 }
 
 /* ==========================================
-   DATA SOURCE
+   ENHANCED SECTION (for Altar and Activity Logs)
+   Now using RunicBox, so we only style the inner content
    ========================================== */
-.admin-data-source {
+.admin-section-enhanced {
   display: flex;
-  width: 100%;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.admin-data-source--disabled {
+.admin-section-enhanced__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.admin-section-enhanced__icon {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    rgba(248, 113, 113, 0.1) 0%,
+    rgba(139, 92, 246, 0.1) 100%
+  );
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  padding: 0.75rem;
+}
+
+.admin-section-enhanced__icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(248, 113, 113, 0.4));
+  color: rgba(248, 113, 113, 0.8);
+}
+
+/* SVG icons in activity logs */
+.admin-section-enhanced__icon svg {
+  width: 100%;
+  height: 100%;
+  color: rgba(139, 92, 246, 0.8);
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+}
+
+.admin-section-enhanced__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-section-enhanced__title {
+  font-family: "Cinzel", serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: rgba(220, 210, 200, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.admin-section-enhanced__description {
+  font-family: "Crimson Text", serif;
+  font-size: 0.9375rem;
+  color: rgba(160, 150, 140, 0.85);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-section-enhanced__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(35, 32, 28, 0.5);
+}
+
+.admin-section-enhanced__status {
+  font-family: "Cinzel", serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.admin-section-enhanced__status--open {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.4);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.admin-section-enhanced__status--closed {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.15);
+  text-shadow: 0 0 10px rgba(248, 113, 113, 0.4);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.admin-section-enhanced__control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.admin-section-enhanced__control--disabled {
   opacity: 0.5;
   pointer-events: none;
   cursor: not-allowed;
 }
 
-.admin-data-source__radio {
+/* ==========================================
+   DATA CONFIGURATION
+   ========================================== */
+.admin-data-config {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.95) 0%,
+    rgba(12, 12, 14, 0.9) 40%,
+    rgba(8, 8, 10, 0.95) 100%
+  );
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    inset 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(60, 55, 50, 0.06),
+    0 1px 0 rgba(45, 40, 35, 0.25);
+  border: 1px solid rgba(35, 32, 28, 0.7);
+  border-top-color: rgba(25, 22, 18, 0.8);
+  border-bottom-color: rgba(55, 50, 45, 0.3);
+}
+
+.admin-data-config--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.admin-data-config__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-data-config__label {
+  font-family: "Cinzel", serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(180, 170, 160, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-data-config__radio {
   width: 100%;
 }
 
-.admin-data-source__radio :deep(.runic-radio) {
+.admin-data-config__radio :deep(.runic-radio) {
   display: flex;
   width: 100%;
 }
 
-.admin-data-source__radio :deep(.runic-radio__groove) {
+.admin-data-config__radio :deep(.runic-radio__groove) {
   width: 100%;
   flex: 1;
+}
+
+.admin-data-config__sync-btn {
+  margin-top: 0.5rem;
+  width: 100%;
 }
 
 /* ==========================================
@@ -925,10 +1177,19 @@ const updateDebugVaalOrbs = (delta: number) => {
   border-bottom-color: rgba(55, 50, 45, 0.3);
 }
 
+.admin-debug-panel--compact {
+  gap: 1rem;
+  padding: 1rem;
+}
+
 .admin-debug-field {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.admin-debug-field--compact {
+  gap: 0.375rem;
 }
 
 .admin-debug-field__label {
@@ -940,8 +1201,28 @@ const updateDebugVaalOrbs = (delta: number) => {
   letter-spacing: 0.05em;
 }
 
+.admin-debug-field__label--compact {
+  font-size: 0.8125rem;
+}
+
 .admin-debug-field__select {
   width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-debug-field__select :deep(.runic-select__dropdown) {
+  z-index: 10002 !important; /* Above admin page content */
+}
+
+.admin-debug-field__select :deep(.runic-radio) {
+  display: flex;
+  width: 100%;
+}
+
+.admin-debug-field__select :deep(.runic-radio__groove) {
+  width: 100%;
+  flex: 1;
 }
 
 .admin-debug-field__number {
@@ -953,6 +1234,11 @@ const updateDebugVaalOrbs = (delta: number) => {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(60, 55, 50, 0.4);
   border-radius: 4px;
+}
+
+.admin-debug-field__number--compact {
+  padding: 0.5rem;
+  gap: 0.75rem;
 }
 
 .admin-debug-field__btn {
@@ -970,6 +1256,12 @@ const updateDebugVaalOrbs = (delta: number) => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.admin-debug-field__btn--compact {
+  width: 28px;
+  height: 28px;
+  font-size: 1rem;
 }
 
 .admin-debug-field__btn:hover:not(:disabled) {
@@ -992,6 +1284,15 @@ const updateDebugVaalOrbs = (delta: number) => {
   text-align: center;
 }
 
+.admin-debug-field__value--compact {
+  font-size: 1.25rem;
+}
+
+.admin-debug-field__sync-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
 /* ==========================================
    RESPONSIVE
    ========================================== */
@@ -1000,23 +1301,43 @@ const updateDebugVaalOrbs = (delta: number) => {
     padding: 0 0.5rem 1.5rem;
   }
 
-  .admin-toggle-panel {
+  .admin-header-compact {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-section-compact {
     flex-direction: column;
     align-items: stretch;
     gap: 1rem;
-    text-align: center;
   }
 
-  .admin-toggle-panel__info {
-    align-items: center;
+  .admin-section-compact__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
-  .admin-toggle-panel__control {
+  .admin-section-compact__control {
+    width: 100%;
     justify-content: center;
   }
 
   .admin-section__title {
     font-size: 1rem;
+  }
+
+  .admin-section__title--compact {
+    font-size: 0.9375rem;
+  }
+
+  .admin-data-config {
+    padding: 0.75rem;
   }
 }
 </style>

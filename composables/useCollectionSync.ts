@@ -88,7 +88,7 @@ export function useCollectionSync() {
     vaalOrbsNewValue?: number
   ): Promise<boolean> {
     if (!isApiData.value) {
-      console.log('[CollectionSync] Skipping sync (mock mode)')
+      console.log('[CollectionSync] Skipping sync (test mode - no sync needed)')
       return true
     }
     

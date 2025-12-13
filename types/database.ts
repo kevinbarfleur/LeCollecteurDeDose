@@ -217,7 +217,7 @@ export interface AltarOpenSetting {
 }
 
 export interface DataSourceSetting {
-  source: 'mock' | 'api'
+  source: 'api' | 'test'
 }
 
 export interface ActivityLogsEnabledSetting {

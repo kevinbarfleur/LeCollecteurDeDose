@@ -132,6 +132,7 @@ const maxWidthClasses: Record<string, string> = {
 .runic-modal__content {
   position: relative;
   width: 100%;
+  min-width: 320px;
   max-height: 90vh;
   overflow-y: auto;
 
