@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   markResolved: [id: string]
   refresh: []
-  filtersChanged: [filters: { level: string; source: string; showResolved: boolean }]
+  filtersChanged: [filters: { level: string; source: string; showResolved: boolean; startDate: string }]
 }>()
 
 // Filter state
@@ -22,17 +22,19 @@ const searchQuery = ref('')
 const selectedLevel = ref<string>('')
 const selectedSource = ref<string>('')
 const showResolved = ref(false)
+const startDate = ref<string>('') // ISO date string, empty for all dates
 
 // Track if component is mounted to avoid emitting on initial setup
 const isMounted = ref(false)
 
 // Watch filters and emit changes to parent (only after mount)
-watch([selectedLevel, selectedSource, showResolved], () => {
+watch([selectedLevel, selectedSource, showResolved, startDate], () => {
   if (isMounted.value) {
     emit('filtersChanged', {
       level: selectedLevel.value,
       source: selectedSource.value,
       showResolved: showResolved.value,
+      startDate: startDate.value,
     })
   }
 })
@@ -176,6 +178,11 @@ const formatContext = (context: Record<string, unknown>): string => {
           v-model="selectedSource"
           :options="sourceOptions"
           placeholder="Source"
+          size="sm"
+          class="error-logs-panel__filter"
+        />
+        <RunicDateFilter
+          v-model="startDate"
           size="sm"
           class="error-logs-panel__filter"
         />

@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth.store'
 import { logInfo, logWarn } from '~/services/logger.service'
+import { logAdminAction } from '~/services/diagnosticLogger.service'
 
 export type DataSource = 'api' | 'test'
 
@@ -90,9 +91,18 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     }
 
     // Admin confirmed, allow change
+    const oldSource = source.value
     source.value = newSource
     if (import.meta.client) {
       localStorage.setItem('dataSource', newSource)
+      
+      // Log diagnostic before change
+      await logAdminAction(
+        'switch_data_source',
+        { data_source: oldSource },
+        { data_source: newSource },
+        { data_mode: newSource }
+      )
     }
     logInfo('Data source changed', { store: 'DataSource', action: 'setDataSource', source: newSource })
   }

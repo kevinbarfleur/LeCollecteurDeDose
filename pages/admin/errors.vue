@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { ErrorLog } from '~/types/errorLog'
+import type { DiagnosticLog } from '~/types/diagnostic'
 import type { Database } from '~/types/database'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import ErrorLogsPanel from '~/components/admin/ErrorLogsPanel.vue'
+import DiagnosticPanel from '~/components/admin/DiagnosticPanel.vue'
 
 definePageMeta({
   middleware: ['admin'],
@@ -23,21 +25,48 @@ const page = ref(1)
 const pageSize = 100 // Increased to show more logs
 const isRealtimeConnected = ref(false)
 
+// Tab state
+const activeTab = ref<'logs' | 'diagnostic'>('logs')
+
+// Diagnostics state
+const diagnostics = ref<DiagnosticLog[]>([])
+const diagnosticsLoading = ref(false)
+const diagnosticsError = ref<string | null>(null)
+const isDiagnosticsRealtimeConnected = ref(false)
+
 // Filters - synchronized with ErrorLogsPanel
 const selectedLevel = ref<string>('')
 const selectedSource = ref<string>('')
 const showResolved = ref(false)
+const startDate = ref<string>('') // ISO date string, empty for all dates
 
 // Handle filter changes from ErrorLogsPanel
-const handleFiltersChanged = (filters: { level: string; source: string; showResolved: boolean }) => {
+const handleFiltersChanged = (filters: { level: string; source: string; showResolved: boolean; startDate: string }) => {
   selectedLevel.value = filters.level
   selectedSource.value = filters.source
   showResolved.value = filters.showResolved
+  startDate.value = filters.startDate
   // fetchErrorLogs will be called by the watch below
 }
 
-// Realtime channel
+// Realtime channels
 let realtimeChannel: RealtimeChannel | null = null
+let diagnosticsRealtimeChannel: RealtimeChannel | null = null
+
+// Diagnostics filters - synchronized with DiagnosticPanel
+const selectedCategory = ref<string>('')
+const selectedActionType = ref<string>('')
+const selectedValidationStatus = ref<string>('')
+const diagnosticsStartDate = ref<string>('') // ISO date string, empty for all dates
+
+// Handle diagnostics filter changes from DiagnosticPanel
+const handleDiagnosticsFiltersChanged = (filters: { category: string; actionType: string; validationStatus: string; startDate: string }) => {
+  selectedCategory.value = filters.category
+  selectedActionType.value = filters.actionType
+  selectedValidationStatus.value = filters.validationStatus
+  // Note: startDate filter is handled by the panel component itself
+  // fetchDiagnostics will be called by the watch below
+}
 
 // Fetch error logs
 const fetchErrorLogs = async () => {
@@ -52,6 +81,7 @@ const fetchErrorLogs = async () => {
         level: selectedLevel.value || undefined,
         source: selectedSource.value || undefined,
         showResolved: showResolved.value,
+        startDate: startDate.value || undefined,
         limit: pageSize,
       },
     })
@@ -81,6 +111,14 @@ const fetchErrorLogs = async () => {
         if (!showResolved.value) {
           query = query.eq('resolved', false)
         }
+        // Apply date filter (default to 3 days ago if not set)
+        const dateFilter = startDate.value || (() => {
+          const threeDaysAgo = new Date()
+          threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+          threeDaysAgo.setHours(0, 0, 0, 0)
+          return threeDaysAgo.toISOString()
+        })()
+        query = query.gte('created_at', dateFilter)
 
         const { data, error: fetchError } = await query
 
@@ -249,7 +287,7 @@ const refresh = () => {
 let refreshTimeout: ReturnType<typeof setTimeout> | null = null
 const isInitialLoad = ref(true)
 
-watch([selectedLevel, selectedSource, showResolved], () => {
+watch([selectedLevel, selectedSource, showResolved, startDate], () => {
   // Skip on initial load (fetchErrorLogs is called in onMounted)
   if (isInitialLoad.value) {
     isInitialLoad.value = false
@@ -264,10 +302,143 @@ watch([selectedLevel, selectedSource, showResolved], () => {
   }, 300) // Debounce 300ms
 })
 
+// Fetch diagnostics
+const fetchDiagnostics = async () => {
+  diagnosticsLoading.value = true
+  diagnosticsError.value = null
+
+  try {
+    const apiResponse = await $fetch('/api/admin/diagnostics', {
+      query: {
+        category: selectedCategory.value || undefined,
+        action_type: selectedActionType.value || undefined,
+        validation_status: selectedValidationStatus.value || undefined,
+        startDate: diagnosticsStartDate.value || undefined,
+        limit: pageSize,
+      },
+    })
+    
+    diagnostics.value = (apiResponse.diagnostics || []) as DiagnosticLog[]
+    console.log('[Diagnostics] Fetched via API:', diagnostics.value.length, 'diagnostics')
+  } catch (err: any) {
+    const errorMessage = err.message || 'Erreur lors du chargement des diagnostics'
+    
+    // Check if it's a "table not found" error
+    if (errorMessage.includes('Could not find the table') || errorMessage.includes('diagnostic_logs')) {
+      diagnosticsError.value = 'La table diagnostic_logs n\'existe pas encore. Veuillez appliquer la migration create_diagnostic_logs.sql dans Supabase.'
+    } else {
+      diagnosticsError.value = errorMessage
+    }
+    
+    console.error('Failed to fetch diagnostics:', err)
+  } finally {
+    diagnosticsLoading.value = false
+  }
+}
+
+// Setup diagnostics realtime subscription
+const setupDiagnosticsRealtime = () => {
+  if (!supabase || diagnosticsRealtimeChannel) return
+
+  try {
+    diagnosticsRealtimeChannel = supabase
+      .channel('diagnostics-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'diagnostic_logs',
+        },
+        (payload) => {
+          const newDiag = payload.new as DiagnosticLog
+          console.log('[Diagnostics] New diagnostic received via realtime:', newDiag.id)
+          
+          // Check if diagnostic matches current filters
+          let shouldAdd = true
+          
+          if (selectedCategory.value && newDiag.category !== selectedCategory.value) {
+            shouldAdd = false
+          }
+          if (selectedActionType.value && newDiag.action_type !== selectedActionType.value) {
+            shouldAdd = false
+          }
+          if (selectedValidationStatus.value && newDiag.validation_status !== selectedValidationStatus.value) {
+            shouldAdd = false
+          }
+          
+          if (shouldAdd) {
+            // Add to the beginning of the list
+            diagnostics.value = [newDiag, ...diagnostics.value].slice(0, pageSize)
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          isDiagnosticsRealtimeConnected.value = true
+          console.log('[Diagnostics] Realtime connected')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          isDiagnosticsRealtimeConnected.value = false
+          console.error('[Diagnostics] Realtime error:', err)
+        } else {
+          console.log('[Diagnostics] Realtime status:', status)
+        }
+      })
+  } catch (err) {
+    console.error('[Diagnostics] Failed to setup realtime:', err)
+  }
+}
+
+// Cleanup diagnostics realtime subscription
+const cleanupDiagnosticsRealtime = async () => {
+  if (diagnosticsRealtimeChannel && supabase) {
+    await supabase.removeChannel(diagnosticsRealtimeChannel)
+    diagnosticsRealtimeChannel = null
+    isDiagnosticsRealtimeConnected.value = false
+  }
+}
+
+// Watch diagnostics filters and refresh (debounced)
+let diagnosticsRefreshTimeout: ReturnType<typeof setTimeout> | null = null
+const isDiagnosticsInitialLoad = ref(true)
+
+watch([selectedCategory, selectedActionType, selectedValidationStatus, diagnosticsStartDate], () => {
+  // Skip on initial load
+  if (isDiagnosticsInitialLoad.value) {
+    isDiagnosticsInitialLoad.value = false
+    return
+  }
+  
+  if (diagnosticsRefreshTimeout) {
+    clearTimeout(diagnosticsRefreshTimeout)
+  }
+  diagnosticsRefreshTimeout = setTimeout(() => {
+    fetchDiagnostics()
+  }, 300) // Debounce 300ms
+})
+
+// Watch active tab and setup/cleanup accordingly
+watch(activeTab, (newTab) => {
+  if (newTab === 'diagnostic') {
+    fetchDiagnostics()
+    setupDiagnosticsRealtime()
+    cleanupRealtime() // Cleanup error logs realtime when switching to diagnostics
+  } else {
+    fetchErrorLogs()
+    setupRealtime()
+    cleanupDiagnosticsRealtime() // Cleanup diagnostics realtime when switching to logs
+  }
+})
+
 // Initial fetch and setup
 onMounted(() => {
-  fetchErrorLogs()
-  setupRealtime()
+  if (activeTab.value === 'logs') {
+    fetchErrorLogs()
+    setupRealtime()
+  } else {
+    fetchDiagnostics()
+    setupDiagnosticsRealtime()
+  }
 })
 
 // Test error logging
@@ -301,6 +472,7 @@ const testErrorLog = async () => {
 // Cleanup on unmount
 onUnmounted(() => {
   cleanupRealtime()
+  cleanupDiagnosticsRealtime()
 })
 
 // Statistics
@@ -331,12 +503,24 @@ const stats = computed(() => {
   <NuxtLayout>
     <div class="admin-errors-page">
       <RunicHeader
-        title="Logs d'erreurs"
+        title="Errors & Diagnostics"
         attached
       />
 
-    <!-- Statistics -->
-    <div class="admin-errors-page__stats">
+    <!-- Tab Selection -->
+    <div class="admin-errors-page__tabs">
+      <RunicRadio
+        v-model="activeTab"
+        :options="[
+          { value: 'logs', label: 'Errors' },
+          { value: 'diagnostic', label: 'Diagnostics' },
+        ]"
+        size="md"
+      />
+    </div>
+
+    <!-- Statistics (only show for logs tab) -->
+    <div v-if="activeTab === 'logs'" class="admin-errors-page__stats">
       <RunicBox padding="sm" class="admin-errors-page__stat">
         <div class="admin-errors-page__stat-label">Total</div>
         <div class="admin-errors-page__stat-value">{{ stats.total }}</div>
@@ -370,9 +554,14 @@ const stats = computed(() => {
     </div>
 
     <!-- Error message -->
-    <div v-if="error" class="admin-errors-page__error">
+    <div v-if="activeTab === 'logs' && error" class="admin-errors-page__error">
       <RunicBox padding="sm" variant="error">
         {{ error }}
+      </RunicBox>
+    </div>
+    <div v-if="activeTab === 'diagnostic' && diagnosticsError" class="admin-errors-page__error">
+      <RunicBox padding="sm" variant="error">
+        {{ diagnosticsError }}
       </RunicBox>
     </div>
 
@@ -381,14 +570,15 @@ const stats = computed(() => {
       <div class="admin-errors-page__realtime-status">
         <span
           class="admin-errors-page__realtime-indicator"
-          :class="isRealtimeConnected ? 'admin-errors-page__realtime-indicator--connected' : 'admin-errors-page__realtime-indicator--disconnected'"
+          :class="(activeTab === 'logs' ? isRealtimeConnected : isDiagnosticsRealtimeConnected) ? 'admin-errors-page__realtime-indicator--connected' : 'admin-errors-page__realtime-indicator--disconnected'"
         />
         <span class="admin-errors-page__realtime-text">
-          {{ isRealtimeConnected ? 'Temps réel actif' : 'Temps réel désactivé' }}
+          {{ (activeTab === 'logs' ? isRealtimeConnected : isDiagnosticsRealtimeConnected) ? 'Temps réel actif' : 'Temps réel désactivé' }}
         </span>
       </div>
       <div class="admin-errors-page__action-buttons">
         <RunicButton
+          v-if="activeTab === 'logs'"
           @click="testErrorLog"
           variant="secondary"
           :disabled="loading || isTestingLog"
@@ -397,10 +587,10 @@ const stats = computed(() => {
           <span v-else>Tester les logs</span>
         </RunicButton>
         <RunicButton
-          @click="refresh"
+          @click="activeTab === 'logs' ? refresh() : fetchDiagnostics()"
           icon="refresh"
           variant="default"
-          :disabled="loading"
+          :disabled="activeTab === 'logs' ? loading : diagnosticsLoading"
         >
           Actualiser
         </RunicButton>
@@ -409,11 +599,21 @@ const stats = computed(() => {
 
     <!-- Error Logs Panel -->
     <ErrorLogsPanel
+      v-if="activeTab === 'logs'"
       :logs="logs"
       :loading="loading"
       @mark-resolved="markAsResolved"
       @refresh="refresh"
       @filters-changed="handleFiltersChanged"
+    />
+
+    <!-- Diagnostics Panel -->
+    <DiagnosticPanel
+      v-if="activeTab === 'diagnostic'"
+      :diagnostics="diagnostics"
+      :loading="diagnosticsLoading"
+      @refresh="fetchDiagnostics"
+      @filters-changed="handleDiagnosticsFiltersChanged"
     />
     </div>
   </NuxtLayout>
@@ -433,6 +633,12 @@ const stats = computed(() => {
   font-size: 0.75rem;
   color: rgba(175, 96, 37, 0.5);
   margin: 0 0.5rem;
+}
+
+.admin-errors-page__tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
 }
 
 .admin-errors-page__stats {

@@ -10,6 +10,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { fetchAppSettings, updateAppSetting, subscribeToAppSettings } from '~/services/supabase.service'
 import { useDataSourceStore } from './dataSource.store'
 import { logInfo, logError } from '~/services/logger.service'
+import { logAdminAction } from '~/services/diagnosticLogger.service'
 
 interface Settings {
   altarOpen: boolean
@@ -110,6 +111,17 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     const newValue = !currentValue
 
     logInfo('Toggling altar', { store: 'AppSettings', action: 'toggleAltar', dataMode: currentDataMode, from: currentValue, to: newValue })
+    
+    // Log diagnostic before updating
+    if (import.meta.client) {
+      await logAdminAction(
+        'toggle_altar',
+        { altar_open: currentValue, data_source: currentDataMode },
+        { altar_open: newValue, data_source: currentDataMode },
+        { data_mode: currentDataMode }
+      )
+    }
+    
     await updateSetting('altar_open', { enabled: newValue }, userId, currentDataMode)
   }
 
@@ -122,6 +134,17 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     const newValue = !currentValue
 
     logInfo('Toggling activity logs', { store: 'AppSettings', action: 'toggleActivityLogs', dataMode: currentDataMode, from: currentValue, to: newValue })
+    
+    // Log diagnostic before updating
+    if (import.meta.client) {
+      await logAdminAction(
+        'toggle_activity_logs',
+        { activity_logs_enabled: currentValue, data_source: currentDataMode },
+        { activity_logs_enabled: newValue, data_source: currentDataMode },
+        { data_mode: currentDataMode }
+      )
+    }
+    
     await updateSetting('activity_logs_enabled', { enabled: newValue }, userId, currentDataMode)
   }
 
