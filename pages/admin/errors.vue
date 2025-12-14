@@ -23,10 +23,18 @@ const page = ref(1)
 const pageSize = 100 // Increased to show more logs
 const isRealtimeConnected = ref(false)
 
-// Filters
+// Filters - synchronized with ErrorLogsPanel
 const selectedLevel = ref<string>('')
 const selectedSource = ref<string>('')
 const showResolved = ref(false)
+
+// Handle filter changes from ErrorLogsPanel
+const handleFiltersChanged = (filters: { level: string; source: string; showResolved: boolean }) => {
+  selectedLevel.value = filters.level
+  selectedSource.value = filters.source
+  showResolved.value = filters.showResolved
+  // fetchErrorLogs will be called by the watch below
+}
 
 // Realtime channel
 let realtimeChannel: RealtimeChannel | null = null
@@ -237,9 +245,23 @@ const refresh = () => {
   fetchErrorLogs()
 }
 
-// Watch filters and refresh
+// Watch filters and refresh (debounced to avoid too many requests)
+let refreshTimeout: ReturnType<typeof setTimeout> | null = null
+const isInitialLoad = ref(true)
+
 watch([selectedLevel, selectedSource, showResolved], () => {
-  fetchErrorLogs()
+  // Skip on initial load (fetchErrorLogs is called in onMounted)
+  if (isInitialLoad.value) {
+    isInitialLoad.value = false
+    return
+  }
+  
+  if (refreshTimeout) {
+    clearTimeout(refreshTimeout)
+  }
+  refreshTimeout = setTimeout(() => {
+    fetchErrorLogs()
+  }, 300) // Debounce 300ms
 })
 
 // Initial fetch and setup
@@ -391,6 +413,7 @@ const stats = computed(() => {
       :loading="loading"
       @mark-resolved="markAsResolved"
       @refresh="refresh"
+      @filters-changed="handleFiltersChanged"
     />
     </div>
   </NuxtLayout>

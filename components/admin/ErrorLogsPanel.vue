@@ -14,6 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   markResolved: [id: string]
   refresh: []
+  filtersChanged: [filters: { level: string; source: string; showResolved: boolean }]
 }>()
 
 // Filter state
@@ -21,6 +22,24 @@ const searchQuery = ref('')
 const selectedLevel = ref<string>('')
 const selectedSource = ref<string>('')
 const showResolved = ref(false)
+
+// Track if component is mounted to avoid emitting on initial setup
+const isMounted = ref(false)
+
+// Watch filters and emit changes to parent (only after mount)
+watch([selectedLevel, selectedSource, showResolved], () => {
+  if (isMounted.value) {
+    emit('filtersChanged', {
+      level: selectedLevel.value,
+      source: selectedSource.value,
+      showResolved: showResolved.value,
+    })
+  }
+})
+
+onMounted(() => {
+  isMounted.value = true
+})
 
 // Level options
 const levelOptions = [
@@ -38,25 +57,12 @@ const sourceOptions = [
 ]
 
 // Filtered logs
+// Note: Level, source, and resolved filters are applied server-side via API
+// We only filter by search query client-side for instant feedback
 const filteredLogs = computed(() => {
   let result = props.logs
 
-  // Filter by resolved status
-  if (!showResolved.value) {
-    result = result.filter(log => !log.resolved)
-  }
-
-  // Filter by level
-  if (selectedLevel.value) {
-    result = result.filter(log => log.level === selectedLevel.value)
-  }
-
-  // Filter by source
-  if (selectedSource.value) {
-    result = result.filter(log => log.source === selectedSource.value)
-  }
-
-  // Filter by search query
+  // Only filter by search query client-side (server-side filters are already applied)
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase().trim()
     result = result.filter(log => {
