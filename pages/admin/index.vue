@@ -659,6 +659,19 @@ const updateDebugVaalOrbs = (delta: number) => {
                     {{ t("admin.altarDebug.apiModeHint") }}
                   </p>
                 </div>
+
+                <!-- Error Logs Access -->
+                <div class="admin-debug-field admin-debug-field--compact">
+                  <RunicButton
+                    to="/admin/errors"
+                    icon="external"
+                    variant="secondary"
+                    size="sm"
+                    class="admin-debug-field__sync-btn"
+                  >
+                    Voir les logs d'erreurs
+                  </RunicButton>
+                </div>
               </div>
             </section>
             <template #fallback>
@@ -990,6 +1003,13 @@ const updateDebugVaalOrbs = (delta: number) => {
   height: 100%;
   color: var(--color-accent);
   filter: drop-shadow(0 0 8px var(--color-accent-glow));
+}
+
+.admin-section-enhanced__icon--error-logs svg {
+  width: 100%;
+  height: 100%;
+  color: #c45050;
+  filter: drop-shadow(0 0 8px rgba(196, 80, 80, 0.4));
 }
 
 .admin-section-enhanced__content {
