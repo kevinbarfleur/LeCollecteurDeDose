@@ -273,6 +273,201 @@ export type Database = {
         }
         Relationships: []
       }
+      unique_cards: {
+        Row: {
+          uid: number
+          id: string
+          name: string
+          item_class: string
+          rarity: string
+          tier: string
+          flavour_text: string | null
+          wiki_url: string | null
+          game_data: Json
+          relevance_score: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          uid: number
+          id: string
+          name: string
+          item_class: string
+          rarity: string
+          tier: string
+          flavour_text?: string | null
+          wiki_url?: string | null
+          game_data?: Json
+          relevance_score?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          uid?: number
+          id?: string
+          name?: string
+          item_class?: string
+          rarity?: string
+          tier?: string
+          flavour_text?: string | null
+          wiki_url?: string | null
+          game_data?: Json
+          relevance_score?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          id: string
+          twitch_username: string
+          twitch_user_id: string | null
+          display_name: string | null
+          avatar_url: string | null
+          vaal_orbs: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          twitch_username: string
+          twitch_user_id?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          vaal_orbs?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          twitch_username?: string
+          twitch_user_id?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          vaal_orbs?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_collections: {
+        Row: {
+          id: string
+          user_id: string
+          card_uid: number
+          quantity: number
+          normal_count: number
+          foil_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          card_uid: number
+          quantity?: number
+          normal_count?: number
+          foil_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          card_uid?: number
+          quantity?: number
+          normal_count?: number
+          foil_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_collections_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_collections_card_uid_fkey"
+            columns: ["card_uid"]
+            referencedRelation: "unique_cards"
+            referencedColumns: ["uid"]
+          }
+        ]
+      }
+      user_boosters: {
+        Row: {
+          id: string
+          user_id: string
+          opened_at: string
+          booster_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          opened_at?: string
+          booster_type?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          opened_at?: string
+          booster_type?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_boosters_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      booster_cards: {
+        Row: {
+          id: string
+          booster_id: string
+          card_uid: number
+          is_foil: boolean
+          position: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          booster_id: string
+          card_uid: number
+          is_foil?: boolean
+          position: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          booster_id?: string
+          card_uid?: number
+          is_foil?: boolean
+          position?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booster_cards_booster_id_fkey"
+            columns: ["booster_id"]
+            referencedRelation: "user_boosters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booster_cards_card_uid_fkey"
+            columns: ["card_uid"]
+            referencedRelation: "unique_cards"
+            referencedColumns: ["uid"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -299,6 +494,38 @@ export type Database = {
           resolved_by_user_id: string
         }
         Returns: boolean
+      }
+      get_or_create_user: {
+        Args: {
+          p_twitch_username: string
+          p_twitch_user_id?: string | null
+          p_display_name?: string | null
+          p_avatar_url?: string | null
+        }
+        Returns: string
+      }
+      add_card_to_collection: {
+        Args: {
+          p_user_id: string
+          p_card_uid: number
+          p_is_foil?: boolean
+        }
+        Returns: undefined
+      }
+      update_vaal_orbs: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+        }
+        Returns: undefined
+      }
+      refresh_user_collection_summary: {
+        Args: never
+        Returns: undefined
+      }
+      refresh_recent_boosters_summary: {
+        Args: never
+        Returns: undefined
       }
     }
     Enums: {

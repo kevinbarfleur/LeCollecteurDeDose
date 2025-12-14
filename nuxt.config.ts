@@ -49,6 +49,7 @@ export default defineNuxtConfig({
     // Supabase configuration (server-side only)
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
+    supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     // Public runtime config (accessible client-side)
     public: {
       dataApiUrl: process.env.DATA_API_URL || 'http://localhost:3001',

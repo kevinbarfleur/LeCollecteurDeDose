@@ -1,0 +1,17 @@
+{
+  "name": "twitch-bot-minimal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Minimal Twitch bot service for Railway - handles chat only",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["twitch", "bot", "tmi.js"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "tmi.js": "^1.8.5"
+  }
+}
