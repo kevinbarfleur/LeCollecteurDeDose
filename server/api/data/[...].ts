@@ -60,6 +60,30 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error(`[Data API Proxy] Error calling ${fullUrl}:`, error)
     
+    // Log the error to Supabase
+    try {
+      const { logApiError } = await import('~/services/errorLogger.service')
+      await logApiError(
+        `Data API Proxy error: ${method} ${url.pathname}`,
+        url.pathname,
+        error.status || error.statusCode || 500,
+        error,
+        {
+          component: 'DataApiProxy',
+          action: 'proxy.error',
+          method,
+          externalUrl: fullUrl,
+          query: Object.keys(query).length > 0 ? query : undefined,
+        }
+      ).catch((logErr) => {
+        // Silently fail if logging fails to avoid infinite loops
+        console.error('[ErrorLogger] Failed to log API error:', logErr)
+      })
+    } catch (logError) {
+      // Silently fail if import fails
+      console.error('[ErrorLogger] Failed to import error logger:', logError)
+    }
+    
     // Return appropriate error response
     throw createError({
       statusCode: error.status || error.statusCode || 500,
