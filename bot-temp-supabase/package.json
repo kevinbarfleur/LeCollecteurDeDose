@@ -1,0 +1,23 @@
+{
+  "name": "twitch-card-bot-supabase",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Bot Twitch adapté pour utiliser Supabase au lieu des fichiers JSON",
+  "main": "launcher.mjs",
+  "scripts": {
+    "start": "node launcher.mjs",
+    "dev": "node launcher.mjs"
+  },
+  "keywords": ["twitch", "bot", "supabase"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "node-fetch": "^3.3.2",
+    "tmi.js": "^1.8.5",
+    "ws": "^8.18.3"
+  }
+}
