@@ -270,7 +270,7 @@ const dataSourceModel = computed({
     }
     
     // User confirmed, proceed with change
-    await setDataSource(value, user.value?.id);
+    await setDataSource(value);
   },
 });
 

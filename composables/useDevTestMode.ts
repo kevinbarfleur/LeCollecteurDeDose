@@ -13,31 +13,32 @@ export function useDevTestMode() {
   /**
    * Set the dev/test mode (now just sets data source)
    */
-  const setDevTestMode = (mode: 'real' | 'test') => {
+  const setDevTestMode = async (mode: 'real' | 'test') => {
     // 'real' means API, 'test' means test data
     const newDataSource: 'api' | 'test' = mode === 'real' ? 'api' : 'test'
-    setDataSource(newDataSource, undefined) // userId not needed for client-side change
+    await setDataSource(newDataSource) // userId not needed for client-side change
   }
 
   /**
    * Get current dev/test mode from data source
    */
   const devTestMode = computed<'real' | 'test'>(() => {
-    return dataSource.value === 'api' ? 'real' : 'test'
+    const source = (dataSource as any).value ?? dataSource
+    return source === 'api' ? 'real' : 'test'
   })
 
   /**
    * Check if we're using test mode (Supabase test data)
    */
   const isTestMode = computed(() => {
-    return isTestData.value
+    return isTestData
   })
 
   /**
    * Check if we're using real mode (production API)
    */
   const isRealMode = computed(() => {
-    return isApiData.value
+    return isApiData
   })
 
   return {

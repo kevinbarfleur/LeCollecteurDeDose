@@ -19,8 +19,8 @@ import {
   type VariationGroup,
 } from "~/composables/useCardGrouping";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
-import { useCollectionSync } from "~/composables/useCollectionSync";
-import { useSyncQueue } from "~/composables/useSyncQueue";
+import { useCollectionSync } from "~/composables/useCollectionSyncStore";
+import { useSyncQueue } from "~/composables/useSyncQueueStore";
 import { useAltarDebug } from "~/composables/useAltarDebug";
 import { transformUserCollectionToCards } from "~/utils/dataTransform";
 import { initTestRunner } from "~/test-scenarios/console";
@@ -71,7 +71,7 @@ const loadCollection = async () => {
 
   console.log('[Altar] Loading collection from API...', {
     username: authUser.value.displayName,
-    isApiData: isApiData.value
+    isApiData: isApiData
   });
 
   isLoadingCollection.value = true;
@@ -206,7 +206,7 @@ onMounted(async () => {
   }
   
   // Listen for vaalOrbs updates from admin page (test mode only)
-  if (!isApiData.value && import.meta.client) {
+  if (!isApiData && import.meta.client) {
     window.addEventListener('altar:updateVaalOrbs', ((e: CustomEvent<{ value: number }>) => {
       vaalOrbs.value = e.detail.value;
     }) as EventListener);
@@ -737,10 +737,11 @@ watch(vaalOrbs, async (newValue, oldValue) => {
 if (import.meta.client) {
   watch([syncQueueStatus, isSyncProcessing], () => {
     if (typeof window !== 'undefined') {
+      const status = (syncQueueStatus as any).value || { size: 0, isProcessing: false, currentOperation: null }
       ;(window as any).__syncQueueStatus = {
-        size: syncQueueStatus.value.size,
-        isProcessing: isSyncProcessing.value,
-        currentOperation: syncQueueStatus.value.currentOperation,
+        size: status.size,
+        isProcessing: (isSyncProcessing as any).value ?? isSyncProcessing,
+        currentOperation: status.currentOperation,
       }
     }
   }, { immediate: true, deep: true })
@@ -1551,8 +1552,8 @@ const isBlockingInteractions = computed(() => {
   return (
     isLoadingCollection.value ||
     isReloadingCollection.value ||
-    isSyncProcessing.value ||
-    isCollectionSyncing.value ||
+    isSyncProcessing ||
+    isCollectionSyncing ||
     isAnimating.value ||
     isCardBeingDestroyed.value ||
     isCardAnimatingIn.value ||
