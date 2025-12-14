@@ -12,7 +12,7 @@ import type { ApiResponse, PlayerCollection, CatalogueResponse, ApiError } from 
 export function useApi() {
   const config = useRuntimeConfig()
   const externalApiUrl = config.public.dataApiUrl as string
-  const { isTestData } = useDataSource() // Use isTestData from useDataSource
+  const { isTestData, dataSource } = useDataSource() // Get both isTestData and dataSource
   
   // Determine which API to use
   // In test mode, use Supabase Edge Function
@@ -23,15 +23,22 @@ export function useApi() {
   // External API: /api/userCollection -> Local proxy: /api/data/userCollection
   // Test API: Supabase Edge Function -> /functions/v1/dev-test-api/api/...
   const apiUrl = computed(() => {
-    return isTestData.value
+    // Use dataSource directly to avoid reactivity issues with isTestData
+    // dataSource is 'test' when localStorage says test, regardless of admin status
+    const useTest = dataSource.value === 'test'
+    return useTest
       ? `${supabaseUrl}/functions/v1/dev-test-api`
       : '/api/data'
   })
 
   // Log when API mode changes
   if (import.meta.client) {
-    watch(isTestData, (isTest) => {
-      console.log('[API] Data source mode changed:', { isTestData: isTest, apiUrl: apiUrl.value })
+    watch([isTestData, dataSource], ([isTest, source]) => {
+      console.log('[API] Data source mode changed:', { 
+        isTestData: isTest, 
+        dataSource: source,
+        apiUrl: apiUrl.value 
+      })
     })
   }
 
@@ -58,7 +65,9 @@ export function useApi() {
     // For test mode, use the full path with /api prefix
     // For real mode, remove /api/ prefix since our proxy adds it
     const currentApiUrl = apiUrl.value
-    const useTestApi = isTestData.value
+    // Use dataSource directly to avoid reactivity timing issues
+    // This ensures we use test API even if isTestData hasn't updated yet
+    const useTestApi = dataSource.value === 'test'
     
     let cleanEndpoint: string
     if (useTestApi) {
@@ -74,6 +83,21 @@ export function useApi() {
     const url = currentApiUrl.endsWith('/') 
       ? `${currentApiUrl}${cleanEndpoint.replace(/^\//, '')}`
       : `${currentApiUrl}${cleanEndpoint.startsWith('/') ? '' : '/'}${cleanEndpoint}`
+
+    // Debug logging - ALWAYS log to debug
+    if (import.meta.client) {
+      console.log('[API] apiFetch called:', {
+        endpoint,
+        cleanEndpoint,
+        currentApiUrl,
+        finalUrl: url,
+        useTestApi,
+        isTestData: isTestData.value,
+        dataSource: dataSource.value,
+        urlStartsWithHttp: url.startsWith('http'),
+        method: options.method || 'GET'
+      })
+    }
 
     try {
       const method = (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET'
@@ -91,12 +115,64 @@ export function useApi() {
         }
       }
       
-      const response = await $fetch(url, {
-        method,
-        headers,
-        body: options.body ? JSON.parse(options.body as string) : undefined,
-      })
+      // Use native fetch for absolute URLs (always), $fetch for relative URLs only
+      // This avoids Nuxt URL resolution issues with absolute URLs
+      let response: any
+      if (url.startsWith('http')) {
+        // Absolute URL - use native fetch to avoid Nuxt URL resolution issues
+        console.log('[API] Using native fetch for absolute URL:', url)
+        const bodyData = options.body 
+          ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body))
+          : undefined
+        
+        const fetchResponse = await fetch(url, {
+          method,
+          headers,
+          body: bodyData,
+        })
+        
+        console.log('[API] Fetch response:', {
+          ok: fetchResponse.ok,
+          status: fetchResponse.status,
+          statusText: fetchResponse.statusText,
+          headers: Object.fromEntries(fetchResponse.headers.entries())
+        })
+        
+        if (!fetchResponse.ok) {
+          const errorText = await fetchResponse.text().catch(() => 'Unknown error')
+          console.error('[API] Fetch failed:', {
+            status: fetchResponse.status,
+            statusText: fetchResponse.statusText,
+            errorText
+          })
+          throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText} - ${errorText}`)
+        }
+        
+        response = await fetchResponse.json()
+        console.log('[API] Fetch response parsed:', {
+          responseType: typeof response,
+          responseKeys: response && typeof response === 'object' ? Object.keys(response).slice(0, 10) : [],
+          responseIsArray: Array.isArray(response)
+        })
+      } else {
+        // Relative URL - use $fetch (production mode)
+        console.log('[API] Using $fetch for relative URL:', url)
+        response = await $fetch(url, {
+          method,
+          headers,
+          body: options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : undefined,
+        })
+        console.log('[API] $fetch response:', {
+          responseType: typeof response,
+          responseKeys: response && typeof response === 'object' ? Object.keys(response).slice(0, 10) : [],
+          responseIsArray: Array.isArray(response)
+        })
+      }
 
+      console.log('[API] apiFetch returning:', {
+        hasResponse: !!response,
+        responseType: typeof response
+      })
       return response as T
     } catch (err: any) {
       
@@ -117,7 +193,14 @@ export function useApi() {
    * Endpoint: GET /api/userCollection
    */
   async function fetchUserCollections(): Promise<Record<string, any> | null> {
+    console.log('[API] fetchUserCollections called')
     const result = await apiFetch<Record<string, any>>('userCollection')
+    console.log('[API] fetchUserCollections result:', {
+      hasResult: !!result,
+      resultType: typeof result,
+      resultKeys: result ? Object.keys(result).slice(0, 5) : [],
+      resultCount: result ? Object.keys(result).length : 0
+    })
     return result
   }
 
@@ -127,19 +210,43 @@ export function useApi() {
    * Endpoint: GET /api/userCollection (then extract user data)
    */
   async function fetchUserCollection(user: string): Promise<Record<string, any> | null> {
+    console.log('[API] fetchUserCollection called for user:', user)
+    
     // Fetch all collections and extract the user's data
     // This handles case-insensitive matching since the bot server lowercases usernames
     const allCollections = await fetchUserCollections()
     
-    if (!allCollections) return null
+    console.log('[API] fetchUserCollection - allCollections:', {
+      hasAllCollections: !!allCollections,
+      allCollectionsType: typeof allCollections,
+      allCollectionsKeys: allCollections ? Object.keys(allCollections).slice(0, 10) : [],
+      allCollectionsCount: allCollections ? Object.keys(allCollections).length : 0
+    })
+    
+    if (!allCollections) {
+      console.log('[API] fetchUserCollection - No collections found, returning null')
+      return null
+    }
     
     // Try to find the user's data (case-insensitive)
     const userLower = user.toLowerCase()
+    console.log('[API] fetchUserCollection - Looking for user:', {
+      originalUser: user,
+      userLower,
+      hasExactMatch: !!allCollections[userLower]
+    })
     
     // Prefer lowercase key if it exists (this is what we use for updates)
     // This ensures we read the same entry we write to
     if (allCollections[userLower]) {
-      return allCollections[userLower]
+      const result = allCollections[userLower]
+      console.log('[API] fetchUserCollection - Found exact match:', {
+        key: userLower,
+        hasData: !!result,
+        dataKeys: result ? Object.keys(result).slice(0, 10) : [],
+        dataCount: result ? Object.keys(result).length : 0
+      })
+      return result
     }
     
     // Fallback to case-insensitive search
@@ -147,10 +254,23 @@ export function useApi() {
       key => key.toLowerCase() === userLower
     )
     
+    console.log('[API] fetchUserCollection - Case-insensitive search:', {
+      foundKey: userKey || null,
+      searchedKeys: Object.keys(allCollections).slice(0, 10)
+    })
+    
     if (userKey) {
-      return allCollections[userKey]
+      const result = allCollections[userKey]
+      console.log('[API] fetchUserCollection - Found case-insensitive match:', {
+        key: userKey,
+        hasData: !!result,
+        dataKeys: result ? Object.keys(result).slice(0, 10) : [],
+        dataCount: result ? Object.keys(result).length : 0
+      })
+      return result
     }
     
+    console.log('[API] fetchUserCollection - No match found, returning null')
     return null
   }
 
