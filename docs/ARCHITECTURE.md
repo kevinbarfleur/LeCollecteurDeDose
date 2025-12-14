@@ -64,7 +64,7 @@ Le mode est automatiquement forcé à `supabase` en production.
 
 Le bot Twitch est divisé en deux parties :
 
-1. **Bot minimal (`twitch-bot-minimal/`)**
+1. **Bot minimal (`twitch-bot/`)**
    - Service léger déployé sur Railway
    - Gère uniquement le chat Twitch via TMI.js
    - Peut recevoir des messages via webhook depuis les Edge Functions
