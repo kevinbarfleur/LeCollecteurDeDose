@@ -301,6 +301,53 @@
       "backupSuccess": "✅ Backup créé avec succès !",
       "backupError": "❌ Erreur lors de la création du backup."
     },
+    "diagnostics": {
+      "title": "Diagnostics",
+      "subtitle": "Analyse du comportement de l'application",
+      "tabs": {
+        "logs": "Logs d'erreurs",
+        "diagnostic": "Diagnostics"
+      },
+      "categories": {
+        "altar": "Autel",
+        "admin": "Admin",
+        "all": "Toutes les catégories"
+      },
+      "actionTypes": {
+        "vaal_outcome": "Résultat Vaal",
+        "load_collection": "Chargement collection",
+        "toggle_altar": "Toggle Autel",
+        "toggle_activity_logs": "Toggle Logs Activité",
+        "switch_data_source": "Changement Source Données",
+        "all": "Tous les types"
+      },
+      "validationStatus": {
+        "ok": "✓ OK",
+        "warning": "⚠ Avertissement",
+        "error": "❌ Erreur",
+        "all": "Tous les statuts"
+      },
+      "labels": {
+        "search": "Rechercher dans les diagnostics...",
+        "category": "Catégorie",
+        "actionType": "Type d'action",
+        "validationStatus": "Statut",
+        "user": "Utilisateur",
+        "validation": "Validation",
+        "apiResponseTime": "Temps de réponse API",
+        "details": "Détails",
+        "stateBefore": "État Avant",
+        "stateAfter": "État Après",
+        "changes": "Changements",
+        "actionDetails": "Détails de l'action",
+        "id": "ID",
+        "date": "Date",
+        "mode": "Mode",
+        "loading": "Chargement...",
+        "empty": "Aucun diagnostic",
+        "noResults": "Aucun résultat"
+      }
+    },
     "activityLogs": {
       "title": "Panneau de Logs d'Activité",
       "description": "Active ou désactive l'affichage du panneau de logs et des notifications pour les replays.",

@@ -225,6 +225,54 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnostic_logs: {
+        Row: {
+          id: string
+          category: string
+          action_type: string
+          user_id: string | null
+          username: string | null
+          state_before: Json
+          state_after: Json
+          action_details: Json
+          validation_status: string | null
+          validation_notes: string | null
+          api_response_time_ms: number | null
+          data_mode: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          category: string
+          action_type: string
+          user_id?: string | null
+          username?: string | null
+          state_before?: Json
+          state_after?: Json
+          action_details?: Json
+          validation_status?: string | null
+          validation_notes?: string | null
+          api_response_time_ms?: number | null
+          data_mode?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          category?: string
+          action_type?: string
+          user_id?: string | null
+          username?: string | null
+          state_before?: Json
+          state_after?: Json
+          action_details?: Json
+          validation_status?: string | null
+          validation_notes?: string | null
+          api_response_time_ms?: number | null
+          data_mode?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -275,6 +323,9 @@ export type AppSetting = Database['public']['Tables']['app_settings']['Row']
 
 export type ErrorLog = Database['public']['Tables']['error_logs']['Row']
 export type ErrorLogInsert = Database['public']['Tables']['error_logs']['Insert']
+
+export type DiagnosticLog = Database['public']['Tables']['diagnostic_logs']['Row']
+export type DiagnosticLogInsert = Database['public']['Tables']['diagnostic_logs']['Insert']
 
 // Typed app settings
 export interface AltarOpenSetting {

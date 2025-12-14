@@ -18,7 +18,17 @@ export default defineEventHandler(async (event) => {
   const level = query.level as string | undefined
   const source = query.source as string | undefined
   const showResolved = query.showResolved === 'true'
+  const startDate = query.startDate as string | undefined
   const limit = parseInt(query.limit as string) || 100
+  
+  // Default to 3 days ago if no startDate provided
+  let actualStartDate = startDate
+  if (!actualStartDate) {
+    const threeDaysAgo = new Date()
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+    threeDaysAgo.setHours(0, 0, 0, 0)
+    actualStartDate = threeDaysAgo.toISOString()
+  }
 
   // Use service role key to bypass RLS
   const config = useRuntimeConfig()
@@ -43,6 +53,9 @@ export default defineEventHandler(async (event) => {
     }
     if (!showResolved) {
       supabaseQuery = supabaseQuery.eq('resolved', false)
+    }
+    if (actualStartDate) {
+      supabaseQuery = supabaseQuery.gte('created_at', actualStartDate)
     }
 
     const { data, error: fetchError } = await supabaseQuery

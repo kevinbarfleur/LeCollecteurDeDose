@@ -26,6 +26,8 @@ import { transformUserCollectionToCards } from "~/utils/dataTransform";
 import { initTestRunner } from "~/test-scenarios/console";
 import { logCollectionState, logCollectionStateComparison } from "~/utils/collectionLogger";
 import { showReloadModal } from "~/composables/useReloadModal";
+import { logAltarAction, createAltarState } from "~/services/diagnosticLogger.service";
+import type { VaalOutcomeType } from "~/types/diagnostic";
 
 const { t } = useI18n();
 
@@ -60,6 +62,10 @@ const vaalOrbs = ref(14);
 const localCollection = ref<Card[]>([]);
 const isLoadingCollection = ref(false);
 const isReloadingCollection = ref(false);
+
+// Diagnostic logging: store state before action
+const diagnosticStateBefore = ref<ReturnType<typeof createAltarState> | null>(null);
+const diagnosticCardInfo = ref<{ id?: string; tier?: string; foil?: boolean } | null>(null);
 
 // Load collection from API or test data
 const loadCollection = async () => {
@@ -725,6 +731,9 @@ const handleSyncRequired = async (
   const vaalOrbsBefore = vaalOrbs.value;
   const localCollectionBefore = JSON.parse(JSON.stringify(localCollection.value)) as Card[];
   
+  // Capture state BEFORE sync for diagnostic logging
+  const stateBeforeSync = createAltarState(localCollectionBefore, vaalOrbsBefore);
+  
   // Log collection state BEFORE sync
   logCollectionState(`Sync: Before (${outcomeType || 'unknown'})`, localCollectionBefore, vaalOrbsBefore, {
     vaalOrbsDelta,
@@ -795,6 +804,7 @@ const handleSyncRequired = async (
         localCollectionBefore,
       },
       onSuccess: async () => {
+        const syncStartTime = Date.now();
 
         // Log collection state AFTER sync (before reload)
         logCollectionState(`Sync: After (${outcomeType || 'unknown'})`, localCollection.value, vaalOrbs.value, {
@@ -814,6 +824,30 @@ const handleSyncRequired = async (
           
           // Reload collection to ensure UI is up to date with server state
           await loadCollection();
+          
+          // Capture state AFTER sync and reload for diagnostic logging
+          const stateAfterSync = createAltarState(localCollection.value, vaalOrbs.value);
+          const apiResponseTime = Date.now() - syncStartTime;
+          
+          // Log diagnostic if we have state before
+          if (diagnosticStateBefore.value && outcomeType && diagnosticCardInfo.value) {
+            await logAltarAction(
+              'vaal_outcome',
+              diagnosticStateBefore.value,
+              stateAfterSync,
+              {
+                card_id: diagnosticCardInfo.value.id,
+                card_tier: diagnosticCardInfo.value.tier,
+                card_foil: diagnosticCardInfo.value.foil,
+                outcome_type: outcomeType as VaalOutcomeType,
+                api_response_time_ms: apiResponseTime,
+              }
+            );
+            
+            // Clear diagnostic state after logging
+            diagnosticStateBefore.value = null;
+            diagnosticCardInfo.value = null;
+          }
 
           // Verify vaalOrbs match expected value
           const expectedVaalOrbs = newVaalOrbsValue;
@@ -1142,6 +1176,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
             localCollectionBefore,
           },
           onSuccess: async () => {
+            const syncStartTime = Date.now();
 
             isReloadingCollection.value = true;
             if (typeof window !== 'undefined') {
@@ -1151,6 +1186,29 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
               await new Promise(resolve => setTimeout(resolve, 1000));
               await loadCollection();
 
+              // Capture state AFTER sync and reload for diagnostic logging
+              const stateAfterSync = createAltarState(localCollection.value, vaalOrbs.value);
+              const apiResponseTime = Date.now() - syncStartTime;
+
+              // Log diagnostic if we have state before
+              if (diagnosticStateBefore.value && diagnosticCardInfo.value) {
+                await logAltarAction(
+                  'vaal_outcome',
+                  diagnosticStateBefore.value,
+                  stateAfterSync,
+                  {
+                    card_id: diagnosticCardInfo.value.id,
+                    card_tier: diagnosticCardInfo.value.tier,
+                    card_foil: diagnosticCardInfo.value.foil,
+                    outcome_type: 'destroyed' as VaalOutcomeType,
+                    api_response_time_ms: apiResponseTime,
+                  }
+                );
+
+                // Clear diagnostic state after logging
+                diagnosticStateBefore.value = null;
+                diagnosticCardInfo.value = null;
+              }
             } finally {
               isReloadingCollection.value = false;
               if (typeof window !== 'undefined') {
@@ -1353,6 +1411,16 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   if (!cardBeforeAnimation) {
 
     return;
+  }
+
+  // Capture state BEFORE action for diagnostic logging
+  if (loggedIn.value && authUser.value?.displayName) {
+    diagnosticStateBefore.value = createAltarState(localCollection.value, vaalOrbs.value);
+    diagnosticCardInfo.value = {
+      id: cardBeforeAnimation.id,
+      tier: cardBeforeAnimation.tier?.toLowerCase(),
+      foil: cardBeforeAnimation.foil || false,
+    };
   }
 
   const capturedCardData = {
