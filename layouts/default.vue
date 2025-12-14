@@ -194,6 +194,9 @@ const showGameOfflineMessage = computed(() => {
 
     <!-- Global Confirmation Modal -->
     <RunicConfirmModal />
+    
+    <!-- Global Reload Modal for Critical Errors -->
+    <ReloadModal />
   </div>
 </template>
 

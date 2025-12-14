@@ -6,6 +6,7 @@
  */
 
 import type { ApiError } from '~/types/api'
+import { logInfo, logError } from './logger.service'
 
 export interface ApiServiceConfig {
   apiUrl: string
@@ -41,6 +42,7 @@ async function apiFetch<T>(
 
   try {
     const method = (options.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET'
+    logInfo('API call', { service: 'API', action: 'apiFetch', method, endpoint, isTestMode })
 
     // Prepare headers
     const headers: Record<string, string> = {
@@ -48,8 +50,13 @@ async function apiFetch<T>(
     }
 
     // For test mode, add Supabase anon key for authentication
-    if (isTestMode && supabaseKey) {
+    if (isTestMode) {
+      if (!supabaseKey) {
+        logError('Missing Supabase key for test mode', undefined, { service: 'API', action: 'apiFetch', endpoint, isTestMode })
+        throw new Error('Missing Supabase key for test mode API calls')
+      }
       headers['Authorization'] = `Bearer ${supabaseKey}`
+      logInfo('Added auth header', { service: 'API', action: 'apiFetch', endpoint, hasKey: !!supabaseKey })
     }
 
     // Use native fetch for absolute URLs (always), $fetch for relative URLs only
@@ -68,6 +75,7 @@ async function apiFetch<T>(
 
       if (!fetchResponse.ok) {
         const errorText = await fetchResponse.text().catch(() => 'Unknown error')
+        logError('API call failed', undefined, { service: 'API', action: 'apiFetch', endpoint, status: fetchResponse.status })
         throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText} - ${errorText}`)
       }
 
@@ -81,14 +89,10 @@ async function apiFetch<T>(
       })
     }
 
+    logInfo('API call succeeded', { service: 'API', action: 'apiFetch', endpoint, method })
     return response as T
   } catch (err: any) {
-    console.error('[ApiService] API call failed:', {
-      endpoint,
-      url,
-      error: err.message,
-      status: err.status || err.statusCode
-    })
+    logError('API call failed', err, { service: 'API', action: 'apiFetch', endpoint, status: err.status || err.statusCode })
     throw err
   }
 }
@@ -98,9 +102,11 @@ async function apiFetch<T>(
  */
 export async function fetchUserCollections(config: ApiServiceConfig): Promise<Record<string, any> | null> {
   try {
-    return await apiFetch<Record<string, any>>('userCollection', config)
+    const result = await apiFetch<Record<string, any>>('userCollection', config)
+    logInfo('User collections fetched', { service: 'API', action: 'fetchUserCollections', userCount: result ? Object.keys(result).length : 0 })
+    return result
   } catch (error) {
-    console.error('[ApiService] Failed to fetch user collections:', error)
+    logError('Failed to fetch user collections', error, { service: 'API', action: 'fetchUserCollections' })
     return null
   }
 }
@@ -113,6 +119,7 @@ export async function fetchUserCollection(
   user: string,
   config: ApiServiceConfig
 ): Promise<Record<string, any> | null> {
+  logInfo('Fetching user collection', { service: 'API', action: 'fetchUserCollection', user })
   const allCollections = await fetchUserCollections(config)
 
   if (!allCollections) return null
@@ -122,6 +129,7 @@ export async function fetchUserCollection(
 
   // Prefer lowercase key if it exists (this is what we use for updates)
   if (allCollections[userLower]) {
+    logInfo('User collection found', { service: 'API', action: 'fetchUserCollection', user, found: true })
     return allCollections[userLower]
   }
 
@@ -131,9 +139,11 @@ export async function fetchUserCollection(
   )
 
   if (userKey) {
+    logInfo('User collection found (case-insensitive)', { service: 'API', action: 'fetchUserCollection', user, found: true })
     return allCollections[userKey]
   }
 
+  logInfo('User collection not found', { service: 'API', action: 'fetchUserCollection', user, found: false })
   return null
 }
 
@@ -147,7 +157,7 @@ export async function fetchUserCards(
   try {
     return await apiFetch<any[]>(`usercards/${user}`, config)
   } catch (error) {
-    console.error('[ApiService] Failed to fetch user cards:', error)
+    logError('Failed to fetch user cards', error, { service: 'ApiService' })
     return null
   }
 }
@@ -159,7 +169,7 @@ export async function fetchUniques(config: ApiServiceConfig): Promise<any[] | nu
   try {
     return await apiFetch<any[]>('uniques', config)
   } catch (error) {
-    console.error('[ApiService] Failed to fetch uniques:', error)
+    logError('Failed to fetch uniques', error, { service: 'ApiService' })
     return null
   }
 }
@@ -173,6 +183,9 @@ export async function updateUserCollection(
   collectionData: Record<string, any>,
   config: ApiServiceConfig
 ): Promise<boolean> {
+  const cardCount = Object.keys(collectionData).filter(k => k !== 'vaalOrbs').length
+  logInfo('Updating user collection', { service: 'API', action: 'updateUserCollection', username, cardCount, vaalOrbs: collectionData.vaalOrbs })
+  
   // Lowercase username to match server behavior
   const userKey = username.toLowerCase()
 
@@ -189,9 +202,11 @@ export async function updateUserCollection(
         body: JSON.stringify(payload),
       }
     )
-    return !!result
+    const success = !!result
+    logInfo('User collection updated', { service: 'API', action: 'updateUserCollection', username, success })
+    return success
   } catch (error) {
-    console.error('[ApiService] Failed to update user collection:', error)
+    logError('Failed to update user collection', error, { service: 'API', action: 'updateUserCollection', username })
     return false
   }
 }

@@ -91,11 +91,10 @@ const createBackup = async () => {
       },
       body: {},
     });
-    
-    console.log('[Admin] ✅ Backup created successfully!', response);
+
     alert(t("admin.dataSource.backupSuccess"));
   } catch (error: any) {
-    console.error('[Admin] Error creating backup:', error);
+
     const errorMessage = error.data?.message || error.message || 'Erreur inconnue';
     alert(`${t("admin.dataSource.backupError")}\n\n${errorMessage}`);
   } finally {
@@ -129,49 +128,37 @@ const syncTestData = async () => {
   
   isSyncingTestData.value = true;
   try {
-    console.log('[Admin] Starting sync from real API to Supabase...', {
-      userId: user.value.id,
-      isAuthenticated: !!user.value
-    });
-    
+
     // Fetch data through Nuxt proxy (bypassing useApi to avoid mode issues)
     // The proxy handles authentication and routing to the real API
-    console.log('[Admin] Fetching from real API via Nuxt proxy...');
-    
+
     // Fetch all data through the Nuxt proxy (server-side proxy handles auth)
-    console.log('[Admin] Fetching userCollections...');
+
     const userCollectionsResponse = await $fetch('/api/data/userCollection', {
       headers: {
         'Content-Type': 'application/json',
       }
     }).catch((error) => {
-      console.error('[Admin] Error fetching userCollections:', error);
+
       return null;
     });
     const userCollections = userCollectionsResponse as Record<string, any> || null;
-    
-    console.log('[Admin] Fetching uniques...');
+
     const uniquesResponse = await $fetch('/api/data/uniques', {
       headers: {
         'Content-Type': 'application/json',
       }
     }).catch((error) => {
-      console.error('[Admin] Error fetching uniques:', error);
+
       return null;
     });
     const uniques = uniquesResponse as any[] || null;
     
-    console.log('[Admin] Fetched data:', {
-      userCollections: userCollections ? Object.keys(userCollections).length : 0,
-      uniques: uniques ? uniques.length : 0
-    });
-    
     // Get all users from collections
     const users = userCollections ? Object.keys(userCollections) : [];
-    console.log(`[Admin] Found ${users.length} users:`, users);
-    
+
     // Fetch userCards for each user through Nuxt proxy
-    console.log('[Admin] Fetching userCards for all users...');
+
     const userCardsPromises = users.map(async (user) => {
       try {
         const cards = await $fetch(`/api/data/usercards/${user}`, {
@@ -179,26 +166,22 @@ const syncTestData = async () => {
             'Content-Type': 'application/json',
           }
         }).catch((error) => {
-          console.warn(`[Admin] Failed to fetch cards for ${user}:`, error);
+
           return [];
         });
         return { user, cards: cards || [] };
       } catch (error) {
-        console.warn(`[Admin] Failed to fetch cards for ${user}:`, error);
+
         return { user, cards: [] };
       }
     });
     
     const userCardsResults = await Promise.all(userCardsPromises);
     const userCardsMap: Record<string, any[]> = {};
-    userCardsResults.forEach(({ user, cards }) => {
-      userCardsMap[user.toLowerCase()] = cards;
-    });
-    
-    console.log('[Admin] Saving to Supabase...', {
-      usersCount: users.length,
-      uniquesCount: uniques?.length || 0,
-      userCardsCount: Object.keys(userCardsMap).length
+    userCardsResults.forEach((result) => {
+      if (result && result.user && Array.isArray(result.cards)) {
+        userCardsMap[result.user.toLowerCase()] = result.cards;
+      }
     });
     
     // Save to Supabase using the normal client (RLS policies allow public access)
@@ -218,16 +201,11 @@ const syncTestData = async () => {
       .select();
     
     if (error) {
-      console.error('[Admin] Failed to sync test data:', error);
-      console.error('[Admin] Error details:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
+
+
       alert(`${t("admin.dataSource.syncError")}\n\n${error.message}`);
     } else {
-      console.log('[Admin] ✅ Sync successful!', data);
+
       const stats = {
         usersCount: users.length,
         uniquesCount: uniques?.length || 0,
@@ -236,7 +214,7 @@ const syncTestData = async () => {
       alert(`${t("admin.dataSource.syncSuccess")}\n\n${t("admin.dataSource.syncStats", stats)}`);
     }
   } catch (error: any) {
-    console.error('[Admin] Error syncing test data:', error);
+
     alert(`${t("admin.dataSource.syncError")}\n\n${error.message || error}`);
   } finally {
     isSyncingTestData.value = false;

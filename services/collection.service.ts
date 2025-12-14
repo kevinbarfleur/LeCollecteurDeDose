@@ -10,6 +10,7 @@ import { cardsToApiFormat, apiFormatToCards, createCardUpdate } from '~/utils/co
 import { logCollectionState } from '~/utils/collectionLogger'
 import type { ApiServiceConfig } from './api.service'
 import * as ApiService from './api.service'
+import { logInfo, logError } from './logger.service'
 
 export interface SyncError {
   message: string
@@ -34,11 +35,14 @@ export async function syncCollectionToApi(
   vaalOrbs: number,
   config: ApiServiceConfig
 ): Promise<boolean> {
+  logInfo('Syncing collection to API', { service: 'Collection', action: 'syncCollectionToApi', username, cardCount: cards.length, vaalOrbs })
   try {
     const apiFormat = cardsToApiFormat(cards, vaalOrbs)
-    return await ApiService.updateUserCollection(username, apiFormat, config)
+    const success = await ApiService.updateUserCollection(username, apiFormat, config)
+    logInfo('Collection synced', { service: 'Collection', action: 'syncCollectionToApi', username, success })
+    return success
   } catch (error: any) {
-    console.error('[CollectionService] Failed to sync collection:', error)
+    logError('Failed to sync collection', error, { service: 'Collection', action: 'syncCollectionToApi', username })
     return false
   }
 }
@@ -53,6 +57,7 @@ export async function updateCardCounts(
   vaalOrbsNewValue: number | undefined,
   config: ApiServiceConfig
 ): Promise<boolean> {
+  logInfo('Updating card counts', { service: 'Collection', action: 'updateCardCounts', username, cardUpdates: cardUpdates.size, vaalOrbs: vaalOrbsNewValue })
   try {
     // IMPORTANT: The server does a shallow merge, so we need to send ALL cards
     // with their updated counts, not just the changed ones.
@@ -60,7 +65,7 @@ export async function updateCardCounts(
     const currentCollectionData = await ApiService.fetchUserCollection(username, config)
 
     if (!currentCollectionData) {
-      console.error('[CollectionService] Could not fetch current collection')
+      logError('Could not fetch current collection', undefined, { service: 'Collection', action: 'updateCardCounts', username })
       return false
     }
 
@@ -93,9 +98,6 @@ export async function updateCardCounts(
     // Add vaalOrbs update if provided (absolute value)
     if (vaalOrbsNewValue !== undefined) {
       update.vaalOrbs = vaalOrbsNewValue
-      if (currentCollectionData.vaalOrbs !== vaalOrbsNewValue) {
-        console.log(`[CollectionService] Using optimistic vaalOrbs value: ${vaalOrbsNewValue} (fetched: ${currentCollectionData.vaalOrbs})`)
-      }
     }
 
     // Remove vaalOrbs from the object before sending (it's a top-level property)
@@ -114,12 +116,14 @@ export async function updateCardCounts(
         username,
         updatesCount: cardUpdates.size,
       })
+      logInfo('Card counts updated', { service: 'Collection', action: 'updateCardCounts', username, success: true })
       return true
     }
 
+    logError('Card counts update failed', undefined, { service: 'Collection', action: 'updateCardCounts', username })
     return false
   } catch (error: any) {
-    console.error('[CollectionService] Update error:', error)
+    logError('Card counts update error', error, { service: 'Collection', action: 'updateCardCounts', username })
     return false
   }
 }

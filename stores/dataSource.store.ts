@@ -7,6 +7,7 @@
 
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth.store'
+import { logInfo, logWarn } from '~/services/logger.service'
 
 export type DataSource = 'api' | 'test'
 
@@ -30,7 +31,11 @@ export const useDataSourceStore = defineStore('dataSource', () => {
   // Getters
   const isTestData = computed(() => {
     // Non-admins can NEVER use test data
-    if (!authStore.isAdmin) {
+    // Access isAdmin computed value - it's a computed ref, so use .value
+    const isAdmin = typeof authStore.isAdmin === 'boolean' 
+      ? authStore.isAdmin 
+      : (authStore.isAdmin as any).value ?? false
+    if (!isAdmin) {
       return false
     }
     return source.value === 'test'
@@ -56,6 +61,8 @@ export const useDataSourceStore = defineStore('dataSource', () => {
 
   // Actions
   async function setDataSource(newSource: DataSource): Promise<void> {
+    logInfo('Setting data source', { store: 'DataSource', action: 'setDataSource', from: source.value, to: newSource })
+    
     // Check if user is admin before allowing change
     const { user } = useUserSession()
     const userId = user.value?.id
@@ -69,7 +76,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       
       const isAdmin = await authStore.checkAdmin(userId)
       if (!isAdmin) {
-        console.warn('[DataSourceStore] Only admins can change data source')
+        logWarn('Data source change denied', { store: 'DataSource', action: 'setDataSource', reason: 'not admin' })
         source.value = 'api'
         if (import.meta.client) {
           localStorage.removeItem('dataSource')
@@ -78,7 +85,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
       }
     } else {
       // No user ID available, reject change
-      console.warn('[DataSourceStore] No user ID available, cannot change data source')
+      logWarn('Data source change denied', { store: 'DataSource', action: 'setDataSource', reason: 'no userId' })
       return
     }
 
@@ -87,6 +94,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     if (import.meta.client) {
       localStorage.setItem('dataSource', newSource)
     }
+    logInfo('Data source changed', { store: 'DataSource', action: 'setDataSource', source: newSource })
   }
 
   async function toggleDataSource(): Promise<void> {
@@ -96,13 +104,15 @@ export const useDataSourceStore = defineStore('dataSource', () => {
   async function initialize() {
     if (isInitialized.value) return
 
+    logInfo('Initializing data source store', { store: 'DataSource', action: 'initialize', initialSource: source.value })
+
     // Initialize auth store first
     const authStore = useAuthStore()
     await authStore.initialize()
 
     // Force API for non-admins
     if (!authStore.isAdmin && source.value === 'test') {
-      console.log('[DataSourceStore] Non-admin user detected, forcing API mode')
+      logWarn('Forcing API mode for non-admin', { store: 'DataSource', action: 'initialize' })
       source.value = 'api'
       if (import.meta.client) {
         localStorage.removeItem('dataSource')
@@ -112,7 +122,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     // Watch for admin status changes
     watch(() => authStore.isAdmin, (isAdmin) => {
       if (!isAdmin && source.value === 'test') {
-        console.log('[DataSourceStore] User lost admin status, forcing API mode')
+        logWarn('Forcing API mode after admin loss', { store: 'DataSource', action: 'adminStatusChange' })
         source.value = 'api'
         if (import.meta.client) {
           localStorage.removeItem('dataSource')
@@ -121,6 +131,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     })
 
     isInitialized.value = true
+    logInfo('Data source store initialized', { store: 'DataSource', action: 'initialize', source: source.value, isTestData: authStore.isAdmin && source.value === 'test' })
   }
 
   return {

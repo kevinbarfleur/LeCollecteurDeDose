@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import type { ApiError } from '~/types/api'
 import { useDataSourceStore } from './dataSource.store'
+import { logInfo, logError } from '~/services/logger.service'
 
 export const useApiStore = defineStore('api', () => {
   // State
@@ -33,15 +34,22 @@ export const useApiStore = defineStore('api', () => {
     isLoading.value = loading
     if (loading) {
       lastRequestTime.value = Date.now()
+      logInfo('API loading started', { store: 'API', action: 'setLoading' })
+    } else {
+      logInfo('API loading finished', { store: 'API', action: 'setLoading' })
     }
   }
 
   function setError(err: ApiError | null) {
     error.value = err
+    if (err) {
+      logError('API error', undefined, { store: 'API', action: 'setError', status: err.status, message: err.message })
+    }
   }
 
   function clearError() {
     error.value = null
+    logInfo('API error cleared', { store: 'API', action: 'clearError' })
   }
 
   /**
@@ -50,10 +58,38 @@ export const useApiStore = defineStore('api', () => {
    */
   function getApiConfig(): { apiUrl: string; isTestMode: boolean; supabaseKey?: string } {
     const config = useRuntimeConfig()
+    const supabaseKey = config.public.supabase?.key
+    
+    // Access isTestData computed value correctly
+    // isTestData is a computed ref, so we need to access .value
+    // But it's exposed as a computed, so we need to unwrap it
+    let isTestMode = false
+    try {
+      // isTestData is a computed ref from Pinia, access its value
+      const testDataComputed = dataSourceStore.isTestData
+      // Check if it's already a boolean (shouldn't happen, but safety check)
+      if (typeof testDataComputed === 'boolean') {
+        isTestMode = testDataComputed
+      } else {
+        // It's a computed ref, access .value
+        isTestMode = (testDataComputed as any).value ?? false
+      }
+    } catch (e) {
+      // Fallback: check source directly
+      try {
+        const source = (dataSourceStore.source as any).value
+        isTestMode = source === 'test'
+      } catch {
+        isTestMode = false
+      }
+    }
+    
+    logInfo('Getting API config', { store: 'API', action: 'getApiConfig', isTestMode, hasSupabaseKey: !!supabaseKey, apiUrl: apiUrl.value })
+    
     return {
       apiUrl: apiUrl.value,
-      isTestMode: dataSourceStore.isTestData,
-      supabaseKey: config.public.supabase?.key,
+      isTestMode,
+      supabaseKey,
     }
   }
 

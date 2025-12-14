@@ -6,6 +6,7 @@
 
 import { defineStore } from 'pinia'
 import { checkAdminStatus, clearAdminCache, clearAdminCacheForUser } from '~/services/supabase.service'
+import { logInfo, logWarn } from '~/services/logger.service'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -24,11 +25,13 @@ export const useAuthStore = defineStore('auth', () => {
   async function checkAdmin(userId: string | undefined | null): Promise<boolean> {
     if (!userId) {
       isAdmin.value = false
+      logInfo('Admin check skipped', { store: 'Auth', action: 'checkAdmin', reason: 'no userId' })
       return false
     }
 
     const adminStatus = await checkAdminStatus(userId)
     isAdmin.value = adminStatus
+    logInfo('Admin status checked', { store: 'Auth', action: 'checkAdmin', userId: userId.slice(0, 8), isAdmin: adminStatus })
     return adminStatus
   }
 
@@ -47,6 +50,8 @@ export const useAuthStore = defineStore('auth', () => {
   async function initialize() {
     if (isInitialized.value) return
 
+    logInfo('Initializing auth store', { store: 'Auth', action: 'initialize' })
+
     const { user } = useUserSession()
 
     if (user.value?.id) {
@@ -60,11 +65,13 @@ export const useAuthStore = defineStore('auth', () => {
           await checkAdmin(userId)
         } else {
           isAdmin.value = false
+          logInfo('User logged out', { store: 'Auth', action: 'userChange' })
         }
       }, { immediate: true })
     }
 
     isInitialized.value = true
+    logInfo('Auth store initialized', { store: 'Auth', action: 'initialize', isAdmin: isAdmin.value })
   }
 
   return {

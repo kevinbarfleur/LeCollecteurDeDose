@@ -9,6 +9,7 @@ import { defineStore } from 'pinia'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { fetchAppSettings, updateAppSetting, subscribeToAppSettings } from '~/services/supabase.service'
 import { useDataSourceStore } from './dataSource.store'
+import { logInfo, logError } from '~/services/logger.service'
 
 interface Settings {
   altarOpen: boolean
@@ -47,20 +48,24 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     switch (key) {
       case 'altar_open': {
         const altarValue = value as { enabled?: boolean }
+        const newValue = altarValue?.enabled ?? false
         if (dataMode === 'test') {
-          settings.value.test.altarOpen = altarValue?.enabled ?? false
+          settings.value.test.altarOpen = newValue
         } else {
-          settings.value.api.altarOpen = altarValue?.enabled ?? false
+          settings.value.api.altarOpen = newValue
         }
+        logInfo('Setting applied', { store: 'AppSettings', action: 'applySetting', key, dataMode, value: newValue })
         break
       }
       case 'activity_logs_enabled': {
         const logsValue = value as { enabled?: boolean }
+        const newValue = logsValue?.enabled ?? true
         if (dataMode === 'test') {
-          settings.value.test.activityLogsEnabled = logsValue?.enabled ?? true
+          settings.value.test.activityLogsEnabled = newValue
         } else {
-          settings.value.api.activityLogsEnabled = logsValue?.enabled ?? true
+          settings.value.api.activityLogsEnabled = newValue
         }
+        logInfo('Setting applied', { store: 'AppSettings', action: 'applySetting', key, dataMode, value: newValue })
         break
       }
     }
@@ -68,16 +73,18 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
 
   async function fetchSettings(): Promise<void> {
     isLoading.value = true
+    logInfo('Fetching app settings', { store: 'AppSettings', action: 'fetchSettings' })
 
     try {
       const data = await fetchAppSettings()
+      logInfo('Settings fetched', { store: 'AppSettings', action: 'fetchSettings', count: data.length })
 
       for (const setting of data) {
         const dataMode = (setting.data_mode as string) || 'api'
         applySettingValue(setting.key, setting.value, dataMode as 'api' | 'test')
       }
     } catch (err) {
-      console.error('[AppSettingsStore] Failed to fetch settings:', err)
+      logError('Failed to fetch settings', err, { store: 'AppSettings', action: 'fetchSettings' })
     } finally {
       isLoading.value = false
     }
@@ -89,6 +96,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     userId: string,
     dataMode: 'api' | 'test' = 'api'
   ): Promise<void> {
+    logInfo('Updating setting', { store: 'AppSettings', action: 'updateSetting', key, dataMode })
     await updateAppSetting(key, value, userId, dataMode)
     // The realtime subscription will update the state automatically
   }
@@ -101,6 +109,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
       : settings.value.api.altarOpen
     const newValue = !currentValue
 
+    logInfo('Toggling altar', { store: 'AppSettings', action: 'toggleAltar', dataMode: currentDataMode, from: currentValue, to: newValue })
     await updateSetting('altar_open', { enabled: newValue }, userId, currentDataMode)
   }
 
@@ -112,6 +121,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
       : settings.value.api.activityLogsEnabled
     const newValue = !currentValue
 
+    logInfo('Toggling activity logs', { store: 'AppSettings', action: 'toggleActivityLogs', dataMode: currentDataMode, from: currentValue, to: newValue })
     await updateSetting('activity_logs_enabled', { enabled: newValue }, userId, currentDataMode)
   }
 
@@ -148,8 +158,10 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
   }
 
   async function initialize(): Promise<void> {
+    logInfo('Initializing app settings store', { store: 'AppSettings', action: 'initialize' })
     await fetchSettings()
     subscribeToRealtime()
+    logInfo('App settings store initialized', { store: 'AppSettings', action: 'initialize', connected: isConnected.value })
   }
 
   // Auto-initialize on client

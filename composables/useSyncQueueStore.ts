@@ -36,6 +36,7 @@ export function useSyncQueue() {
     queueStatus: computed(() => syncStore.queueStatus),
     // isProcessing is already a computed from the store, return it directly
     isProcessing: syncStore.isProcessing,
+    syncError: computed(() => syncStore.syncError),
   }
 }
 

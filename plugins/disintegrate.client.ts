@@ -93,7 +93,6 @@ export default defineNuxtPlugin(() => {
       // Make it available globally for easier access
       (window as any).disintegrate = disintegrate;
     } catch (e) {
-      console.warn('[DisintegratePlugin] Failed to initialize disintegrate:', e);
     }
   }
 });

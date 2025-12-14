@@ -10,6 +10,7 @@ import type { Card } from '~/types/card'
 import { transformUniquesToCards } from '~/utils/dataTransform'
 import * as ApiService from '~/services/api.service'
 import { useApiStore } from './api.store'
+import { logInfo, logError } from '~/services/logger.service'
 
 export const useCatalogueStore = defineStore('catalogue', () => {
   // State
@@ -34,6 +35,7 @@ export const useCatalogueStore = defineStore('catalogue', () => {
   async function fetchCatalogue(force: boolean = false): Promise<void> {
     // Return cached data if valid and not forcing refresh
     if (!force && isCacheValid.value && catalogue.value) {
+      logInfo('Using cached catalogue', { store: 'Catalogue', action: 'fetchCatalogue', cached: true })
       return
     }
 
@@ -42,6 +44,7 @@ export const useCatalogueStore = defineStore('catalogue', () => {
       return
     }
 
+    logInfo('Fetching catalogue', { store: 'Catalogue', action: 'fetchCatalogue', force })
     isLoading.value = true
     apiStore.setLoading(true)
 
@@ -53,9 +56,10 @@ export const useCatalogueStore = defineStore('catalogue', () => {
         const cards = transformUniquesToCards(uniques)
         catalogue.value = cards
         lastFetchTime.value = Date.now()
+        logInfo('Catalogue fetched', { store: 'Catalogue', action: 'fetchCatalogue', cardCount: cards.length })
       }
     } catch (error) {
-      console.error('[CatalogueStore] Error loading catalogue:', error)
+      logError('Failed to load catalogue', error, { store: 'Catalogue', action: 'fetchCatalogue' })
       apiStore.setError({
         status: 500,
         message: 'Failed to load catalogue',

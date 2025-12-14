@@ -53,7 +53,6 @@ watch([isApiData, isInitializing, () => authUser.value?.displayName, loggedIn], 
         apiCollection.value = [];
       }
     } catch (error) {
-      console.error('[Collection] Error fetching user data:', error);
       apiCollection.value = [];
     } finally {
       isLoadingCollection.value = false;

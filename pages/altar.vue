@@ -25,6 +25,7 @@ import { useAltarDebug } from "~/composables/useAltarDebug";
 import { transformUserCollectionToCards } from "~/utils/dataTransform";
 import { initTestRunner } from "~/test-scenarios/console";
 import { logCollectionState, logCollectionStateComparison } from "~/utils/collectionLogger";
+import { showReloadModal } from "~/composables/useReloadModal";
 
 const { t } = useI18n();
 
@@ -69,11 +70,6 @@ const loadCollection = async () => {
     return;
   }
 
-  console.log('[Altar] Loading collection from API...', {
-    username: authUser.value.displayName,
-    isApiData: isApiData
-  });
-
   isLoadingCollection.value = true;
   try {
     const userCollectionData = await fetchUserCollection(authUser.value.displayName);
@@ -86,30 +82,10 @@ const loadCollection = async () => {
       key => key.toLowerCase() === userLower
     ) : [];
     
-    const receivedInfo = {
-      hasData: !!userCollectionData,
-      vaalOrbs: userCollectionData?.vaalOrbs,
-      cardCount: userCollectionData ? Object.keys(userCollectionData).filter(k => k !== 'vaalOrbs').length : 0,
-      matchingKeys: matchingKeys.length > 1 ? `⚠️ Found ${matchingKeys.length} entries: ${matchingKeys.join(', ')}` : matchingKeys[0] || 'none'
-    };
-    console.log('[Altar] Collection data received:')
-    console.log(JSON.stringify(receivedInfo, null, 2))
-    
     if (userCollectionData) {
       // Transform API data to Card[]
       const userLower = authUser.value.displayName.toLowerCase()
       const collectionWrapper = { [userLower]: userCollectionData }
-      const transformInfo = {
-        username: authUser.value.displayName,
-        userLower,
-        wrapperKeys: Object.keys(collectionWrapper),
-        userDataKeys: Object.keys(userCollectionData),
-        vaalOrbs: userCollectionData.vaalOrbs,
-        cardKeys: Object.keys(userCollectionData).filter(k => k !== 'vaalOrbs').slice(0, 5)
-      };
-      console.log('[Altar] Transforming collection:')
-      console.log(JSON.stringify(transformInfo, null, 2))
-      
       // Log collection state BEFORE loading (if we have a previous state)
       const collectionBeforeLoad = localCollection.value.length > 0 
         ? JSON.parse(JSON.stringify(localCollection.value)) as Card[]
@@ -123,12 +99,6 @@ const loadCollection = async () => {
       
       // Extract vaalOrbs - use the value from API, not the local optimistic value
       const apiVaalOrbs = typeof userCollectionData.vaalOrbs === 'number' ? userCollectionData.vaalOrbs : 0;
-      const vaalOrbsInfo = {
-        apiValue: apiVaalOrbs,
-        previousLocalValue: vaalOrbs.value
-      };
-      console.log('[Altar] Setting vaalOrbs from API:')
-      console.log(JSON.stringify(vaalOrbsInfo, null, 2))
       vaalOrbs.value = apiVaalOrbs;
       
       // Log collection state AFTER loading
@@ -147,27 +117,15 @@ const loadCollection = async () => {
         });
       }
       
-      const loadedInfo = {
-        cardsCount: localCollection.value.length,
-        vaalOrbs: vaalOrbs.value
-      };
-      console.log('[Altar] Collection loaded:')
-      console.log(JSON.stringify(loadedInfo, null, 2))
-      
       if (localCollection.value.length === 0) {
-        console.warn('[Altar] ⚠️ Collection is empty after transformation!', {
-          userCollectionData,
-          collectionWrapper,
-          username: authUser.value.displayName
-        });
+        // Collection is empty - this is logged by collectionLogger
       }
     } else {
-      console.warn('[Altar] No collection data received');
       localCollection.value = [];
       vaalOrbs.value = 0;
     }
   } catch (error) {
-    console.error('[Altar] Error loading collection:', error);
+    // Error loading collection - logged by error handling
     localCollection.value = [];
     vaalOrbs.value = 0;
   } finally {
@@ -176,16 +134,26 @@ const loadCollection = async () => {
 };
 
 // Watch for data source changes and reload collection
+// Use a debounced approach to avoid multiple rapid calls
+let loadCollectionTimeout: ReturnType<typeof setTimeout> | null = null
 watch([isApiData, isInitializing, () => authUser.value?.displayName, loggedIn], async ([isApi, initializing, displayName, isLoggedIn]) => {
   // Don't reload while initializing
   if (initializing) {
     return;
   }
   
-  // Reload collection when data source changes or user changes
-  if (isLoggedIn && displayName) {
-    await loadCollection();
+  // Clear any pending load
+  if (loadCollectionTimeout) {
+    clearTimeout(loadCollectionTimeout)
   }
+  
+  // Debounce collection loading to avoid multiple rapid calls
+  loadCollectionTimeout = setTimeout(async () => {
+    // Reload collection when data source changes or user changes
+    if (isLoggedIn && displayName) {
+      await loadCollection();
+    }
+  }, 100) // 100ms debounce
 }, { immediate: false });
 
 // Initialize collection on mount
@@ -682,7 +650,7 @@ const captureCardSnapshot = () => captureCardSnapshotBase(cardFrontRef);
 type CardUpdate = { normalDelta: number; foilDelta: number; currentNormal?: number; currentFoil?: number; cardData?: Partial<Card> };
 
 // Sync queue for managing concurrent syncs
-const { enqueue: enqueueSync, queueStatus: syncQueueStatus, isProcessing: isSyncProcessing } = useSyncQueue()
+const { enqueue: enqueueSync, queueStatus: syncQueueStatus, isProcessing: isSyncProcessing, syncError } = useSyncQueue()
 
 // Auto-credit vaalOrbs in localhost test mode when reaching 0
 const isAutoCrediting = ref(false);
@@ -692,7 +660,6 @@ watch(vaalOrbs, async (newValue, oldValue) => {
     // Check if we're in test mode (auto-credit vaalOrbs when reaching 0)
     if (isTestMode.value && loggedIn.value && authUser.value?.displayName) {
       isAutoCrediting.value = true;
-      console.log('[Altar] 🎁 Auto-crediting 5 vaalOrbs (test mode)');
       
       // Credit locally first (optimistic update)
       const vaalOrbsBefore = vaalOrbs.value;
@@ -714,16 +681,14 @@ watch(vaalOrbs, async (newValue, oldValue) => {
             localCollectionBefore: JSON.parse(JSON.stringify(localCollection.value)) as Card[],
           },
           onSuccess: async () => {
-            console.log('[Altar] ✅ Auto-credit sync completed');
+            // Auto-credit sync completed
           },
           onError: (error) => {
-            console.error('[Altar] ❌ Auto-credit sync failed:', error);
             // Rollback on error
             vaalOrbs.value = vaalOrbsBefore;
           },
         });
       } catch (error) {
-        console.error('[Altar] ❌ Auto-credit sync error:', error);
         // Rollback on error
         vaalOrbs.value = vaalOrbsBefore;
       }
@@ -753,17 +718,8 @@ const handleSyncRequired = async (
   outcomeType?: string
 ) => {
   if (!loggedIn.value || !authUser.value?.displayName) {
-    console.log('[Altar] Skipping sync (not logged in)')
     return;
   }
-  
-  const syncStartInfo = {
-    vaalOrbsBefore: vaalOrbs.value,
-    vaalOrbsDelta,
-    updatesCount: updates.size
-  };
-  console.log(`[Altar] 🔄 Starting sync for outcome: ${outcomeType || 'unknown'}`)
-  console.log(JSON.stringify(syncStartInfo, null, 2))
   
   // Save state for rollback (BEFORE optimistic update)
   const vaalOrbsBefore = vaalOrbs.value;
@@ -807,8 +763,6 @@ const handleSyncRequired = async (
       matchingCardsCount: matchingCards.length,
       allMatchingCards: matchingCards.map(c => ({ uid: c.uid, foil: c.foil, name: c.name }))
     };
-    console.log(`[Altar] Card ${baseUid}:`)
-    console.log(JSON.stringify(cardInfo, null, 2))
     
     // Use currentNormal/currentFoil as the absolute values (they're already the new values)
     updatesWithCurrentCounts.set(baseUid, {
@@ -822,10 +776,8 @@ const handleSyncRequired = async (
   
   // Rollback function to restore previous state
   const rollback = () => {
-    console.warn(`[Altar] 🔄 Rolling back changes for ${outcomeType || 'unknown'}`)
     vaalOrbs.value = vaalOrbsBefore
     localCollection.value = localCollectionBefore
-    console.log(`[Altar] ✅ Rollback completed. vaalOrbs: ${vaalOrbs.value}, cards: ${localCollection.value.length}`)
   }
   
   // Enqueue sync operation with rollback support
@@ -843,8 +795,7 @@ const handleSyncRequired = async (
         localCollectionBefore,
       },
       onSuccess: async () => {
-        console.log(`[Altar] ✅ Sync successful for ${outcomeType || 'unknown'}. Reloading collection...`);
-        
+
         // Log collection state AFTER sync (before reload)
         logCollectionState(`Sync: After (${outcomeType || 'unknown'})`, localCollection.value, vaalOrbs.value, {
           syncCompleted: true,
@@ -863,20 +814,19 @@ const handleSyncRequired = async (
           
           // Reload collection to ensure UI is up to date with server state
           await loadCollection();
-          console.log(`[Altar] ✅ Collection reloaded. New vaalOrbs: ${vaalOrbs.value}, Cards count: ${localCollection.value.length}`);
-          
+
           // Verify vaalOrbs match expected value
           const expectedVaalOrbs = newVaalOrbsValue;
           if (vaalOrbs.value !== expectedVaalOrbs) {
-            console.warn(`[Altar] ⚠️ VaalOrbs mismatch! Expected: ${expectedVaalOrbs}, Got: ${vaalOrbs.value}. Server may not have updated yet or there's a merge issue.`);
-            console.warn(`[Altar] This could indicate the server merge didn't work correctly for vaalOrbs.`);
+
+
           } else {
-            console.log(`[Altar] ✅ VaalOrbs match expected value: ${expectedVaalOrbs}`);
+
           }
           
           // Verify collection is not empty
           if (localCollection.value.length === 0) {
-            console.error(`[Altar] ❌ Collection is empty after reload! This indicates a problem with data fetching or transformation.`);
+
           }
         } finally {
           // Mark that reload is complete
@@ -887,17 +837,42 @@ const handleSyncRequired = async (
         }
       },
       onError: (error) => {
-        console.error(`[Altar] ❌ Sync failed for ${outcomeType || 'unknown'}:`, error.message);
         // Rollback optimistic updates
         rollback();
-        // Show user-friendly error message
-        // TODO: Could show a toast notification here
+        
+        // Check if this is a critical error that requires reload
+        const isCriticalError = error.code === 'CRITICAL' || 
+          error.message?.includes('corrupted') || 
+          error.message?.includes('corrompu') ||
+          error.message?.includes('corruption')
+        
+        if (isCriticalError) {
+          showReloadModal({
+            title: 'Oups, quelque chose a mal tourné',
+            message: 'Une erreur critique s\'est produite lors de la synchronisation. Pour éviter toute corruption de données, veuillez recharger la page.',
+            reloadText: 'Rafraîchir',
+          })
+        }
       },
     });
   } catch (error: any) {
-    console.error(`[Altar] ❌ Sync error for ${outcomeType || 'unknown'}:`, error);
     // Rollback optimistic updates
     rollback();
+    
+    // Check if this is a critical error that requires reload
+    const errorMessage = error?.message || String(error)
+    const isCriticalError = error?.code === 'CRITICAL' || 
+      errorMessage.includes('corrupted') || 
+      errorMessage.includes('corrompu') ||
+      errorMessage.includes('corruption')
+    
+    if (isCriticalError) {
+      showReloadModal({
+        title: 'Oups, quelque chose a mal tourné',
+        message: 'Une erreur critique s\'est produite lors de la synchronisation. Pour éviter toute corruption de données, veuillez recharger la page.',
+        reloadText: 'Rafraîchir',
+      })
+    }
   }
 };
 
@@ -967,18 +942,13 @@ onMounted(() => {
       vaalOrbs: vaalOrbs.value,
       cardCounts: calculateCardCounts(),
     }
-    console.log('[TestRunner] getCollectionState called:', {
-      cardCount: state.cards.length,
-      vaalOrbs: state.vaalOrbs,
-      cardCountsSize: state.cardCounts.size
-    })
+
     return state
   }
 
   // Simulate outcome helper
   const simulateOutcome = async (outcome: string, cardUid?: number): Promise<void> => {
-    console.log(`[TestRunner] simulateOutcome called with outcome: ${outcome}`, { cardUid })
-    
+
     // If a specific card UID is provided, select that card
     if (cardUid !== undefined) {
       const targetCard = localCollection.value.find(c => Math.floor(c.uid) === Math.floor(cardUid))
@@ -990,14 +960,6 @@ onMounted(() => {
       isCardOnAltar.value = true
       await nextTick()
       await new Promise(resolve => setTimeout(resolve, 100))
-      const selectedCardInfo = {
-        cardName: targetCard.name,
-        hasCardRef: !!altarCardRef.value,
-        hasDisplayCard: !!displayCard.value,
-        isFoil: targetCard.foil
-      };
-      console.log(`[TestRunner] Selected card for test: ${targetCard.name}`)
-      console.log(JSON.stringify(selectedCardInfo, null, 2))
     } else if (!isCardOnAltar.value) {
       // Put a card on the altar if none
       if (localCollection.value.length > 0) {
@@ -1009,13 +971,6 @@ onMounted(() => {
         await nextTick()
         // Additional wait to ensure card element is rendered
         await new Promise(resolve => setTimeout(resolve, 100))
-        const placedCardInfo = {
-          cardName: firstCard.name,
-          hasCardRef: !!altarCardRef.value,
-          hasDisplayCard: !!displayCard.value
-        };
-        console.log(`[TestRunner] Card placed on altar: ${firstCard.name}`)
-        console.log(JSON.stringify(placedCardInfo, null, 2))
       } else {
         throw new Error('No cards available for testing')
       }
@@ -1023,15 +978,12 @@ onMounted(() => {
       // Card already on altar, but ensure cardRef is available
       await nextTick()
       await new Promise(resolve => setTimeout(resolve, 100))
-      console.log(`[TestRunner] Card already on altar`, {
-        hasCardRef: !!altarCardRef.value,
-        hasDisplayCard: !!displayCard.value
-      })
+
     }
 
     // Verify cardRef is available for outcomes that need it
     if (outcome !== 'nothing' && !altarCardRef.value) {
-      console.warn(`[TestRunner] ⚠️ cardRef not available for outcome: ${outcome}. Retrying...`)
+
       // Retry after a bit more time
       await new Promise(resolve => setTimeout(resolve, 200))
       if (!altarCardRef.value) {
@@ -1044,51 +996,41 @@ onMounted(() => {
       throw new Error('Not enough vaalOrbs for this outcome')
     }
 
-    console.log(`[TestRunner] Executing outcome: ${outcome}, vaalOrbs: ${vaalOrbs.value}`)
-
     // Execute outcome using the functions from useVaalOutcomes
     // These functions will call onSyncRequired which is handleSyncRequired
     switch (outcome.toLowerCase()) {
       case 'nothing':
-        console.log(`[TestRunner] Calling executeNothing()`)
         await executeNothing()
         // For nothing, sync is handled manually in handleVaalOutcome
         // But simulateOutcome calls executeNothing directly, so we need to sync manually
         if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
-          console.log('[TestRunner] NOTHING: Syncing to API...')
           const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
           await handleSyncRequired(updates, -1, 'nothing');
-          console.log('[TestRunner] NOTHING: Sync completed')
         }
         break
       case 'foil':
         if (isCurrentCardFoil.value) {
           throw new Error('Card is already foil')
         }
-        console.log(`[TestRunner] Calling executeFoil()`, { hasCardRef: !!altarCardRef.value })
         await executeFoil()
         // Sync is handled by executeFoil via onSyncRequired callback
         break
       case 'duplicate':
-        console.log(`[TestRunner] Calling executeDuplicate()`, { hasCardRef: !!altarCardRef.value })
         await executeDuplicate()
         // Sync is handled by executeDuplicate via onSyncRequired callback
         break
       case 'destroyed':
-        console.log(`[TestRunner] Calling destroyCard()`, { hasCardRef: !!altarCardRef.value })
         await destroyCard()
         // Sync is handled by cleanupAfterDestruction
         break
       case 'transform':
-        console.log(`[TestRunner] Calling executeTransform()`, { hasCardRef: !!altarCardRef.value })
         await executeTransform()
         // Sync is handled by executeTransform via onSyncRequired callback
         break
       default:
         throw new Error(`Unknown outcome: ${outcome}`)
     }
-    
-    console.log(`[TestRunner] Outcome ${outcome} execution completed`)
+
   }
 
   // Get card by UID helper
@@ -1099,7 +1041,7 @@ onMounted(() => {
   // Add vaalOrbs helper (for testing)
   const addVaalOrbs = (amount: number) => {
     vaalOrbs.value = Math.max(0, vaalOrbs.value + amount)
-    console.log(`[TestRunner] Added ${amount} vaalOrbs. New total: ${vaalOrbs.value}`)
+
   }
 
   // Initialize test runner
@@ -1150,13 +1092,6 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
     
     // Sync with API: remove card (normal: -1 or foil: -1)
     if (loggedIn.value && authUser.value?.displayName) {
-      const destroyedInfo = {
-        card: destroyedCard.name,
-        uid: destroyedCard.uid,
-        isFoil: isCardFoil(destroyedCard)
-      };
-      console.log('[Altar] DESTROYED: Syncing to API...')
-      console.log(JSON.stringify(destroyedInfo, null, 2))
       const baseUid = Math.floor(destroyedCard.uid);
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
       
@@ -1186,10 +1121,10 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
       
       // Rollback function to restore previous state
       const rollback = () => {
-        console.warn('[Altar] 🔄 Rolling back DESTROYED changes')
+
         vaalOrbs.value = vaalOrbsBefore
         localCollection.value = localCollectionBefore
-        console.log(`[Altar] ✅ Rollback completed. vaalOrbs: ${vaalOrbs.value}, cards: ${localCollection.value.length}`)
+
       }
       
       // Enqueue sync operation with rollback support
@@ -1207,7 +1142,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
             localCollectionBefore,
           },
           onSuccess: async () => {
-            console.log('[Altar] ✅ DESTROYED sync successful. Reloading collection...');
+
             isReloadingCollection.value = true;
             if (typeof window !== 'undefined') {
               (window as any).__isReloadingCollection = true;
@@ -1215,7 +1150,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
             try {
               await new Promise(resolve => setTimeout(resolve, 1000));
               await loadCollection();
-              console.log(`[Altar] ✅ Collection reloaded. New vaalOrbs: ${vaalOrbs.value}, Cards count: ${localCollection.value.length}`);
+
             } finally {
               isReloadingCollection.value = false;
               if (typeof window !== 'undefined') {
@@ -1224,12 +1159,25 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
             }
           },
           onError: (error) => {
-            console.error('[Altar] ❌ DESTROYED sync failed:', error.message);
             rollback();
+            
+            // Check if this is a critical error that requires reload
+            const isCriticalError = error.code === 'CRITICAL' || 
+              error.message?.includes('corrupted') || 
+              error.message?.includes('corrompu') ||
+              error.message?.includes('corruption')
+            
+            if (isCriticalError) {
+              showReloadModal({
+                title: 'Oups, quelque chose a mal tourné',
+                message: 'Une erreur critique s\'est produite lors de la synchronisation. Pour éviter toute corruption de données, veuillez recharger la page.',
+                reloadText: 'Rafraîchir',
+              })
+            }
           },
         });
       } catch (error: any) {
-        console.error('[Altar] ❌ DESTROYED sync error:', error);
+
         rollback();
       }
     }
@@ -1329,7 +1277,7 @@ const destroyCard = async () => {
                 }
               });
             } catch (e) {
-              console.error('[Altar] Error in onclone:', e);
+
             }
           },
           ignoreElements: (element) => {
@@ -1342,7 +1290,7 @@ const destroyCard = async () => {
           },
         });
       } catch (e) {
-        console.error('[Altar] Fallback capture failed:', e);
+
       }
     }
     
@@ -1403,7 +1351,7 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   // After animation, displayCard may have changed (foil, transform, etc.)
   const cardBeforeAnimation = displayCard.value;
   if (!cardBeforeAnimation) {
-    console.warn("handleVaalOutcome called without a card on altar");
+
     return;
   }
 
@@ -1418,14 +1366,14 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   // Execute the outcome animation first (for outcomes that produce a result)
   switch (outcome) {
     case "nothing":
-      console.log('[Altar] NOTHING: Starting outcome...')
+
       await executeNothing();
       // Sync: consume vaalOrb only
       if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
-        console.log('[Altar] NOTHING: Syncing to API...')
+
         const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
         await handleSyncRequired(updates, -1, 'nothing'); // Consume 1 vaalOrb
-        console.log('[Altar] NOTHING: Sync completed')
+
       }
       break;
 
@@ -1549,11 +1497,21 @@ const isAnimatingRef = computed(
 
 // Global state to block interactions during critical operations
 const isBlockingInteractions = computed(() => {
+  // Access isSyncProcessing correctly - it's a computed that returns a boolean
+  const syncProcessing = typeof isSyncProcessing === 'boolean' 
+    ? isSyncProcessing 
+    : (isSyncProcessing as any).value ?? false
+  
+  // Access isCollectionSyncing correctly
+  const collectionSyncing = typeof isCollectionSyncing === 'boolean'
+    ? isCollectionSyncing
+    : (isCollectionSyncing as any).value ?? false
+  
   return (
     isLoadingCollection.value ||
     isReloadingCollection.value ||
-    isSyncProcessing ||
-    isCollectionSyncing ||
+    syncProcessing ||
+    collectionSyncing ||
     isAnimating.value ||
     isCardBeingDestroyed.value ||
     isCardAnimatingIn.value ||
@@ -2150,6 +2108,14 @@ const endDragOrb = async () => {
           </div>
 
           <RunicBox padding="md" class="vaal-orbs-box" attached>
+            <!-- Sync Status Banner -->
+            <SyncStatusBanner
+              :is-syncing="isSyncProcessing || isCollectionSyncing"
+              :is-loading="isLoadingCollection || isReloadingCollection"
+              :has-error="!!syncError"
+              :error-message="syncError?.message"
+            />
+            
             <div class="vaal-orbs-inventory">
               <button
                 v-for="(_, index) in vaalOrbs"
@@ -2180,20 +2146,6 @@ const endDragOrb = async () => {
                 <span class="vaal-orbs-empty__icon">◇</span>
                 <span class="vaal-orbs-empty__text">{{
                   t("altar.vaalOrbs.empty")
-                }}</span>
-              </div>
-              
-              <!-- Loading state indicator -->
-              <div
-                v-if="isBlockingInteractions && vaalOrbs > 0"
-                class="vaal-orbs-loading"
-                :title="t('altar.vaalOrbs.syncing')"
-              >
-                <span class="vaal-orbs-loading__spinner">⟳</span>
-                <span class="vaal-orbs-loading__text">{{
-                  isLoadingCollection || isReloadingCollection
-                    ? t("altar.vaalOrbs.loading")
-                    : t("altar.vaalOrbs.syncing")
                 }}</span>
               </div>
             </div>
@@ -2449,6 +2401,9 @@ const endDragOrb = async () => {
       </div>
     </div>
   </NuxtLayout>
+  
+  <!-- Reload Modal for Critical Errors -->
+  <ReloadModal />
 </template>
 
 <style scoped>
@@ -3196,36 +3151,7 @@ const endDragOrb = async () => {
   font-style: italic;
 }
 
-.vaal-orbs-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  color: rgba(100, 90, 80, 0.7);
-  width: 100%;
-}
-
-.vaal-orbs-loading__spinner {
-  font-size: 1.5rem;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.vaal-orbs-loading__text {
-  font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
-  font-style: italic;
-  opacity: 0.8;
-}
+/* Removed vaal-orbs-loading styles - replaced by SyncStatusBanner */
 
 /* ==========================================
    VAAL ORB ITEM

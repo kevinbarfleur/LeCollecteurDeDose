@@ -11,6 +11,7 @@ import type { SyncError } from '~/services/collection.service'
 import * as CollectionService from '~/services/collection.service'
 import { useApiStore } from './api.store'
 import { useDataSourceStore } from './dataSource.store'
+import { logInfo, logError, logWarn } from '~/services/logger.service'
 
 export interface SyncOperation {
   id: string
@@ -71,7 +72,7 @@ export const useSyncStore = defineStore('sync', () => {
       }
 
       queue.value.push(operationWithCallbacks)
-      console.log(`[SyncStore] Enqueued operation: ${operation.id} (queue size: ${queue.value.length})`)
+      logInfo('Operation enqueued', { store: 'Sync', action: 'enqueue', operationId: operation.id, queueSize: queue.value.length, username: operation.username })
 
       // Start processing if not already processing
       if (!isProcessing.value) {
@@ -85,12 +86,34 @@ export const useSyncStore = defineStore('sync', () => {
       return
     }
 
-    // Skip if not using API mode
-    if (!dataSourceStore.isApiData) {
-      console.log('[SyncStore] Skipping sync (test mode - no sync needed)')
-      // Clear queue and resolve all operations as successful
-      while (queue.value.length > 0) {
-        const op = queue.value.shift()!
+    // Skip if not using API mode (test mode)
+    // Access isApiData computed value correctly
+    // isApiData is a computed ref, so we need to access its value
+    let isApiMode = false
+    try {
+      const apiDataValue = dataSourceStore.isApiData
+      isApiMode = typeof apiDataValue === 'boolean' 
+        ? apiDataValue 
+        : (apiDataValue as any).value ?? false
+    } catch (e) {
+      // If we can't access isApiData, assume API mode for safety
+      isApiMode = true
+    }
+    
+    if (!isApiMode) {
+      logInfo('Skipping sync (test mode)', { store: 'Sync', action: 'processQueue', queueSize: queue.value.length })
+      // Clear queue and resolve all operations as successful immediately
+      // Process all operations synchronously to avoid blocking
+      const operations = [...queue.value]
+      queue.value = []
+      
+      // IMPORTANT: Reset processing state BEFORE resolving operations
+      // This ensures isSyncProcessing becomes false immediately
+      isProcessing.value = false
+      apiStore.setLoading(false)
+      
+      // Resolve all operations immediately (synchronously)
+      for (const op of operations) {
         op.onSuccess?.()
       }
       return
@@ -104,7 +127,7 @@ export const useSyncStore = defineStore('sync', () => {
         const operation = queue.value.shift()!
         currentOperation.value = operation
 
-        console.log(`[SyncStore] Processing operation: ${operation.id}`)
+        logInfo('Processing operation', { store: 'Sync', action: 'processQueue', operationId: operation.id, username: operation.username, cardUpdates: operation.cardUpdates.size, vaalOrbs: operation.vaalOrbsNewValue })
 
         try {
           const config = apiStore.getApiConfig()
@@ -116,7 +139,7 @@ export const useSyncStore = defineStore('sync', () => {
           )
 
           if (success) {
-            console.log(`[SyncStore] ✅ Operation ${operation.id} completed successfully`)
+            logInfo('Operation completed', { store: 'Sync', action: 'processQueue', operationId: operation.id })
             lastSyncTime.value = Date.now()
             syncError.value = null
             operation.onSuccess?.()
@@ -125,7 +148,7 @@ export const useSyncStore = defineStore('sync', () => {
               message: 'Échec de la synchronisation',
               retryable: true,
             }
-            console.error(`[SyncStore] ❌ Operation ${operation.id} failed`)
+            logError('Operation failed', undefined, { store: 'Sync', action: 'processQueue', operationId: operation.id })
             syncError.value = error
             operation.onError?.(error)
           }
@@ -135,7 +158,7 @@ export const useSyncStore = defineStore('sync', () => {
             retryable: true,
             code: error.code,
           }
-          console.error(`[SyncStore] ❌ Operation ${operation.id} error:`, error)
+          logError('Operation error', error, { store: 'Sync', action: 'processQueue', operationId: operation.id })
           syncError.value = syncErr
           operation.onError?.(syncErr)
         }
@@ -145,12 +168,11 @@ export const useSyncStore = defineStore('sync', () => {
     } finally {
       isProcessing.value = false
       apiStore.setLoading(false)
-      console.log('[SyncStore] Queue processing completed')
+      logInfo('Queue processing completed', { store: 'Sync', action: 'processQueue', remainingQueue: queue.value.length })
     }
   }
 
   function clearQueue(): void {
-    console.log(`[SyncStore] Clearing queue (${queue.value.length} operations)`)
     queue.value = []
     currentOperation.value = null
     isProcessing.value = false

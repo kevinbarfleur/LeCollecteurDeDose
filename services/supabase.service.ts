@@ -9,6 +9,7 @@
 
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Database } from '~/types/database'
+import { logInfo, logError } from './logger.service'
 
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
@@ -31,10 +32,12 @@ export async function checkAdminStatus(userId: string | undefined | null): Promi
   const now = Date.now()
   
   if (cached && cached.expiresAt > now) {
+    logInfo('Admin status from cache', { service: 'Supabase', action: 'checkAdminStatus', userId: userId.slice(0, 8), isAdmin: cached.isAdmin })
     return cached.isAdmin
   }
 
   // Query Supabase for active admin
+  logInfo('Checking admin status', { service: 'Supabase', action: 'checkAdminStatus', userId: userId.slice(0, 8) })
   const supabase = useSupabaseClient<Database>()
   const { data, error } = await supabase
     .from('admin_users')
@@ -51,6 +54,7 @@ export async function checkAdminStatus(userId: string | undefined | null): Promi
     expiresAt: now + CACHE_DURATION
   })
 
+  logInfo('Admin status checked', { service: 'Supabase', action: 'checkAdminStatus', userId: userId.slice(0, 8), isAdmin })
   return isAdmin
 }
 
@@ -76,16 +80,18 @@ export async function fetchAppSettings(): Promise<Array<{
   value: unknown
   data_mode: string
 }>> {
+  logInfo('Fetching app settings', { service: 'Supabase', action: 'fetchAppSettings' })
   const supabase = useSupabaseClient<Database>()
   const { data, error } = await supabase
     .from('app_settings')
     .select('key, value, data_mode')
 
   if (error) {
-    console.error('[SupabaseService] Error fetching app settings:', error)
+    logError('Failed to fetch app settings', error, { service: 'Supabase', action: 'fetchAppSettings' })
     throw error
   }
 
+  logInfo('App settings fetched', { service: 'Supabase', action: 'fetchAppSettings', count: data?.length || 0 })
   return data || []
 }
 
@@ -103,6 +109,7 @@ export async function updateAppSetting(
   updated_at: string
   updated_by: string | null
 }> {
+  logInfo('Updating app setting', { service: 'Supabase', action: 'updateAppSetting', key, dataMode })
   const supabase = useSupabaseClient<Database>()
 
   const { data, error } = await supabase.rpc('update_app_setting', {
@@ -113,15 +120,17 @@ export async function updateAppSetting(
   })
 
   if (error) {
-    console.error('[SupabaseService] Failed to update app setting:', error)
+    logError('Failed to update app setting', error, { service: 'Supabase', action: 'updateAppSetting', key, dataMode })
     throw error
   }
 
   if (!data || (Array.isArray(data) && data.length === 0)) {
+    logError('No data returned from update_app_setting', undefined, { service: 'Supabase', action: 'updateAppSetting', key })
     throw new Error('No data returned from update_app_setting')
   }
 
   const result = Array.isArray(data) ? data[0] : data
+  logInfo('App setting updated', { service: 'Supabase', action: 'updateAppSetting', key, dataMode })
   return {
     key: result.key,
     value: result.value,
