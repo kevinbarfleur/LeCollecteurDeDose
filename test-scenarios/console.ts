@@ -35,74 +35,80 @@ export function initTestRunner(helpers: {
   
   // Expose to window for console access
   if (typeof window !== 'undefined') {
-    ;(window as any).runTests = async () => {
-      if (!testRunner) {
-        console.error('[TestRunner] Test runner not initialized')
-        return
+    // Only expose test functions in development mode
+    if (import.meta.dev) {
+      ;(window as any).runTests = async () => {
+        if (!testRunner) {
+          console.error('[TestRunner] Test runner not initialized')
+          return
+        }
+        return await testRunner.runAllScenarios(testScenarios)
       }
-      return await testRunner.runAllScenarios(testScenarios)
+      
+      ;(window as any).runTest = async (scenarioName: string) => {
+        if (!testRunner) {
+          console.error('[TestRunner] Test runner not initialized')
+          return
+        }
+        const scenario = testScenarios.find(s => s.name === scenarioName)
+        if (!scenario) {
+          console.error(`[TestRunner] Scenario "${scenarioName}" not found`)
+          console.log('[TestRunner] Available scenarios:', testScenarios.map(s => s.name))
+          return
+        }
+        return await testRunner.runScenario(scenario)
+      }
+      
+      ;(window as any).testReport = () => {
+        if (!testRunner) {
+          console.error('[TestRunner] Test runner not initialized')
+          return
+        }
+        const report = testRunner.generateReport()
+        console.log(report)
+        return report
+      }
+      
+      ;(window as any).testStatus = () => {
+        if (!testRunner) {
+          console.error('[TestRunner] Test runner not initialized')
+          return
+        }
+        return {
+          isRunning: testRunner.isRunning.value,
+          currentScenario: testRunner.currentScenario.value,
+          results: testRunner.results.value,
+        }
+      }
+      
+      // Expose sync queue status check
+      ;(window as any).checkSyncQueue = () => {
+        // Access sync queue status if available
+        // This will be set by the sync queue composable
+        const queueStatus = (window as any).__syncQueueStatus
+        return queueStatus || { isProcessing: false, size: 0 }
+      }
+      
+      // Expose addVaalOrbs if available
+      if (helpers.addVaalOrbs) {
+        ;(window as any).addVaalOrbs = (amount: number = 10) => {
+          helpers.addVaalOrbs!(amount)
+          console.log(`[TestRunner] Added ${amount} vaalOrbs`)
+        }
+      }
     }
     
-    ;(window as any).runTest = async (scenarioName: string) => {
-      if (!testRunner) {
-        console.error('[TestRunner] Test runner not initialized')
-        return
+    // Only log in development mode
+    if (import.meta.dev) {
+      console.log('[TestRunner] ✅ Test runner initialized')
+      console.log('[TestRunner] Available commands:')
+      console.log('  window.runTests()      - Run all test scenarios')
+      console.log('  window.runTest(name)   - Run a specific scenario')
+      console.log('  window.testReport()    - Show test report')
+      console.log('  window.testStatus()    - Show test status')
+      if (helpers.addVaalOrbs) {
+        console.log('  window.addVaalOrbs(n)  - Add vaalOrbs for testing')
       }
-      const scenario = testScenarios.find(s => s.name === scenarioName)
-      if (!scenario) {
-        console.error(`[TestRunner] Scenario "${scenarioName}" not found`)
-        console.log('[TestRunner] Available scenarios:', testScenarios.map(s => s.name))
-        return
-      }
-      return await testRunner.runScenario(scenario)
-    }
-    
-    ;(window as any).testReport = () => {
-      if (!testRunner) {
-        console.error('[TestRunner] Test runner not initialized')
-        return
-      }
-      const report = testRunner.generateReport()
-      console.log(report)
-      return report
-    }
-    
-    ;(window as any).testStatus = () => {
-      if (!testRunner) {
-        console.error('[TestRunner] Test runner not initialized')
-        return
-      }
-      return {
-        isRunning: testRunner.isRunning.value,
-        currentScenario: testRunner.currentScenario.value,
-        results: testRunner.results.value,
-      }
-    }
-    
-    // Expose sync queue status check
-    ;(window as any).checkSyncQueue = () => {
-      // Access sync queue status if available
-      // This will be set by the sync queue composable
-      const queueStatus = (window as any).__syncQueueStatus
-      return queueStatus || { isProcessing: false, size: 0 }
-    }
-    
-    // Expose addVaalOrbs if available
-    if (helpers.addVaalOrbs) {
-      ;(window as any).addVaalOrbs = (amount: number = 10) => {
-        helpers.addVaalOrbs!(amount)
-        console.log(`[TestRunner] Added ${amount} vaalOrbs`)
-      }
-    }
-    
-    console.log('[TestRunner] ✅ Test runner initialized')
-    console.log('[TestRunner] Available commands:')
-    console.log('  window.runTests()      - Run all test scenarios')
-    console.log('  window.runTest(name)   - Run a specific scenario')
-    console.log('  window.testReport()    - Show test report')
-    console.log('  window.testStatus()    - Show test status')
-    if (helpers.addVaalOrbs) {
-      console.log('  window.addVaalOrbs(n)  - Add vaalOrbs for testing')
     }
   }
 }

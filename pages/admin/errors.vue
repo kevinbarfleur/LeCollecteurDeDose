@@ -87,14 +87,20 @@ const fetchErrorLogs = async () => {
     })
     
     logs.value = (apiResponse.logs || []) as ErrorLog[]
-    console.log('[ErrorLogs] Fetched via API:', logs.value.length, 'logs')
+    if (import.meta.dev) {
+      console.log('[ErrorLogs] Fetched via API:', logs.value.length, 'logs')
+    }
   } catch (err: any) {
     error.value = err.message || 'Erreur lors du chargement des logs'
-    console.error('Failed to fetch error logs:', err)
-    
+    if (import.meta.dev) {
+      console.error('Failed to fetch error logs:', err)
+    }
+
     // Fallback: try direct Supabase query if API fails
     if (err.statusCode === 404 || err.statusCode === 500) {
-      console.log('[ErrorLogs] API failed, trying direct Supabase query...')
+      if (import.meta.dev) {
+        console.log('[ErrorLogs] API failed, trying direct Supabase query...')
+      }
       try {
         let query = supabase
           .from('error_logs')
@@ -123,16 +129,22 @@ const fetchErrorLogs = async () => {
         const { data, error: fetchError } = await query
 
         if (fetchError) {
-          console.error('[ErrorLogs] Direct query also failed:', fetchError)
+          if (import.meta.dev) {
+            console.error('[ErrorLogs] Direct query also failed:', fetchError)
+          }
           if (fetchError.code === 'PGRST301' || fetchError.message?.includes('permission')) {
             error.value = 'Permission refusée. Vérifiez que la migration RLS a été appliquée.'
           }
         } else {
           logs.value = (data || []) as ErrorLog[]
-          console.log('[ErrorLogs] Fetched via direct query:', logs.value.length, 'logs')
+          if (import.meta.dev) {
+            console.log('[ErrorLogs] Fetched via direct query:', logs.value.length, 'logs')
+          }
         }
       } catch (directErr: any) {
-        console.error('[ErrorLogs] Direct query error:', directErr)
+        if (import.meta.dev) {
+          console.error('[ErrorLogs] Direct query error:', directErr)
+        }
       }
     }
   } finally {
@@ -156,7 +168,9 @@ const setupRealtime = () => {
         },
         (payload) => {
           const newLog = payload.new as ErrorLog
-          console.log('[ErrorLogs] New log received via realtime:', newLog.id)
+          if (import.meta.dev) {
+            console.log('[ErrorLogs] New log received via realtime:', newLog.id)
+          }
           
           // Check if log matches current filters
           let shouldAdd = true
@@ -186,7 +200,9 @@ const setupRealtime = () => {
         },
         (payload) => {
           const updatedLog = payload.new as ErrorLog
-          console.log('[ErrorLogs] Log updated via realtime:', updatedLog.id)
+          if (import.meta.dev) {
+            console.log('[ErrorLogs] Log updated via realtime:', updatedLog.id)
+          }
           
           // Update the log in the list
           const index = logs.value.findIndex(log => log.id === updatedLog.id)
@@ -229,16 +245,24 @@ const setupRealtime = () => {
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           isRealtimeConnected.value = true
-          console.log('[ErrorLogs] Realtime connected')
+          if (import.meta.dev) {
+            console.log('[ErrorLogs] Realtime connected')
+          }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           isRealtimeConnected.value = false
-          console.error('[ErrorLogs] Realtime error:', err)
+          if (import.meta.dev) {
+            console.error('[ErrorLogs] Realtime error:', err)
+          }
         } else {
-          console.log('[ErrorLogs] Realtime status:', status)
+          if (import.meta.dev) {
+            console.log('[ErrorLogs] Realtime status:', status)
+          }
         }
       })
   } catch (err) {
-    console.error('[ErrorLogs] Failed to setup realtime:', err)
+    if (import.meta.dev) {
+      console.error('[ErrorLogs] Failed to setup realtime:', err)
+    }
   }
 }
 
@@ -273,7 +297,9 @@ const markAsResolved = async (logId: string) => {
     // But we can also refresh to ensure consistency
     await fetchErrorLogs()
   } catch (err: any) {
-    console.error('Failed to mark error as resolved:', err)
+    if (import.meta.dev) {
+      console.error('Failed to mark error as resolved:', err)
+    }
     alert('Erreur lors de la mise à jour: ' + (err.message || 'Erreur inconnue'))
   }
 }
@@ -319,7 +345,9 @@ const fetchDiagnostics = async () => {
     })
     
     diagnostics.value = (apiResponse.diagnostics || []) as DiagnosticLog[]
-    console.log('[Diagnostics] Fetched via API:', diagnostics.value.length, 'diagnostics')
+    if (import.meta.dev) {
+      console.log('[Diagnostics] Fetched via API:', diagnostics.value.length, 'diagnostics')
+    }
   } catch (err: any) {
     const errorMessage = err.message || 'Erreur lors du chargement des diagnostics'
     
@@ -330,7 +358,9 @@ const fetchDiagnostics = async () => {
       diagnosticsError.value = errorMessage
     }
     
-    console.error('Failed to fetch diagnostics:', err)
+    if (import.meta.dev) {
+      console.error('Failed to fetch diagnostics:', err)
+    }
   } finally {
     diagnosticsLoading.value = false
   }
@@ -352,7 +382,9 @@ const setupDiagnosticsRealtime = () => {
         },
         (payload) => {
           const newDiag = payload.new as DiagnosticLog
-          console.log('[Diagnostics] New diagnostic received via realtime:', newDiag.id)
+          if (import.meta.dev) {
+            console.log('[Diagnostics] New diagnostic received via realtime:', newDiag.id)
+          }
           
           // Check if diagnostic matches current filters
           let shouldAdd = true
@@ -376,16 +408,24 @@ const setupDiagnosticsRealtime = () => {
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           isDiagnosticsRealtimeConnected.value = true
-          console.log('[Diagnostics] Realtime connected')
+          if (import.meta.dev) {
+            console.log('[Diagnostics] Realtime connected')
+          }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           isDiagnosticsRealtimeConnected.value = false
-          console.error('[Diagnostics] Realtime error:', err)
+          if (import.meta.dev) {
+            console.error('[Diagnostics] Realtime error:', err)
+          }
         } else {
-          console.log('[Diagnostics] Realtime status:', status)
+          if (import.meta.dev) {
+            console.log('[Diagnostics] Realtime status:', status)
+          }
         }
       })
   } catch (err) {
-    console.error('[Diagnostics] Failed to setup realtime:', err)
+    if (import.meta.dev) {
+      console.error('[Diagnostics] Failed to setup realtime:', err)
+    }
   }
 }
 
@@ -463,7 +503,9 @@ const testErrorLog = async () => {
     }, 500)
   } catch (err: any) {
     alert(`Erreur lors du test: ${err.message || 'Erreur inconnue'}`)
-    console.error('Test error log failed:', err)
+    if (import.meta.dev) {
+      console.error('Test error log failed:', err)
+    }
   } finally {
     isTestingLog.value = false
   }

@@ -77,10 +77,13 @@ export function logCollectionState(
     summary.context = context
   }
   
-  // Stringify large objects for better console readability
-  const summaryString = JSON.stringify(summary, null, 2)
-  console.log(`[CollectionState] ${label}:`)
-  console.log(summaryString)
+  // Only log in development mode
+  if (import.meta.dev) {
+    // Stringify large objects for better console readability
+    const summaryString = JSON.stringify(summary, null, 2)
+    console.log(`[CollectionState] ${label}:`)
+    console.log(summaryString)
+  }
 }
 
 /**
@@ -144,9 +147,12 @@ export function logCollectionStateComparison(
     comparison.context = context
   }
   
-  // Stringify large objects for better console readability
-  const comparisonString = JSON.stringify(comparison, null, 2)
-  console.log(`[CollectionState] ${label} (Comparison):`)
-  console.log(comparisonString)
+  // Only log in development mode
+  if (import.meta.dev) {
+    // Stringify large objects for better console readability
+    const comparisonString = JSON.stringify(comparison, null, 2)
+    console.log(`[CollectionState] ${label} (Comparison):`)
+    console.log(comparisonString)
+  }
 }
 
