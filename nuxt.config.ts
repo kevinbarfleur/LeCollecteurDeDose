@@ -44,15 +44,12 @@ export default defineNuxtConfig({
     session: {
       maxAge: 60 * 60 * 24 * 7
     },
-    // Data API configuration
-    dataApiKey: process.env.DATA_API_KEY || '',
     // Supabase configuration (server-side only)
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
     supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     // Public runtime config (accessible client-side)
     public: {
-      dataApiUrl: process.env.DATA_API_URL || 'http://localhost:3001',
       supabase: {
         url: process.env.SUPABASE_URL || '',
         key: process.env.SUPABASE_KEY || '',

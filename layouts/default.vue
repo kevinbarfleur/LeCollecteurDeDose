@@ -2,7 +2,7 @@
 const { t } = useI18n();
 const route = useRoute();
 const { user, loggedIn } = useUserSession();
-const { checkIsAdmin, isApiData } = useDataSource();
+const { checkIsAdmin, isSupabaseData } = useDataSource();
 const { activityLogsEnabled } = useAppSettings();
 const { isApiOffline } = useApiStatus();
 
@@ -39,7 +39,7 @@ const showGameOfflineMessage = computed(() => {
   // Never show on admin, about, or home pages
   if (route.path === '/admin' || route.path === '/about' || route.path === '/') return false;
   // Only show if API mode is active and API is offline
-  return isApiData.value && isApiOffline.value;
+  return isSupabaseData.value && isApiOffline.value;
 });
 </script>
 

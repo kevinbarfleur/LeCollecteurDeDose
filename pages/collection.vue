@@ -12,7 +12,7 @@ const { t } = useI18n();
 useHead({ title: t("meta.collection.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
-const { isApiData, isInitializing } = useDataSource();
+const { isSupabaseData, isInitializing } = useDataSource();
 const { fetchUserCollection, fetchUserCards } = useApi();
 
 const user = computed(() => ({
@@ -27,7 +27,7 @@ const apiCollection = ref<Card[]>([]);
 const isLoadingCollection = ref(false);
 
 // Watch for data source changes and fetch accordingly
-watch([isApiData, isInitializing, () => authUser.value?.displayName, loggedIn], async ([isApi, initializing, displayName, isLoggedIn]) => {
+watch([isSupabaseData, isInitializing, () => authUser.value?.displayName, loggedIn], async ([isSupabase, initializing, displayName, isLoggedIn]) => {
   // Don't do anything while initializing
   if (initializing) {
     apiCollection.value = [];

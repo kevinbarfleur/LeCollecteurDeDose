@@ -20,7 +20,7 @@ const checkInterval = ref<NodeJS.Timeout | null>(null)
 const CHECK_INTERVAL_MS = 30000
 
 export function useApiStatus() {
-  const { isApiData } = useDataSource()
+  const { isSupabaseData } = useDataSource()
   const { fetchUserCollections } = useApi()
   const apiStore = useApiStore()
 
@@ -30,7 +30,7 @@ export function useApiStatus() {
   const checkApiStatus = async (): Promise<boolean> => {
     // Only check if we're in API mode (not test mode)
     // In test mode, we don't need to check API status
-    if (!isApiData) {
+    if (!isSupabaseData) {
       isApiOffline.value = false
       return true
     }
@@ -57,7 +57,7 @@ export function useApiStatus() {
    */
   const updateOfflineStatusFromError = () => {
     // Only update if we're in API mode (not test mode)
-    if (!isApiData) {
+    if (!isSupabaseData) {
       isApiOffline.value = false
       return
     }
@@ -104,7 +104,7 @@ export function useApiStatus() {
     }
 
     // Only monitor if in API mode
-    if (!isApiData) {
+    if (!isSupabaseData) {
       isApiOffline.value = false
       return
     }
@@ -131,7 +131,7 @@ export function useApiStatus() {
   // Auto-start monitoring when in API mode (only on client)
   // Skip monitoring in test mode to avoid unnecessary API calls
   if (import.meta.client) {
-    watch(() => isApiData, (isApi) => {
+    watch(() => isSupabaseData, (isApi) => {
       if (isApi) {
         // Only start monitoring if we're actually in API mode (not test mode)
         startMonitoring()
@@ -148,7 +148,7 @@ export function useApiStatus() {
         updateOfflineStatusFromError()
       } else {
         // If error is cleared and we're in API mode, check status again
-        if (isApiData) {
+        if (isSupabaseData) {
           checkApiStatus()
         }
       }

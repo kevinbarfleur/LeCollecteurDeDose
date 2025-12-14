@@ -56,9 +56,9 @@ function getDataMode(): DataMode | undefined {
   if (!import.meta.client) return undefined
 
   try {
-    const { isApiData, isSupabaseData } = useDataSource()
-    // Both 'api' and 'supabase' are production modes, return 'api' for logging
-    return (isApiData.value || isSupabaseData.value) ? 'api' : 'test'
+    const { isSupabaseData, isMockData } = useDataSource()
+    // Supabase is production mode, mock is test mode
+    return isSupabaseData.value ? 'api' : 'test'
   } catch {
     return undefined
   }

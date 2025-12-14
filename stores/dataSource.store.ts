@@ -1,23 +1,23 @@
 /**
  * Data Source Store
  * 
- * Manages the data source mode (API vs Test)
- * Only admins can use test mode
+ * Manages the data source mode (Supabase vs Mock)
+ * Mock mode is for local development only
  */
 
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth.store'
-import { logInfo, logWarn } from '~/services/logger.service'
+import { logWarn } from '~/services/logger.service'
 import { logAdminAction } from '~/services/diagnosticLogger.service'
 
-export type DataSource = 'api' | 'test' | 'supabase'
+export type DataSource = 'supabase' | 'mock'
 
 export const useDataSourceStore = defineStore('dataSource', () => {
   // Initialize from localStorage
-  let initialSource: DataSource = 'api'
+  let initialSource: DataSource = 'supabase'
   if (import.meta.client) {
     const stored = localStorage.getItem('dataSource') as DataSource | null
-    if (stored && (stored === 'api' || stored === 'test' || stored === 'supabase')) {
+    if (stored && (stored === 'supabase' || stored === 'mock')) {
       initialSource = stored
     }
   }
@@ -30,72 +30,40 @@ export const useDataSourceStore = defineStore('dataSource', () => {
   const authStore = useAuthStore()
 
   // Getters
-  const isTestData = computed(() => {
-    // Non-admins can NEVER use test data
-    // Access isAdmin computed value - it's a computed ref, so use .value
-    const isAdmin = typeof authStore.isAdmin === 'boolean' 
-      ? authStore.isAdmin 
-      : (authStore.isAdmin as any).value ?? false
-    if (!isAdmin) {
-      return false
-    }
-    return source.value === 'test'
-  })
-
-  const isApiData = computed(() => {
-    // Non-admins ALWAYS use API
-    if (!authStore.isAdmin) {
-      return true
-    }
-    return source.value === 'api'
+  const isMockData = computed(() => {
+    return source.value === 'mock'
   })
 
   const isSupabaseData = computed(() => {
-    // Non-admins can use Supabase (it's the production source)
     return source.value === 'supabase'
   })
 
   const apiUrl = computed(() => {
-    const config = useRuntimeConfig()
-    const supabaseUrl = config.public.supabase?.url || ''
-    
-    if (source.value === 'test') {
-      return `${supabaseUrl}/functions/v1/dev-test-api`
-    }
-    if (source.value === 'supabase') {
       // Return null to indicate direct Supabase usage (not via API)
+    // Mock mode also uses null as it's handled internally
       return null
-    }
-    return '/api/data'
   })
 
   // Actions
   async function setDataSource(newSource: DataSource): Promise<void> {
-    logInfo('Setting data source', { store: 'DataSource', action: 'setDataSource', from: source.value, to: newSource })
-    
     // Check if user is admin before allowing change
     const { user } = useUserSession()
     const userId = user.value?.id
     const authStore = useAuthStore()
 
-    if (userId) {
-      // Ensure admin status is checked
-      if (!authStore.isInitialized) {
-        await authStore.initialize()
-      }
-      
-      const isAdmin = await authStore.checkAdmin(userId)
-      if (!isAdmin) {
-        logWarn('Data source change denied', { store: 'DataSource', action: 'setDataSource', reason: 'not admin' })
-        source.value = 'api'
+    // Allow mock mode only in development
+    if (newSource === 'mock' && import.meta.prod) {
+      logWarn('Mock mode not allowed in production', { store: 'DataSource', action: 'setDataSource' })
+      return
+    }
+    
+    // In production, force Supabase mode
+    if (import.meta.prod && newSource !== 'supabase') {
+      logWarn('Only Supabase mode allowed in production', { store: 'DataSource', action: 'setDataSource' })
+      source.value = 'supabase'
         if (import.meta.client) {
-          localStorage.removeItem('dataSource')
+        localStorage.setItem('dataSource', 'supabase')
         }
-        return
-      }
-    } else {
-      // No user ID available, reject change
-      logWarn('Data source change denied', { store: 'DataSource', action: 'setDataSource', reason: 'no userId' })
       return
     }
 
@@ -113,44 +81,28 @@ export const useDataSourceStore = defineStore('dataSource', () => {
         { data_mode: newSource }
       )
     }
-    logInfo('Data source changed', { store: 'DataSource', action: 'setDataSource', source: newSource })
   }
 
   async function toggleDataSource(): Promise<void> {
-    await setDataSource(source.value === 'api' ? 'test' : 'api')
+    await setDataSource(source.value === 'supabase' ? 'mock' : 'supabase')
   }
 
   async function initialize() {
     if (isInitialized.value) return
 
-    logInfo('Initializing data source store', { store: 'DataSource', action: 'initialize', initialSource: source.value })
-
     // Initialize auth store first
     const authStore = useAuthStore()
     await authStore.initialize()
 
-    // Force API for non-admins (but allow Supabase as it's production)
-    if (!authStore.isAdmin && source.value === 'test') {
-      logWarn('Forcing API mode for non-admin', { store: 'DataSource', action: 'initialize' })
-      source.value = 'api'
+    // Force Supabase in production
+    if (import.meta.prod && source.value !== 'supabase') {
+      source.value = 'supabase'
       if (import.meta.client) {
-        localStorage.removeItem('dataSource')
+        localStorage.setItem('dataSource', 'supabase')
       }
     }
 
-    // Watch for admin status changes
-    watch(() => authStore.isAdmin, (isAdmin) => {
-      if (!isAdmin && source.value === 'test') {
-        logWarn('Forcing API mode after admin loss', { store: 'DataSource', action: 'adminStatusChange' })
-        source.value = 'api'
-        if (import.meta.client) {
-          localStorage.removeItem('dataSource')
-        }
-      }
-    })
-
     isInitialized.value = true
-    logInfo('Data source store initialized', { store: 'DataSource', action: 'initialize', source: source.value, isTestData: authStore.isAdmin && source.value === 'test' })
   }
 
   return {
@@ -159,8 +111,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     isInitialized: computed(() => isInitialized.value),
 
     // Getters
-    isTestData,
-    isApiData,
+    isMockData,
     isSupabaseData,
     apiUrl,
 

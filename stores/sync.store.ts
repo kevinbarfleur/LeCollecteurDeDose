@@ -11,7 +11,7 @@ import type { SyncError } from '~/services/collection.service'
 import * as CollectionService from '~/services/collection.service'
 import { useApiStore } from './api.store'
 import { useDataSourceStore } from './dataSource.store'
-import { logInfo, logError, logWarn } from '~/services/logger.service'
+import { logError, logWarn } from '~/services/logger.service'
 
 export interface SyncOperation {
   id: string
@@ -72,7 +72,6 @@ export const useSyncStore = defineStore('sync', () => {
       }
 
       queue.value.push(operationWithCallbacks)
-      logInfo('Operation enqueued', { store: 'Sync', action: 'enqueue', operationId: operation.id, queueSize: queue.value.length, username: operation.username })
 
       // Start processing if not already processing
       if (!isProcessing.value) {
@@ -86,22 +85,21 @@ export const useSyncStore = defineStore('sync', () => {
       return
     }
 
-    // Skip if not using API mode (test mode)
-    // Access isApiData computed value correctly
-    // isApiData is a computed ref, so we need to access its value
+    // Skip if not using Supabase mode (mock mode)
+    // Access isSupabaseData computed value correctly
+    // isSupabaseData is a computed ref, so we need to access its value
     let isApiMode = false
     try {
-      const apiDataValue = dataSourceStore.isApiData
-      isApiMode = typeof apiDataValue === 'boolean' 
-        ? apiDataValue 
-        : (apiDataValue as any).value ?? false
+      const supabaseDataValue = dataSourceStore.isSupabaseData
+      isApiMode = typeof supabaseDataValue === 'boolean' 
+        ? supabaseDataValue 
+        : (supabaseDataValue as any).value ?? false
     } catch (e) {
-      // If we can't access isApiData, assume API mode for safety
+      // If we can't access isSupabaseData, assume Supabase mode for safety
       isApiMode = true
     }
     
     if (!isApiMode) {
-      logInfo('Skipping sync (test mode)', { store: 'Sync', action: 'processQueue', queueSize: queue.value.length })
       // Clear queue and resolve all operations as successful immediately
       // Process all operations synchronously to avoid blocking
       const operations = [...queue.value]
@@ -127,8 +125,6 @@ export const useSyncStore = defineStore('sync', () => {
         const operation = queue.value.shift()!
         currentOperation.value = operation
 
-        logInfo('Processing operation', { store: 'Sync', action: 'processQueue', operationId: operation.id, username: operation.username, cardUpdates: operation.cardUpdates.size, vaalOrbs: operation.vaalOrbsNewValue })
-
         try {
           const config = apiStore.getApiConfig()
           const success = await CollectionService.updateCardCounts(
@@ -139,7 +135,6 @@ export const useSyncStore = defineStore('sync', () => {
           )
 
           if (success) {
-            logInfo('Operation completed', { store: 'Sync', action: 'processQueue', operationId: operation.id })
             lastSyncTime.value = Date.now()
             syncError.value = null
             operation.onSuccess?.()
@@ -148,7 +143,6 @@ export const useSyncStore = defineStore('sync', () => {
               message: 'Échec de la synchronisation',
               retryable: true,
             }
-            logError('Operation failed', undefined, { store: 'Sync', action: 'processQueue', operationId: operation.id })
             syncError.value = error
             operation.onError?.(error)
           }
@@ -158,7 +152,6 @@ export const useSyncStore = defineStore('sync', () => {
             retryable: true,
             code: error.code,
           }
-          logError('Operation error', error, { store: 'Sync', action: 'processQueue', operationId: operation.id })
           syncError.value = syncErr
           operation.onError?.(syncErr)
         }
@@ -168,7 +161,6 @@ export const useSyncStore = defineStore('sync', () => {
     } finally {
       isProcessing.value = false
       apiStore.setLoading(false)
-      logInfo('Queue processing completed', { store: 'Sync', action: 'processQueue', remainingQueue: queue.value.length })
     }
   }
 

@@ -12,10 +12,10 @@ export default defineNuxtPlugin(async () => {
     return
   }
 
-  // Only test connection in API mode, not test mode or supabase mode
-  const { isApiData, isSupabaseData } = useDataSource()
-  if (!isApiData.value || isSupabaseData.value) {
-    return // Skip test connection in test mode or supabase mode
+  // Only test connection in Supabase mode, not mock mode
+  const { isSupabaseData, isMockData } = useDataSource()
+  if (isMockData.value || !isSupabaseData.value) {
+    return // Skip test connection in mock mode or if not in Supabase mode
   }
 
   const { testConnection } = useApi()

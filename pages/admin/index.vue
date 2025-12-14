@@ -6,7 +6,7 @@ definePageMeta({
 const { t } = useI18n();
 const { user } = useUserSession();
 const { altarOpen, isLoading, isConnected, toggleAltar, activityLogsEnabled, toggleActivityLogs } = useAppSettings();
-const { dataSource, setDataSource, isApiData, isTestData } = useDataSource();
+const { dataSource, setDataSource, isSupabaseData, isMockData } = useDataSource();
 const { forcedOutcome } = useAltarDebug();
 const { getForcedOutcomeOptions } = await import('~/types/vaalOutcome');
 const { fetchUserCollections, fetchUniques, fetchUserCards } = useApi();
@@ -49,9 +49,8 @@ const handleActivityLogsToggle = async () => {
 
 // Data source options for RunicSelect
 const dataSourceOptions = computed(() => [
-  { value: "api", label: t("admin.dataSource.api") },
-  { value: "test", label: t("admin.dataSource.test") },
   { value: "supabase", label: t("admin.dataSource.supabase") },
+  { value: "mock", label: t("admin.dataSource.test") },
 ]);
 
 
@@ -109,7 +108,7 @@ const createBackup = async () => {
   }
 };
 
-// Sync test data from real API
+// Sync mock data from Supabase production data
 const isSyncingTestData = ref(false);
 const syncTestData = async () => {
   if (isSyncingTestData.value) return;
@@ -135,50 +134,21 @@ const syncTestData = async () => {
   
   isSyncingTestData.value = true;
   try {
-
-    // Fetch data through Nuxt proxy (bypassing useApi to avoid mode issues)
-    // The proxy handles authentication and routing to the real API
-
-    // Fetch all data through the Nuxt proxy (server-side proxy handles auth)
-
-    const userCollectionsResponse = await $fetch('/api/data/userCollection', {
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    }).catch((error) => {
-
-      return null;
-    });
-    const userCollections = userCollectionsResponse as Record<string, any> || null;
-
-    const uniquesResponse = await $fetch('/api/data/uniques', {
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    }).catch((error) => {
-
-      return null;
-    });
-    const uniques = uniquesResponse as any[] || null;
+    // Fetch data directly from Supabase production database
+    const { getAllUserCollections, getAllUniqueCards, getUserCards } = await import('~/services/supabase-collection.service');
+    
+    const userCollections = await getAllUserCollections().catch(() => null);
+    const uniques = await getAllUniqueCards().catch(() => null);
     
     // Get all users from collections
     const users = userCollections ? Object.keys(userCollections) : [];
 
-    // Fetch userCards for each user through Nuxt proxy
-
+    // Fetch userCards for each user
     const userCardsPromises = users.map(async (user) => {
       try {
-        const cards = await $fetch(`/api/data/usercards/${user}`, {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }).catch((error) => {
-
-          return [];
-        });
+        const cards = await getUserCards(user).catch(() => []);
         return { user, cards: cards || [] };
       } catch (error) {
-
         return { user, cards: [] };
       }
     });
@@ -232,27 +202,26 @@ const syncTestData = async () => {
 const { confirm } = useConfirmModal();
 
 // Helper function to get data source label
-const getDataSourceLabel = (source: "api" | "test" | "supabase") => {
-  if (source === "api") return t("admin.dataSource.api");
-  if (source === "test") return t("admin.dataSource.test");
+const getDataSourceLabel = (source: "supabase" | "mock") => {
+  if (source === "mock") return t("admin.dataSource.test");
   return t("admin.dataSource.supabase");
 };
 
 // Computed for data source v-model - now with confirmation
 const dataSourceModel = computed({
   get: () => dataSource.value,
-  set: async (value: "api" | "test" | "supabase") => {
+  set: async (value: "supabase" | "mock") => {
     // Ask for confirmation for any change
     if (value !== dataSource.value) {
       const confirmed = await confirm({
         title: t("admin.dataSource.confirmTitle"),
         message: t("admin.dataSource.confirmMessage", {
-          from: getDataSourceLabel(dataSource.value as "api" | "test" | "supabase"),
+          from: getDataSourceLabel((dataSource.value as any) === "mock" ? "mock" : "supabase"),
           to: getDataSourceLabel(value),
         }),
         confirmText: t("admin.dataSource.confirmButton"),
         cancelText: t("common.cancel"),
-        variant: value === "api" ? "warning" : "default", // Warning when switching to API (production)
+        variant: "default",
       });
       
       if (!confirmed) {
@@ -552,7 +521,7 @@ const updateDebugVaalOrbs = (delta: number) => {
                   </div>
 
                   <!-- Vaal Orbs -->
-                  <div v-if="isTestData" class="admin-card__row">
+                  <div v-if="isMockData" class="admin-card__row">
                     <div class="admin-card__row-content">
                       <label class="admin-card__row-label">Vaal Orbs</label>
                       <p class="admin-card__row-description">
@@ -581,7 +550,7 @@ const updateDebugVaalOrbs = (delta: number) => {
                   </div>
                   <div v-else class="admin-card__row">
                     <p class="admin-card__hint">
-                      {{ t("admin.altarDebug.apiModeHint") }}
+                      Les contrôles de debug Vaal Orbs sont disponibles uniquement en mode mock.
                     </p>
                   </div>
 
@@ -687,7 +656,7 @@ const updateDebugVaalOrbs = (delta: number) => {
                   </RunicButton>
 
                   <RunicButton
-                    v-if="isTestData"
+                    v-if="isMockData"
                     size="md"
                     variant="primary"
                     :disabled="isSyncingTestData"

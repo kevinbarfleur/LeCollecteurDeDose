@@ -3,23 +3,39 @@
  * 
  * Direct Supabase service for collections, replacing JSON file-based API
  * Provides functions compatible with the existing API format
+ * Routes to mock service in mock mode, real Supabase otherwise
  */
 
-import { logInfo, logError } from './logger.service'
+import { logError } from './logger.service'
 import type { Database } from '~/types/database'
+import * as MockService from './supabase-mock.service'
+
+/**
+ * Check if we're in mock mode
+ */
+async function isMockMode(): Promise<boolean> {
+  if (import.meta.server) {
+    // Server-side: check environment variable
+    return process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DATA === 'true'
+  }
+  
+  // Client-side: check data source store
+  try {
+    const { useDataSourceStore } = await import('~/stores/dataSource.store')
+    const store = useDataSourceStore()
+    const source = typeof store.source === 'string' ? store.source : (store.source as any).value
+    return source === 'mock'
+  } catch {
+    // Fallback: assume Supabase mode if we can't determine
+    return false
+  }
+}
 
 /**
  * Get Supabase client for reads (uses anon key from Nuxt config)
  */
 function getSupabaseRead() {
-  const client = useSupabaseClient<Database>()
-  const config = useRuntimeConfig()
-  logInfo('Getting Supabase read client', { 
-    service: 'SupabaseCollection', 
-    hasUrl: !!config.public.supabase?.url,
-    url: config.public.supabase?.url || 'missing'
-  })
-  return client
+  return useSupabaseClient<Database>()
 }
 
 /**
@@ -40,12 +56,12 @@ async function getSupabaseWrite() {
  * Returns format compatible with existing API: { [username]: { [cardUid]: cardData, vaalOrbs: number } }
  */
 export async function getAllUserCollections(): Promise<Record<string, any>> {
+  if (await isMockMode()) {
+    return MockService.getAllUserCollections()
+  }
   try {
-    logInfo('🔵 [SUPABASE] Starting getAllUserCollections', { service: 'SupabaseCollection' })
-
     const supabase = getSupabaseRead()
     
-    logInfo('🔵 [SUPABASE] Executing query: users with collections', { service: 'SupabaseCollection' })
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(`
@@ -60,16 +76,8 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
         )
       `)
 
-    logInfo('🔵 [SUPABASE] Query completed', { 
-      service: 'SupabaseCollection',
-      hasError: !!usersError,
-      error: usersError ? usersError.message : null,
-      usersCount: users?.length || 0,
-      rawData: users ? `Found ${users.length} users` : 'No users'
-    })
-
     if (usersError) {
-      logError('❌ [SUPABASE] Failed to fetch users', usersError, { 
+      logError('Failed to fetch users', usersError, { 
         service: 'SupabaseCollection',
         errorCode: usersError.code,
         errorMessage: usersError.message,
@@ -81,27 +89,14 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
 
     const result: Record<string, any> = {}
 
-    logInfo('🔵 [SUPABASE] Processing users', { 
-      service: 'SupabaseCollection',
-      usersToProcess: users?.length || 0
-    })
-
     for (const user of users || []) {
       const username = user.twitch_username
       result[username] = { vaalOrbs: user.vaal_orbs || 1 }
-      
-      const collectionCount = user.user_collections?.length || 0
-      logInfo('🔵 [SUPABASE] Processing user', { 
-        service: 'SupabaseCollection',
-        username,
-        vaalOrbs: user.vaal_orbs,
-        collectionCount
-      })
 
       for (const col of user.user_collections || []) {
         const card = col.unique_cards
         if (!card) {
-          logError('⚠️ [SUPABASE] Missing card data', undefined, { 
+          logError('Missing card data', undefined, { 
             service: 'SupabaseCollection',
             username,
             cardUid: col.card_uid
@@ -127,20 +122,9 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
       }
     }
 
-    const totalCards = Object.values(result).reduce((sum: number, userData: any) => {
-      return sum + Object.keys(userData).filter(k => k !== 'vaalOrbs').length
-    }, 0)
-
-    logInfo('✅ [SUPABASE] User collections fetched successfully', { 
-      service: 'SupabaseCollection', 
-      userCount: Object.keys(result).length,
-      totalCards,
-      usernames: Object.keys(result).slice(0, 5) // Log first 5 usernames
-    })
-
     return result
   } catch (error) {
-    logError('❌ [SUPABASE] Error fetching all user collections', error, { service: 'SupabaseCollection' })
+    logError('Error fetching all user collections', error, { service: 'SupabaseCollection' })
     return {}
   }
 }
@@ -150,17 +134,12 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
  * Returns format compatible with existing API: { [cardUid]: cardData, vaalOrbs: number }
  */
 export async function getUserCollection(username: string): Promise<Record<string, any> | null> {
+  if (await isMockMode()) {
+    return MockService.getUserCollection(username)
+  }
   try {
-    logInfo('🔵 [SUPABASE] Starting getUserCollection', { service: 'SupabaseCollection', username })
-
     const supabase = getSupabaseRead()
     const searchUsername = username.toLowerCase()
-    
-    logInfo('🔵 [SUPABASE] Querying user', { 
-      service: 'SupabaseCollection', 
-      username,
-      searchUsername
-    })
     
     const { data: user, error: userError } = await supabase
       .from('users')
@@ -178,19 +157,8 @@ export async function getUserCollection(username: string): Promise<Record<string
       .eq('twitch_username', searchUsername)
       .maybeSingle()
 
-    logInfo('🔵 [SUPABASE] User query completed', { 
-      service: 'SupabaseCollection',
-      username,
-      hasError: !!userError,
-      error: userError ? userError.message : null,
-      found: !!user,
-      userId: user?.id,
-      vaalOrbs: user?.vaal_orbs,
-      collectionCount: user?.user_collections?.length || 0
-    })
-
     if (userError) {
-      logError('❌ [SUPABASE] Error fetching user collection', userError, { 
+      logError('Error fetching user collection', userError, { 
         service: 'SupabaseCollection', 
         username,
         errorCode: userError.code,
@@ -201,26 +169,15 @@ export async function getUserCollection(username: string): Promise<Record<string
     }
 
     if (!user) {
-      logInfo('⚠️ [SUPABASE] User collection not found', { 
-        service: 'SupabaseCollection', 
-        username, 
-        found: false 
-      })
       return { vaalOrbs: 0 }
     }
 
     const result: Record<string, any> = { vaalOrbs: user.vaal_orbs || 1 }
 
-    logInfo('🔵 [SUPABASE] Processing collections', { 
-      service: 'SupabaseCollection',
-      username,
-      collectionCount: user.user_collections?.length || 0
-    })
-
     for (const col of user.user_collections || []) {
       const card = col.unique_cards
       if (!card) {
-        logError('⚠️ [SUPABASE] Missing card data in collection', undefined, { 
+        logError('Missing card data in collection', undefined, { 
           service: 'SupabaseCollection',
           username,
           cardUid: col.card_uid
@@ -244,19 +201,10 @@ export async function getUserCollection(username: string): Promise<Record<string
         foil: col.foil_count
       }
     }
-
-    const cardCount = Object.keys(result).filter(k => k !== 'vaalOrbs').length
-    logInfo('✅ [SUPABASE] User collection fetched successfully', { 
-      service: 'SupabaseCollection', 
-      username, 
-      cardCount,
-      vaalOrbs: result.vaalOrbs,
-      cardUids: Object.keys(result).filter(k => k !== 'vaalOrbs').slice(0, 5)
-    })
     
     return result
   } catch (error) {
-    logError('❌ [SUPABASE] Error fetching user collection', error, { service: 'SupabaseCollection', username })
+    logError('Error fetching user collection', error, { service: 'SupabaseCollection', username })
     return null
   }
 }
@@ -266,9 +214,10 @@ export async function getUserCollection(username: string): Promise<Record<string
  * Returns format compatible with existing API: Array<{ booster: true, timestamp: string, content: Card[] }>
  */
 export async function getUserCards(username: string): Promise<any[] | null> {
+  if (await isMockMode()) {
+    return MockService.getUserCards(username)
+  }
   try {
-    logInfo('Fetching user cards', { service: 'SupabaseCollection', username })
-
     const supabase = getSupabaseRead()
     const { data: user, error: userError } = await supabase
       .from('users')
@@ -282,7 +231,6 @@ export async function getUserCards(username: string): Promise<any[] | null> {
     }
 
     if (!user) {
-      logInfo('User not found', { service: 'SupabaseCollection', username, found: false })
       return []
     }
 
@@ -332,7 +280,6 @@ export async function getUserCards(username: string): Promise<any[] | null> {
       }
     })
 
-    logInfo('User cards fetched', { service: 'SupabaseCollection', username, boosterCount: result.length })
     return result
   } catch (error) {
     logError('Error fetching user cards', error, { service: 'SupabaseCollection', username })
@@ -345,26 +292,19 @@ export async function getUserCards(username: string): Promise<any[] | null> {
  * Returns format compatible with existing API: Array<Card>
  */
 export async function getAllUniqueCards(): Promise<any[] | null> {
+  if (await isMockMode()) {
+    return MockService.getAllUniqueCards()
+  }
   try {
-    logInfo('🔵 [SUPABASE] Starting getAllUniqueCards', { service: 'SupabaseCollection' })
-
     const supabase = getSupabaseRead()
     
-    logInfo('🔵 [SUPABASE] Querying unique_cards table', { service: 'SupabaseCollection' })
     const { data: cards, error } = await supabase
       .from('unique_cards')
       .select('*')
       .order('uid', { ascending: true })
 
-    logInfo('🔵 [SUPABASE] Unique cards query completed', { 
-      service: 'SupabaseCollection',
-      hasError: !!error,
-      error: error ? error.message : null,
-      cardsCount: cards?.length || 0
-    })
-
     if (error) {
-      logError('❌ [SUPABASE] Failed to fetch unique cards', error, { 
+      logError('Failed to fetch unique cards', error, { 
         service: 'SupabaseCollection',
         errorCode: error.code,
         errorMessage: error.message,
@@ -385,16 +325,10 @@ export async function getAllUniqueCards(): Promise<any[] | null> {
       gameData: card.game_data,
       relevanceScore: card.relevance_score
     }))
-
-    logInfo('✅ [SUPABASE] Unique cards fetched successfully', { 
-      service: 'SupabaseCollection', 
-      count: result.length,
-      sampleCards: result.slice(0, 3).map(c => ({ uid: c.uid, name: c.name }))
-    })
     
     return result
   } catch (error) {
-    logError('❌ [SUPABASE] Error fetching unique cards', error, { service: 'SupabaseCollection' })
+    logError('Error fetching unique cards', error, { service: 'SupabaseCollection' })
     return null
   }
 }
@@ -407,15 +341,10 @@ export async function updateUserCollection(
   username: string,
   collectionData: Record<string, any>
 ): Promise<boolean> {
+  if (await isMockMode()) {
+    return MockService.updateUserCollection(username, collectionData)
+  }
   try {
-    const cardCount = Object.keys(collectionData).filter(k => k !== 'vaalOrbs').length
-    logInfo('Updating user collection', { 
-      service: 'SupabaseCollection', 
-      username, 
-      cardCount, 
-      vaalOrbs: collectionData.vaalOrbs 
-    })
-
     const supabase = await getSupabaseWrite()
     
     // Get or create user
@@ -430,9 +359,6 @@ export async function updateUserCollection(
 
     // Update vaal orbs if provided
     if (collectionData.vaalOrbs !== undefined) {
-      const currentVaalOrbs = collectionData.vaalOrbs
-      // This is a bit tricky - we'd need to fetch current value first
-      // For now, assume the value passed is the absolute value
       const { error: vaalError } = await supabase
         .from('users')
         .update({ vaal_orbs: collectionData.vaalOrbs })
@@ -474,7 +400,6 @@ export async function updateUserCollection(
       }
     }
 
-    logInfo('User collection updated', { service: 'SupabaseCollection', username, success: true })
     return true
   } catch (error) {
     logError('Error updating user collection', error, { service: 'SupabaseCollection', username })

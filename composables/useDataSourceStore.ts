@@ -16,8 +16,7 @@ export function useDataSource() {
 
   return {
     dataSource: computed(() => dataSourceStore.source),
-    isTestData: computed(() => dataSourceStore.isTestData),
-    isApiData: computed(() => dataSourceStore.isApiData),
+    isMockData: computed(() => dataSourceStore.isMockData),
     isSupabaseData: computed(() => dataSourceStore.isSupabaseData),
     isInitializing: computed(() => !dataSourceStore.isInitialized),
     setDataSource: dataSourceStore.setDataSource,
