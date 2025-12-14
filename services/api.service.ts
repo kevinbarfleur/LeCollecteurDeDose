@@ -59,37 +59,33 @@ async function apiFetch<T>(
       logInfo('Added auth header', { service: 'API', action: 'apiFetch', endpoint, hasKey: !!supabaseKey })
     }
 
-    // Use native fetch for absolute URLs (always), $fetch for relative URLs only
-    let response: any
-    if (url.startsWith('http')) {
-      // Absolute URL - use native fetch to avoid Nuxt URL resolution issues
-      const bodyData = options.body
-        ? typeof options.body === 'string' ? options.body : JSON.stringify(options.body)
-        : undefined
-
-      const fetchResponse = await fetch(url, {
-        method,
-        headers,
-        body: bodyData,
-      })
-
-      if (!fetchResponse.ok) {
-        const errorText = await fetchResponse.text().catch(() => 'Unknown error')
-        logError('API call failed', undefined, { service: 'API', action: 'apiFetch', endpoint, status: fetchResponse.status })
-        throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText} - ${errorText}`)
-      }
-
-      response = await fetchResponse.json()
-    } else {
-      // Relative URL - use $fetch (production mode)
-      response = await $fetch(url, {
-        method,
-        headers,
-        body: options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : undefined,
-      })
+    // Always use native fetch to ensure consistent behavior
+    // For relative URLs, construct full URL using window.location.origin in browser
+    let finalUrl = url
+    if (!url.startsWith('http') && typeof window !== 'undefined') {
+      // Relative URL in browser - construct full URL
+      finalUrl = `${window.location.origin}${url.startsWith('/') ? url : `/${url}`}`
     }
 
-    logInfo('API call succeeded', { service: 'API', action: 'apiFetch', endpoint, method })
+    const bodyData = options.body
+      ? typeof options.body === 'string' ? options.body : JSON.stringify(options.body)
+      : undefined
+
+    const fetchResponse = await fetch(finalUrl, {
+      method,
+      headers,
+      body: bodyData,
+    })
+
+    if (!fetchResponse.ok) {
+      const errorText = await fetchResponse.text().catch(() => 'Unknown error')
+      logError('API call failed', undefined, { service: 'API', action: 'apiFetch', endpoint, finalUrl, status: fetchResponse.status })
+      throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText} - ${errorText}`)
+    }
+
+    const response = await fetchResponse.json()
+
+    logInfo('API call succeeded', { service: 'API', action: 'apiFetch', endpoint, finalUrl, method })
     return response as T
   } catch (err: any) {
     logError('API call failed', err, { service: 'API', action: 'apiFetch', endpoint, status: err.status || err.statusCode })
