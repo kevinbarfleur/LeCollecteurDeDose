@@ -59,6 +59,18 @@ import('http').then((http) => {
       return
     }
 
+    // Health check endpoint for Railway
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ 
+        status: 'ok', 
+        bot: 'connected',
+        channel: process.env.TWITCH_CHANNEL_NAME || 'unknown'
+      }))
+      return
+    }
+
+    // Webhook endpoint for Edge Functions
     if (req.method === 'POST' && req.url === '/webhook/message') {
       let body = ''
       req.on('data', chunk => { body += chunk.toString() })
@@ -80,15 +92,18 @@ import('http').then((http) => {
           res.end(JSON.stringify({ error: 'Invalid request' }))
         }
       })
-    } else {
-      res.writeHead(404)
-      res.end()
+      return
     }
+
+    // 404 for other routes
+    res.writeHead(404)
+    res.end()
   })
 
   webhookServer.listen(PORT, '0.0.0.0', () => {
     console.log(`📡 Webhook server listening on port ${PORT}`)
     console.log(`   Endpoint: http://0.0.0.0:${PORT}/webhook/message`)
+    console.log(`   Health check: http://0.0.0.0:${PORT}/health`)
   })
 })
 

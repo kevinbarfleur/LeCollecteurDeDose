@@ -1,12 +1,23 @@
 # Guide de Déploiement du Bot Twitch sur Railway
 
-Ce guide vous explique comment déployer le bot Twitch minimal sur Railway.
+Ce guide vous explique comment déployer le bot Twitch sur Railway ET le lancer en local pour tester.
+
+> **💡 Pour le développement local uniquement**, consultez [QUICK_START.md](./QUICK_START.md) pour un guide rapide.
 
 ## 📋 Prérequis
 
+### Pour Railway (Production)
 1. Un compte GitHub (gratuit)
 2. Un compte Railway (gratuit, connexion via GitHub)
 3. Un token OAuth Twitch pour le bot (voir section "Obtenir le Token OAuth")
+4. Un projet Supabase configuré avec les Edge Functions déployées
+
+### Pour Local (Développement)
+1. **Node.js** installé (version 18 ou supérieure)
+2. **Token OAuth Twitch** pour le bot
+3. **Nom d'utilisateur Twitch** du bot
+4. **Nom de votre chaîne Twitch**
+5. **Variables d'environnement Supabase** (optionnel pour tester les commandes chat)
 
 ## 🚀 Étape 1 : Obtenir le Token OAuth Twitch
 
@@ -49,6 +60,8 @@ Le bot a besoin d'un token OAuth pour se connecter à Twitch. Voici comment l'ob
    - Root Directory : `twitch-bot`
    - Build Command : `npm install`
    - Start Command : `npm start`
+3. **Important** : Le bot expose un endpoint `/health` pour que Railway détecte qu'il est actif
+   - Railway vérifiera automatiquement `https://votre-service.railway.app/health`
 
 ## 🔧 Étape 3 : Configurer les Variables d'Environnement
 
@@ -92,11 +105,17 @@ Dans le dashboard Railway, allez dans votre service et cliquez sur "Variables" :
 ### 2. Configurer BOT_WEBHOOK_URL dans Supabase :
 
 1. Allez dans votre projet Supabase Dashboard
-2. Allez dans **Edge Functions** > **Settings** (ou **Project Settings** > **Edge Functions**)
-3. Ajoutez la variable d'environnement suivante :
+   - URL : https://supabase.com/dashboard/project/pkhwgiwafehlsgrnhxyv
+2. Allez dans **Project Settings** > **Edge Functions** > **Secrets**
+   - Ou directement : https://supabase.com/dashboard/project/pkhwgiwafehlsgrnhxyv/settings/functions
+3. Cliquez sur **"Add a new secret"** ou **"New Secret"**
+4. Ajoutez la variable d'environnement suivante :
    - **Nom** : `BOT_WEBHOOK_URL`
-   - **Valeur** : `https://votre-service.railway.app/webhook/message`
-   - Exemple : `https://twitch-bot-production.up.railway.app/webhook/message`
+   - **Valeur** : `https://lecollecteurdedose-production.up.railway.app/webhook/message`
+   - ⚠️ **Important** : Remplacez par votre URL Railway réelle si différente
+5. Cliquez sur **"Save"** ou **"Add"**
+
+> **💡 Note** : Cette variable est utilisée par l'Edge Function `handle-reward` pour envoyer des messages au bot Railway.
 
 ### 3. Vérifier la configuration :
 
@@ -120,7 +139,70 @@ Dans les logs Railway, vous devriez voir :
    - Allez dans l'onglet "Deployments"
    - Cliquez sur le dernier déploiement pour voir les logs
 
+## 🏠 Développement Local (Alternative à Railway)
+
+Si vous voulez tester le bot en local avant de déployer sur Railway :
+
+### 1. Installer les dépendances
+
+```bash
+cd twitch-bot
+npm install
+```
+
+### 2. Créer le fichier `.env`
+
+Créez un fichier `.env` à la racine du dossier `twitch-bot` :
+
+```env
+TWITCH_BOT_USERNAME=votre_bot_username
+TWITCH_BOT_OAUTH_TOKEN=oauth:votre_token_oauth
+TWITCH_CHANNEL_NAME=votre_chaine
+SUPABASE_URL=https://votre-projet.supabase.co
+SUPABASE_KEY=votre_anon_key
+PORT=3001
+```
+
+### 3. Lancer le bot
+
+```bash
+npm start
+```
+
+### 4. Tester le webhook localement
+
+Pour tester avec les Edge Functions Supabase en local, utilisez `ngrok` :
+
+```bash
+ngrok http 3001
+```
+
+Puis configurez `BOT_WEBHOOK_URL` dans Supabase avec l'URL ngrok (temporairement) :
+- Exemple : `https://abc123.ngrok.io/webhook/message`
+
+> **📚 Pour plus de détails sur le développement local**, consultez [QUICK_START.md](./QUICK_START.md)
+
 ## ✅ Étape 6 : Vérifier que le Bot Fonctionne
+
+### Checklist de Vérification
+
+#### ✅ Railway
+- [ ] Bot déployé et actif sur Railway
+- [ ] Variables d'environnement configurées (TWITCH_BOT_USERNAME, TWITCH_BOT_OAUTH_TOKEN, TWITCH_CHANNEL_NAME, SUPABASE_URL, SUPABASE_KEY)
+- [ ] Public Domain créé (ex: `lecollecteurdedose-production.up.railway.app`)
+- [ ] Logs Railway montrent la connexion réussie
+
+#### ✅ Supabase
+- [ ] Edge Functions déployées (`twitch-eventsub`, `handle-reward`)
+- [ ] Variable `BOT_WEBHOOK_URL` configurée dans Supabase Edge Functions Secrets
+- [ ] URL complète : `https://lecollecteurdedose-production.up.railway.app/webhook/message`
+
+#### ✅ Tests
+- [ ] Bot répond à `!ping` dans le chat Twitch
+- [ ] Commandes chat fonctionnent (`!collection`, `!stats`, `!vaal`)
+- [ ] Webhook reçoit les messages de `handle-reward` (testez une récompense Twitch)
+
+### Logs Attendus
 
 Dans les logs Railway, vous devriez voir :
 
@@ -133,6 +215,8 @@ Dans les logs Railway, vous devriez voir :
    Endpoint: http://0.0.0.0:XXXX/webhook/message
 ✅ Bot connected to Twitch chat: MaChaine
 ```
+
+Si vous voyez `📨 Received webhook message: ...` dans les logs Railway, le webhook fonctionne correctement !
 
 ## 🔍 Dépannage
 
@@ -181,10 +265,20 @@ Dans les logs Railway, vous devriez voir :
 twitch-bot/
 ├── index.js              # Code principal du bot
 ├── package.json          # Dépendances Node.js
+├── package-lock.json     # Lock file des dépendances (généré par npm)
 ├── railway.json          # Configuration Railway (optionnel)
-├── README.md             # Documentation
-└── DEPLOYMENT_RAILWAY.md # Ce guide
+├── README.md             # Documentation principale
+├── DEPLOYMENT_RAILWAY.md # Ce guide (Railway + Local)
+├── QUICK_START.md        # Guide rapide pour le développement local
+└── ARCHITECTURE_COMPLETE.md # Architecture complète Bot + Supabase
 ```
+
+## 🔗 Liens Rapides
+
+- **Supabase Dashboard** : https://supabase.com/dashboard/project/pkhwgiwafehlsgrnhxyv
+- **Railway Dashboard** : https://railway.app
+- **Guide Local** : [QUICK_START.md](./QUICK_START.md)
+- **Architecture** : [ARCHITECTURE_COMPLETE.md](./ARCHITECTURE_COMPLETE.md)
 
 ## 🔄 Mises à Jour
 
@@ -205,7 +299,25 @@ Pour mettre à jour le bot :
 
 Si vous rencontrez des problèmes :
 
-1. Vérifiez les logs Railway
-2. Vérifiez que toutes les variables d'environnement sont définies
-3. Vérifiez que le token OAuth est valide
-4. Consultez la documentation Railway : https://docs.railway.app
+1. **Vérifiez les logs Railway** :
+   - Dashboard Railway > Votre service > Deployments > Logs
+   
+2. **Vérifiez les logs Supabase** :
+   - Dashboard Supabase > Edge Functions > handle-reward > Logs
+   - Cherchez les erreurs liées à `BOT_WEBHOOK_URL` ou `Failed to send message to bot`
+   
+3. **Vérifiez les variables d'environnement** :
+   - Railway : Toutes les variables requises sont définies
+   - Supabase : `BOT_WEBHOOK_URL` est configuré avec l'URL complète
+   
+4. **Testez le webhook manuellement** :
+   ```bash
+   curl -X POST https://lecollecteurdedose-production.up.railway.app/webhook/message \
+     -H "Content-Type: application/json" \
+     -d '{"message":"Test","channel":"votre_chaine"}'
+   ```
+   
+5. **Consultez la documentation** :
+   - Railway : https://docs.railway.app
+   - Supabase Edge Functions : https://supabase.com/docs/guides/functions
+   - [ARCHITECTURE_COMPLETE.md](./ARCHITECTURE_COMPLETE.md) pour le dépannage détaillé
