@@ -284,6 +284,20 @@ process.on('SIGINT', () => {
   process.exit(0)
 })
 
+// Keep the process alive - prevent Railway from thinking the service is inactive
+// Railway needs to see active network connections or HTTP activity
+// This interval keeps the event loop active
+setInterval(() => {
+  if (webhookServer && webhookServer.listening) {
+    // Log periodically to show Railway the process is active
+    // This helps Railway understand the service is running
+    const uptime = Math.floor(process.uptime())
+    if (uptime % 300 === 0) { // Every 5 minutes
+      console.log(`💓 Bot heartbeat - uptime: ${uptime}s, connected: ${client.readyState() === 'OPEN'}`)
+    }
+  }
+}, 30000) // Every 30 seconds
+
 console.log('🤖 Twitch Bot Service starting...')
 console.log(`   Channel: ${process.env.TWITCH_CHANNEL_NAME}`)
 console.log(`   Username: ${process.env.TWITCH_BOT_USERNAME}`)
