@@ -32,7 +32,6 @@ export function useReplayRecorder() {
   try {
     supabase = useSupabaseClient<Database>();
   } catch (e) {
-    console.warn('Supabase client not available, replay saving disabled');
   }
   
   const isRecording = ref(false);
@@ -211,21 +210,18 @@ export function useReplayRecorder() {
     
     // If Supabase is not configured, skip saving
     if (!supabase) {
-      console.warn('Supabase not configured, replay not saved');
       saveError.value = 'Service de sauvegarde non disponible';
       return null;
     }
 
     // Validate card_unique_id is a valid number
     if (typeof data.cardUid !== 'number' || !Number.isFinite(data.cardUid)) {
-      console.error('Invalid card UID type:', typeof data.cardUid, data.cardUid);
       saveError.value = 'Erreur de données (UID invalide)';
       return null;
     }
 
     // Validate required string fields
     if (!data.cardId || typeof data.cardId !== 'string') {
-      console.error('Invalid card ID:', data.cardId);
       saveError.value = 'Erreur de données (ID invalide)';
       return null;
     }
@@ -255,7 +251,6 @@ export function useReplayRecorder() {
         .single();
 
       if (error) {
-        console.error('Failed to save replay:', error);
         // User-friendly error messages based on error code
         if (error.code === '22P02') {
           saveError.value = 'Erreur de format des données';
@@ -281,7 +276,6 @@ export function useReplayRecorder() {
       
       return url;
     } catch (e) {
-      console.error('Error saving replay:', e);
       saveError.value = 'Erreur inattendue lors de la sauvegarde';
       return null;
     } finally {
@@ -309,10 +303,8 @@ export function useReplayRecorder() {
         .insert(activityLogInsert);
 
       if (error) {
-        console.warn('Failed to save activity log:', error);
       }
     } catch (e) {
-      console.warn('Error saving activity log:', e);
     }
   };
 
@@ -353,10 +345,8 @@ export function useReplayRecorder() {
         .insert(activityLogInsert);
 
       if (error) {
-        console.warn('Failed to save activity log:', error);
       }
     } catch (e) {
-      console.warn('Error saving activity log:', e);
     }
   };
 
@@ -384,7 +374,6 @@ export function useReplayRecorder() {
       await navigator.clipboard.writeText(generatedUrl.value);
       return true;
     } catch (e) {
-      console.error('Failed to copy URL:', e);
       return false;
     }
   };

@@ -85,7 +85,6 @@ export function useTestRunner() {
     }
     
     if (!queueEmpty) {
-      console.warn('[TestRunner] ⚠️ Sync queue did not empty within timeout, continuing anyway')
     }
     
     // Wait for collection reload to complete
@@ -101,7 +100,6 @@ export function useTestRunner() {
     }
     
     if (!reloadComplete) {
-      console.warn('[TestRunner] ⚠️ Collection reload did not complete within timeout, continuing anyway')
     }
     
     // Additional wait to ensure everything is settled
@@ -139,40 +137,25 @@ export function useTestRunner() {
     }
 
     currentScenario.value = scenario.name
-    console.log(`[TestRunner] 🧪 Running scenario: ${scenario.name}`)
-    console.log(`[TestRunner] Description: ${scenario.description}`)
-
     try {
       // Setup
       if (scenario.setup) {
-        console.log(`[TestRunner] Setting up scenario...`)
         await scenario.setup()
       }
 
       // Execute
-      console.log(`[TestRunner] Executing scenario...`)
       await scenario.execute()
 
       // Wait for animations
       await waitForAnimations()
       
       // Wait for sync to complete (longer wait for API sync + reload)
-      console.log(`[TestRunner] Waiting for sync to complete...`)
       await waitForSync(15000) // 15 seconds max wait
       
       // Additional wait for collection reload after sync
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Log current state for debugging
-      const currentState = getCollectionState()
-      console.log(`[TestRunner] Current state before assertions:`, {
-        vaalOrbs: currentState.vaalOrbs,
-        cardCount: currentState.cards.length,
-        cardCounts: Array.from(currentState.cardCounts.entries()).slice(0, 3)
-      })
 
       // Run assertions
-      console.log(`[TestRunner] Running assertions...`)
       for (const assertion of scenario.assertions) {
         try {
           const passed = await assertion.check()
@@ -183,9 +166,7 @@ export function useTestRunner() {
           })
           
           if (passed) {
-            console.log(`[TestRunner] ✅ ${assertion.name}`)
           } else {
-            console.error(`[TestRunner] ❌ ${assertion.name}: ${assertion.expected || 'Failed'}`)
           }
         } catch (error: any) {
           result.assertions.push({
@@ -193,7 +174,6 @@ export function useTestRunner() {
             passed: false,
             error: error.message,
           })
-          console.error(`[TestRunner] ❌ ${assertion.name}: ${error.message}`)
         }
       }
 
@@ -202,23 +182,13 @@ export function useTestRunner() {
 
       // Cleanup
       if (scenario.cleanup) {
-        console.log(`[TestRunner] Cleaning up...`)
         await scenario.cleanup()
       }
 
       result.duration = Date.now() - startTime
-      
-      if (result.passed) {
-        console.log(`[TestRunner] ✅ Scenario "${scenario.name}" passed in ${result.duration}ms`)
-      } else {
-        console.error(`[TestRunner] ❌ Scenario "${scenario.name}" failed in ${result.duration}ms`)
-        const failedAssertions = result.assertions.filter(a => !a.passed)
-        console.error(`[TestRunner] Failed assertions:`, failedAssertions.map(a => a.name))
-      }
     } catch (error: any) {
       result.errors.push(error.message)
       result.duration = Date.now() - startTime
-      console.error(`[TestRunner] ❌ Scenario "${scenario.name}" error:`, error)
     } finally {
       currentScenario.value = null
     }
@@ -231,15 +201,11 @@ export function useTestRunner() {
    */
   const runAllScenarios = async (scenarios: TestScenario[]): Promise<TestResult[]> => {
     if (isRunning.value) {
-      console.warn('[TestRunner] Already running tests')
       return results.value
     }
 
     isRunning.value = true
     results.value = []
-
-    console.log(`[TestRunner] 🚀 Starting test suite with ${scenarios.length} scenarios`)
-
     for (const scenario of scenarios) {
       const result = await runScenario(scenario)
       results.value.push(result)
@@ -254,13 +220,6 @@ export function useTestRunner() {
     const passed = results.value.filter(r => r.passed).length
     const failed = results.value.filter(r => !r.passed).length
     const totalDuration = results.value.reduce((sum, r) => sum + r.duration, 0)
-
-    console.log(`[TestRunner] 📊 Test Summary:`)
-    console.log(`[TestRunner]   Total: ${scenarios.length}`)
-    console.log(`[TestRunner]   Passed: ${passed}`)
-    console.log(`[TestRunner]   Failed: ${failed}`)
-    console.log(`[TestRunner]   Duration: ${totalDuration}ms`)
-
     return results.value
   }
 

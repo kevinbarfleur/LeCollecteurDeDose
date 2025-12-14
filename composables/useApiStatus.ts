@@ -28,7 +28,8 @@ export function useApiStatus() {
    * Check if API is available by making a lightweight request
    */
   const checkApiStatus = async (): Promise<boolean> => {
-    // Only check if we're in API mode
+    // Only check if we're in API mode (not test mode)
+    // In test mode, we don't need to check API status
     if (!isApiData) {
       isApiOffline.value = false
       return true
@@ -91,15 +92,18 @@ export function useApiStatus() {
   }
 
   // Auto-start monitoring when in API mode (only on client)
+  // Skip monitoring in test mode to avoid unnecessary API calls
   if (import.meta.client) {
     watch(() => isApiData, (isApi) => {
       if (isApi) {
+        // Only start monitoring if we're actually in API mode (not test mode)
         startMonitoring()
       } else {
+        // Stop monitoring when switching to test mode
         stopMonitoring()
         isApiOffline.value = false
       }
-    }, { immediate: true })
+    }, { immediate: false }) // Don't run immediately to avoid initial call in test mode
   }
 
   // Cleanup on unmount

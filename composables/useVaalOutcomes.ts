@@ -83,14 +83,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   // ==========================================
   
   const executeFoil = async (): Promise<OutcomeResult> => {
-    console.log('[VaalOutcomes] executeFoil called', { 
-      hasCardRef: !!cardRef.value, 
-      hasDisplayCard: !!displayCard.value,
-      hasOnSyncRequired: !!onSyncRequired 
-    })
-    
     if (!cardRef.value || !displayCard.value) {
-      console.warn('[VaalOutcomes] executeFoil: Missing cardRef or displayCard')
       return { success: false };
     }
 
@@ -171,16 +164,12 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     isAnimating.value = false;
 
     // Sync with API: normal: -1, foil: +1
-    console.log('[VaalOutcomes] FOIL: Checking onSyncRequired...', { onSyncRequired: !!onSyncRequired })
     if (onSyncRequired) {
-      console.log('[VaalOutcomes] FOIL: Syncing to API...')
       const baseUid = Math.floor(currentCard.uid)
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
       updates.set(baseUid, { normalDelta: -1, foilDelta: 1, cardData: { ...currentCard, foil: true } })
       await onSyncRequired(updates, -1, 'foil') // Consume 1 vaalOrb
-      console.log('[VaalOutcomes] FOIL: Sync completed')
     } else {
-      console.warn('[VaalOutcomes] FOIL: onSyncRequired is not defined!')
     }
 
     return { success: true };
@@ -207,14 +196,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   };
   
   const executeTransform = async (): Promise<OutcomeResult> => {
-    console.log('[VaalOutcomes] executeTransform called', { 
-      hasCardRef: !!cardRef.value, 
-      hasDisplayCard: !!displayCard.value,
-      hasOnSyncRequired: !!onSyncRequired 
-    })
-    
     if (!cardRef.value || !displayCard.value) {
-      console.warn('[VaalOutcomes] executeTransform: Missing cardRef or displayCard')
       return { success: false };
     }
 
@@ -266,7 +248,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       try {
         await preloadImage(newImageUrl);
       } catch (e) {
-        console.warn('Failed to preload transform card image, continuing anyway');
       }
     }
     
@@ -389,7 +370,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     isAnimating.value = false;
 
     // Sync with API: old card normal: -1, new card normal: +1
-    console.log('[VaalOutcomes] TRANSFORM: Checking onSyncRequired...', { onSyncRequired: !!onSyncRequired })
     if (onSyncRequired) {
       const transformSyncInfo = {
         oldCard: currentCard.name,
@@ -397,8 +377,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
         oldUid: currentCard.uid,
         newUid: newCard.uid
       };
-      console.log('[VaalOutcomes] TRANSFORM: Syncing to API...')
-      console.log(JSON.stringify(transformSyncInfo, null, 2))
       const oldBaseUid = Math.floor(currentCard.uid)
       const newBaseUid = Math.floor(newCard.uid)
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
@@ -412,9 +390,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       updates.set(newBaseUid, { normalDelta, foilDelta, cardData: newCard })
       
       await onSyncRequired(updates, -1, 'transform') // Consume 1 vaalOrb
-      console.log('[VaalOutcomes] TRANSFORM: Sync completed')
     } else {
-      console.warn('[VaalOutcomes] TRANSFORM: onSyncRequired is not defined!')
     }
 
     return { success: true, newCard };
@@ -426,14 +402,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   // ==========================================
   
   const executeDuplicate = async (): Promise<OutcomeResult> => {
-    console.log('[VaalOutcomes] executeDuplicate called', { 
-      hasCardRef: !!cardRef.value, 
-      hasDisplayCard: !!displayCard.value,
-      hasOnSyncRequired: !!onSyncRequired 
-    })
-    
     if (!cardRef.value || !displayCard.value) {
-      console.warn('[VaalOutcomes] executeDuplicate: Missing cardRef or displayCard')
       return { success: false };
     }
 
@@ -615,8 +584,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       originalCardFoil: isCardFoil(originalCard),
       allMatchingCardsBefore: matchingCardsBeforeAdd.map(c => ({ uid: c.uid, foil: c.foil, name: c.name }))
     };
-    console.log('[VaalOutcomes] DUPLICATE: Before adding duplicate:')
-    console.log(JSON.stringify(beforeInfo, null, 2))
     
     // Add duplicate to collection FIRST, before syncing
     // Ensure duplicateCard preserves foil status from original
@@ -632,8 +599,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       localCollectionLengthBefore: localCollection.value.length,
       baseUid
     };
-    console.log('[VaalOutcomes] DUPLICATE: About to push duplicate card:')
-    console.log(JSON.stringify(pushInfo, null, 2))
     
     localCollection.value.push(duplicateCardWithFoil);
     
@@ -661,8 +626,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       originalCardUid: originalCard.uid,
       allMatchingCards: matchingCardsAfterAdd.map(c => ({ uid: c.uid, foil: c.foil, name: c.name }))
     };
-    console.log('[VaalOutcomes] DUPLICATE: After adding duplicate to localCollection:')
-    console.log(JSON.stringify(afterAddInfo, null, 2))
     
     isAnimating.value = false;
 
@@ -671,15 +634,12 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     }
 
     // Sync with API: same card, increase count (normal or foil depending on original)
-    console.log('[VaalOutcomes] DUPLICATE: Checking onSyncRequired...', { onSyncRequired: !!onSyncRequired })
     if (onSyncRequired) {
       const duplicateSyncInfo = {
         card: originalCard.name,
         uid: originalCard.uid,
         isFoil: isCardFoil(originalCard)
       };
-      console.log('[VaalOutcomes] DUPLICATE: Syncing to API...')
-      console.log(JSON.stringify(duplicateSyncInfo, null, 2))
       // baseUid already declared at line 407
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
       
@@ -692,9 +652,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       }
       
       await onSyncRequired(updates, -1, 'duplicate') // Consume 1 vaalOrb
-      console.log('[VaalOutcomes] DUPLICATE: Sync completed')
     } else {
-      console.warn('[VaalOutcomes] DUPLICATE: onSyncRequired is not defined!')
     }
 
     return { success: true, newCard: duplicateCard };

@@ -37,7 +37,6 @@ export function useActivityLogs() {
   try {
     supabase = useSupabaseClient<Database>();
   } catch (e) {
-    console.warn('Supabase client not available for activity logs');
   }
 
   // Subscribe to realtime changes
@@ -53,7 +52,6 @@ export function useActivityLogs() {
         .limit(MAX_LOGS);
 
       if (fetchError) {
-        console.error('Failed to fetch initial logs:', fetchError);
         connectionError.value = 'Échec du chargement des logs';
       } else if (recentLogs) {
         logs.value = recentLogs;
@@ -94,11 +92,9 @@ export function useActivityLogs() {
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             isConnected.value = false;
             connectionError.value = 'Connexion temps réel perdue';
-            console.error('Realtime subscription error:', err);
           }
         });
     } catch (e) {
-      console.error('Error setting up activity logs subscription:', e);
       connectionError.value = 'Erreur de connexion';
     }
   };

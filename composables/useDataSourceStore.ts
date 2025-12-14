@@ -11,11 +11,8 @@ export function useDataSource() {
   const dataSourceStore = useDataSourceStorePinia()
   const authStore = useAuthStore()
 
-  // Initialize stores if needed
-  if (import.meta.client) {
-    authStore.initialize()
-    dataSourceStore.initialize()
-  }
+  // Don't initialize here - let the plugin handle it
+  // This prevents multiple initializations
 
   return {
     dataSource: computed(() => dataSourceStore.source),

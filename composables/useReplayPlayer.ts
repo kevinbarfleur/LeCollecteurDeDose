@@ -10,7 +10,6 @@ export function useReplayPlayer() {
   try {
     supabase = useSupabaseClient<Database>();
   } catch (e) {
-    console.warn('Supabase client not available');
   }
   
   const replayData = ref<Replay | null>(null);
@@ -120,7 +119,6 @@ export function useReplayPlayer() {
       
       return true;
     } catch (e) {
-      console.error('Error loading replay:', e);
       error.value = 'Erreur lors du chargement';
       return false;
     } finally {

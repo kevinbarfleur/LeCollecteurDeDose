@@ -11,10 +11,8 @@ export function useAppSettings() {
   const appSettingsStore = useAppSettingsStorePinia()
   const dataSourceStore = useDataSourceStore()
 
-  // Initialize if needed
-  if (import.meta.client && !appSettingsStore.isLoading) {
-    appSettingsStore.initialize()
-  }
+  // Don't initialize here - let the plugin handle it
+  // This prevents multiple initializations
 
   return {
     // State - wrap in computed to ensure reactivity
