@@ -174,6 +174,57 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs: {
+        Row: {
+          id: string
+          level: string
+          message: string
+          stack: string | null
+          context: Json
+          user_id: string | null
+          username: string | null
+          source: string
+          endpoint: string | null
+          status_code: number | null
+          created_at: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          id?: string
+          level: string
+          message: string
+          stack?: string | null
+          context?: Json
+          user_id?: string | null
+          username?: string | null
+          source: string
+          endpoint?: string | null
+          status_code?: number | null
+          created_at?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          id?: string
+          level?: string
+          message?: string
+          stack?: string | null
+          context?: Json
+          user_id?: string | null
+          username?: string | null
+          source?: string
+          endpoint?: string | null
+          status_code?: number | null
+          created_at?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -193,6 +244,13 @@ export type Database = {
           updated_at: string
           updated_by: string | null
         }
+      }
+      mark_error_resolved: {
+        Args: {
+          error_id: string
+          resolved_by_user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
@@ -214,6 +272,9 @@ export type AdminUser = Database['public']['Tables']['admin_users']['Row']
 export type AdminUserInsert = Database['public']['Tables']['admin_users']['Insert']
 
 export type AppSetting = Database['public']['Tables']['app_settings']['Row']
+
+export type ErrorLog = Database['public']['Tables']['error_logs']['Row']
+export type ErrorLogInsert = Database['public']['Tables']['error_logs']['Insert']
 
 // Typed app settings
 export interface AltarOpenSetting {
