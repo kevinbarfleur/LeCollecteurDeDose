@@ -330,286 +330,213 @@ const updateDebugVaalOrbs = (delta: number) => {
       />
 
       <!-- Main content -->
-      <RunicBox attached padding="md">
+      <RunicBox attached padding="lg">
         <div class="admin-content">
-          <!-- Compact header with status and user -->
-          <div class="admin-header-compact">
-            <div class="admin-status-compact">
+          <!-- Status Bar -->
+          <div class="admin-status-bar">
+            <div class="admin-status-bar__item">
               <span
-                class="admin-status__indicator"
+                class="admin-status-bar__indicator"
                 :class="
                   isConnected
-                    ? 'admin-status__indicator--connected'
-                    : 'admin-status__indicator--disconnected'
+                    ? 'admin-status-bar__indicator--connected'
+                    : 'admin-status-bar__indicator--disconnected'
                 "
               />
-              <span class="admin-status__text">
+              <span class="admin-status-bar__text">
                 {{ isConnected ? t("admin.connected") : t("admin.disconnected") }}
               </span>
             </div>
-            <div class="admin-user-info-compact">
+            <div class="admin-status-bar__divider"></div>
+            <div class="admin-status-bar__item admin-status-bar__user">
               <img
                 v-if="user?.avatar"
                 :src="user.avatar"
                 :alt="user.displayName"
-                class="admin-user-info__avatar"
+                class="admin-status-bar__avatar"
               />
-              <div class="admin-user-info__details">
-                <span class="admin-user-info__name">{{ user?.displayName }}</span>
-                <span class="admin-user-info__id">ID: {{ user?.id }}</span>
+              <div class="admin-status-bar__user-info">
+                <span class="admin-status-bar__name">{{ user?.displayName }}</span>
+                <span class="admin-status-bar__id">{{ user?.id?.slice(0, 8) }}...</span>
               </div>
             </div>
           </div>
 
-          <RunicDivider />
-
-          <!-- Altar Control -->
-          <ClientOnly>
-            <RunicBox padding="lg">
-              <div class="admin-section-enhanced__header">
-                <div class="admin-section-enhanced__icon">
-                  <img
-                    src="/images/vaal-risitas.png"
-                    alt="Vaal Orb"
-                    class="admin-section-enhanced__icon-image"
-                  />
+          <!-- Dashboard Grid -->
+          <div class="admin-dashboard-grid">
+            <!-- Card 1: Contrôles Principaux -->
+            <ClientOnly>
+              <div class="admin-card">
+                <div class="admin-card__header admin-card__header--default">
+                  <h2 class="admin-card__header-title">CONTRÔLES PRINCIPAUX</h2>
                 </div>
-                <div class="admin-section-enhanced__content">
-                  <h3 class="admin-section-enhanced__title">
-                    {{ t("admin.altar.title") }}
-                  </h3>
-                  <p class="admin-section-enhanced__description">
-                    {{ t("admin.altar.description") }}
-                  </p>
-                </div>
-              </div>
-              <div class="admin-section-enhanced__footer">
-                <span
-                  class="admin-section-enhanced__status"
-                  :class="
-                    altarOpen
-                      ? 'admin-section-enhanced__status--open'
-                      : 'admin-section-enhanced__status--closed'
-                  "
-                >
-                  {{
-                    altarOpen ? t("admin.altar.open") : t("admin.altar.closed")
-                  }}
-                </span>
-                <div
-                  class="admin-section-enhanced__control"
-                  :class="{
-                    'admin-section-enhanced__control--disabled':
-                      isLoading || isTogglingAltar,
-                  }"
-                >
-                  <RunicRadio
-                    v-model="altarOpenModel"
-                    :toggle="true"
-                    size="md"
-                    toggle-color="default"
-                  />
-                </div>
-              </div>
-            </RunicBox>
-            <template #fallback>
-              <RunicBox padding="lg">
-                <div class="admin-section-enhanced__header">
-                  <div class="admin-section-enhanced__icon">
-                    <img
-                      src="/images/vaal-risitas.png"
-                      alt="Vaal Orb"
-                      class="admin-section-enhanced__icon-image"
-                    />
-                  </div>
-                  <div class="admin-section-enhanced__content">
-                    <h3 class="admin-section-enhanced__title">
-                      {{ t("admin.altar.title") }}
-                    </h3>
-                    <p class="admin-section-enhanced__description">
-                      {{ t("admin.altar.description") }}
-                    </p>
-                  </div>
-                </div>
-                <div class="admin-section-enhanced__footer">
-                  <span class="admin-section-enhanced__status admin-section-enhanced__status--closed">
-                    {{ t("admin.altar.closed") }}
-                  </span>
-                  <div class="admin-section-enhanced__control admin-section-enhanced__control--disabled">
-                    <RunicRadio
-                      :model-value="false"
-                      :toggle="true"
-                      size="md"
-                      toggle-color="default"
-                      disabled
-                    />
-                  </div>
-                </div>
-              </RunicBox>
-            </template>
-          </ClientOnly>
-
-          <RunicDivider />
-
-          <!-- Activity Logs Control -->
-          <ClientOnly>
-            <RunicBox padding="lg">
-              <div class="admin-section-enhanced__header">
-                <div class="admin-section-enhanced__icon admin-section-enhanced__icon--activity-logs">
-                  <!-- Users icon (same as ActivityLogsPanel) -->
-                  <svg
-                    class="admin-section-enhanced__icon-image"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
-                    />
-                  </svg>
-                </div>
-                <div class="admin-section-enhanced__content">
-                  <h3 class="admin-section-enhanced__title">
-                    {{ t("admin.activityLogs.title") }}
-                  </h3>
-                  <p class="admin-section-enhanced__description">
-                    {{ t("admin.activityLogs.description") }}
-                  </p>
-                </div>
-              </div>
-              <div class="admin-section-enhanced__footer">
-                <span
-                  class="admin-section-enhanced__status"
-                  :class="
-                    activityLogsEnabled
-                      ? 'admin-section-enhanced__status--open'
-                      : 'admin-section-enhanced__status--closed'
-                  "
-                >
-                  {{
-                    activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled")
-                  }}
-                </span>
-                <div
-                  class="admin-section-enhanced__control"
-                  :class="{
-                    'admin-section-enhanced__control--disabled':
-                      isLoading || isTogglingActivityLogs,
-                  }"
-                >
-                  <RunicRadio
-                    v-model="activityLogsEnabledModel"
-                    :toggle="true"
-                    size="md"
-                    toggle-color="default"
-                  />
-                </div>
-              </div>
-            </RunicBox>
-            <template #fallback>
-              <RunicBox padding="lg">
-                <div class="admin-section-enhanced__header">
-                  <div class="admin-section-enhanced__icon admin-section-enhanced__icon--activity-logs">
-                    <!-- Users icon (same as ActivityLogsPanel) -->
-                    <svg
-                      class="admin-section-enhanced__icon-image"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path
-                        d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+                <div class="admin-card__content">
+                  <!-- Altar Control -->
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Contrôle de l'Autel</label>
+                      <p class="admin-card__row-description">
+                        {{ t("admin.altar.description") }}
+                      </p>
+                    </div>
+                    <div class="admin-card__row-control">
+                      <span class="admin-card__row-status" :class="altarOpen ? 'admin-card__row-status--open' : 'admin-card__row-status--closed'">
+                        {{ altarOpen ? t("admin.altar.open") : t("admin.altar.closed") }}
+                      </span>
+                      <RunicRadio
+                        v-model="altarOpenModel"
+                        :toggle="true"
+                        size="md"
+                        toggle-color="default"
+                        :disabled="isLoading || isTogglingAltar"
                       />
-                    </svg>
+                    </div>
                   </div>
-                  <div class="admin-section-enhanced__content">
-                    <h3 class="admin-section-enhanced__title">
-                      {{ t("admin.activityLogs.title") }}
-                    </h3>
-                    <p class="admin-section-enhanced__description">
-                      {{ t("admin.activityLogs.description") }}
+
+                  <!-- Activity Logs Control -->
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Panneau de Logs d'Activité</label>
+                      <p class="admin-card__row-description">
+                        {{ t("admin.activityLogs.description") }}
+                      </p>
+                    </div>
+                    <div class="admin-card__row-control">
+                      <span class="admin-card__row-status" :class="activityLogsEnabled ? 'admin-card__row-status--open' : 'admin-card__row-status--closed'">
+                        {{ activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled") }}
+                      </span>
+                      <RunicRadio
+                        v-model="activityLogsEnabledModel"
+                        :toggle="true"
+                        size="md"
+                        toggle-color="default"
+                        :disabled="isLoading || isTogglingActivityLogs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <template #fallback>
+                <div class="admin-card">
+                  <div class="admin-card__header admin-card__header--default">
+                    <h2 class="admin-card__header-title">CONTRÔLES PRINCIPAUX</h2>
+                  </div>
+                </div>
+              </template>
+            </ClientOnly>
+
+            <!-- Card 2: Outils de Test -->
+            <ClientOnly>
+              <div class="admin-card">
+                <div class="admin-card__header admin-card__header--default">
+                  <h2 class="admin-card__header-title">OUTILS DE TEST</h2>
+                </div>
+                <div class="admin-card__content">
+                  <!-- Data Source -->
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Source des Données</label>
+                    </div>
+                    <div class="admin-card__row-control">
+                      <RunicRadio
+                        v-model="dataSourceModel"
+                        :options="dataSourceOptions"
+                        size="md"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Force Outcome -->
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Forcer l'Issue de Corruption</label>
+                    </div>
+                    <div class="admin-card__row-control">
+                      <RunicSelect
+                        v-model="forcedOutcome"
+                        :options="forcedOutcomeOptions"
+                        size="md"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Vaal Orbs -->
+                  <div v-if="isTestData" class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Vaal Orbs</label>
+                      <p class="admin-card__row-description">
+                        Nombre de Vaal Orbs disponibles pour les tests
+                      </p>
+                    </div>
+                    <div class="admin-card__row-control">
+                      <div class="admin-card__number-control">
+                        <button
+                          class="admin-card__number-btn"
+                          :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
+                          @click="updateDebugVaalOrbs(-1)"
+                        >
+                          −
+                        </button>
+                        <span class="admin-card__number-value">{{ debugVaalOrbs }}</span>
+                        <button
+                          class="admin-card__number-btn"
+                          :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
+                          @click="updateDebugVaalOrbs(1)"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="admin-card__row">
+                    <p class="admin-card__hint">
+                      {{ t("admin.altarDebug.apiModeHint") }}
                     </p>
                   </div>
                 </div>
-                <div class="admin-section-enhanced__footer">
-                  <span class="admin-section-enhanced__status admin-section-enhanced__status--open">
-                    {{ t("admin.activityLogs.enabled") }}
-                  </span>
-                  <div class="admin-section-enhanced__control admin-section-enhanced__control--disabled">
-                    <RunicRadio
-                      :model-value="true"
-                      :toggle="true"
-                      size="md"
-                      toggle-color="default"
-                      disabled
-                    />
+              </div>
+              <template #fallback>
+                <div class="admin-card">
+                  <div class="admin-card__header admin-card__header--default">
+                    <h2 class="admin-card__header-title">OUTILS DE TEST</h2>
                   </div>
                 </div>
-              </RunicBox>
-            </template>
-          </ClientOnly>
+              </template>
+            </ClientOnly>
 
-          <RunicDivider />
-
-          <!-- Admin Debug Panel -->
-          <ClientOnly>
-            <section class="admin-section admin-section--compact">
-              <h2 class="admin-section__title admin-section__title--compact">
-                <span class="admin-section__rune">◆</span>
-                {{ t("altar.preferences.adminTitle") }}
-                <span class="admin-section__rune">◆</span>
-              </h2>
-
-              <div class="admin-debug-panel admin-debug-panel--compact">
-                <!-- Data Source Configuration -->
-                <div class="admin-debug-field admin-debug-field--compact">
-                  <label class="admin-debug-field__label admin-debug-field__label--compact">
-                    {{ t("admin.dataSource.title") }}
-                  </label>
-                  <RunicRadio
-                    v-model="dataSourceModel"
-                    :options="dataSourceOptions"
-                    size="sm"
-                    class="admin-debug-field__select"
-                  />
+            <!-- Card 3: Gestion des Données -->
+            <ClientOnly>
+              <div class="admin-card">
+                <div class="admin-card__header admin-card__header--default">
+                  <h2 class="admin-card__header-title">GESTION DES DONNÉES</h2>
                 </div>
-
-                <!-- Create Backup Button (always visible) -->
-                <div class="admin-debug-field admin-debug-field--compact">
+                <div class="admin-card__content admin-card__content--actions">
                   <RunicButton
-                    size="sm"
-                    variant="secondary"
+                    size="md"
+                    variant="primary"
                     :disabled="isCreatingBackup"
                     @click="createBackup"
-                    class="admin-debug-field__sync-btn"
+                    class="admin-card__action-btn"
                   >
-                    <span v-if="isCreatingBackup" class="flex items-center gap-2">
-                      <span class="loader ease-linear rounded-full border-2 border-t-2 border-current h-3 w-3"></span>
+                    <span v-if="isCreatingBackup" class="admin-card__action-loading">
+                      <span class="admin-card__action-spinner"></span>
                       {{ t("admin.dataSource.backingUp") }}
                     </span>
                     <span v-else>
                       {{ t("admin.dataSource.backupButton") }}
                     </span>
                   </RunicButton>
-                </div>
 
-                <!-- Sync Test Data Button (only visible in test mode) -->
-                <div v-if="isTestData" class="admin-debug-field admin-debug-field--compact">
                   <RunicButton
-                    size="sm"
-                    variant="secondary"
+                    v-if="isTestData"
+                    size="md"
+                    variant="primary"
                     :disabled="isSyncingTestData"
                     @click="syncTestData"
-                    class="admin-debug-field__sync-btn"
+                    class="admin-card__action-btn"
                   >
-                    <span v-if="isSyncingTestData" class="flex items-center gap-2">
-                      <span class="loader ease-linear rounded-full border-2 border-t-2 border-current h-3 w-3"></span>
+                    <span v-if="isSyncingTestData" class="admin-card__action-loading">
+                      <span class="admin-card__action-spinner"></span>
                       {{ t("admin.dataSource.syncing") }}
                     </span>
                     <span v-else>
@@ -617,73 +544,51 @@ const updateDebugVaalOrbs = (delta: number) => {
                     </span>
                   </RunicButton>
                 </div>
-
-                <!-- Force Outcome -->
-                <div class="admin-debug-field admin-debug-field--compact">
-                  <label class="admin-debug-field__label admin-debug-field__label--compact">
-                    {{ t("altar.preferences.forceOutcome") }}
-                  </label>
-                  <RunicSelect
-                    v-model="forcedOutcome"
-                    :options="forcedOutcomeOptions"
-                    size="sm"
-                    class="admin-debug-field__select"
-                  />
-                </div>
-
-                <!-- Vaal Orbs Debug (test mode only) -->
-                <div v-if="isTestData" class="admin-debug-field admin-debug-field--compact">
-                  <label class="admin-debug-field__label admin-debug-field__label--compact">
-                    {{ t("altar.preferences.vaalOrbsLabel") }}
-                  </label>
-                  <div class="admin-debug-field__number admin-debug-field__number--compact">
-                    <button
-                      class="admin-debug-field__btn admin-debug-field__btn--compact"
-                      :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
-                      @click="updateDebugVaalOrbs(-1)"
-                    >
-                      −
-                    </button>
-                    <span class="admin-debug-field__value admin-debug-field__value--compact">{{ debugVaalOrbs }}</span>
-                    <button
-                      class="admin-debug-field__btn admin-debug-field__btn--compact"
-                      :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
-                      @click="updateDebugVaalOrbs(1)"
-                    >
-                      +
-                    </button>
+              </div>
+              <template #fallback>
+                <div class="admin-card">
+                  <div class="admin-card__header admin-card__header--default">
+                    <h2 class="admin-card__header-title">GESTION DES DONNÉES</h2>
                   </div>
                 </div>
-                <div v-else class="admin-debug-field admin-debug-field--compact">
-                  <p class="admin-section__hint admin-section__hint--compact">
-                    {{ t("admin.altarDebug.apiModeHint") }}
-                  </p>
-                </div>
+              </template>
+            </ClientOnly>
 
-                <!-- Error Logs Access -->
-                <div class="admin-debug-field admin-debug-field--compact">
+            <!-- Card 4: Logs et Diagnostic -->
+            <ClientOnly>
+              <div class="admin-card">
+                <div class="admin-card__header admin-card__header--accent">
+                  <h2 class="admin-card__header-title">LOGS ET DIAGNOSTIC</h2>
+                </div>
+                <div class="admin-card__content">
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Logs d'Erreurs</label>
+                      <p class="admin-card__row-description">
+                        Visualiser et gérer les erreurs de l'application pour le débogage
+                      </p>
+                    </div>
+                  </div>
                   <RunicButton
                     to="/admin/errors"
                     icon="external"
-                    variant="secondary"
-                    size="sm"
-                    class="admin-debug-field__sync-btn"
+                    variant="primary"
+                    size="md"
+                    class="admin-card__action-btn admin-card__action-btn--full"
                   >
-                    Voir les logs d'erreurs
+                    VOIR LES LOGS
                   </RunicButton>
                 </div>
               </div>
-            </section>
-            <template #fallback>
-              <section class="admin-section admin-section--compact">
-                <h2 class="admin-section__title admin-section__title--compact">
-                  <span class="admin-section__rune">◆</span>
-                  {{ t("altar.preferences.adminTitle") }}
-                  <span class="admin-section__rune">◆</span>
-                </h2>
-              </section>
-            </template>
-          </ClientOnly>
+              <template #fallback>
+                <div class="admin-card">
+                  <div class="admin-card__header admin-card__header--accent">
+                    <h2 class="admin-card__header-title">LOGS ET DIAGNOSTIC</h2>
+                  </div>
+                </div>
+              </template>
+            </ClientOnly>
+          </div>
         </div>
       </RunicBox>
     </div>
@@ -692,66 +597,60 @@ const updateDebugVaalOrbs = (delta: number) => {
 
 <style scoped>
 .admin-page {
-  max-width: 800px;
+  max-width: 1200px;
+}
+
+.admin-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 /* ==========================================
-   COMPACT HEADER
+   STATUS BAR
    ========================================== */
-.admin-header-compact {
+.admin-status-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
+  padding: 0.875rem 1rem;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(60, 55, 50, 0.3);
   border-radius: 6px;
 }
 
-.admin-status-compact {
+.admin-status-bar__item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
-.admin-user-info-compact {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.admin-status-bar__divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(60, 55, 50, 0.3);
 }
 
-/* ==========================================
-   STATUS INDICATOR
-   ========================================== */
-.admin-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.admin-status__indicator {
-  width: 8px;
-  height: 8px;
+.admin-status-bar__indicator {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
 
-.admin-status__indicator--connected {
+.admin-status-bar__indicator--connected {
   background: #4ade80;
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
 }
 
-.admin-status__indicator--disconnected {
+.admin-status-bar__indicator--disconnected {
   background: #f87171;
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
   animation: none;
 }
 
 @keyframes pulse {
-  0%,
-  100% {
+  0%, 100% {
     opacity: 1;
   }
   50% {
@@ -759,493 +658,206 @@ const updateDebugVaalOrbs = (delta: number) => {
   }
 }
 
-.admin-status__text {
+.admin-status-bar__text {
   font-family: "Crimson Text", serif;
   font-size: 0.875rem;
-  color: rgba(140, 130, 120, 0.7);
+  color: rgba(160, 150, 140, 0.85);
+  font-weight: 500;
 }
 
-/* ==========================================
-   USER INFO
-   ========================================== */
-.admin-user-info__avatar {
-  width: 36px;
-  height: 36px;
+.admin-status-bar__user {
+  margin-left: auto;
+  gap: 0.75rem;
+}
+
+.admin-status-bar__avatar {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid rgba(175, 96, 37, 0.5);
 }
 
-.admin-user-info__details {
+.admin-status-bar__user-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.125rem;
 }
 
-.admin-user-info__name {
+.admin-status-bar__name {
   font-family: "Cinzel", serif;
   font-size: 0.875rem;
   font-weight: 600;
+  color: rgba(200, 190, 180, 0.95);
+}
+
+.admin-status-bar__id {
+  font-family: "Crimson Text", serif;
+  font-size: 0.75rem;
+  color: rgba(140, 130, 120, 0.7);
+  font-style: italic;
+}
+
+/* ==========================================
+   DASHBOARD GRID
+   ========================================== */
+.admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+/* ==========================================
+   ADMIN CARDS
+   ========================================== */
+.admin-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 18, 22, 0.95);
+  border: 1px solid rgba(50, 45, 40, 0.4);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.admin-card__header {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid rgba(50, 45, 40, 0.3);
+}
+
+.admin-card__header--default {
+  background: rgba(40, 38, 35, 0.6);
+}
+
+.admin-card__header--accent {
+  background: rgba(196, 80, 80, 0.2);
+  border-bottom-color: rgba(196, 80, 80, 0.3);
+}
+
+.admin-card__header-title {
+  font-family: "Cinzel", serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.admin-card__header--default .admin-card__header-title {
   color: rgba(200, 190, 180, 0.9);
 }
 
-.admin-user-info__id {
-  font-family: "Crimson Text", serif;
-  font-size: 0.75rem;
-  color: rgba(120, 115, 110, 0.7);
-  font-style: italic;
+.admin-card__header--accent .admin-card__header-title {
+  color: rgba(255, 255, 255, 0.95);
 }
 
-/* ==========================================
-   SECTIONS
-   ========================================== */
-.admin-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.admin-section {
-  padding: 1.5rem 0;
-}
-
-.admin-section--compact {
-  padding: 1rem 0;
-}
-
-.admin-section__title--compact {
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.admin-section__title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin: 0 0 0.5rem;
-  font-family: "Cinzel", serif;
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #c9a227;
-  text-shadow: 0 0 20px rgba(201, 162, 39, 0.3);
-}
-
-.admin-section__rune {
-  font-size: 0.5rem;
-  color: rgba(175, 96, 37, 0.6);
-}
-
-.admin-section__desc {
-  margin: 0 0 1.5rem;
-  font-family: "Crimson Text", serif;
-  font-size: 1.0625rem;
-  color: rgba(140, 130, 120, 0.8);
-  text-align: center;
-  line-height: 1.5;
-}
-
-.admin-section__hint {
-  margin: 1rem 0 0;
-  font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
-  color: rgba(120, 115, 110, 0.6);
-  text-align: center;
-  font-style: italic;
-}
-
-.admin-section__hint--compact {
-  margin: 0.5rem 0 0;
-  font-size: 0.8125rem;
-}
-
-.admin-section__hint--coming-soon {
-  color: rgba(201, 162, 39, 0.7);
-  font-weight: 500;
-}
-
-/* ==========================================
-   GRID LAYOUT FOR QUICK CONTROLS
-   ========================================== */
-.admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-/* ==========================================
-   COMPACT SECTION (for grid items)
-   ========================================== */
-.admin-section-compact {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.95) 0%,
-    rgba(12, 12, 14, 0.9) 40%,
-    rgba(8, 8, 10, 0.95) 100%
-  );
-  border-radius: 6px;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7),
-    inset 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(60, 55, 50, 0.06),
-    0 1px 0 rgba(45, 40, 35, 0.25);
-  border: 1px solid rgba(35, 32, 28, 0.7);
-  border-top-color: rgba(25, 22, 18, 0.8);
-  border-bottom-color: rgba(55, 50, 45, 0.3);
-}
-
-.admin-section-compact--full {
-  width: 100%;
-}
-
-.admin-section-compact__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex: 1;
-}
-
-.admin-section-compact__title {
-  font-family: "Cinzel", serif;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: rgba(180, 170, 160, 0.9);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0;
-}
-
-.admin-section-compact__status {
-  font-family: "Cinzel", serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-}
-
-.admin-section-compact__status--open {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-  text-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
-}
-
-.admin-section-compact__status--closed {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
-  text-shadow: 0 0 10px rgba(248, 113, 113, 0.3);
-}
-
-.admin-section-compact__control {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-.admin-section-compact__control--disabled {
-  opacity: 0.5;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-/* ==========================================
-   ENHANCED SECTION (for Altar and Activity Logs)
-   Now using RunicBox, so we only style the inner content
-   ========================================== */
-.admin-section-enhanced {
+.admin-card__content {
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.admin-section-enhanced__header {
+.admin-card__content--actions {
+  gap: 0.875rem;
+}
+
+/* ==========================================
+   CARD ROWS
+   ========================================== */
+.admin-card__row {
   display: flex;
   align-items: flex-start;
-  gap: 1.25rem;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(50, 45, 40, 0.2);
 }
 
-.admin-section-enhanced__icon {
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(
-    135deg,
-    rgba(248, 113, 113, 0.1) 0%,
-    rgba(139, 92, 246, 0.1) 100%
-  );
-  border-radius: 8px;
-  border: 1px solid rgba(248, 113, 113, 0.2);
-  padding: 0.75rem;
-  position: relative;
+.admin-card__row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
-.admin-section-enhanced__icon-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(248, 113, 113, 0.4));
-  color: rgba(248, 113, 113, 0.8);
-}
-
-/* SVG icons in activity logs - using accent color from design system */
-.admin-section-enhanced__icon--activity-logs svg {
-  width: 100%;
-  height: 100%;
-  color: var(--color-accent);
-  filter: drop-shadow(0 0 8px var(--color-accent-glow));
-}
-
-.admin-section-enhanced__icon--error-logs svg {
-  width: 100%;
-  height: 100%;
-  color: #c45050;
-  filter: drop-shadow(0 0 8px rgba(196, 80, 80, 0.4));
-}
-
-.admin-section-enhanced__content {
+.admin-card__row-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  min-width: 0;
 }
 
-.admin-section-enhanced__title {
+.admin-card__row-label {
   font-family: "Cinzel", serif;
-  font-size: 1.125rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: rgba(220, 210, 200, 0.95);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   margin: 0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1.3;
 }
 
-.admin-section-enhanced__description {
+.admin-card__row-description {
   font-family: "Crimson Text", serif;
-  font-size: 0.9375rem;
-  color: rgba(160, 150, 140, 0.85);
-  line-height: 1.5;
+  font-size: 0.8125rem;
+  color: rgba(140, 130, 120, 0.7);
+  line-height: 1.4;
   margin: 0;
 }
 
-.admin-section-enhanced__footer {
+.admin-card__row-control {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(35, 32, 28, 0.5);
+  gap: 0.875rem;
+  flex-shrink: 0;
 }
 
-.admin-section-enhanced__status {
+.admin-card__row-status {
   font-family: "Cinzel", serif;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.375rem 0.625rem;
+  border-radius: 4px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.admin-section-enhanced__status--open {
+.admin-card__row-status--open {
   color: #4ade80;
   background: rgba(74, 222, 128, 0.15);
-  text-shadow: 0 0 10px rgba(74, 222, 128, 0.4);
   border: 1px solid rgba(74, 222, 128, 0.3);
 }
 
-.admin-section-enhanced__status--closed {
+.admin-card__row-status--closed {
   color: #f87171;
   background: rgba(248, 113, 113, 0.15);
-  text-shadow: 0 0 10px rgba(248, 113, 113, 0.4);
   border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
-.admin-section-enhanced__control {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-.admin-section-enhanced__control--disabled {
-  opacity: 0.5;
-  pointer-events: none;
-  cursor: not-allowed;
+.admin-card__hint {
+  font-family: "Crimson Text", serif;
+  font-size: 0.8125rem;
+  color: rgba(120, 115, 110, 0.6);
+  text-align: center;
+  font-style: italic;
+  margin: 0;
+  padding: 0.5rem 0;
 }
 
 /* ==========================================
-   DATA CONFIGURATION
+   NUMBER CONTROL
    ========================================== */
-.admin-data-config {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.95) 0%,
-    rgba(12, 12, 14, 0.9) 40%,
-    rgba(8, 8, 10, 0.95) 100%
-  );
-  border-radius: 6px;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7),
-    inset 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(60, 55, 50, 0.06),
-    0 1px 0 rgba(45, 40, 35, 0.25);
-  border: 1px solid rgba(35, 32, 28, 0.7);
-  border-top-color: rgba(25, 22, 18, 0.8);
-  border-bottom-color: rgba(55, 50, 45, 0.3);
-}
-
-.admin-data-config--disabled {
-  opacity: 0.5;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-.admin-data-config__group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.admin-data-config__label {
-  font-family: "Cinzel", serif;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: rgba(180, 170, 160, 0.9);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.admin-data-config__radio {
-  width: 100%;
-}
-
-.admin-data-config__radio :deep(.runic-radio) {
-  display: flex;
-  width: 100%;
-}
-
-.admin-data-config__radio :deep(.runic-radio__groove) {
-  width: 100%;
-  flex: 1;
-}
-
-.admin-data-config__sync-btn {
-  margin-top: 0.5rem;
-  width: 100%;
-}
-
-/* ==========================================
-   DEBUG PANEL
-   ========================================== */
-.admin-debug-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.95) 0%,
-    rgba(12, 12, 14, 0.9) 40%,
-    rgba(8, 8, 10, 0.95) 100%
-  );
-  border-radius: 6px;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7),
-    inset 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(60, 55, 50, 0.06),
-    0 1px 0 rgba(45, 40, 35, 0.25);
-  border: 1px solid rgba(35, 32, 28, 0.7);
-  border-top-color: rgba(25, 22, 18, 0.8);
-  border-bottom-color: rgba(55, 50, 45, 0.3);
-}
-
-.admin-debug-panel--compact {
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.admin-debug-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.admin-debug-field--compact {
-  gap: 0.375rem;
-}
-
-.admin-debug-field__label {
-  font-family: "Cinzel", serif;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: rgba(180, 170, 160, 0.9);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.admin-debug-field__label--compact {
-  font-size: 0.8125rem;
-}
-
-.admin-debug-field__select {
-  width: 100%;
-  position: relative;
-  z-index: 1;
-}
-
-/* Ensure dropdown appears above RunicBox and other admin content */
-.admin-debug-field__select :deep(.runic-select__dropdown) {
-  z-index: 10002 !important; /* Above admin page content */
-  position: fixed !important; /* Use fixed positioning to escape RunicBox overflow */
-}
-
-/* Ensure RunicBox doesn't clip the dropdown */
-.admin-debug-panel :deep(.runic-box) {
-  overflow: visible;
-}
-
-.admin-debug-panel :deep(.runic-box__content) {
-  overflow: visible;
-}
-
-.admin-debug-field__select :deep(.runic-radio) {
-  display: flex;
-  width: 100%;
-}
-
-.admin-debug-field__select :deep(.runic-radio__groove) {
-  width: 100%;
-  flex: 1;
-}
-
-.admin-debug-field__number {
+.admin-card__number-control {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(60, 55, 50, 0.4);
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-.admin-debug-field__number--compact {
-  padding: 0.5rem;
-  gap: 0.75rem;
-}
-
-.admin-debug-field__btn {
+.admin-card__number-btn {
   width: 32px;
   height: 32px;
   display: flex;
@@ -1256,92 +868,106 @@ const updateDebugVaalOrbs = (delta: number) => {
   border-radius: 4px;
   color: rgba(200, 190, 180, 0.9);
   font-family: "Cinzel", serif;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.admin-debug-field__btn--compact {
-  width: 28px;
-  height: 28px;
-  font-size: 1rem;
-}
-
-.admin-debug-field__btn:hover:not(:disabled) {
+.admin-card__number-btn:hover:not(:disabled) {
   background: rgba(175, 96, 37, 0.2);
   border-color: rgba(175, 96, 37, 0.5);
   color: #c9a227;
 }
 
-.admin-debug-field__btn:disabled {
+.admin-card__number-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.admin-debug-field__value {
+.admin-card__number-value {
   font-family: "Cinzel", serif;
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   font-weight: 700;
   color: rgba(200, 190, 180, 0.95);
-  min-width: 3ch;
+  min-width: 2.5ch;
   text-align: center;
 }
 
-.admin-debug-field__value--compact {
-  font-size: 1.25rem;
+/* ==========================================
+   ACTION BUTTONS
+   ========================================== */
+.admin-card__action-btn {
+  width: 100%;
 }
 
-.admin-debug-field__sync-btn {
+.admin-card__action-btn--full {
   margin-top: 0.5rem;
-  width: 100%;
+}
+
+.admin-card__action-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.admin-card__action-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================
    RESPONSIVE
    ========================================== */
-@media (max-width: 640px) {
+@media (max-width: 1024px) {
+  .admin-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
   .admin-page {
     padding: 0 0.5rem 1.5rem;
   }
 
-  .admin-header-compact {
+  .admin-content {
+    gap: 1.25rem;
+  }
+
+  .admin-status-bar {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
   }
 
-  .admin-grid {
-    grid-template-columns: 1fr;
+  .admin-status-bar__divider {
+    display: none;
   }
 
-  .admin-section-compact {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .admin-section-compact__header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .admin-section-compact__control {
+  .admin-status-bar__user {
+    margin-left: 0;
     width: 100%;
-    justify-content: center;
   }
 
-  .admin-section__title {
-    font-size: 1rem;
+  .admin-card__row {
+    flex-direction: column;
+    gap: 0.875rem;
+    align-items: stretch;
   }
 
-  .admin-section__title--compact {
-    font-size: 0.9375rem;
-  }
-
-  .admin-data-config {
-    padding: 0.75rem;
+  .admin-card__row-control {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>
