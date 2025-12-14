@@ -52,6 +52,43 @@ export function useApiStatus() {
   }
 
   /**
+   * Update offline status based on API store error
+   * Called immediately when an API error occurs
+   */
+  const updateOfflineStatusFromError = () => {
+    // Only update if we're in API mode (not test mode)
+    if (!isApiData) {
+      isApiOffline.value = false
+      return
+    }
+
+    // Check if there's an error in the API store
+    const error = apiStore.error
+    if (error) {
+      // Consider API offline for:
+      // - Server errors (500+)
+      // - Network errors (status 0, no status, or network-related messages)
+      // - Timeout errors
+      // - Connection refused/ECONNREFUSED
+      const isServerError = error.status >= 500 || error.status === 0 || !error.status
+      const isNetworkError = error.status === 0 || 
+                            error.message?.toLowerCase().includes('fetch') || 
+                            error.message?.toLowerCase().includes('network') ||
+                            error.message?.toLowerCase().includes('timeout') ||
+                            error.message?.toLowerCase().includes('econnrefused') ||
+                            error.message?.toLowerCase().includes('failed to fetch')
+      
+      // Also consider offline for 503 (Service Unavailable) and 502 (Bad Gateway)
+      const isServiceUnavailable = error.status === 503 || error.status === 502
+      
+      if (isServerError || isNetworkError || isServiceUnavailable) {
+        isApiOffline.value = true
+        lastApiCheck.value = new Date()
+      }
+    }
+  }
+
+  /**
    * Start periodic API status checks
    * Only works on client side
    */
@@ -104,6 +141,18 @@ export function useApiStatus() {
         isApiOffline.value = false
       }
     }, { immediate: false }) // Don't run immediately to avoid initial call in test mode
+
+    // Watch for API errors and immediately update offline status
+    watch(() => apiStore.error, (error) => {
+      if (error) {
+        updateOfflineStatusFromError()
+      } else {
+        // If error is cleared and we're in API mode, check status again
+        if (isApiData) {
+          checkApiStatus()
+        }
+      }
+    }, { immediate: true })
   }
 
   // Cleanup on unmount

@@ -80,7 +80,10 @@ async function apiFetch<T>(
     if (!fetchResponse.ok) {
       const errorText = await fetchResponse.text().catch(() => 'Unknown error')
       logError('API call failed', undefined, { service: 'API', action: 'apiFetch', endpoint, finalUrl, status: fetchResponse.status })
-      throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText} - ${errorText}`)
+      const error = new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText} - ${errorText}`) as any
+      error.status = fetchResponse.status
+      error.statusCode = fetchResponse.status
+      throw error
     }
 
     const response = await fetchResponse.json()
@@ -88,7 +91,13 @@ async function apiFetch<T>(
     logInfo('API call succeeded', { service: 'API', action: 'apiFetch', endpoint, finalUrl, method })
     return response as T
   } catch (err: any) {
-    logError('API call failed', err, { service: 'API', action: 'apiFetch', endpoint, status: err.status || err.statusCode })
+    // Enhance error with status if missing (common for network errors)
+    if (!err.status && !err.statusCode) {
+      // Network errors typically have status 0 or no status
+      err.status = 0
+      err.statusCode = 0
+    }
+    logError('API call failed', err, { service: 'API', action: 'apiFetch', endpoint, status: err.status || err.statusCode, finalUrl })
     throw err
   }
 }
