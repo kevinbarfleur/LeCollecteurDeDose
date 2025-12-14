@@ -13,6 +13,7 @@
     "@formkit/auto-animate": "^0.9.0",
     "@nuxtjs/i18n": "^10.2.1",
     "@nuxtjs/supabase": "^2.0.3",
+    "@pinia/nuxt": "^0.5.1",
     "@tanstack/vue-virtual": "^3.13.13",
     "@vueuse/motion": "^3.0.3",
     "disintegrate": "^1.0.1",
@@ -20,6 +21,7 @@
     "html2canvas": "^1.4.1",
     "nuxt": "^3.17.4",
     "nuxt-auth-utils": "^0.5.25",
+    "pinia": "^2.1.7",
     "vue": "^3.5.16",
     "vue-router": "^4.5.0"
   },

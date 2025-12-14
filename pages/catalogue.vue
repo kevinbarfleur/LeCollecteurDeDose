@@ -34,7 +34,6 @@ onMounted(async () => {
         apiAllCards.value = [];
       }
     } catch (error) {
-      console.error('[Catalogue] Error loading catalogue:', error);
       // Try to use cached data on error
       const cached = getCachedCatalogue();
       apiAllCards.value = cached || [];
@@ -61,7 +60,6 @@ watch([isApiData, isInitializing], async ([isApi, initializing]) => {
       apiAllCards.value = [];
     }
   } catch (error) {
-    console.error('[Catalogue] Error loading catalogue:', error);
     const cached = getCachedCatalogue();
     apiAllCards.value = cached || [];
   } finally {
@@ -95,7 +93,6 @@ watch([loggedIn, () => authUser.value?.displayName, isApiData, isInitializing],
           apiUserCollection.value = [];
         }
       } catch (error) {
-        console.error('[Catalogue] Error fetching user collection:', error);
         apiUserCollection.value = [];
       }
     } else {

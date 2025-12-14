@@ -3,10 +3,13 @@
  * 
  * Detects when the external API is offline and provides
  * a reactive state for displaying "game offline" messages
+ * 
+ * Updated to use Pinia stores
  */
 
-import { useApi } from './useApi'
-import { useDataSource } from './useDataSource'
+import { useApi } from './useApiStore'
+import { useDataSource } from './useDataSourceStore'
+import { useApiStore } from '~/stores/api.store'
 
 // Track API status
 const isApiOffline = ref(false)
@@ -19,13 +22,15 @@ const CHECK_INTERVAL_MS = 30000
 export function useApiStatus() {
   const { isApiData } = useDataSource()
   const { fetchUserCollections } = useApi()
+  const apiStore = useApiStore()
 
   /**
    * Check if API is available by making a lightweight request
    */
   const checkApiStatus = async (): Promise<boolean> => {
-    // Only check if we're in API mode
-    if (!isApiData.value) {
+    // Only check if we're in API mode (not test mode)
+    // In test mode, we don't need to check API status
+    if (!isApiData) {
       isApiOffline.value = false
       return true
     }
@@ -34,10 +39,10 @@ export function useApiStatus() {
       // Try to fetch user collections (lightweight endpoint)
       const result = await fetchUserCollections()
       const isOnline = result !== null
-      
+
       isApiOffline.value = !isOnline
       lastApiCheck.value = new Date()
-      
+
       return isOnline
     } catch (error) {
       isApiOffline.value = true
@@ -62,7 +67,7 @@ export function useApiStatus() {
     }
 
     // Only monitor if in API mode
-    if (!isApiData.value) {
+    if (!isApiData) {
       isApiOffline.value = false
       return
     }
@@ -87,15 +92,18 @@ export function useApiStatus() {
   }
 
   // Auto-start monitoring when in API mode (only on client)
+  // Skip monitoring in test mode to avoid unnecessary API calls
   if (import.meta.client) {
-    watch(isApiData, (isApi) => {
+    watch(() => isApiData, (isApi) => {
       if (isApi) {
+        // Only start monitoring if we're actually in API mode (not test mode)
         startMonitoring()
       } else {
+        // Stop monitoring when switching to test mode
         stopMonitoring()
         isApiOffline.value = false
       }
-    }, { immediate: true })
+    }, { immediate: false }) // Don't run immediately to avoid initial call in test mode
   }
 
   // Cleanup on unmount
@@ -113,4 +121,3 @@ export function useApiStatus() {
     stopMonitoring,
   }
 }
-

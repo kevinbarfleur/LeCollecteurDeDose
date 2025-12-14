@@ -47,7 +47,6 @@ export function useDisintegrationEffect() {
       try {
         disintegrate.init();
       } catch (e) {
-        console.warn('[DisintegrationEffect] Failed to initialize disintegrate:', e);
       }
     }
     return disintegrate;
@@ -287,7 +286,6 @@ export function useDisintegrationEffect() {
       
       // Verify element has valid dimensions
       if (cardRect.width === 0 || cardRect.height === 0) {
-        console.warn('[DisintegrationEffect] Card element has invalid dimensions, skipping capture');
         cardSnapshot.value = null;
         isCapturingSnapshot.value = false;
         return;
@@ -304,7 +302,6 @@ export function useDisintegrationEffect() {
 
       const finalRect = cardFrontRef.value.getBoundingClientRect();
       if (finalRect.width === 0 || finalRect.height === 0) {
-        console.warn('[DisintegrationEffect] Card element lost dimensions, skipping capture');
         cardSnapshot.value = null;
         isCapturingSnapshot.value = false;
         return;
@@ -413,7 +410,6 @@ export function useDisintegrationEffect() {
               }
             });
           } catch (e) {
-            console.error('[DisintegrationEffect] Error in onclone:', e);
           }
         },
         ignoreElements: (element) => {
@@ -449,7 +445,6 @@ export function useDisintegrationEffect() {
 
       // Verify canvas has valid dimensions
       if (canvas.width === 0 || canvas.height === 0) {
-        console.warn('[DisintegrationEffect] Captured canvas has invalid dimensions');
         cardSnapshot.value = null;
       } else {
         cardSnapshot.value = canvas;
@@ -459,7 +454,6 @@ export function useDisintegrationEffect() {
         };
       }
     } catch (error) {
-      console.error('[DisintegrationEffect] Failed to capture card snapshot:', error);
       cardSnapshot.value = null;
     }
 

@@ -428,7 +428,6 @@ const destroyCardEffect = async () => {
   try {
     let cardCanvas = cardSnapshot.value;
     if (!cardCanvas) {
-      console.warn('[Replay] ⚠️ No pre-captured snapshot found! This should not happen if captureCardSnapshot was called.');
       if (cardFrontRef.value && cardWidth > 0 && cardHeight > 0) {
         try {
           cardCanvas = await html2canvas(cardFrontRef.value, {
@@ -487,7 +486,6 @@ const destroyCardEffect = async () => {
                   }
                 });
               } catch (e) {
-                console.error('[Replay] Error in onclone:', e);
               }
             },
             ignoreElements: (element) => {
@@ -513,7 +511,6 @@ const destroyCardEffect = async () => {
             },
           });
         } catch (e) {
-          console.error('[Replay] Fallback capture failed:', e);
         }
       }
     }
@@ -553,19 +550,10 @@ const destroyCardEffect = async () => {
         targetWidth: cardWidth,
         targetHeight: cardHeight,
       });
-      
-      console.log('[Replay] ✅ Card disintegration started');
-      
       // Wait for disintegration to complete
       await new Promise((resolve) => setTimeout(resolve, 1500));
       cardContainer.remove();
     } else {
-      console.warn('[Replay] ❌ Could not disintegrate card:', {
-        hasCardCanvas: !!cardCanvas,
-        cardWidth,
-        cardHeight,
-        hasCardFrontRef: !!cardFrontRef.value,
-      });
       // Fallback: at least hide the card
       if (altarCardRef.value) {
         gsap.set(altarCardRef.value, { opacity: 0 });
@@ -573,7 +561,6 @@ const destroyCardEffect = async () => {
       }
     }
   } catch (error) {
-    console.error('[Replay] Error during card destruction:', error);
     if (altarCardRef.value) {
       gsap.to(altarCardRef.value, { opacity: 0, scale: 0.8, duration: 0.5 });
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -624,9 +611,6 @@ const showTransformEffect = async () => {
       try {
         await preloadImage(newImageUrl);
       } catch (e) {
-        console.warn(
-          "Failed to preload transform card image, continuing anyway"
-        );
       }
     }
   }
@@ -887,7 +871,6 @@ const showDuplicateEffect = async () => {
       cardClone.style.animation = "none";
       cloneElement.appendChild(cardClone);
     } catch (e) {
-      console.error("Clone failed:", e);
       cloneElement.style.background = `linear-gradient(135deg, ${tierColors.primary}, ${tierColors.secondary})`;
     }
   } else {
