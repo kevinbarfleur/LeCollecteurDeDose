@@ -56,15 +56,25 @@ export const useApiStore = defineStore('api', () => {
    * Get API service configuration
    * This is used by services to get the current API URL and mode
    */
-  function getApiConfig(): { apiUrl: string; isTestMode: boolean; supabaseKey?: string } {
+  function getApiConfig(): { apiUrl: string | null; isTestMode: boolean; isSupabaseMode?: boolean; supabaseKey?: string } {
     const config = useRuntimeConfig()
     const supabaseKey = config.public.supabase?.key
     
-    // Access isTestData computed value correctly
-    // isTestData is a computed ref, so we need to access .value
-    // But it's exposed as a computed, so we need to unwrap it
+    // Access isTestData and isSupabaseData computed values correctly
+    // These are computed refs, so we need to access .value
     let isTestMode = false
+    let isSupabaseMode = false
+    let dataSource = 'unknown'
+    
     try {
+      // Get current data source
+      const sourceComputed = dataSourceStore.source
+      if (typeof sourceComputed === 'string') {
+        dataSource = sourceComputed
+      } else {
+        dataSource = (sourceComputed as any).value ?? 'unknown'
+      }
+      
       // isTestData is a computed ref from Pinia, access its value
       const testDataComputed = dataSourceStore.isTestData
       // Check if it's already a boolean (shouldn't happen, but safety check)
@@ -74,21 +84,42 @@ export const useApiStore = defineStore('api', () => {
         // It's a computed ref, access .value
         isTestMode = (testDataComputed as any).value ?? false
       }
+      
+      // Check Supabase mode
+      const supabaseDataComputed = dataSourceStore.isSupabaseData
+      if (typeof supabaseDataComputed === 'boolean') {
+        isSupabaseMode = supabaseDataComputed
+      } else {
+        isSupabaseMode = (supabaseDataComputed as any).value ?? false
+      }
     } catch (e) {
       // Fallback: check source directly
       try {
         const source = (dataSourceStore.source as any).value
+        dataSource = source || 'unknown'
         isTestMode = source === 'test'
+        isSupabaseMode = source === 'supabase'
       } catch {
         isTestMode = false
+        isSupabaseMode = false
       }
     }
     
-    logInfo('Getting API config', { store: 'API', action: 'getApiConfig', isTestMode, hasSupabaseKey: !!supabaseKey, apiUrl: apiUrl.value })
+    logInfo('🟡 [STORE] Getting API config', { 
+      store: 'API', 
+      action: 'getApiConfig', 
+      dataSource,
+      isTestMode, 
+      isSupabaseMode, 
+      hasSupabaseKey: !!supabaseKey, 
+      apiUrl: apiUrl.value,
+      supabaseUrl: config.public.supabase?.url
+    })
     
     return {
       apiUrl: apiUrl.value,
       isTestMode,
+      isSupabaseMode,
       supabaseKey,
     }
   }

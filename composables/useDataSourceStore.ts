@@ -18,6 +18,7 @@ export function useDataSource() {
     dataSource: computed(() => dataSourceStore.source),
     isTestData: computed(() => dataSourceStore.isTestData),
     isApiData: computed(() => dataSourceStore.isApiData),
+    isSupabaseData: computed(() => dataSourceStore.isSupabaseData),
     isInitializing: computed(() => !dataSourceStore.isInitialized),
     setDataSource: dataSourceStore.setDataSource,
     toggleDataSource: dataSourceStore.toggleDataSource,

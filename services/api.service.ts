@@ -7,10 +7,12 @@
 
 import type { ApiError } from '~/types/api'
 import { logInfo, logError } from './logger.service'
+import * as SupabaseCollectionService from './supabase-collection.service'
 
 export interface ApiServiceConfig {
-  apiUrl: string
+  apiUrl: string | null
   isTestMode: boolean
+  isSupabaseMode?: boolean
   supabaseKey?: string
 }
 
@@ -23,6 +25,11 @@ async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T | null> {
   const { apiUrl, isTestMode, supabaseKey } = config
+
+  // If apiUrl is null, we're in Supabase mode and should not use this function
+  if (!apiUrl) {
+    throw new Error('Cannot use apiFetch in Supabase mode - use direct Supabase service instead')
+  }
 
   // For test mode, use the full path with /api prefix
   // For real mode, remove /api/ prefix since our proxy adds it
@@ -103,15 +110,41 @@ async function apiFetch<T>(
 }
 
 /**
- * Fetch all user collections from the Data API
+ * Fetch all user collections from the Data API or Supabase
  */
 export async function fetchUserCollections(config: ApiServiceConfig): Promise<Record<string, any> | null> {
   try {
+    logInfo('🟢 [API] fetchUserCollections called', { 
+      service: 'API', 
+      action: 'fetchUserCollections',
+      isSupabaseMode: config.isSupabaseMode,
+      isTestMode: config.isTestMode,
+      apiUrl: config.apiUrl
+    })
+    
+    // Use direct Supabase service if in Supabase mode
+    if (config.isSupabaseMode) {
+      logInfo('🟢 [API] Using Supabase direct mode', { service: 'API', action: 'fetchUserCollections' })
+      const result = await SupabaseCollectionService.getAllUserCollections()
+      logInfo('🟢 [API] User collections fetched from Supabase', { 
+        service: 'API', 
+        action: 'fetchUserCollections', 
+        userCount: result ? Object.keys(result).length : 0,
+        hasResult: !!result
+      })
+      return result
+    }
+    
+    logInfo('🟢 [API] Using API fetch mode', { service: 'API', action: 'fetchUserCollections', apiUrl: config.apiUrl })
     const result = await apiFetch<Record<string, any>>('userCollection', config)
-    logInfo('User collections fetched', { service: 'API', action: 'fetchUserCollections', userCount: result ? Object.keys(result).length : 0 })
+    logInfo('🟢 [API] User collections fetched from API', { 
+      service: 'API', 
+      action: 'fetchUserCollections', 
+      userCount: result ? Object.keys(result).length : 0 
+    })
     return result
   } catch (error) {
-    logError('Failed to fetch user collections', error, { service: 'API', action: 'fetchUserCollections' })
+    logError('❌ [API] Failed to fetch user collections', error, { service: 'API', action: 'fetchUserCollections' })
     return null
   }
 }
@@ -124,7 +157,28 @@ export async function fetchUserCollection(
   user: string,
   config: ApiServiceConfig
 ): Promise<Record<string, any> | null> {
-  logInfo('Fetching user collection', { service: 'API', action: 'fetchUserCollection', user })
+  logInfo('🟢 [API] fetchUserCollection called', { 
+    service: 'API', 
+    action: 'fetchUserCollection', 
+    user,
+    isSupabaseMode: config.isSupabaseMode,
+    isTestMode: config.isTestMode
+  })
+  
+  // Use direct Supabase service if in Supabase mode
+  if (config.isSupabaseMode) {
+    logInfo('🟢 [API] Using Supabase direct mode for user collection', { service: 'API', action: 'fetchUserCollection', user })
+    const result = await SupabaseCollectionService.getUserCollection(user)
+    logInfo('🟢 [API] User collection fetched from Supabase', { 
+      service: 'API', 
+      action: 'fetchUserCollection', 
+      user, 
+      found: !!result,
+      cardCount: result ? Object.keys(result).filter(k => k !== 'vaalOrbs').length : 0
+    })
+    return result
+  }
+  
   const allCollections = await fetchUserCollections(config)
 
   if (!allCollections) return null
@@ -160,6 +214,14 @@ export async function fetchUserCards(
   config: ApiServiceConfig
 ): Promise<any[] | null> {
   try {
+    // Use direct Supabase service if in Supabase mode
+    if (config.isSupabaseMode) {
+      logInfo('Fetching user cards from Supabase', { service: 'API', action: 'fetchUserCards', user })
+      const result = await SupabaseCollectionService.getUserCards(user)
+      logInfo('User cards fetched from Supabase', { service: 'API', action: 'fetchUserCards', user, count: result?.length || 0 })
+      return result
+    }
+    
     return await apiFetch<any[]>(`usercards/${user}`, config)
   } catch (error) {
     logError('Failed to fetch user cards', error, { service: 'ApiService' })
@@ -172,9 +234,30 @@ export async function fetchUserCards(
  */
 export async function fetchUniques(config: ApiServiceConfig): Promise<any[] | null> {
   try {
+    logInfo('🟢 [API] fetchUniques called', { 
+      service: 'API', 
+      action: 'fetchUniques',
+      isSupabaseMode: config.isSupabaseMode,
+      isTestMode: config.isTestMode
+    })
+    
+    // Use direct Supabase service if in Supabase mode
+    if (config.isSupabaseMode) {
+      logInfo('🟢 [API] Using Supabase direct mode for uniques', { service: 'API', action: 'fetchUniques' })
+      const result = await SupabaseCollectionService.getAllUniqueCards()
+      logInfo('🟢 [API] Unique cards fetched from Supabase', { 
+        service: 'API', 
+        action: 'fetchUniques', 
+        count: result?.length || 0,
+        hasResult: !!result
+      })
+      return result
+    }
+    
+    logInfo('🟢 [API] Using API fetch mode for uniques', { service: 'API', action: 'fetchUniques', apiUrl: config.apiUrl })
     return await apiFetch<any[]>('uniques', config)
   } catch (error) {
-    logError('Failed to fetch uniques', error, { service: 'ApiService' })
+    logError('❌ [API] Failed to fetch uniques', error, { service: 'ApiService' })
     return null
   }
 }
@@ -190,6 +273,14 @@ export async function updateUserCollection(
 ): Promise<boolean> {
   const cardCount = Object.keys(collectionData).filter(k => k !== 'vaalOrbs').length
   logInfo('Updating user collection', { service: 'API', action: 'updateUserCollection', username, cardCount, vaalOrbs: collectionData.vaalOrbs })
+  
+  // Use direct Supabase service if in Supabase mode
+  if (config.isSupabaseMode) {
+    logInfo('Updating user collection via Supabase', { service: 'API', action: 'updateUserCollection', username })
+    const result = await SupabaseCollectionService.updateUserCollection(username, collectionData)
+    logInfo('User collection updated via Supabase', { service: 'API', action: 'updateUserCollection', username, success: result })
+    return result
+  }
   
   // Lowercase username to match server behavior
   const userKey = username.toLowerCase()

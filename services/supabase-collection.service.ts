@@ -12,7 +12,14 @@ import type { Database } from '~/types/database'
  * Get Supabase client for reads (uses anon key from Nuxt config)
  */
 function getSupabaseRead() {
-  return useSupabaseClient<Database>()
+  const client = useSupabaseClient<Database>()
+  const config = useRuntimeConfig()
+  logInfo('Getting Supabase read client', { 
+    service: 'SupabaseCollection', 
+    hasUrl: !!config.public.supabase?.url,
+    url: config.public.supabase?.url || 'missing'
+  })
+  return client
 }
 
 /**
@@ -34,9 +41,11 @@ async function getSupabaseWrite() {
  */
 export async function getAllUserCollections(): Promise<Record<string, any>> {
   try {
-    logInfo('Fetching all user collections from Supabase', { service: 'SupabaseCollection' })
+    logInfo('🔵 [SUPABASE] Starting getAllUserCollections', { service: 'SupabaseCollection' })
 
     const supabase = getSupabaseRead()
+    
+    logInfo('🔵 [SUPABASE] Executing query: users with collections', { service: 'SupabaseCollection' })
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(`
@@ -51,19 +60,55 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
         )
       `)
 
+    logInfo('🔵 [SUPABASE] Query completed', { 
+      service: 'SupabaseCollection',
+      hasError: !!usersError,
+      error: usersError ? usersError.message : null,
+      usersCount: users?.length || 0,
+      rawData: users ? `Found ${users.length} users` : 'No users'
+    })
+
     if (usersError) {
-      logError('Failed to fetch users', usersError, { service: 'SupabaseCollection' })
+      logError('❌ [SUPABASE] Failed to fetch users', usersError, { 
+        service: 'SupabaseCollection',
+        errorCode: usersError.code,
+        errorMessage: usersError.message,
+        errorDetails: usersError.details,
+        errorHint: usersError.hint
+      })
       return {}
     }
 
     const result: Record<string, any> = {}
 
+    logInfo('🔵 [SUPABASE] Processing users', { 
+      service: 'SupabaseCollection',
+      usersToProcess: users?.length || 0
+    })
+
     for (const user of users || []) {
       const username = user.twitch_username
       result[username] = { vaalOrbs: user.vaal_orbs || 1 }
+      
+      const collectionCount = user.user_collections?.length || 0
+      logInfo('🔵 [SUPABASE] Processing user', { 
+        service: 'SupabaseCollection',
+        username,
+        vaalOrbs: user.vaal_orbs,
+        collectionCount
+      })
 
       for (const col of user.user_collections || []) {
         const card = col.unique_cards
+        if (!card) {
+          logError('⚠️ [SUPABASE] Missing card data', undefined, { 
+            service: 'SupabaseCollection',
+            username,
+            cardUid: col.card_uid
+          })
+          continue
+        }
+        
         result[username][col.card_uid] = {
           uid: col.card_uid,
           id: card.id,
@@ -82,14 +127,20 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
       }
     }
 
-    logInfo('User collections fetched', { 
+    const totalCards = Object.values(result).reduce((sum: number, userData: any) => {
+      return sum + Object.keys(userData).filter(k => k !== 'vaalOrbs').length
+    }, 0)
+
+    logInfo('✅ [SUPABASE] User collections fetched successfully', { 
       service: 'SupabaseCollection', 
-      userCount: Object.keys(result).length 
+      userCount: Object.keys(result).length,
+      totalCards,
+      usernames: Object.keys(result).slice(0, 5) // Log first 5 usernames
     })
 
     return result
   } catch (error) {
-    logError('Error fetching all user collections', error, { service: 'SupabaseCollection' })
+    logError('❌ [SUPABASE] Error fetching all user collections', error, { service: 'SupabaseCollection' })
     return {}
   }
 }
@@ -100,9 +151,17 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
  */
 export async function getUserCollection(username: string): Promise<Record<string, any> | null> {
   try {
-    logInfo('Fetching user collection', { service: 'SupabaseCollection', username })
+    logInfo('🔵 [SUPABASE] Starting getUserCollection', { service: 'SupabaseCollection', username })
 
     const supabase = getSupabaseRead()
+    const searchUsername = username.toLowerCase()
+    
+    logInfo('🔵 [SUPABASE] Querying user', { 
+      service: 'SupabaseCollection', 
+      username,
+      searchUsername
+    })
+    
     const { data: user, error: userError } = await supabase
       .from('users')
       .select(`
@@ -116,18 +175,59 @@ export async function getUserCollection(username: string): Promise<Record<string
           unique_cards (*)
         )
       `)
-      .eq('twitch_username', username.toLowerCase())
-      .single()
+      .eq('twitch_username', searchUsername)
+      .maybeSingle()
 
-    if (userError || !user) {
-      logInfo('User collection not found', { service: 'SupabaseCollection', username, found: false })
+    logInfo('🔵 [SUPABASE] User query completed', { 
+      service: 'SupabaseCollection',
+      username,
+      hasError: !!userError,
+      error: userError ? userError.message : null,
+      found: !!user,
+      userId: user?.id,
+      vaalOrbs: user?.vaal_orbs,
+      collectionCount: user?.user_collections?.length || 0
+    })
+
+    if (userError) {
+      logError('❌ [SUPABASE] Error fetching user collection', userError, { 
+        service: 'SupabaseCollection', 
+        username,
+        errorCode: userError.code,
+        errorMessage: userError.message,
+        errorDetails: userError.details
+      })
+      return { vaalOrbs: 0 }
+    }
+
+    if (!user) {
+      logInfo('⚠️ [SUPABASE] User collection not found', { 
+        service: 'SupabaseCollection', 
+        username, 
+        found: false 
+      })
       return { vaalOrbs: 0 }
     }
 
     const result: Record<string, any> = { vaalOrbs: user.vaal_orbs || 1 }
 
+    logInfo('🔵 [SUPABASE] Processing collections', { 
+      service: 'SupabaseCollection',
+      username,
+      collectionCount: user.user_collections?.length || 0
+    })
+
     for (const col of user.user_collections || []) {
       const card = col.unique_cards
+      if (!card) {
+        logError('⚠️ [SUPABASE] Missing card data in collection', undefined, { 
+          service: 'SupabaseCollection',
+          username,
+          cardUid: col.card_uid
+        })
+        continue
+      }
+      
       result[col.card_uid] = {
         uid: col.card_uid,
         id: card.id,
@@ -145,10 +245,18 @@ export async function getUserCollection(username: string): Promise<Record<string
       }
     }
 
-    logInfo('User collection fetched', { service: 'SupabaseCollection', username, cardCount: Object.keys(result).length - 1 })
+    const cardCount = Object.keys(result).filter(k => k !== 'vaalOrbs').length
+    logInfo('✅ [SUPABASE] User collection fetched successfully', { 
+      service: 'SupabaseCollection', 
+      username, 
+      cardCount,
+      vaalOrbs: result.vaalOrbs,
+      cardUids: Object.keys(result).filter(k => k !== 'vaalOrbs').slice(0, 5)
+    })
+    
     return result
   } catch (error) {
-    logError('Error fetching user collection', error, { service: 'SupabaseCollection', username })
+    logError('❌ [SUPABASE] Error fetching user collection', error, { service: 'SupabaseCollection', username })
     return null
   }
 }
@@ -166,9 +274,14 @@ export async function getUserCards(username: string): Promise<any[] | null> {
       .from('users')
       .select('id')
       .eq('twitch_username', username.toLowerCase())
-      .single()
+      .maybeSingle()
 
-    if (userError || !user) {
+    if (userError) {
+      logError('Error fetching user', userError, { service: 'SupabaseCollection', username })
+      return []
+    }
+
+    if (!user) {
       logInfo('User not found', { service: 'SupabaseCollection', username, found: false })
       return []
     }
@@ -233,16 +346,30 @@ export async function getUserCards(username: string): Promise<any[] | null> {
  */
 export async function getAllUniqueCards(): Promise<any[] | null> {
   try {
-    logInfo('Fetching all unique cards', { service: 'SupabaseCollection' })
+    logInfo('🔵 [SUPABASE] Starting getAllUniqueCards', { service: 'SupabaseCollection' })
 
     const supabase = getSupabaseRead()
+    
+    logInfo('🔵 [SUPABASE] Querying unique_cards table', { service: 'SupabaseCollection' })
     const { data: cards, error } = await supabase
       .from('unique_cards')
       .select('*')
       .order('uid', { ascending: true })
 
+    logInfo('🔵 [SUPABASE] Unique cards query completed', { 
+      service: 'SupabaseCollection',
+      hasError: !!error,
+      error: error ? error.message : null,
+      cardsCount: cards?.length || 0
+    })
+
     if (error) {
-      logError('Failed to fetch unique cards', error, { service: 'SupabaseCollection' })
+      logError('❌ [SUPABASE] Failed to fetch unique cards', error, { 
+        service: 'SupabaseCollection',
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorDetails: error.details
+      })
       return null
     }
 
@@ -259,10 +386,15 @@ export async function getAllUniqueCards(): Promise<any[] | null> {
       relevanceScore: card.relevance_score
     }))
 
-    logInfo('Unique cards fetched', { service: 'SupabaseCollection', count: result.length })
+    logInfo('✅ [SUPABASE] Unique cards fetched successfully', { 
+      service: 'SupabaseCollection', 
+      count: result.length,
+      sampleCards: result.slice(0, 3).map(c => ({ uid: c.uid, name: c.name }))
+    })
+    
     return result
   } catch (error) {
-    logError('Error fetching unique cards', error, { service: 'SupabaseCollection' })
+    logError('❌ [SUPABASE] Error fetching unique cards', error, { service: 'SupabaseCollection' })
     return null
   }
 }

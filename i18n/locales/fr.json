@@ -283,6 +283,8 @@
       "apiHint": "Utilise l'API de production (expérience réelle pour tous)",
       "test": "Test",
       "testHint": "Utilise les données de test stockées dans Supabase",
+      "supabase": "Supabase",
+      "supabaseHint": "Utilise directement Supabase (base de données de production)",
       "warning": "Ce réglage n'affecte que ta propre session d'administration.",
       "confirmTitle": "Changer ta source de données",
       "confirmMessage": "Tu vas passer de {from} à {to}. Cette action ne changera la source de données que pour toi, pauvre admin. Les autres exilés continueront de souffrir avec l'API réelle. Es-tu sûr de vouloir continuer ?",

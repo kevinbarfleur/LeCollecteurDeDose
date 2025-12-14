@@ -11,6 +11,12 @@ const { forcedOutcome } = useAltarDebug();
 const { getForcedOutcomeOptions } = await import('~/types/vaalOutcome');
 const { fetchUserCollections, fetchUniques, fetchUserCards } = useApi();
 
+// Bot action triggers
+const botActionUsername = ref('');
+const isTriggeringBooster = ref(false);
+const isTriggeringVaalOrbs = ref(false);
+const botActionMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
 useHead({ title: t("admin.meta.title") });
 
 // Local state for optimistic updates
@@ -41,10 +47,11 @@ const handleActivityLogsToggle = async () => {
   }
 };
 
-// Data source options for RunicRadio
+// Data source options for RunicSelect
 const dataSourceOptions = computed(() => [
-  { value: "api", label: t("admin.dataSource.api"), color: "default" },
-  { value: "test", label: t("admin.dataSource.test"), color: "default" },
+  { value: "api", label: t("admin.dataSource.api") },
+  { value: "test", label: t("admin.dataSource.test") },
+  { value: "supabase", label: t("admin.dataSource.supabase") },
 ]);
 
 
@@ -224,17 +231,24 @@ const syncTestData = async () => {
 // Confirmation modal composable
 const { confirm } = useConfirmModal();
 
+// Helper function to get data source label
+const getDataSourceLabel = (source: "api" | "test" | "supabase") => {
+  if (source === "api") return t("admin.dataSource.api");
+  if (source === "test") return t("admin.dataSource.test");
+  return t("admin.dataSource.supabase");
+};
+
 // Computed for data source v-model - now with confirmation
 const dataSourceModel = computed({
   get: () => dataSource.value,
-  set: async (value: "api" | "test") => {
+  set: async (value: "api" | "test" | "supabase") => {
     // Ask for confirmation for any change
     if (value !== dataSource.value) {
       const confirmed = await confirm({
         title: t("admin.dataSource.confirmTitle"),
         message: t("admin.dataSource.confirmMessage", {
-          from: dataSource.value === "api" ? t("admin.dataSource.api") : t("admin.dataSource.test"),
-          to: value === "api" ? t("admin.dataSource.api") : t("admin.dataSource.test"),
+          from: getDataSourceLabel(dataSource.value as "api" | "test" | "supabase"),
+          to: getDataSourceLabel(value),
         }),
         confirmText: t("admin.dataSource.confirmButton"),
         cancelText: t("common.cancel"),
@@ -284,6 +298,83 @@ const activityLogsEnabledModel = computed({
 
 // Altar Debug settings
 const forcedOutcomeOptions = computed(() => getForcedOutcomeOptions(t));
+
+// Bot action handlers
+const triggerBooster = async () => {
+  if (!botActionUsername.value || isTriggeringBooster.value) return;
+  
+  isTriggeringBooster.value = true;
+  botActionMessage.value = null;
+
+  try {
+    const response = await $fetch('/api/admin/trigger-bot-action', {
+      method: 'POST',
+      body: {
+        action: 'booster',
+        username: botActionUsername.value
+      }
+    });
+
+    if (response.ok) {
+      botActionMessage.value = {
+        type: 'success',
+        text: response.message || `✅ Booster ouvert pour ${botActionUsername.value} !`
+      };
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        botActionMessage.value = null;
+      }, 5000);
+    } else {
+      throw new Error('Failed to trigger booster');
+    }
+  } catch (error: any) {
+    botActionMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.message || 'Impossible d\'ouvrir le booster'}`
+    };
+  } finally {
+    isTriggeringBooster.value = false;
+  }
+};
+
+const triggerVaalOrbs = async () => {
+  if (!botActionUsername.value || isTriggeringVaalOrbs.value) return;
+  
+  isTriggeringVaalOrbs.value = true;
+  botActionMessage.value = null;
+
+  try {
+    const response = await $fetch('/api/admin/trigger-bot-action', {
+      method: 'POST',
+      body: {
+        action: 'vaal_orbs',
+        username: botActionUsername.value
+      }
+    });
+
+    if (response.ok) {
+      botActionMessage.value = {
+        type: 'success',
+        text: response.message || `✅ 5 Vaal Orbs ajoutés pour ${botActionUsername.value} !`
+      };
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        botActionMessage.value = null;
+      }, 5000);
+    } else {
+      throw new Error('Failed to trigger vaal orbs');
+    }
+  } catch (error: any) {
+    botActionMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.message || 'Impossible d\'ajouter les Vaal Orbs'}`
+    };
+  } finally {
+    isTriggeringVaalOrbs.value = false;
+  }
+};
 
 // Vaal Orbs debug control (only in mock mode)
 const debugVaalOrbs = ref(14);
@@ -438,7 +529,7 @@ const updateDebugVaalOrbs = (delta: number) => {
                       <label class="admin-card__row-label">Source des Données</label>
                     </div>
                     <div class="admin-card__row-control">
-                      <RunicRadio
+                      <RunicSelect
                         v-model="dataSourceModel"
                         :options="dataSourceOptions"
                         size="md"
@@ -492,6 +583,74 @@ const updateDebugVaalOrbs = (delta: number) => {
                     <p class="admin-card__hint">
                       {{ t("admin.altarDebug.apiModeHint") }}
                     </p>
+                  </div>
+
+                  <!-- Bot Actions -->
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Actions du Bot</label>
+                      <p class="admin-card__row-description">
+                        Déclencher des actions du bot pour tester
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Username input for bot actions -->
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Nom d'utilisateur</label>
+                    </div>
+                    <div class="admin-card__row-control">
+                      <input
+                        v-model="botActionUsername"
+                        type="text"
+                        class="admin-card__input"
+                        placeholder="Nom d'utilisateur Twitch"
+                        :disabled="isTriggeringBooster || isTriggeringVaalOrbs"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Bot action buttons -->
+                  <div class="admin-card__row">
+                    <div class="admin-card__row-content">
+                      <label class="admin-card__row-label">Actions disponibles</label>
+                    </div>
+                    <div class="admin-card__row-control admin-card__row-control--buttons">
+                      <RunicButton
+                        size="md"
+                        variant="primary"
+                        :disabled="!botActionUsername || isTriggeringBooster || isTriggeringVaalOrbs"
+                        @click="triggerBooster"
+                        class="admin-card__action-btn"
+                      >
+                        <span v-if="!isTriggeringBooster">🎁 Ouvrir un Booster</span>
+                        <span v-else>Ouverture...</span>
+                      </RunicButton>
+                      <RunicButton
+                        size="md"
+                        variant="secondary"
+                        :disabled="!botActionUsername || isTriggeringBooster || isTriggeringVaalOrbs"
+                        @click="triggerVaalOrbs"
+                        class="admin-card__action-btn"
+                      >
+                        <span v-if="!isTriggeringVaalOrbs">✨ Acheter 5 Vaal Orbs</span>
+                        <span v-else>Achat...</span>
+                      </RunicButton>
+                    </div>
+                  </div>
+
+                  <!-- Bot action message -->
+                  <div v-if="botActionMessage" class="admin-card__row">
+                    <div 
+                      class="admin-card__message"
+                      :class="{
+                        'admin-card__message--success': botActionMessage.type === 'success',
+                        'admin-card__message--error': botActionMessage.type === 'error'
+                      }"
+                    >
+                      {{ botActionMessage.text }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -903,6 +1062,60 @@ const updateDebugVaalOrbs = (delta: number) => {
 
 .admin-card__action-btn--full {
   margin-top: 0.5rem;
+}
+
+.admin-card__row-control--buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-card__input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: rgba(20, 15, 10, 0.6);
+  border: 1px solid rgba(175, 96, 37, 0.3);
+  border-radius: 4px;
+  color: rgba(200, 190, 180, 0.9);
+  font-family: "Cinzel", serif;
+  font-size: 0.9375rem;
+  transition: all 0.2s ease;
+}
+
+.admin-card__input:focus {
+  outline: none;
+  border-color: rgba(175, 96, 37, 0.6);
+  background: rgba(20, 15, 10, 0.8);
+}
+
+.admin-card__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-card__input::placeholder {
+  color: rgba(200, 190, 180, 0.4);
+}
+
+.admin-card__message {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-family: "Cinzel", serif;
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+.admin-card__message--success {
+  background: rgba(34, 139, 34, 0.2);
+  border: 1px solid rgba(34, 139, 34, 0.4);
+  color: #90ee90;
+}
+
+.admin-card__message--error {
+  background: rgba(220, 20, 60, 0.2);
+  border: 1px solid rgba(220, 20, 60, 0.4);
+  color: #ff6b6b;
 }
 
 .admin-card__action-loading {

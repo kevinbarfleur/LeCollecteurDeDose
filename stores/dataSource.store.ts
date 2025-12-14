@@ -10,14 +10,14 @@ import { useAuthStore } from './auth.store'
 import { logInfo, logWarn } from '~/services/logger.service'
 import { logAdminAction } from '~/services/diagnosticLogger.service'
 
-export type DataSource = 'api' | 'test'
+export type DataSource = 'api' | 'test' | 'supabase'
 
 export const useDataSourceStore = defineStore('dataSource', () => {
   // Initialize from localStorage
   let initialSource: DataSource = 'api'
   if (import.meta.client) {
     const stored = localStorage.getItem('dataSource') as DataSource | null
-    if (stored && (stored === 'api' || stored === 'test')) {
+    if (stored && (stored === 'api' || stored === 'test' || stored === 'supabase')) {
       initialSource = stored
     }
   }
@@ -50,12 +50,21 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     return source.value === 'api'
   })
 
+  const isSupabaseData = computed(() => {
+    // Non-admins can use Supabase (it's the production source)
+    return source.value === 'supabase'
+  })
+
   const apiUrl = computed(() => {
     const config = useRuntimeConfig()
     const supabaseUrl = config.public.supabase?.url || ''
     
     if (source.value === 'test') {
       return `${supabaseUrl}/functions/v1/dev-test-api`
+    }
+    if (source.value === 'supabase') {
+      // Return null to indicate direct Supabase usage (not via API)
+      return null
     }
     return '/api/data'
   })
@@ -120,7 +129,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     const authStore = useAuthStore()
     await authStore.initialize()
 
-    // Force API for non-admins
+    // Force API for non-admins (but allow Supabase as it's production)
     if (!authStore.isAdmin && source.value === 'test') {
       logWarn('Forcing API mode for non-admin', { store: 'DataSource', action: 'initialize' })
       source.value = 'api'
@@ -152,6 +161,7 @@ export const useDataSourceStore = defineStore('dataSource', () => {
     // Getters
     isTestData,
     isApiData,
+    isSupabaseData,
     apiUrl,
 
     // Actions

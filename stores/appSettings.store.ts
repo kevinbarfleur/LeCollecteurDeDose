@@ -37,6 +37,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
   // Getters
   const currentSettings = computed<Settings>(() => {
     const dataSourceStore = useDataSourceStore()
+    // Use 'api' settings for both 'api' and 'supabase' modes (both are production)
     return dataSourceStore.isTestData ? settings.value.test : settings.value.api
   })
 
@@ -104,6 +105,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
 
   async function toggleAltar(userId: string): Promise<void> {
     const dataSourceStore = useDataSourceStore()
+    // Use 'api' mode for both 'api' and 'supabase' (both are production)
     const currentDataMode = dataSourceStore.isTestData ? 'test' : 'api'
     const currentValue = currentDataMode === 'test' 
       ? settings.value.test.altarOpen 
@@ -127,6 +129,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
 
   async function toggleActivityLogs(userId: string): Promise<void> {
     const dataSourceStore = useDataSourceStore()
+    // Use 'api' mode for both 'api' and 'supabase' (both are production)
     const currentDataMode = dataSourceStore.isTestData ? 'test' : 'api'
     const currentValue = currentDataMode === 'test'
       ? settings.value.test.activityLogsEnabled
@@ -150,6 +153,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
 
   async function setActivityLogsEnabled(enabled: boolean, userId: string): Promise<void> {
     const dataSourceStore = useDataSourceStore()
+    // Use 'api' mode for both 'api' and 'supabase' (both are production)
     const currentDataMode = dataSourceStore.isTestData ? 'test' : 'api'
     await updateSetting('activity_logs_enabled', { enabled }, userId, currentDataMode)
   }

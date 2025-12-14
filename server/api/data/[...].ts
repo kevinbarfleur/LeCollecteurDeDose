@@ -78,8 +78,8 @@ export default defineEventHandler(async (event) => {
       }
       
       return { ok: true, results }
-    }
-    
+  }
+  
     // POST /api/usercards/update - Update user cards (requires API key)
     if (path === 'usercards/update' && method === 'POST') {
       // Verify API key
