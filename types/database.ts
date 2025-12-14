@@ -76,18 +76,21 @@ export type Database = {
         Row: {
           key: string
           value: Json
+          data_mode: string
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           key: string
           value?: Json
+          data_mode?: string
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           key?: string
           value?: Json
+          data_mode?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -182,6 +185,7 @@ export type Database = {
           setting_key: string
           setting_value: Json
           twitch_user_id: string
+          setting_data_mode?: string
         }
         Returns: {
           key: string

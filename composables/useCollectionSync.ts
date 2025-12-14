@@ -23,7 +23,7 @@ interface CardUpdate {
 }
 
 export function useCollectionSync() {
-  const { updateUserCollection } = useApi()
+  const { updateUserCollection, fetchUserCollection } = useApi()
   const { isApiData } = useDataSource()
   
   const isSyncing = ref(false)
@@ -114,7 +114,6 @@ export function useCollectionSync() {
       // IMPORTANT: The server does a shallow merge, so we need to send ALL cards
       // with their updated counts, not just the changed ones.
       // Fetch current collection first to get all existing cards
-      const { fetchUserCollection } = useApi()
       const currentCollectionData = await fetchUserCollection(username)
       
       if (!currentCollectionData) {

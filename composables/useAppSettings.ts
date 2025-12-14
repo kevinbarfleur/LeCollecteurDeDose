@@ -3,15 +3,19 @@
  * 
  * Settings are stored in Supabase (app_settings table) and
  * synchronized in real-time across all clients.
+ * 
+ * Settings are now separated by data mode (api/test) so that
+ * production and test modes can have independent states.
  */
 
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { AltarOpenSetting, DataSourceSetting, ActivityLogsEnabledSetting } from '~/types/database'
 
-// Shared state across all components
-const altarOpen = ref(false)
-const dataSource = ref<'api' | 'test'>('test') // Default to test for safety
-const activityLogsEnabled = ref(true)
+// Shared state across all components - separated by data mode
+const altarOpenApi = ref(false)
+const altarOpenTest = ref(false)
+const activityLogsEnabledApi = ref(true)
+const activityLogsEnabledTest = ref(true)
 const isLoading = ref(true)
 const isConnected = ref(false)
 
@@ -21,9 +25,10 @@ let realtimeChannel: RealtimeChannel | null = null
 
 export function useAppSettings() {
   const supabase = useSupabaseClient()
+  const { isTestData, dataSource: currentDataSource } = useDataSource()
 
   /**
-   * Fetch initial settings from Supabase
+   * Fetch initial settings from Supabase for both modes
    */
   const fetchSettings = async () => {
     isLoading.value = true
@@ -31,7 +36,7 @@ export function useAppSettings() {
     try {
       const { data, error } = await supabase
         .from('app_settings')
-        .select('key, value')
+        .select('key, value, data_mode')
 
       if (error) {
         console.error('[AppSettings] Error fetching settings:', error)
@@ -40,7 +45,8 @@ export function useAppSettings() {
 
       if (data) {
         for (const setting of data) {
-          applySettingValue(setting.key, setting.value)
+          const dataMode = (setting.data_mode as string) || 'api'
+          applySettingValue(setting.key, setting.value, dataMode)
         }
       }
     } catch (err) {
@@ -51,21 +57,29 @@ export function useAppSettings() {
   }
 
   /**
-   * Apply a setting value to the appropriate ref
+   * Apply a setting value to the appropriate ref based on data mode
    */
-  const applySettingValue = (key: string, value: unknown) => {
+  const applySettingValue = (key: string, value: unknown, dataMode: string = 'api') => {
     switch (key) {
       case 'altar_open':
         const altarValue = value as AltarOpenSetting
-        altarOpen.value = altarValue?.enabled ?? false
+        if (dataMode === 'test') {
+          altarOpenTest.value = altarValue?.enabled ?? false
+        } else {
+          altarOpenApi.value = altarValue?.enabled ?? false
+        }
         break
       case 'data_source':
-        const dsValue = value as DataSourceSetting
-        dataSource.value = dsValue?.source ?? 'test'
+        // Data source is now managed by useDataSource composable
+        // This setting is kept for backward compatibility but is not used
         break
       case 'activity_logs_enabled':
         const logsValue = value as ActivityLogsEnabledSetting
-        activityLogsEnabled.value = logsValue?.enabled ?? true
+        if (dataMode === 'test') {
+          activityLogsEnabledTest.value = logsValue?.enabled ?? true
+        } else {
+          activityLogsEnabledApi.value = logsValue?.enabled ?? true
+        }
         break
     }
   }
@@ -87,9 +101,11 @@ export function useAppSettings() {
         },
         (payload) => {
           if (payload.new) {
+            const dataMode = (payload.new.data_mode as string) || 'api'
             applySettingValue(
               payload.new.key as string,
-              payload.new.value
+              payload.new.value,
+              dataMode
             )
           }
         }
@@ -103,7 +119,7 @@ export function useAppSettings() {
    * Update a setting in Supabase (admin only - uses PostgreSQL function)
    * Uses a PostgreSQL function that checks admin status server-side
    */
-  const updateSetting = async (key: string, value: unknown, userId?: string) => {
+  const updateSetting = async (key: string, value: unknown, userId?: string, dataMode: 'api' | 'test' = 'api') => {
     if (!userId) {
       return { success: false, error: { message: 'User ID required' } }
     }
@@ -113,7 +129,8 @@ export function useAppSettings() {
       const { data, error } = await supabase.rpc('update_app_setting', {
         setting_key: key,
         setting_value: value,
-        twitch_user_id: userId
+        twitch_user_id: userId,
+        setting_data_mode: dataMode
       })
 
       if (error) {
@@ -129,11 +146,13 @@ export function useAppSettings() {
   }
 
   /**
-   * Toggle the altar open/closed state
+   * Toggle the altar open/closed state for the current data mode
    */
   const toggleAltar = async (userId?: string) => {
-    const newValue = !altarOpen.value
-    return await updateSetting('altar_open', { enabled: newValue }, userId)
+    const currentDataMode = isTestData.value ? 'test' : 'api'
+    const currentValue = currentDataMode === 'test' ? altarOpenTest.value : altarOpenApi.value
+    const newValue = !currentValue
+    return await updateSetting('altar_open', { enabled: newValue }, userId, currentDataMode)
   }
 
   /**
@@ -148,18 +167,21 @@ export function useAppSettings() {
   }
 
   /**
-   * Toggle activity logs enabled/disabled
+   * Toggle activity logs enabled/disabled for the current data mode
    */
   const toggleActivityLogs = async (userId?: string) => {
-    const newValue = !activityLogsEnabled.value
-    return await updateSetting('activity_logs_enabled', { enabled: newValue }, userId)
+    const currentDataMode = isTestData.value ? 'test' : 'api'
+    const currentValue = currentDataMode === 'test' ? activityLogsEnabledTest.value : activityLogsEnabledApi.value
+    const newValue = !currentValue
+    return await updateSetting('activity_logs_enabled', { enabled: newValue }, userId, currentDataMode)
   }
 
   /**
-   * Set activity logs enabled state
+   * Set activity logs enabled state for the current data mode
    */
   const setActivityLogsEnabled = async (enabled: boolean, userId?: string) => {
-    return await updateSetting('activity_logs_enabled', { enabled }, userId)
+    const currentDataMode = isTestData.value ? 'test' : 'api'
+    return await updateSetting('activity_logs_enabled', { enabled }, userId, currentDataMode)
   }
 
   /**
@@ -190,11 +212,20 @@ export function useAppSettings() {
     initialize()
   }
 
+  // Computed values that return the setting for the current data mode
+  const altarOpen = computed(() => {
+    return isTestData.value ? altarOpenTest.value : altarOpenApi.value
+  })
+
+  const activityLogsEnabled = computed(() => {
+    return isTestData.value ? activityLogsEnabledTest.value : activityLogsEnabledApi.value
+  })
+
   return {
-    // State
-    altarOpen: computed(() => altarOpen.value),
-    dataSource: computed(() => dataSource.value),
-    activityLogsEnabled: computed(() => activityLogsEnabled.value),
+    // State - these automatically return the value for the current data mode
+    altarOpen,
+    dataSource: currentDataSource, // Use the real dataSource from useDataSource
+    activityLogsEnabled,
     isLoading: computed(() => isLoading.value),
     isConnected: computed(() => isConnected.value),
     
