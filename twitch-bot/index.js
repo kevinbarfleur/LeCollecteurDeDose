@@ -49,7 +49,7 @@ import('http').then((http) => {
   webhookServer = http.createServer(async (req, res) => {
     // CORS headers for Edge Functions
     res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
     // Handle OPTIONS preflight
@@ -59,13 +59,15 @@ import('http').then((http) => {
       return
     }
 
-    // Health check endpoint for Railway
+    // Health check endpoint for Railway (must respond quickly)
     if (req.method === 'GET' && req.url === '/health') {
+      const isConnected = client.readyState() === 'OPEN'
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ 
         status: 'ok', 
-        bot: 'connected',
-        channel: process.env.TWITCH_CHANNEL_NAME || 'unknown'
+        bot: isConnected ? 'connected' : 'connecting',
+        channel: process.env.TWITCH_CHANNEL_NAME || 'unknown',
+        timestamp: new Date().toISOString()
       }))
       return
     }
@@ -104,10 +106,13 @@ import('http').then((http) => {
     console.log(`📡 Webhook server listening on port ${PORT}`)
     console.log(`   Endpoint: http://0.0.0.0:${PORT}/webhook/message`)
     console.log(`   Health check: http://0.0.0.0:${PORT}/health`)
+    
+    // Connect to Twitch AFTER the HTTP server is ready
+    // This ensures Railway can do health checks immediately
+    console.log('🔌 Connecting to Twitch...')
+    client.connect()
   })
 })
-
-client.connect()
 
 client.on('message', async (channel, tags, message, self) => {
   // Ignore messages from the bot itself
