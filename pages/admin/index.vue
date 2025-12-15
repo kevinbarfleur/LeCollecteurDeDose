@@ -749,8 +749,8 @@ const configGroups = computed(() => ({
     ]
   },
   buffs: {
-    title: 'Buffs Temporaires',
-    keys: ['atlas_influence_duration', 'atlas_influence_foil_boost']
+    title: 'Buffs (Usage unique)',
+    keys: ['atlas_influence_foil_boost']
   },
   antiFocus: {
     title: 'Anti-Focus (millisecondes)',
@@ -777,8 +777,7 @@ const configLabels: Record<string, string> = {
   trigger_trade_scam: 'Trade Scam',
   trigger_chris_vision: 'Chris Wilson\'s Vision',
   trigger_atlas_influence: 'Atlas Influence',
-  atlas_influence_duration: 'Durée (minutes)',
-  atlas_influence_foil_boost: 'Bonus chance foil',
+  atlas_influence_foil_boost: 'Bonus chance foil (autel)',
   auto_triggers_target_cooldown: 'Cooldown de ciblage',
   auto_triggers_min_users_for_cooldown: 'Minimum utilisateurs actifs',
   auto_triggers_user_activity_window: 'Fenêtre d\'activité'
@@ -798,9 +797,8 @@ const configDescriptions: Record<string, string> = {
   trigger_alch_misclick: 'Reroll une carte aléatoire (nécessite des cartes)',
   trigger_trade_scam: 'Transfère une carte à un autre utilisateur aléatoire (nécessite des cartes)',
   trigger_chris_vision: 'Retire le foil d\'une carte foil (nécessite des cartes foil)',
-  trigger_atlas_influence: 'Ajoute un buff temporaire qui augmente la chance de foil',
-  atlas_influence_duration: 'Durée du buff Atlas Influence en minutes',
-  atlas_influence_foil_boost: 'Bonus de chance de foil (0.0 - 1.0) appliqué pendant le buff',
+  trigger_atlas_influence: 'Ajoute un buff à usage unique qui augmente la chance de foil sur l\'autel',
+  atlas_influence_foil_boost: 'Bonus de chance de foil (0.0 - 1.0) appliqué sur la prochaine utilisation de l\'autel',
   auto_triggers_target_cooldown: 'Temps avant de pouvoir cibler le même utilisateur (en millisecondes)',
   auto_triggers_min_users_for_cooldown: 'Nombre minimum d\'utilisateurs actifs pour appliquer le cooldown strict',
   auto_triggers_user_activity_window: 'Fenêtre de temps pour considérer un utilisateur comme actif (en millisecondes)'

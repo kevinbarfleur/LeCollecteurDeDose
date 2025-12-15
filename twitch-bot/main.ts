@@ -87,7 +87,6 @@ interface TriggerConfig {
   probabilities: Record<string, number>
   buffs: {
     atlasInfluence: {
-      duration: number
       foilBoost: number
     }
   }
@@ -122,7 +121,6 @@ async function loadTriggerConfig(): Promise<TriggerConfig> {
     },
     buffs: {
       atlasInfluence: {
-        duration: 30,
         foilBoost: 0.10,
       }
     },
@@ -184,7 +182,6 @@ async function loadTriggerConfig(): Promise<TriggerConfig> {
       },
       buffs: {
         atlasInfluence: {
-          duration: getIntConfig('atlas_influence_duration', defaults.buffs.atlasInfluence.duration),
           foilBoost: getFloatConfig('atlas_influence_foil_boost', defaults.buffs.atlasInfluence.foilBoost),
         }
       },
@@ -218,7 +215,6 @@ let triggerConfig: TriggerConfig = {
   },
   buffs: {
     atlasInfluence: {
-      duration: 30,
       foilBoost: 0.10,
     }
   },
@@ -873,11 +869,11 @@ async function atlasInfluence(userId: string, username: string): Promise<{ succe
     return { success: false, message: '❌ Service non disponible' }
   }
 
-  const { data: result, error } = await supabase.rpc('add_temporary_buff', {
+  // Atlas Influence is now a single-use buff that boosts foil chance on the altar
+  const { data: result, error } = await supabase.rpc('add_single_use_buff', {
     p_user_id: userId,
     p_buff_type: 'atlas_influence',
-    p_duration_minutes: triggerConfig.buffs.atlasInfluence.duration,
-    p_data: { foil_chance_boost: triggerConfig.buffs.atlasInfluence.foilBoost }
+    p_data: { foil_boost: triggerConfig.buffs.atlasInfluence.foilBoost }
   })
 
   if (error) {
@@ -890,9 +886,9 @@ async function atlasInfluence(userId: string, username: string): Promise<{ succe
   }
 
   const boostPercent = Math.round(triggerConfig.buffs.atlasInfluence.foilBoost * 100)
-  return { 
-    success: true, 
-    message: `🗺️ @${username} reçoit l'influence de l'Atlas ! +${boostPercent}% chance de foil pendant ${triggerConfig.buffs.atlasInfluence.duration}min` 
+  return {
+    success: true,
+    message: `🗺️ @${username} reçoit l'influence de l'Atlas ! +${boostPercent}% chance de foil sur la prochaine utilisation de l'autel`
   }
 }
 

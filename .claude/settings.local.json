@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp add:*)",
+      "Bash(claude /mcp)",
+      "Bash(claude mcp login:*)",
+      "Bash(claude mcp list)",
+      "Bash(claude mcp auth:*)",
+      "Bash(claude mcp --help:*)",
+      "Bash(claude mcp get:*)",
+      "Bash(claude mcp remove:*)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_organizations",
+      "mcp__Railway__list-projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__list_edge_functions",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__get_edge_function",
+      "mcp__supabase__get_advisors",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix security vulnerabilities and optimize RLS performance\n\nSecurity fixes:\n- Enable RLS on backup and bot_config tables (were publicly exposed)\n- Implement HMAC SHA256 signature verification for Twitch EventSub webhooks\n- Add constant-time comparison to prevent timing attacks\n\nPerformance optimizations:\n- Set search_path on all 33 custom PostgreSQL functions to prevent injection\n- Consolidate duplicate RLS policies (reduces per-query evaluation overhead)\n- Optimize service role policies for users, user_collections, user_boosters, booster_cards, unique_cards\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git restore:*)",
+      "Bash(git commit --amend -m \"$(cat <<''EOF''\nFix security vulnerabilities and optimize RLS performance\n\nSecurity fixes:\n- Enable RLS on backup and bot_config tables (were publicly exposed)\n- Implement HMAC SHA256 signature verification for Twitch EventSub webhooks\n- Add constant-time comparison to prevent timing attacks\n\nPerformance optimizations:\n- Set search_path on all 33 custom PostgreSQL functions to prevent injection\n- Consolidate duplicate RLS policies (reduces per-query evaluation overhead)\n- Optimize service role policies for users, user_collections, user_boosters, booster_cards, unique_cards\n\nFeatures:\n- Add restore mode selection (strict/permissive) for backup restoration\n- Strict mode: deletes users not in backup, full data reset\n- Permissive mode: preserves new users, only updates backup users\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)",
+      "mcp__Railway__list-variables",
+      "mcp__supabase__get_project",
+      "mcp__supabase__get_publishable_keys",
+      "mcp__Railway__get-logs",
+      "mcp__Railway__deploy",
+      "mcp__supabase__apply_migration"
+    ]
+  }
+}

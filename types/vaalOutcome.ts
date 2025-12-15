@@ -158,20 +158,30 @@ export function getForcedOutcomeOptions(t: TranslationFunction): Array<{ value: 
 
 /**
  * Simulate a random Vaal outcome based on configured probabilities
+ * @param foilBoost - Optional boost to foil probability (0.10 = +10% weight added to foil)
  */
-export function rollVaalOutcome(): VaalOutcome {
+export function rollVaalOutcome(foilBoost: number = 0): VaalOutcome {
   const outcomes = getAllOutcomes();
-  const totalWeight = outcomes.reduce((sum, o) => sum + o.probability, 0);
-  
+
+  // Apply foil boost if provided (convert decimal to weight: 0.10 = +10 weight)
+  const adjustedOutcomes = foilBoost > 0
+    ? outcomes.map(o => ({
+        ...o,
+        probability: o.id === 'foil' ? o.probability + (foilBoost * 100) : o.probability
+      }))
+    : outcomes;
+
+  const totalWeight = adjustedOutcomes.reduce((sum, o) => sum + o.probability, 0);
+
   let random = Math.random() * totalWeight;
-  
-  for (const outcome of outcomes) {
+
+  for (const outcome of adjustedOutcomes) {
     random -= outcome.probability;
     if (random <= 0) {
       return outcome.id;
     }
   }
-  
+
   // Fallback (shouldn't happen)
   return 'nothing';
 }

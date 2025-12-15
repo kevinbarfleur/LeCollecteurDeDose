@@ -468,3 +468,90 @@ export async function updateUserCollection(
     return false
   }
 }
+
+/**
+ * Get active buffs for a user
+ * @param username - Twitch username (will be converted to Supabase user UUID)
+ * @returns Object with buffs or null on error
+ */
+export async function getUserBuffs(username: string): Promise<{ atlas_influence?: { type: string; data: { foil_boost: number } } } | null> {
+  if (await isMockMode()) {
+    return null // No buffs in mock mode
+  }
+
+  try {
+    const supabase = getSupabaseRead()
+
+    // Get user UUID from username
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('twitch_username', username)
+      .maybeSingle()
+
+    if (userError || !user) {
+      logError('Failed to find user for buffs', userError, { service: 'SupabaseCollection', username })
+      return null
+    }
+
+    // Get active buffs
+    const { data: buffsResult, error: buffsError } = await supabase.rpc('get_user_buffs', {
+      p_user_id: user.id
+    })
+
+    if (buffsError) {
+      logError('Failed to get user buffs', buffsError, { service: 'SupabaseCollection', username })
+      return null
+    }
+
+    return buffsResult?.buffs || null
+  } catch (error) {
+    logError('Error getting user buffs', error, { service: 'SupabaseCollection', username })
+    return null
+  }
+}
+
+/**
+ * Consume a single-use buff for a user
+ * @param username - Twitch username (will be converted to Supabase user UUID)
+ * @param buffType - Type of buff to consume (e.g., 'atlas_influence')
+ * @returns true if buff was consumed, false otherwise
+ */
+export async function consumeUserBuff(username: string, buffType: string): Promise<boolean> {
+  if (await isMockMode()) {
+    return true // Pretend success in mock mode
+  }
+
+  try {
+    const supabase = await getSupabaseWrite()
+
+    // Get user UUID from username
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('twitch_username', username)
+      .maybeSingle()
+
+    if (userError || !user) {
+      logError('Failed to find user for buff consumption', userError, { service: 'SupabaseCollection', username })
+      return false
+    }
+
+    // Consume the buff
+    const { data: result, error: consumeError } = await supabase.rpc('consume_buff', {
+      p_user_id: user.id,
+      p_buff_type: buffType
+    })
+
+    if (consumeError) {
+      logError('Failed to consume buff', consumeError, { service: 'SupabaseCollection', username, buffType })
+      return false
+    }
+
+    console.log(`[SupabaseCollection] consumeUserBuff: ${buffType} consumed for ${username}:`, result)
+    return result?.consumed || false
+  } catch (error) {
+    logError('Error consuming user buff', error, { service: 'SupabaseCollection', username, buffType })
+    return false
+  }
+}

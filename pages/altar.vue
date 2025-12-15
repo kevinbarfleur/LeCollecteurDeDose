@@ -26,6 +26,7 @@ import { transformUserCollectionToCards } from "~/utils/dataTransform";
 import { logCollectionState, logCollectionStateComparison } from "~/utils/collectionLogger";
 import { showReloadModal } from "~/composables/useReloadModal";
 import { logAltarAction, createAltarState } from "~/services/diagnosticLogger.service";
+import { getUserBuffs, consumeUserBuff } from "~/services/supabase-collection.service";
 import type { VaalOutcomeType } from "~/types/diagnostic";
 
 const { t } = useI18n();
@@ -65,6 +66,9 @@ const isReloadingCollection = ref(false);
 // Diagnostic logging: store state before action
 const diagnosticStateBefore = ref<ReturnType<typeof createAltarState> | null>(null);
 const diagnosticCardInfo = ref<{ id?: string; tier?: string; foil?: boolean } | null>(null);
+
+// Atlas Influence buff - single-use foil boost for altar
+const atlasInfluenceBuff = ref<{ foilBoost: number } | null>(null);
 
 // Load collection from API or test data
 const loadCollection = async () => {
@@ -125,14 +129,30 @@ const loadCollection = async () => {
       if (localCollection.value.length === 0) {
         // Collection is empty - this is logged by collectionLogger
       }
+
+      // Load Atlas Influence buff if available
+      try {
+        const buffs = await getUserBuffs(authUser.value.displayName);
+        if (buffs?.atlas_influence?.type === 'single_use') {
+          atlasInfluenceBuff.value = { foilBoost: buffs.atlas_influence.data?.foil_boost || 0.10 };
+          console.log('[Altar] Atlas Influence buff loaded:', atlasInfluenceBuff.value);
+        } else {
+          atlasInfluenceBuff.value = null;
+        }
+      } catch (buffError) {
+        console.warn('[Altar] Failed to load buffs:', buffError);
+        atlasInfluenceBuff.value = null;
+      }
     } else {
       localCollection.value = [];
       vaalOrbs.value = 0;
+      atlasInfluenceBuff.value = null;
     }
   } catch (error) {
     // Error loading collection - logged by error handling
     localCollection.value = [];
     vaalOrbs.value = 0;
+    atlasInfluenceBuff.value = null;
   } finally {
     isLoadingCollection.value = false;
   }
@@ -630,8 +650,12 @@ const simulateVaalOutcome = (): VaalOutcome => {
     return forcedOutcome.value as VaalOutcome;
   }
 
-  // Use centralized probability-based roll
-  return rollVaalOutcome();
+  // Use centralized probability-based roll with Atlas Influence buff if active
+  const foilBoost = atlasInfluenceBuff.value?.foilBoost || 0;
+  if (foilBoost > 0) {
+    console.log(`[Altar] Atlas Influence active: +${Math.round(foilBoost * 100)}% foil boost`);
+  }
+  return rollVaalOutcome(foilBoost);
 };
 
 // Use shared disintegration effect composable
@@ -730,10 +754,18 @@ const handleSyncRequired = async (
     console.log('[Altar] handleSyncRequired: User not logged in, skipping sync');
     return;
   }
-  
+
   console.log(`[Altar] handleSyncRequired: Starting sync for outcome "${outcomeType || 'unknown'}"`);
   console.log(`[Altar] handleSyncRequired: vaalOrbsDelta=${vaalOrbsDelta}, updatesCount=${updates.size}`);
-  
+
+  // Capture Atlas Influence buff state BEFORE sync (to consume it after)
+  // Clear local buff immediately to prevent double usage on rapid clicks
+  const wasAtlasInfluenceActive = atlasInfluenceBuff.value !== null;
+  if (wasAtlasInfluenceActive) {
+    console.log('[Altar] Atlas Influence buff was active, will consume after sync');
+    atlasInfluenceBuff.value = null; // Clear immediately to prevent double usage
+  }
+
   // Save state for rollback (BEFORE optimistic update)
   const vaalOrbsBefore = vaalOrbs.value;
   const localCollectionBefore = JSON.parse(JSON.stringify(localCollection.value)) as Card[];
@@ -842,7 +874,21 @@ const handleSyncRequired = async (
           console.log(`[Altar] handleSyncRequired: Reloading collection after sync`);
           await loadCollection();
           console.log(`[Altar] handleSyncRequired: Collection reloaded - ${localCollection.value.length} cards, ${vaalOrbs.value} vaalOrbs`);
-          
+
+          // Consume Atlas Influence buff on server if it was active during this altar use
+          if (wasAtlasInfluenceActive) {
+            try {
+              console.log('[Altar] Consuming Atlas Influence buff on server after altar use');
+              const consumed = await consumeUserBuff(authUser.value!.displayName, 'atlas_influence');
+              if (consumed) {
+                console.log('[Altar] Atlas Influence buff consumed successfully on server');
+              }
+            } catch (consumeError) {
+              console.warn('[Altar] Failed to consume Atlas Influence buff:', consumeError);
+              // Buff is already cleared locally, server will clean it up on next sync
+            }
+          }
+
           // Capture state AFTER sync and reload for diagnostic logging
           const stateAfterSync = createAltarState(localCollection.value, vaalOrbs.value);
           const apiResponseTime = Date.now() - syncStartTime;
