@@ -68,7 +68,6 @@ async function isFoil(card: any, userId: string, supabase: any): Promise<boolean
       if (expiresAt > new Date()) {
         const foilBoost = atlasBuff.data?.foil_chance_boost || 0
         foilChance = Math.min(1.0, foilChance + foilBoost)
-        console.log(`🗺️ Atlas Influence active: foil chance boosted from ${baseChances[tier]} to ${foilChance}`)
       }
     }
   } catch (error) {
@@ -79,17 +78,11 @@ async function isFoil(card: any, userId: string, supabase: any): Promise<boolean
   return Math.random() < foilChance
 }
 
-// Send message to Twitch chat (via bot service or webhook)
 async function sendTwitchMessage(message: string) {
-  // This will be handled by the Railway bot service
-  // For now, we'll log it - the bot can poll or we can use a webhook
-  console.log(`📢 Twitch message: ${message}`)
-  
-  // Option: Call a webhook endpoint on Railway bot if available
   const botWebhookUrl = Deno.env.get('BOT_WEBHOOK_URL')
   if (botWebhookUrl) {
     try {
-      await fetch(botWebhookUrl, {
+      await fetch(`${botWebhookUrl}/webhook/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, channel: CHANNEL_NAME })
@@ -111,7 +104,6 @@ serve(async (req) => {
       })
     }
 
-    console.log(`🎁 Processing reward for ${username}, rewardId: ${rewardId}`)
 
     // Handle Vaal Orbs reward
     if (rewardId === VAAL_REWARD_ID) {

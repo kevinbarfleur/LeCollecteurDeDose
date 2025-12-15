@@ -63,55 +63,33 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get bot webhook URL from environment or config
-  // For local dev, prioritize localhost over Railway URL
   const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
-  
-  // In dev mode, prioritize localhost unless explicitly forced to use Railway
-  // Check environment variable first (highest priority)
   const envBotUrl = process.env.BOT_WEBHOOK_URL
-  
-  // In dev mode: ALWAYS use localhost (127.0.0.1 for IPv4 compatibility), ignore Railway URL from env/config
-  // This ensures local development uses the local bot which has the latest endpoints
-  // Note: Railway bot needs to be deployed with the latest code to support /webhook/trigger-manual
-  // To test Railway bot, deploy to production or set BOT_WEBHOOK_URL_FORCE_RAILWAY=true
   const forceRailway = process.env.BOT_WEBHOOK_URL_FORCE_RAILWAY === 'true'
+  
   const botWebhookUrl = (isDev && !forceRailway)
-    ? 'http://127.0.0.1:3001'  // Use 127.0.0.1 instead of localhost to avoid IPv6 issues on Windows
+    ? 'http://127.0.0.1:3001'
     : (envBotUrl || config.public.botWebhookUrl || 'https://lecollecteurdedose-production.up.railway.app')
   
-  // Ensure URL has protocol
-  const finalBotUrl = botWebhookUrl.startsWith('http') 
+  const finalBotUrl = (typeof botWebhookUrl === 'string' && botWebhookUrl.startsWith('http')) 
     ? botWebhookUrl 
-    : `https://${botWebhookUrl}`
-  
-  console.log(`[Admin] Using bot webhook URL: ${finalBotUrl} (dev: ${isDev}, forceRailway: ${forceRailway}, envBotUrl: ${envBotUrl || 'none'})`)
+    : `https://${botWebhookUrl || 'lecollecteurdedose-production.up.railway.app'}`
   
   try {
-    // Use the final URL (already has protocol)
     const webhookUrl = finalBotUrl
-    
-    // First, check if bot is available via health check
     const healthCheckUrl = `${webhookUrl}/health`
     
-    console.log(`[Admin] Checking bot health at: ${healthCheckUrl}`)
     try {
       const healthResponse = await fetch(healthCheckUrl, {
         method: 'GET',
-        signal: AbortSignal.timeout(3000) // 3 seconds timeout for health check
+        signal: AbortSignal.timeout(3000)
       })
-      
-      console.log(`[Admin] Health check response: ${healthResponse.status} ${healthResponse.statusText}`)
       
       if (!healthResponse.ok) {
         const healthText = await healthResponse.text().catch(() => '')
         throw new Error(`Bot health check failed: ${healthResponse.status} - ${healthText}`)
       }
-      
-      const healthData = await healthResponse.json().catch(() => ({}))
-      console.log(`[Admin] Bot health check passed:`, healthData)
     } catch (healthError: any) {
-      console.error(`[Admin] Health check failed:`, healthError)
       
       // Check if it's a connection refused error (bot not running)
       const isConnectionRefused = healthError.message?.includes('ECONNREFUSED') || 
@@ -147,20 +125,15 @@ export default defineEventHandler(async (event) => {
       signal: AbortSignal.timeout(10000) // 10 seconds timeout
     })
 
-    console.log(`[Admin] Webhook response status: ${response.status} ${response.statusText}`)
-    
     if (!response.ok) {
       let errorText = 'Unknown error'
       try {
         errorText = await response.text()
-        console.error(`[Admin] Bot webhook error body: ${errorText}`)
-      } catch (e) {
+      } catch {
         errorText = `HTTP ${response.status} ${response.statusText}`
-        console.error(`[Admin] Failed to read error body:`, e)
       }
       
       console.error(`[Admin] Bot webhook error: ${response.status} - ${errorText}`)
-      console.error(`[Admin] Requested URL: ${webhookEndpoint}`)
       
       // Provide more helpful error messages
       if (response.status === 404) {
@@ -221,7 +194,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.error('[Admin] Error triggering manual trigger:', error)
+    console.error('[Admin] Error triggering manual trigger:', error.message || error)
     throw createError({ 
       statusCode: 500, 
       message: error.message || 'Internal server error' 

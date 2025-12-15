@@ -10,25 +10,14 @@ import tmi from "npm:tmi.js@^1.8.5"
 import { createClient } from "npm:@supabase/supabase-js@^2"
 import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
 
-// Load .env file for local development (only if file exists)
-// On Railway, environment variables are already set, so this won't override them
-// Try multiple locations: current directory, parent directory
+// Load .env file for local development
 try {
-  // Try current directory first (twitch-bot/.env)
-  const env = await load({ export: true })
-  console.log('📄 Loaded .env file from current directory')
+  await load({ export: true })
 } catch {
   try {
-    // Try parent directory (.env at project root)
-    const env = await load({ 
-      envPath: '../.env',
-      export: true 
-    })
-    console.log('📄 Loaded .env file from parent directory')
+    await load({ envPath: '../.env', export: true })
   } catch {
-    // .env file not found, that's okay - we'll use system environment variables
-    // This is normal on Railway where env vars are set directly
-    console.log('ℹ️  No .env file found, using system environment variables')
+    // Use system environment variables (normal on Railway)
   }
 }
 
@@ -55,9 +44,8 @@ let supabase: ReturnType<typeof createClient> | null = null
 
 if (SUPABASE_URL && SUPABASE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
-  console.log('✅ Supabase client initialized')
 } else {
-  console.warn('⚠️  Supabase credentials not found - chat commands requiring Supabase will be disabled')
+  console.error('⚠️  Supabase credentials not found - chat commands requiring Supabase will be disabled')
 }
 
 // Initialize Twitch client
@@ -138,17 +126,14 @@ async function loadTriggerConfig(): Promise<TriggerConfig> {
   }
 
   if (!supabase) {
-    console.log('⚠️  Supabase not initialized, using default config')
     return defaults
   }
 
   try {
-    // Load all config from Supabase
     const { data: configData, error } = await supabase.rpc('get_all_bot_config')
     
     if (error || !configData) {
       console.error('Error loading bot config from Supabase:', error)
-      console.log('⚠️  Falling back to default config')
       return defaults
     }
 
@@ -203,7 +188,6 @@ async function loadTriggerConfig(): Promise<TriggerConfig> {
     }
   } catch (error) {
     console.error('Error loading trigger config:', error)
-    console.log('⚠️  Falling back to default config')
     return defaults
   }
 }
@@ -961,6 +945,12 @@ let triggerTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleNextTrigger() {
   if (!triggerConfig.enabled) return
 
+  // Clear any existing timer to prevent multiple triggers
+  if (triggerTimer !== null) {
+    clearTimeout(triggerTimer)
+    triggerTimer = null
+  }
+
   const delay = randomBetween(triggerConfig.minInterval, triggerConfig.maxInterval) * 1000
   triggerTimer = setTimeout(() => {
     executeRandomTrigger()
@@ -974,7 +964,6 @@ async function executeRandomTrigger() {
 
   const targetUser = getRandomActiveUser()
   if (!targetUser) {
-    console.log('⚠️  No targetable users available for trigger')
     return
   }
 
@@ -984,19 +973,14 @@ async function executeRandomTrigger() {
   if (result.success) {
     markUserAsTargeted(targetUser, triggerType)
     client.say(`#${TWITCH_CHANNEL_NAME}`, result.message)
-    console.log(`✅ Trigger "${triggerType}" executed on @${targetUser}`)
   } else {
-    // Even on failure, send the failure message
     client.say(`#${TWITCH_CHANNEL_NAME}`, result.message)
-    console.log(`⚠️  Trigger "${triggerType}" failed for @${targetUser}: ${result.message}`)
-    // Don't mark as targeted on failure (can retry later)
   }
 }
 
 // HTTP server for webhooks and health checks
 async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
-  console.log(`📥 [${req.method}] ${url.pathname} - ${url.href}`)
   
   // CORS headers
   const corsHeaders = {
@@ -1033,7 +1017,6 @@ async function handleRequest(req: Request): Promise<Response> {
       const { message, channel } = body
 
       if (message && channel) {
-        console.log(`📨 Received webhook message: ${message}`)
         client.say(`#${channel}`, message)
         return new Response(
           JSON.stringify({ ok: true }),
@@ -1198,20 +1181,11 @@ client.on('connected', async () => {
       console.log('📋 Trigger configuration loaded from Supabase')
     } catch (error) {
       console.error('Error loading trigger config:', error)
-      console.log('⚠️  Using default configuration')
     }
-  } else {
-    console.log('⚠️  Supabase not initialized, using default configuration')
   }
   
-  // Start auto triggers if enabled
   if (triggerConfig.enabled) {
-    console.log('🎲 Auto triggers enabled')
-    console.log(`   Min interval: ${triggerConfig.minInterval}s, Max interval: ${triggerConfig.maxInterval}s`)
-    console.log(`   Target cooldown: ${triggerConfig.targetCooldown / 1000}s`)
     scheduleNextTrigger()
-  } else {
-    console.log('⚠️  Auto triggers disabled (set auto_triggers_enabled=true in bot_config table to enable)')
   }
 })
 
@@ -1243,6 +1217,13 @@ client.on('message', async (channel: string, tags: any, message: string, self: b
 const gracefulShutdown = async (signal: string) => {
   console.log(`🛑 ${signal} received, disconnecting bot...`)
   isConnected = false
+  
+  // Clear trigger timer
+  if (triggerTimer !== null) {
+    clearTimeout(triggerTimer)
+    triggerTimer = null
+  }
+  
   client.disconnect()
   abortController.abort()
   await server.finished
@@ -1265,64 +1246,36 @@ let heartbeatCount = 0
 setInterval(() => {
   heartbeatCount++
   const uptime = Math.floor(performance.now() / 1000)
-  console.log(`💓 Heartbeat #${heartbeatCount} - uptime: ${uptime}s, server: listening, twitch: ${isConnected ? 'connected' : 'connecting'}`)
-  
-  // Also log server status every 5 minutes
-  if (uptime % 300 === 0) {
-    console.log(`📊 Status check - Server listening: true, Port: ${PORT}, Twitch: ${isConnected ? 'connected' : 'disconnected'}`)
-    console.log(`📊 Active users tracked: ${recentUsers.length}, Recently targeted: ${targetedUsers.length}`)
+  // Log status every 5 minutes if disconnected
+  if (uptime % 300 === 0 && !isConnected) {
+    console.warn(`⚠️  Twitch disconnected - Server: listening, Port: ${PORT}`)
   }
 }, 60000) // Every 60 seconds
 
-// Cleanup expired buffs periodically (every 5 minutes)
-if (supabase && triggerConfig.enabled) {
-  setInterval(async () => {
-    try {
-      // This would require a cleanup function in Supabase or we can do it client-side
-      // For now, buffs are cleaned when accessed via get_user_buffs
-      console.log('🧹 Buff cleanup check (buffs are cleaned on access)')
-    } catch (error) {
-      console.error('Error in buff cleanup:', error)
-    }
-  }, 300000) // Every 5 minutes
-}
-
-console.log('✅ Service ready and listening for requests')
+// Buffs are cleaned automatically when accessed via get_user_buffs
 
 // Console command interface for local development
-// Only enabled when not running on Railway
 if (!Deno.env.get("RAILWAY_ENVIRONMENT")) {
-  console.log('\n🎮 Mode Console Activé - Tapez vos commandes ci-dessous (ou dans le chat Twitch)')
-  console.log('   Commandes disponibles: !ping, !collection, !stats, !vaal, !vaalorb')
-  console.log('   Commandes DEV (local uniquement): !booster, !orb')
-  console.log('   Format: [username] <commande> (ex: "testuser !collection" ou juste "!ping")')
-  console.log('   Tapez "exit" ou Ctrl+C pour quitter\n')
-  
-  // Default username for console commands (can be overridden via CONSOLE_USERNAME env var)
   const DEFAULT_CONSOLE_USERNAME = Deno.env.get("CONSOLE_USERNAME") || "testuser"
   
-  // Simulate active users for auto triggers testing (only if triggers enabled)
-  // Note: triggerConfig will be loaded after Supabase connection, so we check it dynamically
-  setTimeout(async () => {
-    if (triggerConfig && triggerConfig.enabled) {
-      console.log('🎲 Simulation d\'utilisateurs actifs pour tester les triggers automatiques')
-      
-      // Add some fake users to recentUsers for testing
-      const fakeUsers = ['testuser1', 'testuser2', 'testuser3', DEFAULT_CONSOLE_USERNAME]
-      fakeUsers.forEach((user, index) => {
-        trackUserActivity(user)
-      })
-      
-      // Periodically simulate user activity (every 2 minutes)
-      setInterval(() => {
-        if (triggerConfig && triggerConfig.enabled) {
-          const randomUser = fakeUsers[Math.floor(Math.random() * fakeUsers.length)]
-          trackUserActivity(randomUser)
-          console.log(`📝 [Simulation] @${randomUser} a écrit dans le chat`)
-        }
-      }, 120000) // Every 2 minutes
-    }
-  }, 5000) // Wait 5 seconds for config to load
+  // Only simulate users if explicitly enabled via env var (to prevent accidental triggers in production-like environments)
+  const ENABLE_CONSOLE_SIMULATION = Deno.env.get("ENABLE_CONSOLE_SIMULATION") === "true"
+  
+  if (ENABLE_CONSOLE_SIMULATION) {
+    setTimeout(async () => {
+      if (triggerConfig?.enabled) {
+        const fakeUsers = ['testuser1', 'testuser2', 'testuser3', DEFAULT_CONSOLE_USERNAME]
+        fakeUsers.forEach((user) => trackUserActivity(user))
+        
+        setInterval(() => {
+          if (triggerConfig?.enabled) {
+            const randomUser = fakeUsers[Math.floor(Math.random() * fakeUsers.length)]
+            trackUserActivity(randomUser)
+          }
+        }, 120000)
+      }
+    }, 5000)
+  }
   
   // Read from stdin line by line
   const decoder = new TextDecoder()
@@ -1346,7 +1299,6 @@ if (!Deno.env.get("RAILWAY_ENVIRONMENT")) {
         
         // Handle exit
         if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
-          console.log('\n👋 Arrêt du mode console...')
           break
         }
         
@@ -1361,28 +1313,21 @@ if (!Deno.env.get("RAILWAY_ENVIRONMENT")) {
           command = parts.slice(1).join(' ')
         }
         
-        console.log(`\n📝 [Console] @${username}: ${command}`)
-        
-        // Track user activity (for auto triggers)
         if (!command.trim().startsWith('!')) {
           trackUserActivity(username)
         }
         
-        // Handle command
         await handleCommand(username, command, (response) => {
           console.log(`💬 Bot: ${response}`)
         })
-        
-        console.log('') // Empty line for readability
       }
     } catch (error) {
-      // If stdin reading fails, just continue without console mode
-      console.log('⚠️  Console input not available, continuing in Twitch-only mode')
+      // Continue without console mode if stdin fails
     }
   }
   
   // Start reading console input (non-blocking)
   readConsoleInput().catch((error) => {
-    console.log('⚠️  Console mode error:', error.message)
+    console.error('Console mode error:', error.message)
   })
 }
