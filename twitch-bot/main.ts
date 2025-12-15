@@ -90,6 +90,10 @@ interface TriggerConfig {
       foilBoost: number
     }
   }
+  dailyLimits: {
+    booster: number
+    vaals: number
+  }
   targetCooldown: number
   minUsersForCooldown: number
   userActivityWindow: number
@@ -123,6 +127,10 @@ async function loadTriggerConfig(): Promise<TriggerConfig> {
       atlasInfluence: {
         foilBoost: 0.10,
       }
+    },
+    dailyLimits: {
+      booster: 10,
+      vaals: 5,
     },
     targetCooldown: 600000,
     minUsersForCooldown: 3,
@@ -185,6 +193,10 @@ async function loadTriggerConfig(): Promise<TriggerConfig> {
           foilBoost: getFloatConfig('atlas_influence_foil_boost', defaults.buffs.atlasInfluence.foilBoost),
         }
       },
+      dailyLimits: {
+        booster: getIntConfig('daily_limit_booster', defaults.dailyLimits.booster),
+        vaals: getIntConfig('daily_limit_vaals', defaults.dailyLimits.vaals),
+      },
       targetCooldown: getIntConfig('auto_triggers_target_cooldown', defaults.targetCooldown),
       minUsersForCooldown: getIntConfig('auto_triggers_min_users_for_cooldown', defaults.minUsersForCooldown),
       userActivityWindow: getIntConfig('auto_triggers_user_activity_window', defaults.userActivityWindow),
@@ -217,6 +229,10 @@ let triggerConfig: TriggerConfig = {
     atlasInfluence: {
       foilBoost: 0.10,
     }
+  },
+  dailyLimits: {
+    booster: 10,
+    vaals: 5,
   },
   targetCooldown: 600000,
   minUsersForCooldown: 3,
@@ -539,14 +555,8 @@ async function handleCommand(
     return
   }
 
-  // DEV ONLY: !booster - Buy a booster (local development only)
+  // !booster - Open a booster (with daily limit)
   if (command === '!booster') {
-    // Only available in local development
-    if (Deno.env.get("RAILWAY_ENVIRONMENT")) {
-      sendResponse('❌ Cette commande n\'est disponible qu\'en développement local')
-      return
-    }
-
     if (!supabase) {
       sendResponse('❌ Service non disponible')
       return
@@ -564,6 +574,24 @@ async function handleCommand(
       if (userError || !userId) {
         console.error('Error getting user:', userError)
         sendResponse(`❌ Erreur lors de la récupération de votre profil`)
+        return
+      }
+
+      // Check daily limit
+      const { data: limitResult, error: limitError } = await supabase.rpc('check_and_increment_daily_limit', {
+        p_user_id: userId,
+        p_command_type: 'booster',
+        p_max_limit: triggerConfig.dailyLimits.booster
+      })
+
+      if (limitError) {
+        console.error('Error checking daily limit:', limitError)
+        sendResponse('❌ Erreur lors de la vérification des limites')
+        return
+      }
+
+      if (!limitResult?.success) {
+        sendResponse(`⚠️ @${username}, Zana refuse de t'ouvrir plus de maps aujourd'hui. Reviens demain, Exile !`)
         return
       }
 
@@ -583,22 +611,18 @@ async function handleCommand(
         return
       }
 
-      sendResponse(`🎁 @${username}, tu as looté : ${result.message} !`)
+      const used = limitResult.used || 0
+      const limit = limitResult.limit || triggerConfig.dailyLimits.booster
+      sendResponse(`📦 @${username} ouvre un booster : ${result.message} (${used}/${limit})`)
     } catch (error) {
       console.error('Error in !booster command:', error)
-      sendResponse('❌ Erreur lors de l\'achat du booster')
+      sendResponse('❌ Erreur lors de l\'ouverture du booster')
     }
     return
   }
 
-  // DEV ONLY: !orb - Buy 5 Vaal Orbs (local development only)
-  if (command === '!orb') {
-    // Only available in local development
-    if (Deno.env.get("RAILWAY_ENVIRONMENT")) {
-      sendResponse('❌ Cette commande n\'est disponible qu\'en développement local')
-      return
-    }
-
+  // !vaals - Get 5 Vaal Orbs (with daily limit)
+  if (command === '!vaals') {
     if (!supabase) {
       sendResponse('❌ Service non disponible')
       return
@@ -619,6 +643,24 @@ async function handleCommand(
         return
       }
 
+      // Check daily limit
+      const { data: limitResult, error: limitError } = await supabase.rpc('check_and_increment_daily_limit', {
+        p_user_id: userId,
+        p_command_type: 'vaals',
+        p_max_limit: triggerConfig.dailyLimits.vaals
+      })
+
+      if (limitError) {
+        console.error('Error checking daily limit:', limitError)
+        sendResponse('❌ Erreur lors de la vérification des limites')
+        return
+      }
+
+      if (!limitResult?.success) {
+        sendResponse(`⚠️ @${username}, le temple d'Atziri est épuisé pour aujourd'hui. Les Vaal te reverront demain, Exile !`)
+        return
+      }
+
       // Add 5 Vaal Orbs
       const { error: vaalError } = await supabase.rpc('update_vaal_orbs', {
         p_user_id: userId,
@@ -627,7 +669,7 @@ async function handleCommand(
 
       if (vaalError) {
         console.error('Error updating vaal orbs:', vaalError)
-        sendResponse('❌ Erreur lors de l\'achat des Vaal Orbs')
+        sendResponse('❌ Erreur lors de l\'ajout des Vaal Orbs')
         return
       }
 
@@ -639,10 +681,12 @@ async function handleCommand(
         .single()
 
       const vaalOrbs = user?.vaal_orbs || 0
-      sendResponse(`✨ @${username} reçoit 5 Vaal Orbs ! (Total: ${vaalOrbs})`)
+      const used = limitResult.used || 0
+      const limit = limitResult.limit || triggerConfig.dailyLimits.vaals
+      sendResponse(`💎 @${username} reçoit 5 Vaal Orbs ! Total: ${vaalOrbs} (${used}/${limit})`)
     } catch (error) {
-      console.error('Error in !orb command:', error)
-      sendResponse('❌ Erreur lors de l\'achat des Vaal Orbs')
+      console.error('Error in !vaals command:', error)
+      sendResponse('❌ Erreur lors de l\'ajout des Vaal Orbs')
     }
     return
   }
@@ -775,7 +819,9 @@ async function sirusVoiceLine(userId: string, username: string): Promise<{ succe
     return { success: false, message: `💀 Sirus regarde @${username}... "Tu n'as rien à perdre."` }
   }
 
-  return { success: true, message: `💀 "Die." - Sirus détruit une carte de @${username}` }
+  const cardName = result.card_name || 'une carte'
+  const foilIndicator = result.is_foil ? ' ✨' : ''
+  return { success: true, message: `💀 "Die." - Sirus détruit ${cardName}${foilIndicator} de @${username}` }
 }
 
 // Alch & Go Misclick - Reroll a card (checks if user has cards)

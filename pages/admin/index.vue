@@ -752,6 +752,13 @@ const configGroups = computed(() => ({
     title: 'Buffs (Usage unique)',
     keys: ['atlas_influence_foil_boost']
   },
+  dailyLimits: {
+    title: 'Limites Journalières (!booster, !vaals)',
+    keys: [
+      'daily_limit_booster',
+      'daily_limit_vaals'
+    ]
+  },
   antiFocus: {
     title: 'Anti-Focus (millisecondes)',
     keys: [
@@ -778,6 +785,8 @@ const configLabels: Record<string, string> = {
   trigger_chris_vision: 'Chris Wilson\'s Vision',
   trigger_atlas_influence: 'Atlas Influence',
   atlas_influence_foil_boost: 'Bonus chance foil (autel)',
+  daily_limit_booster: 'Limite !booster par jour',
+  daily_limit_vaals: 'Limite !vaals par jour',
   auto_triggers_target_cooldown: 'Cooldown de ciblage',
   auto_triggers_min_users_for_cooldown: 'Minimum utilisateurs actifs',
   auto_triggers_user_activity_window: 'Fenêtre d\'activité'
@@ -799,6 +808,8 @@ const configDescriptions: Record<string, string> = {
   trigger_chris_vision: 'Retire le foil d\'une carte foil (nécessite des cartes foil)',
   trigger_atlas_influence: 'Ajoute un buff à usage unique qui augmente la chance de foil sur l\'autel',
   atlas_influence_foil_boost: 'Bonus de chance de foil (0.0 - 1.0) appliqué sur la prochaine utilisation de l\'autel',
+  daily_limit_booster: 'Nombre maximum de !booster par utilisateur par jour (reset à minuit UTC)',
+  daily_limit_vaals: 'Nombre maximum de !vaals par utilisateur par jour (reset à minuit UTC)',
   auto_triggers_target_cooldown: 'Temps avant de pouvoir cibler le même utilisateur (en millisecondes)',
   auto_triggers_min_users_for_cooldown: 'Nombre minimum d\'utilisateurs actifs pour appliquer le cooldown strict',
   auto_triggers_user_activity_window: 'Fenêtre de temps pour considérer un utilisateur comme actif (en millisecondes)'
