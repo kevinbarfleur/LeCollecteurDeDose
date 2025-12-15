@@ -661,7 +661,7 @@ const loadBotConfig = async () => {
 const saveBotConfigValue = async (key: string, value: string) => {
   botConfigSaving.value = true;
   botConfigMessage.value = null;
-  
+
   try {
     const response = await $fetch('/api/admin/bot-config', {
       method: 'POST',
@@ -673,11 +673,32 @@ const saveBotConfigValue = async (key: string, value: string) => {
 
     if (response.ok) {
       botConfig.value[key] = value;
-      botConfigMessage.value = {
-        type: 'success',
-        text: response.message || 'Configuration sauvegardée'
-      };
-      
+
+      // Notify bot to reload config
+      try {
+        const reloadResponse = await $fetch('/api/admin/reload-bot-config', {
+          method: 'POST'
+        });
+
+        if (reloadResponse.botReloaded) {
+          botConfigMessage.value = {
+            type: 'success',
+            text: 'Configuration sauvegardée et bot mis à jour'
+          };
+        } else {
+          botConfigMessage.value = {
+            type: 'success',
+            text: 'Configuration sauvegardée (bot sera mis à jour au prochain cycle)'
+          };
+        }
+      } catch (reloadError) {
+        // Config was saved, just bot notification failed
+        botConfigMessage.value = {
+          type: 'success',
+          text: 'Configuration sauvegardée (notification bot échouée)'
+        };
+      }
+
       // Clear message after 3 seconds
       setTimeout(() => {
         botConfigMessage.value = null;

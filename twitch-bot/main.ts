@@ -1177,6 +1177,47 @@ async function handleRequest(req: Request): Promise<Response> {
     }
   }
 
+  // Webhook endpoint to reload bot config (called by admin panel)
+  if (req.method === 'POST' && url.pathname === '/webhook/reload-config') {
+    try {
+      const previousEnabled = triggerConfig.enabled
+      triggerConfig = await loadTriggerConfig()
+
+      console.log('🔄 Config reloaded via webhook')
+      console.log(`   Triggers: ${triggerConfig.enabled ? '✅ Enabled' : '⏸️ Disabled'}`)
+
+      // If triggers were just enabled, make sure the loop is running
+      if (triggerConfig.enabled && !previousEnabled) {
+        console.log('🎲 Triggers enabled - restarting trigger loop')
+        scheduleNextTrigger()
+      }
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          config: {
+            enabled: triggerConfig.enabled,
+            minInterval: triggerConfig.minInterval,
+            maxInterval: triggerConfig.maxInterval
+          }
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    } catch (error) {
+      console.error('Error reloading config:', error)
+      return new Response(
+        JSON.stringify({ error: 'Failed to reload config' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+  }
+
   // Webhook endpoint for manual trigger execution
   if (req.method === 'POST' && url.pathname === '/webhook/trigger-manual') {
     try {
