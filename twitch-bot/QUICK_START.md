@@ -74,6 +74,163 @@ Une fois lancé, vous devriez voir dans la console :
 ✅ Supabase client initialized
 📡 Webhook server listening on port 3001
    Endpoint: http://0.0.0.0:3001/webhook/message
+```
+
+## 🎮 Mode Console pour Tests Locaux
+
+En développement local, le bot active automatiquement un **mode console** qui vous permet de tester les commandes directement dans le terminal sans passer par le chat Twitch.
+
+### Utilisation
+
+Une fois le bot lancé, vous verrez :
+
+```
+🎮 Mode Console Activé - Tapez vos commandes ci-dessous (ou dans le chat Twitch)
+   Commandes disponibles: !ping, !collection, !stats, !vaal, !vaalorb
+   Commandes DEV (local uniquement): !booster, !orb
+   Format: [username] <commande> (ex: "testuser !collection" ou juste "!ping")
+   Tapez "exit" ou Ctrl+C pour quitter
+
+> 
+```
+
+### Exemples de commandes console
+
+```bash
+# Commande simple (utilise le username par défaut: "testuser")
+> !ping
+📝 [Console] @testuser: !ping
+💬 Bot: Pong!
+
+# Commande avec username spécifique
+> monutilisateur !collection
+📝 [Console] @monutilisateur: !collection
+💬 Bot: 📦 @monutilisateur : 42 cartes (5 ✨) | 10 Vaal Orbs
+
+# Commande avec username dans la commande
+> !vaal monutilisateur
+📝 [Console] @testuser: !vaal monutilisateur
+💬 Bot: 💎 @monutilisateur a 10 Vaal Orbs
+
+# Utiliser un Vaal Orb
+> !vaalorb
+📝 [Console] @testuser: !vaalorb
+💬 Bot: ✨ @testuser utilise un Vaal Orb sur CarteExemple... Transformation réussie ! La carte devient foil ! (9 Vaal Orbs restants)
+
+# Commandes DEV (uniquement en local)
+> !booster
+📝 [Console] @testuser: !booster
+💬 Bot: 🎁 @testuser, tu as looté : Carte1, Carte2 ✨, Carte3, Carte4, Carte5 !
+
+> !orb
+📝 [Console] @testuser: !orb
+💬 Bot: ✨ @testuser reçoit 5 Vaal Orbs ! (Total: 15)
+```
+
+## 🎲 Triggers Automatiques
+
+Le bot peut déclencher automatiquement des événements aléatoires dans le chat. La configuration est gérée via la table `bot_config` dans Supabase, ce qui permet de modifier les paramètres sans redéployer le bot.
+
+### Configuration via Supabase
+
+La configuration est stockée dans la table `bot_config` avec les clés suivantes :
+
+#### Activation
+- `auto_triggers_enabled` : `true` ou `false` (défaut: `false`)
+
+#### Intervalles (en secondes)
+- `auto_triggers_min_interval` : Intervalle minimum (défaut: `300` = 5 minutes)
+- `auto_triggers_max_interval` : Intervalle maximum (défaut: `900` = 15 minutes)
+
+#### Probabilités de chaque trigger (0.0 à 1.0)
+- `trigger_blessing_rngesus` : 20% (défaut: `0.20`)
+- `trigger_cartographers_gift` : 20% (défaut: `0.20`)
+- `trigger_mirror_tier` : 5% (défaut: `0.05`)
+- `trigger_einhar_approved` : 15% (défaut: `0.15`)
+- `trigger_heist_tax` : 10% (défaut: `0.10`)
+- `trigger_sirus_voice` : 3% (défaut: `0.03`)
+- `trigger_alch_misclick` : 10% (défaut: `0.10`)
+- `trigger_trade_scam` : 5% (défaut: `0.05`)
+- `trigger_chris_vision` : 5% (défaut: `0.05`)
+- `trigger_atlas_influence` : 7% (défaut: `0.07`)
+
+#### Durée des buffs temporaires
+- `atlas_influence_duration` : Durée en minutes (défaut: `30`)
+- `atlas_influence_foil_boost` : Bonus de chance de foil (défaut: `0.10` = +10%)
+
+#### Anti-focus (en millisecondes)
+- `auto_triggers_target_cooldown` : Cooldown avant re-ciblage (défaut: `600000` = 10 minutes)
+- `auto_triggers_min_users_for_cooldown` : Minimum d'utilisateurs actifs (défaut: `3`)
+- `auto_triggers_user_activity_window` : Fenêtre d'activité (défaut: `3600000` = 1 heure)
+
+### Modifier la Configuration
+
+**Via SQL dans Supabase** :
+```sql
+-- Activer les triggers
+SELECT set_bot_config('auto_triggers_enabled', 'true');
+
+-- Modifier une probabilité
+SELECT set_bot_config('trigger_blessing_rngesus', '0.25');
+
+-- Voir toute la configuration
+SELECT * FROM bot_config;
+```
+
+**Via l'interface Supabase** :
+1. Allez dans Table Editor → `bot_config`
+2. Modifiez les valeurs directement
+3. Les changements seront pris en compte au prochain redémarrage du bot
+
+### Effets Disponibles
+
+1. **Blessing of RNGesus** ✨ : Donne +1 Vaal Orb (toujours possible)
+2. **Cartographer's Gift** 🗺️ : Donne 1 carte aléatoire (toujours possible)
+3. **Mirror-tier Moment** 💎 : Duplique une carte (nécessite des cartes)
+4. **Einhar Approved** 🦎 : Convertit une carte normale en foil (nécessite des cartes normales)
+5. **Heist Tax** 💰 : Retire 1 Vaal Orb (nécessite des Vaal Orbs)
+6. **Sirus Voice Line** 💀 : Détruit une carte (nécessite des cartes)
+7. **Alch & Go Misclick** ⚗️ : Reroll une carte (nécessite des cartes)
+8. **Trade Scam** 🤝 : Transfère une carte à un autre joueur (nécessite des cartes)
+9. **Chris Wilson's Vision** 👓 : Retire le foil d'une carte foil (nécessite des cartes foil)
+10. **Atlas Influence** 🗺️ : Ajoute un buff temporaire (+10% chance de foil)
+
+### Système Anti-Focus
+
+Le bot utilise un système anti-focus pour éviter de cibler le même utilisateur plusieurs fois d'affilée :
+- Un utilisateur ne peut pas être ciblé deux fois dans la fenêtre de cooldown (10 minutes par défaut)
+- Si moins de 3 utilisateurs sont actifs, le cooldown est appliqué strictement
+- Les utilisateurs sont considérés "actifs" s'ils ont envoyé un message dans la dernière heure
+
+### Mode Console et Tests Locaux
+
+En mode console local, le bot simule automatiquement des utilisateurs actifs pour tester les triggers :
+- Des utilisateurs fictifs sont ajoutés à la liste des utilisateurs actifs
+- L'activité est simulée toutes les 2 minutes
+- Les triggers fonctionnent normalement et affichent leurs messages dans la console
+
+### Personnaliser le username par défaut
+
+Vous pouvez définir un username par défaut différent via une variable d'environnement :
+
+```bash
+CONSOLE_USERNAME=monusername deno run --allow-net --allow-env --allow-read main.ts
+```
+
+Ou dans votre `.env` :
+
+```env
+CONSOLE_USERNAME=monusername
+```
+
+**Note** : La configuration des triggers est maintenant gérée via la table `bot_config` dans Supabase, pas via les variables d'environnement. Voir la section "Configuration via Supabase" ci-dessus.
+
+### Notes
+
+- Le mode console est **automatiquement désactivé** sur Railway (détection via `RAILWAY_ENVIRONMENT`)
+- Les commandes fonctionnent exactement comme dans le chat Twitch
+- Vous pouvez toujours utiliser le chat Twitch en parallèle si le bot est connecté
+- Tapez `exit` ou `quit` pour quitter le mode console (le bot continue de tourner)
    Health check: http://0.0.0.0:3001/health
 ✅ HTTP server ready - Railway can now perform health checks
 🔌 Connecting to Twitch...

@@ -384,6 +384,138 @@ const tabOptions = computed(() => [
   { value: 'main', label: 'Actions Principales' },
   { value: 'advanced', label: 'Actions Avancées' },
 ]);
+
+// Bot config modal
+const showBotConfigModal = ref(false);
+const botConfig = ref<Record<string, string>>({});
+const botConfigLoading = ref(false);
+const botConfigSaving = ref(false);
+const botConfigMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
+// Load bot config
+const loadBotConfig = async () => {
+  botConfigLoading.value = true;
+  try {
+    const response = await $fetch('/api/admin/bot-config');
+    if (response.ok && response.config) {
+      botConfig.value = response.config;
+    }
+  } catch (error: any) {
+    console.error('Error loading bot config:', error);
+    botConfigMessage.value = {
+      type: 'error',
+      text: `Erreur lors du chargement: ${error.message || 'Erreur inconnue'}`
+    };
+  } finally {
+    botConfigLoading.value = false;
+  }
+};
+
+// Save bot config value
+const saveBotConfigValue = async (key: string, value: string) => {
+  botConfigSaving.value = true;
+  botConfigMessage.value = null;
+  
+  try {
+    const response = await $fetch('/api/admin/bot-config', {
+      method: 'POST',
+      body: {
+        key,
+        value
+      }
+    });
+
+    if (response.ok) {
+      botConfig.value[key] = value;
+      botConfigMessage.value = {
+        type: 'success',
+        text: response.message || 'Configuration sauvegardée'
+      };
+      
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        botConfigMessage.value = null;
+      }, 3000);
+    } else {
+      throw new Error('Failed to save config');
+    }
+  } catch (error: any) {
+    botConfigMessage.value = {
+      type: 'error',
+      text: `Erreur: ${error.message || 'Impossible de sauvegarder'}`
+    };
+  } finally {
+    botConfigSaving.value = false;
+  }
+};
+
+// Watch modal visibility to load config when opened
+watch(showBotConfigModal, (isOpen) => {
+  if (isOpen) {
+    loadBotConfig();
+  }
+});
+
+// Config groups for organization
+const configGroups = computed(() => ({
+  activation: {
+    title: 'Activation',
+    keys: ['auto_triggers_enabled']
+  },
+  intervals: {
+    title: 'Intervalles (secondes)',
+    keys: ['auto_triggers_min_interval', 'auto_triggers_max_interval']
+  },
+  probabilities: {
+    title: 'Probabilités des Triggers (0.0 - 1.0)',
+    keys: [
+      'trigger_blessing_rngesus',
+      'trigger_cartographers_gift',
+      'trigger_mirror_tier',
+      'trigger_einhar_approved',
+      'trigger_heist_tax',
+      'trigger_sirus_voice',
+      'trigger_alch_misclick',
+      'trigger_trade_scam',
+      'trigger_chris_vision',
+      'trigger_atlas_influence'
+    ]
+  },
+  buffs: {
+    title: 'Buffs Temporaires',
+    keys: ['atlas_influence_duration', 'atlas_influence_foil_boost']
+  },
+  antiFocus: {
+    title: 'Anti-Focus (millisecondes)',
+    keys: [
+      'auto_triggers_target_cooldown',
+      'auto_triggers_min_users_for_cooldown',
+      'auto_triggers_user_activity_window'
+    ]
+  }
+}));
+
+// Config labels
+const configLabels: Record<string, string> = {
+  auto_triggers_enabled: 'Activer les triggers automatiques',
+  auto_triggers_min_interval: 'Intervalle minimum',
+  auto_triggers_max_interval: 'Intervalle maximum',
+  trigger_blessing_rngesus: 'Blessing of RNGesus',
+  trigger_cartographers_gift: 'Cartographer\'s Gift',
+  trigger_mirror_tier: 'Mirror-tier Moment',
+  trigger_einhar_approved: 'Einhar Approved',
+  trigger_heist_tax: 'Heist Tax',
+  trigger_sirus_voice: 'Sirus Voice Line',
+  trigger_alch_misclick: 'Alch & Go Misclick',
+  trigger_trade_scam: 'Trade Scam',
+  trigger_chris_vision: 'Chris Wilson\'s Vision',
+  trigger_atlas_influence: 'Atlas Influence',
+  atlas_influence_duration: 'Durée (minutes)',
+  atlas_influence_foil_boost: 'Bonus chance foil',
+  auto_triggers_target_cooldown: 'Cooldown de ciblage',
+  auto_triggers_min_users_for_cooldown: 'Minimum utilisateurs actifs',
+  auto_triggers_user_activity_window: 'Fenêtre d\'activité'
+};
 </script>
 
 <template>
@@ -496,6 +628,25 @@ const tabOptions = computed(() => [
                           toggle-color="default"
                           :disabled="isLoading || isTogglingActivityLogs"
                         />
+                      </div>
+                    </div>
+
+                    <!-- Bot Triggers Configuration -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Triggers Automatiques</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Gérer les paramètres des triggers automatiques du bot Twitch
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="secondary"
+                          @click="showBotConfigModal = true"
+                        >
+                          ⚙️ Configurer
+                        </RunicButton>
                       </div>
                     </div>
                   </div>
@@ -756,6 +907,109 @@ const tabOptions = computed(() => [
           </div>
         </div>
       </RunicBox>
+
+      <!-- Bot Config Modal -->
+      <ClientOnly>
+        <div
+          v-if="showBotConfigModal"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          @click.self="showBotConfigModal = false"
+        >
+          <RunicBox
+            class="max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4"
+            padding="lg"
+          >
+            <div class="flex flex-col gap-6">
+              <!-- Header -->
+              <div class="flex items-center justify-between">
+                <RunicHeader
+                  title="Triggers Automatiques"
+                  attached
+                />
+                <button
+                  @click="showBotConfigModal = false"
+                  class="w-8 h-8 flex items-center justify-center text-poe-text-dim hover:text-poe-text transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <!-- Loading state -->
+              <div v-if="botConfigLoading" class="flex items-center justify-center py-8">
+                <span class="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></span>
+                <span class="ml-3 font-body text-lg text-poe-text-dim">Chargement...</span>
+              </div>
+
+              <!-- Config form -->
+              <div v-else class="flex flex-col gap-6">
+                <!-- Message -->
+                <div
+                  v-if="botConfigMessage"
+                  class="p-3 rounded text-center font-display text-base"
+                  :class="{
+                    'bg-green-900/20 border border-green-700/40 text-green-200': botConfigMessage.type === 'success',
+                    'bg-red-900/20 border border-red-700/40 text-red-200': botConfigMessage.type === 'error'
+                  }"
+                >
+                  {{ botConfigMessage.text }}
+                </div>
+
+                <!-- Config groups -->
+                <div
+                  v-for="(group, groupKey) in configGroups"
+                  :key="groupKey"
+                  class="flex flex-col gap-4 pb-6 border-b border-poe-border/20 last:border-0 last:pb-0"
+                >
+                  <h3 class="font-display text-xl font-bold text-poe-text">{{ group.title }}</h3>
+                  
+                  <div class="flex flex-col gap-4">
+                    <div
+                      v-for="key in group.keys"
+                      :key="key"
+                      class="flex items-start justify-between gap-4"
+                    >
+                      <div class="flex-1 flex flex-col gap-1 min-w-0">
+                        <label class="font-display text-base font-semibold text-poe-text">
+                          {{ configLabels[key] || key }}
+                        </label>
+                        <span class="font-body text-sm text-poe-text-dim font-mono">{{ key }}</span>
+                      </div>
+                      <div class="flex items-center gap-3 flex-shrink-0">
+                        <!-- Boolean toggle -->
+                        <RunicRadio
+                          v-if="key === 'auto_triggers_enabled'"
+                          v-model="autoTriggersEnabledModel"
+                          :toggle="true"
+                          size="md"
+                          toggle-color="default"
+                          :disabled="botConfigSaving"
+                        />
+                        <!-- Number input -->
+                        <input
+                          v-else
+                          v-model="botConfig[key]"
+                          type="number"
+                          step="any"
+                          class="w-32 px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-base transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] disabled:opacity-50 disabled:cursor-not-allowed"
+                          :disabled="botConfigSaving"
+                          @blur="saveBotConfigValue(key, botConfig[key])"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Info message -->
+                <div class="p-4 bg-blue-900/20 border border-blue-700/40 rounded">
+                  <p class="font-body text-sm text-blue-200 m-0">
+                    💡 Les modifications sont sauvegardées automatiquement. Le bot rechargera la configuration au prochain redémarrage ou reconnexion.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </RunicBox>
+        </div>
+      </ClientOnly>
     </div>
   </NuxtLayout>
 </template>

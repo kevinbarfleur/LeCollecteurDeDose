@@ -49,11 +49,34 @@ function createBooster(allCards: any[]) {
   return booster
 }
 
-// Determine if a card should be foil
-function isFoil(card: any): boolean {
+// Determine if a card should be foil (with buff support)
+async function isFoil(card: any, userId: string, supabase: any): Promise<boolean> {
   const tier = card.tier ?? "T0"
-  const chances: Record<string, number> = { T3: 0.10, T2: 0.08, T1: 0.05, T0: 0.01 }
-  return Math.random() < (chances[tier] ?? 0.01)
+  let baseChances: Record<string, number> = { T3: 0.10, T2: 0.08, T1: 0.05, T0: 0.01 }
+  let foilChance = baseChances[tier] ?? 0.01
+  
+  // Check for Atlas Influence buff
+  try {
+    const { data: buffsResult, error: buffsError } = await supabase.rpc('get_user_buffs', {
+      p_user_id: userId
+    })
+    
+    if (!buffsError && buffsResult?.success && buffsResult.buffs?.atlas_influence) {
+      const atlasBuff = buffsResult.buffs.atlas_influence
+      const expiresAt = new Date(atlasBuff.expires_at)
+      
+      if (expiresAt > new Date()) {
+        const foilBoost = atlasBuff.data?.foil_chance_boost || 0
+        foilChance = Math.min(1.0, foilChance + foilBoost)
+        console.log(`🗺️ Atlas Influence active: foil chance boosted from ${baseChances[tier]} to ${foilChance}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error checking buffs:', error)
+    // Continue with base chance if buff check fails
+  }
+  
+  return Math.random() < foilChance
 }
 
 // Send message to Twitch chat (via bot service or webhook)
@@ -173,7 +196,7 @@ serve(async (req) => {
 
     for (let i = 0; i < booster.length; i++) {
       const card = booster[i]
-      const foil = isFoil(card)
+      const foil = await isFoil(card, userId, supabase)
 
       // Add to booster_cards
       boosterCards.push({

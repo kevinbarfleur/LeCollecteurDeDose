@@ -247,3 +247,108 @@ BEGIN
   );
 END;
 $$;
+
+-- Function to create a booster for a user (dev/testing purposes)
+-- Uses SECURITY DEFINER to bypass RLS
+CREATE OR REPLACE FUNCTION create_booster_for_user(
+  p_user_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_booster_id UUID;
+  v_card_uid INTEGER;
+  v_card_name TEXT;
+  v_card_tier TEXT;
+  v_is_foil BOOLEAN;
+  v_loot_names TEXT[] := ARRAY[]::TEXT[];
+  v_card_count INTEGER := 0;
+  v_total_weight NUMERIC;
+  v_random_weight NUMERIC;
+  v_current_weight NUMERIC;
+  v_tier_chances JSONB := '{"T3": 0.10, "T2": 0.08, "T1": 0.05, "T0": 0.01}'::jsonb;
+BEGIN
+  -- Create booster record
+  INSERT INTO user_boosters (user_id, opened_at, booster_type)
+  VALUES (p_user_id, NOW(), 'normal')
+  RETURNING id INTO v_booster_id;
+  
+  -- Add guaranteed card (T0, T1, or T2) - weighted random with T2 boost
+  SELECT uid, name, tier INTO v_card_uid, v_card_name, v_card_tier
+  FROM unique_cards
+  WHERE tier IN ('T0', 'T1', 'T2')
+  ORDER BY 
+    CASE 
+      WHEN tier = 'T2' THEN (COALESCE((game_data->>'weight')::NUMERIC, 1) * 4)
+      ELSE COALESCE((game_data->>'weight')::NUMERIC, 1)
+    END DESC,
+    RANDOM()
+  LIMIT 1;
+  
+  IF v_card_uid IS NOT NULL THEN
+    v_is_foil := RANDOM() < COALESCE((v_tier_chances->>v_card_tier)::NUMERIC, 0.01);
+    
+    INSERT INTO booster_cards (booster_id, card_uid, is_foil, position)
+    VALUES (v_booster_id, v_card_uid, v_is_foil, 1);
+    
+    PERFORM add_card_to_collection(p_user_id, v_card_uid, v_is_foil);
+    
+    v_loot_names := array_append(v_loot_names, v_card_name || CASE WHEN v_is_foil THEN ' ✨' ELSE '' END);
+    v_card_count := 1;
+  END IF;
+  
+  -- Add remaining cards (up to 5 total) using weighted random
+  WHILE v_card_count < 5 LOOP
+    -- Calculate total weight
+    SELECT SUM(COALESCE((game_data->>'weight')::NUMERIC, 1)) INTO v_total_weight
+    FROM unique_cards;
+    
+    IF v_total_weight IS NULL OR v_total_weight = 0 THEN
+      v_total_weight := 1;
+    END IF;
+    
+    -- Pick random card based on weight (simplified approach)
+    v_random_weight := RANDOM() * v_total_weight;
+    
+    SELECT uid, name, tier INTO v_card_uid, v_card_name, v_card_tier
+    FROM (
+      SELECT uid, name, tier, 
+             SUM(COALESCE((game_data->>'weight')::NUMERIC, 1)) OVER (ORDER BY uid) as cumulative_weight
+      FROM unique_cards
+    ) weighted
+    WHERE cumulative_weight >= v_random_weight
+    ORDER BY uid
+    LIMIT 1;
+    
+    -- Fallback if no card found
+    IF v_card_uid IS NULL THEN
+      SELECT uid, name, tier INTO v_card_uid, v_card_name, v_card_tier
+      FROM unique_cards
+      ORDER BY RANDOM()
+      LIMIT 1;
+    END IF;
+    
+    -- Determine if foil
+    v_is_foil := RANDOM() < COALESCE((v_tier_chances->>v_card_tier)::NUMERIC, 0.01);
+    
+    -- Add to booster
+    INSERT INTO booster_cards (booster_id, card_uid, is_foil, position)
+    VALUES (v_booster_id, v_card_uid, v_is_foil, v_card_count + 1);
+    
+    -- Add to collection
+    PERFORM add_card_to_collection(p_user_id, v_card_uid, v_is_foil);
+    
+    v_loot_names := array_append(v_loot_names, v_card_name || CASE WHEN v_is_foil THEN ' ✨' ELSE '' END);
+    v_card_count := v_card_count + 1;
+  END LOOP;
+  
+  RETURN jsonb_build_object(
+    'success', true,
+    'booster_id', v_booster_id,
+    'cards', v_loot_names,
+    'message', array_to_string(v_loot_names, ', ')
+  );
+END;
+$$;
