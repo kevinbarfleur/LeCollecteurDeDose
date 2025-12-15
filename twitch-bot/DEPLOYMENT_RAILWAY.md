@@ -59,9 +59,10 @@ Le bot a besoin d'un token OAuth pour se connecter à Twitch. Voici comment l'ob
 2. Si ce n'est pas le cas :
    - Root Directory : `twitch-bot`
    - Build Command : `npm install`
-   - Start Command : `npm start`
+   - **Start Command** : `node index.js` (⚠️ **Important** : Utilisez `node index.js` directement, pas `npm start`)
 3. **Important** : Le bot expose un endpoint `/health` pour que Railway détecte qu'il est actif
    - Railway vérifiera automatiquement `https://votre-service.railway.app/health`
+   - Le fichier `railway.json` configure automatiquement le health check
 
 ## 🔧 Étape 3 : Configurer les Variables d'Environnement
 
@@ -235,11 +236,28 @@ Si vous voyez `📨 Received webhook message: ...` dans les logs Railway, le web
    - Pas de `#` au début
    - Nom exact de la chaîne
 
-### Le bot se déconnecte souvent
+### Le bot se déconnecte souvent ou Railway arrête le conteneur
 
-- Railway peut mettre le service en veille après inactivité
-- Le bot se reconnectera automatiquement
-- Pour éviter cela, utilisez le plan payant ou configurez un keep-alive
+**Problème** : Railway arrête le conteneur avec `SIGTERM` même si le bot fonctionne.
+
+**Solutions** :
+1. **Vérifiez le Start Command** :
+   - Doit être `node index.js` (pas `npm start`)
+   - `npm start` fait que npm devient le processus principal et ne gère pas correctement les signaux
+   
+2. **Vérifiez le Health Check** :
+   - Le endpoint `/health` doit répondre rapidement
+   - Testez : `curl https://votre-service.railway.app/health`
+   - Doit retourner `{"status":"ok","bot":"connected",...}`
+   
+3. **Vérifiez les logs** :
+   - Le serveur HTTP doit démarrer AVANT la connexion Twitch
+   - Vous devriez voir : `📡 Webhook server listening on port XXXX` avant `✅ Bot connected`
+   
+4. **Configuration Railway** :
+   - Settings → Health Check → Path : `/health`
+   - Settings → Health Check → Timeout : 300 secondes
+   - Settings → Deploy → Restart Policy : `ON_FAILURE`
 
 ### Les messages de handle-reward ne s'affichent pas dans le chat
 

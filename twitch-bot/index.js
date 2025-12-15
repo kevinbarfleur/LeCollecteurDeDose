@@ -8,6 +8,7 @@
 
 import tmi from 'tmi.js'
 import { createClient } from '@supabase/supabase-js'
+import http from 'http'
 
 // Railway injects environment variables automatically, no need for dotenv in production
 // But we keep it for local development
@@ -45,73 +46,72 @@ let webhookServer = null
 
 // Always setup webhook server to receive messages from Edge Functions
 // This is required for handle-reward to send messages to chat
-import('http').then((http) => {
-  webhookServer = http.createServer(async (req, res) => {
-    // CORS headers for Edge Functions
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+// Use synchronous import to ensure server starts before Railway health checks
+webhookServer = http.createServer(async (req, res) => {
+  // CORS headers for Edge Functions
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
-    // Handle OPTIONS preflight
-    if (req.method === 'OPTIONS') {
-      res.writeHead(200)
-      res.end()
-      return
-    }
-
-    // Health check endpoint for Railway (must respond quickly)
-    if (req.method === 'GET' && req.url === '/health') {
-      const isConnected = client.readyState() === 'OPEN'
-      res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ 
-        status: 'ok', 
-        bot: isConnected ? 'connected' : 'connecting',
-        channel: process.env.TWITCH_CHANNEL_NAME || 'unknown',
-        timestamp: new Date().toISOString()
-      }))
-      return
-    }
-
-    // Webhook endpoint for Edge Functions
-    if (req.method === 'POST' && req.url === '/webhook/message') {
-      let body = ''
-      req.on('data', chunk => { body += chunk.toString() })
-      req.on('end', () => {
-        try {
-          const { message, channel } = JSON.parse(body)
-          if (message && channel) {
-            console.log(`📨 Received webhook message: ${message}`)
-            client.say(`#${channel}`, message)
-            res.writeHead(200, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ ok: true }))
-          } else {
-            res.writeHead(400, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ error: 'Missing message or channel' }))
-          }
-        } catch (error) {
-          console.error('Error processing webhook:', error)
-          res.writeHead(400, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ error: 'Invalid request' }))
-        }
-      })
-      return
-    }
-
-    // 404 for other routes
-    res.writeHead(404)
+  // Handle OPTIONS preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200)
     res.end()
-  })
+    return
+  }
 
-  webhookServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`📡 Webhook server listening on port ${PORT}`)
-    console.log(`   Endpoint: http://0.0.0.0:${PORT}/webhook/message`)
-    console.log(`   Health check: http://0.0.0.0:${PORT}/health`)
-    
-    // Connect to Twitch AFTER the HTTP server is ready
-    // This ensures Railway can do health checks immediately
-    console.log('🔌 Connecting to Twitch...')
-    client.connect()
-  })
+  // Health check endpoint for Railway (must respond quickly)
+  if (req.method === 'GET' && req.url === '/health') {
+    const isConnected = client.readyState() === 'OPEN'
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ 
+      status: 'ok', 
+      bot: isConnected ? 'connected' : 'connecting',
+      channel: process.env.TWITCH_CHANNEL_NAME || 'unknown',
+      timestamp: new Date().toISOString()
+    }))
+    return
+  }
+
+  // Webhook endpoint for Edge Functions
+  if (req.method === 'POST' && req.url === '/webhook/message') {
+    let body = ''
+    req.on('data', chunk => { body += chunk.toString() })
+    req.on('end', () => {
+      try {
+        const { message, channel } = JSON.parse(body)
+        if (message && channel) {
+          console.log(`📨 Received webhook message: ${message}`)
+          client.say(`#${channel}`, message)
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: true }))
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Missing message or channel' }))
+        }
+      } catch (error) {
+        console.error('Error processing webhook:', error)
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid request' }))
+      }
+    })
+    return
+  }
+
+  // 404 for other routes
+  res.writeHead(404)
+  res.end()
+})
+
+webhookServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`📡 Webhook server listening on port ${PORT}`)
+  console.log(`   Endpoint: http://0.0.0.0:${PORT}/webhook/message`)
+  console.log(`   Health check: http://0.0.0.0:${PORT}/health`)
+  
+  // Connect to Twitch AFTER the HTTP server is ready
+  // This ensures Railway can do health checks immediately
+  console.log('🔌 Connecting to Twitch...')
+  client.connect()
 })
 
 client.on('message', async (channel, tags, message, self) => {
@@ -284,6 +284,10 @@ process.on('SIGINT', () => {
   process.exit(0)
 })
 
+console.log('🤖 Twitch Bot Service starting...')
+console.log(`   Channel: ${process.env.TWITCH_CHANNEL_NAME}`)
+console.log(`   Username: ${process.env.TWITCH_BOT_USERNAME}`)
+
 // Keep the process alive - prevent Railway from thinking the service is inactive
 // Railway needs to see active network connections or HTTP activity
 // This interval keeps the event loop active
@@ -297,7 +301,3 @@ setInterval(() => {
     }
   }
 }, 30000) // Every 30 seconds
-
-console.log('🤖 Twitch Bot Service starting...')
-console.log(`   Channel: ${process.env.TWITCH_CHANNEL_NAME}`)
-console.log(`   Username: ${process.env.TWITCH_BOT_USERNAME}`)
