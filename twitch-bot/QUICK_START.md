@@ -153,15 +153,31 @@ Avec Deno, les modules sont téléchargés automatiquement. Si vous avez des pro
 
 Le bot répond aux commandes suivantes :
 
-- `!ping` → Répond `Pong!`
-- `!collection [username]` → Affiche la collection d'un utilisateur (cartes, foils, Vaal Orbs)
+### Commandes d'Information
+
+- **`!ping`** → Répond `Pong!` (test de connexion)
+- **`!collection [username]`** → Affiche la collection d'un utilisateur
+  - Affiche : nombre total de cartes, nombre de foils ✨, et Vaal Orbs
   - Exemple : `!collection` (votre collection) ou `!collection MonAmi`
-- `!stats [username]` → Affiche les statistiques complètes (cartes, boosters ouverts, Vaal Orbs)
+- **`!stats [username]`** → Affiche les statistiques complètes
+  - Affiche : cartes totales, boosters ouverts, Vaal Orbs
   - Exemple : `!stats` (vos stats) ou `!stats MonAmi`
-- `!vaal [username]` → Affiche le nombre de Vaal Orbs
+- **`!vaal [username]`** → Affiche le nombre de Vaal Orbs
   - Exemple : `!vaal` (vos Vaal Orbs) ou `!vaal MonAmi`
 
-**Note :** Les commandes `!collection`, `!stats` et `!vaal` nécessitent les variables d'environnement Supabase pour fonctionner.
+### Commandes d'Action
+
+- **`!vaalorb`** → Utilise un Vaal Orb sur une carte aléatoire (inspiré de Path of Exile)
+  - Consomme 1 Vaal Orb de votre inventaire
+  - Sélectionne une carte normale aléatoire de votre collection
+  - Effets possibles :
+    - ✨ **50% chance** : Transforme la carte en foil (réussite)
+    - 💫 **25% chance** : Rien ne se passe (échec mineur)
+    - 💥 **15% chance** : Détruit la carte (échec majeur)
+    - 🌟 **10% chance** : Duplique la carte (succès rare)
+  - **Prérequis** : Au moins 1 Vaal Orb et au moins une carte normale dans votre collection
+
+**Note :** Les commandes nécessitent les variables d'environnement Supabase pour fonctionner.
 
 ## 🛑 Arrêter le bot
 

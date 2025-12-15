@@ -106,3 +106,144 @@ BEGIN
   WHERE id = p_user_id;
 END;
 $$;
+
+-- Function to use a Vaal Orb on a random card from user's collection
+-- Inspired by Path of Exile's Vaal Orb mechanics
+-- Effects:
+--   50% chance: Transform to foil (success)
+--   25% chance: Nothing happens (minor failure)
+--   15% chance: Destroy card (major failure)
+--   10% chance: Duplicate card (rare success)
+CREATE OR REPLACE FUNCTION use_vaal_orb(
+  p_user_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_vaal_orbs INTEGER;
+  v_card_uid INTEGER;
+  v_card_name TEXT;
+  v_card_tier TEXT;
+  v_normal_count INTEGER;
+  v_foil_count INTEGER;
+  v_collection_id UUID;
+  v_roll REAL;
+  v_result TEXT;
+  v_message TEXT;
+  v_success BOOLEAN;
+BEGIN
+  -- Check if user has Vaal Orbs
+  SELECT vaal_orbs INTO v_vaal_orbs
+  FROM users
+  WHERE id = p_user_id;
+  
+  IF v_vaal_orbs IS NULL OR v_vaal_orbs < 1 THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'message', 'Vous n''avez pas de Vaal Orb !'
+    );
+  END IF;
+  
+  -- Get a random card from user's collection that has normal copies (not already all foil)
+  SELECT uc.id, uc.card_uid, uc.normal_count, uc.foil_count, c.name, c.tier
+  INTO v_collection_id, v_card_uid, v_normal_count, v_foil_count, v_card_name, v_card_tier
+  FROM user_collections uc
+  JOIN unique_cards c ON c.uid = uc.card_uid
+  WHERE uc.user_id = p_user_id
+    AND uc.normal_count > 0
+  ORDER BY RANDOM()
+  LIMIT 1;
+  
+  IF v_collection_id IS NULL THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'message', 'Vous n''avez aucune carte normale à vaal !'
+    );
+  END IF;
+  
+  -- Consume 1 Vaal Orb
+  UPDATE users
+  SET vaal_orbs = vaal_orbs - 1,
+      updated_at = NOW()
+  WHERE id = p_user_id;
+  
+  -- Roll for outcome (Path of Exile style)
+  -- 50% chance: Transform to foil (success)
+  -- 25% chance: Nothing happens (minor failure)
+  -- 15% chance: Destroy card (major failure)
+  -- 10% chance: Duplicate card (rare success)
+  v_roll := RANDOM();
+  
+  IF v_roll < 0.50 THEN
+    -- Transform to foil (50% chance)
+    UPDATE user_collections
+    SET normal_count = normal_count - 1,
+        foil_count = foil_count + 1,
+        updated_at = NOW()
+    WHERE id = v_collection_id;
+    
+    v_result := 'foil';
+    v_message := format('✨ @%s utilise un Vaal Orb sur %s... Transformation réussie ! La carte devient foil !', 
+      (SELECT twitch_username FROM users WHERE id = p_user_id),
+      v_card_name
+    );
+    v_success := true;
+    
+  ELSIF v_roll < 0.75 THEN
+    -- Nothing happens (25% chance)
+    v_result := 'nothing';
+    v_message := format('💫 @%s utilise un Vaal Orb sur %s... Rien ne se passe. Le pouvoir du Vaal est imprévisible.', 
+      (SELECT twitch_username FROM users WHERE id = p_user_id),
+      v_card_name
+    );
+    v_success := true;
+    
+  ELSIF v_roll < 0.90 THEN
+    -- Destroy card (15% chance)
+    IF v_normal_count = 1 AND v_foil_count = 0 THEN
+      -- Delete the collection entry if it was the last card
+      DELETE FROM user_collections WHERE id = v_collection_id;
+    ELSE
+      -- Just remove one normal copy
+      UPDATE user_collections
+      SET normal_count = normal_count - 1,
+          quantity = quantity - 1,
+          updated_at = NOW()
+      WHERE id = v_collection_id;
+    END IF;
+    
+    v_result := 'destroyed';
+    v_message := format('💥 @%s utilise un Vaal Orb sur %s... La carte est détruite ! Le pouvoir du Vaal est dangereux.', 
+      (SELECT twitch_username FROM users WHERE id = p_user_id),
+      v_card_name
+    );
+    v_success := true;
+    
+  ELSE
+    -- Duplicate card (10% chance - rare success)
+    UPDATE user_collections
+    SET normal_count = normal_count + 1,
+        quantity = quantity + 1,
+        updated_at = NOW()
+    WHERE id = v_collection_id;
+    
+    v_result := 'duplicate';
+    v_message := format('🌟 @%s utilise un Vaal Orb sur %s... Miracle ! La carte est dupliquée ! Le pouvoir du Vaal vous sourit.', 
+      (SELECT twitch_username FROM users WHERE id = p_user_id),
+      v_card_name
+    );
+    v_success := true;
+  END IF;
+  
+  RETURN jsonb_build_object(
+    'success', v_success,
+    'result', v_result,
+    'message', v_message,
+    'card_name', v_card_name,
+    'card_tier', v_card_tier,
+    'remaining_vaal_orbs', (SELECT vaal_orbs FROM users WHERE id = p_user_id)
+  );
+END;
+$$;

@@ -82,12 +82,29 @@ Pour tester le bot en local, consultez [QUICK_START.md](./QUICK_START.md)
 
 ## 🎯 Fonctionnalités
 
-- ✅ Connexion au chat Twitch via `twitch_irc` (Deno)
-- ✅ Commandes chat interactives avec Supabase :
-  - `!ping` → Répond `Pong!`
-  - `!collection [username]` → Affiche la collection d'un utilisateur (cartes, foils, Vaal Orbs)
-  - `!stats [username]` → Affiche les statistiques complètes d'un utilisateur
-  - `!vaal [username]` → Affiche le nombre de Vaal Orbs d'un utilisateur
+### Commandes Chat Disponibles
+
+- **`!ping`** → Répond `Pong!` (test de connexion)
+- **`!collection [username]`** → Affiche la collection d'un utilisateur
+  - Affiche : nombre total de cartes, nombre de foils ✨, et Vaal Orbs
+  - Exemple : `!collection` ou `!collection MonAmi`
+- **`!stats [username]`** → Affiche les statistiques complètes
+  - Affiche : cartes totales, boosters ouverts, Vaal Orbs
+  - Exemple : `!stats` ou `!stats MonAmi`
+- **`!vaal [username]`** → Affiche le nombre de Vaal Orbs
+  - Exemple : `!vaal` ou `!vaal MonAmi`
+- **`!vaalorb`** → Utilise un Vaal Orb sur une carte aléatoire (inspiré de Path of Exile)
+  - Consomme 1 Vaal Orb
+  - Effets possibles :
+    - ✨ **50% chance** : Transforme la carte en foil (réussite)
+    - 💫 **25% chance** : Rien ne se passe (échec mineur)
+    - 💥 **15% chance** : Détruit la carte (échec majeur)
+    - 🌟 **10% chance** : Duplique la carte (succès rare)
+  - Nécessite au moins 1 Vaal Orb et une carte normale dans la collection
+
+### Autres Fonctionnalités
+
+- ✅ Connexion au chat Twitch via `tmi.js` (via npm)
 - ✅ Webhook automatique pour recevoir messages des Edge Functions Supabase (handle-reward)
 - ✅ Reconnexion automatique en cas de déconnexion
 - ✅ Interaction directe avec Supabase Database

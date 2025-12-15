@@ -252,6 +252,54 @@ client.on('message', async (channel, tags, message, self) => {
     return
   }
 
+  // !vaalorb - Use a Vaal Orb on a random card (Path of Exile style)
+  if (command === '!vaalorb') {
+    if (!supabase) {
+      client.say(channel, '❌ Service non disponible')
+      return
+    }
+
+    try {
+      // Get or create user
+      const { data: userId, error: userError } = await supabase.rpc('get_or_create_user', {
+        p_twitch_username: username,
+        p_twitch_user_id: null,
+        p_display_name: null,
+        p_avatar_url: null
+      })
+
+      if (userError || !userId) {
+        console.error('Error getting user:', userError)
+        client.say(channel, `❌ Erreur lors de la récupération de votre profil`)
+        return
+      }
+
+      // Use Vaal Orb
+      const { data: result, error: vaalError } = await supabase.rpc('use_vaal_orb', {
+        p_user_id: userId
+      })
+
+      if (vaalError) {
+        console.error('Error using vaal orb:', vaalError)
+        client.say(channel, `❌ Erreur lors de l'utilisation du Vaal Orb`)
+        return
+      }
+
+      if (!result || !result.success) {
+        client.say(channel, result?.message || '❌ Erreur lors de l\'utilisation du Vaal Orb')
+        return
+      }
+
+      // Send result message
+      const remaining = result.remaining_vaal_orbs || 0
+      client.say(channel, `${result.message} (${remaining} Vaal Orb${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''})`)
+    } catch (error) {
+      console.error('Error in !vaalorb command:', error)
+      client.say(channel, '❌ Erreur lors de l\'utilisation du Vaal Orb')
+    }
+    return
+  }
+
   // !vaal - Show user's Vaal Orbs
   if (command === '!vaal' || command.startsWith('!vaal ')) {
     if (!supabase) {
@@ -280,7 +328,7 @@ client.on('message', async (channel, tags, message, self) => {
       }
 
       const vaalOrbs = user.vaal_orbs || 0
-      client.say(channel, `💎 @${targetUser} a ${vaalOrbs} Vaal Orbs`)
+      client.say(channel, `💎 @${targetUser} a ${vaalOrbs} Vaal Orb${vaalOrbs > 1 ? 's' : ''}`)
     } catch (error) {
       console.error('Error in !vaal command:', error)
       client.say(channel, '❌ Erreur lors de la récupération des Vaal Orbs')
