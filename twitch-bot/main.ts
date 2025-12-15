@@ -1059,23 +1059,38 @@ async function executeTrigger(triggerType: string, username: string, isManual: b
 let triggerTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleNextTrigger() {
-  if (!triggerConfig.enabled) return
-
   // Clear any existing timer to prevent multiple triggers
   if (triggerTimer !== null) {
     clearTimeout(triggerTimer)
     triggerTimer = null
   }
 
-  const delay = randomBetween(triggerConfig.minInterval, triggerConfig.maxInterval) * 1000
-  triggerTimer = setTimeout(() => {
-    executeRandomTrigger()
+  // Always schedule the next check - executeRandomTrigger will reload config and decide
+  // Use shorter interval when disabled to detect re-enable faster (30s check interval)
+  const delay = triggerConfig.enabled
+    ? randomBetween(triggerConfig.minInterval, triggerConfig.maxInterval) * 1000
+    : 30000 // Check every 30s when disabled to detect re-enable
+
+  triggerTimer = setTimeout(async () => {
+    await executeRandomTrigger()
     scheduleNextTrigger()
   }, delay)
 }
 
 // Execute random trigger
 async function executeRandomTrigger() {
+  // Reload config from Supabase to get latest settings (including enabled state)
+  try {
+    triggerConfig = await loadTriggerConfig()
+  } catch (error) {
+    console.error('Error reloading trigger config:', error)
+  }
+
+  // Check if triggers are enabled - if not, skip execution but keep polling
+  if (!triggerConfig.enabled) {
+    return // scheduleNextTrigger will continue polling every 30s
+  }
+
   cleanupOldTargets()
 
   const targetUser = getRandomActiveUser()
@@ -1299,9 +1314,13 @@ client.on('connected', async () => {
       console.error('Error loading trigger config:', error)
     }
   }
-  
+
+  // Always start the trigger loop - it will poll config and execute only when enabled
+  scheduleNextTrigger()
   if (triggerConfig.enabled) {
-    scheduleNextTrigger()
+    console.log('🎲 Auto triggers enabled - starting trigger loop')
+  } else {
+    console.log('⏸️  Auto triggers disabled - polling every 30s for config changes')
   }
 })
 
