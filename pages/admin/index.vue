@@ -17,6 +17,10 @@ const isTriggeringBooster = ref(false);
 const isTriggeringVaalOrbs = ref(false);
 const botActionMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
 
+// Credit Vaal Orbs for current user
+const isCreditingVaalOrbs = ref(false);
+const creditVaalOrbsMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
 useHead({ title: t("admin.meta.title") });
 
 // Local state for optimistic updates
@@ -342,6 +346,67 @@ const triggerVaalOrbs = async () => {
     };
   } finally {
     isTriggeringVaalOrbs.value = false;
+  }
+};
+
+// Credit 5 Vaal Orbs for current user (direct Supabase update)
+const creditVaalOrbs = async () => {
+  if (!user.value?.login || isCreditingVaalOrbs.value) return;
+  
+  isCreditingVaalOrbs.value = true;
+  creditVaalOrbsMessage.value = null;
+
+  try {
+    console.log(`[Admin] creditVaalOrbs: Starting credit for user ${user.value.login}`);
+    
+    const supabase = useSupabaseClient();
+    if (!supabase) {
+      throw new Error('Supabase client not available');
+    }
+
+    // Get or create user to obtain Supabase UUID (not Twitch ID)
+    // update_vaal_orbs requires the Supabase UUID, not the Twitch user ID
+    const { data: userId, error: userError } = await supabase.rpc('get_or_create_user', {
+      p_twitch_username: user.value.login.toLowerCase()
+    });
+
+    if (userError || !userId) {
+      console.error('[Admin] creditVaalOrbs: Error getting user UUID:', userError);
+      throw new Error(`Failed to get user UUID: ${userError?.message || 'Unknown error'}`);
+    }
+
+    console.log(`[Admin] creditVaalOrbs: Got Supabase UUID ${userId} for user ${user.value.login}`);
+
+    // Call update_vaal_orbs RPC function with Supabase UUID
+    const { data, error } = await supabase.rpc('update_vaal_orbs', {
+      p_user_id: userId,
+      p_amount: 5
+    });
+
+    if (error) {
+      console.error('[Admin] creditVaalOrbs: Error updating vaal orbs:', error);
+      throw error;
+    }
+
+    console.log('[Admin] creditVaalOrbs: Successfully credited 5 Vaal Orbs');
+    
+    creditVaalOrbsMessage.value = {
+      type: 'success',
+      text: '✅ 5 Vaal Orbs ajoutés avec succès !'
+    };
+    
+    // Clear message after 5 seconds
+    setTimeout(() => {
+      creditVaalOrbsMessage.value = null;
+    }, 5000);
+  } catch (error: any) {
+    console.error('[Admin] creditVaalOrbs: Failed:', error);
+    creditVaalOrbsMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.message || 'Impossible de créditer les Vaal Orbs'}`
+    };
+  } finally {
+    isCreditingVaalOrbs.value = false;
   }
 };
 
@@ -818,6 +883,36 @@ const triggerManualTrigger = async (triggerType: string) => {
                           :options="forcedOutcomeOptions"
                           size="md"
                         />
+                      </div>
+                    </div>
+
+                    <!-- Credit Vaal Orbs (Production) -->
+                    <div v-if="isSupabaseData" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Créditer 5 Vaal Orbs</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Ajouter 5 Vaal Orbs directement dans Supabase pour l'utilisateur actuel
+                        </p>
+                      </div>
+                      <div class="flex flex-col gap-3 flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="primary"
+                          :disabled="!user?.id || isCreditingVaalOrbs"
+                          @click="creditVaalOrbs"
+                        >
+                          <span v-if="!isCreditingVaalOrbs">✨ Créditer 5 Vaal Orbs</span>
+                          <span v-else>Crédit en cours...</span>
+                        </RunicButton>
+                        <div v-if="creditVaalOrbsMessage" 
+                          class="w-full p-2 rounded text-center font-display text-sm"
+                          :class="{
+                            'bg-green-900/20 border border-green-700/40 text-green-200': creditVaalOrbsMessage.type === 'success',
+                            'bg-red-900/20 border border-red-700/40 text-red-200': creditVaalOrbsMessage.type === 'error'
+                          }"
+                        >
+                          {{ creditVaalOrbsMessage.text }}
+                        </div>
                       </div>
                     </div>
 

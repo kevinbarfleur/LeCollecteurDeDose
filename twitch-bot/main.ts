@@ -26,7 +26,11 @@ const TWITCH_BOT_USERNAME = Deno.env.get("TWITCH_BOT_USERNAME") || ""
 const TWITCH_BOT_OAUTH_TOKEN = Deno.env.get("TWITCH_BOT_OAUTH_TOKEN") || ""
 const TWITCH_CHANNEL_NAME = Deno.env.get("TWITCH_CHANNEL_NAME") || ""
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
-const SUPABASE_KEY = Deno.env.get("SUPABASE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || ""
+// Prefer service role key for server-side operations (better security)
+// Fallback to anon key for backward compatibility (functions use SECURITY DEFINER, so anon key works)
+const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || 
+                     Deno.env.get("SUPABASE_KEY") || 
+                     Deno.env.get("SUPABASE_ANON_KEY") || ""
 const PORT = parseInt(Deno.env.get("PORT") || Deno.env.get("WEBHOOK_PORT") || "3001")
 
 // Debug: Log environment variables status (only in development)
@@ -36,7 +40,9 @@ if (!Deno.env.get("RAILWAY_ENVIRONMENT")) {
   console.log(`   TWITCH_BOT_OAUTH_TOKEN: ${TWITCH_BOT_OAUTH_TOKEN ? '✅ Set' : '❌ Missing'}`)
   console.log(`   TWITCH_CHANNEL_NAME: ${TWITCH_CHANNEL_NAME ? '✅ Set' : '❌ Missing'}`)
   console.log(`   SUPABASE_URL: ${SUPABASE_URL ? '✅ Set' : '❌ Missing'}`)
-  console.log(`   SUPABASE_KEY: ${SUPABASE_KEY ? '✅ Set' : '❌ Missing'}`)
+  const keyType = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? 'Service Role' : 
+                  Deno.env.get("SUPABASE_KEY") ? 'Anon' : 'Missing'
+  console.log(`   SUPABASE_KEY: ${SUPABASE_KEY ? `✅ Set (${keyType})` : '❌ Missing'}`)
 }
 
 // Initialize Supabase client

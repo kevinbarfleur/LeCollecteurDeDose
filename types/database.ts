@@ -519,6 +519,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_card_collection_counts: {
+        Args: {
+          p_user_id: string
+          p_card_uid: number
+          p_normal_count?: number
+          p_foil_count?: number
+        }
+        Returns: undefined
+      }
+      set_vaal_orbs: {
+        Args: {
+          p_user_id: string
+          p_count: number
+        }
+        Returns: undefined
+      }
       refresh_user_collection_summary: {
         Args: never
         Returns: undefined

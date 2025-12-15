@@ -62,12 +62,16 @@ export async function updateCardCounts(
     // IMPORTANT: The server does a shallow merge, so we need to send ALL cards
     // with their updated counts, not just the changed ones.
     // Fetch current collection first to get all existing cards
+    console.log(`[Collection] updateCardCounts: Fetching current collection for ${username}`);
     const currentCollectionData = await ApiService.fetchUserCollection(username, config)
 
     if (!currentCollectionData) {
+      console.error(`[Collection] updateCardCounts: Could not fetch current collection for ${username}`);
       logError('Could not fetch current collection', undefined, { service: 'Collection', action: 'updateCardCounts', username })
       return false
     }
+    
+    console.log(`[Collection] updateCardCounts: Fetched current collection, ${Object.keys(currentCollectionData).length} entries`);
 
     // Log collection state BEFORE API update
     const currentCards = apiFormatToCards(currentCollectionData)
@@ -81,9 +85,11 @@ export async function updateCardCounts(
     const update: Record<string, any> = { ...currentCollectionData }
 
     // Apply card updates (overwrite with new counts)
+    console.log(`[Collection] updateCardCounts: Applying ${cardUpdates.size} card updates`);
     for (const [uid, changes] of cardUpdates.entries()) {
       const currentNormal = changes.currentNormal ?? 0
       const currentFoil = changes.currentFoil ?? 0
+      console.log(`[Collection] updateCardCounts: Updating card UID ${uid} - normal: ${currentNormal}, foil: ${currentFoil}`);
       const cardUpdate = createCardUpdate(
         uid,
         changes.normalDelta,
@@ -98,6 +104,7 @@ export async function updateCardCounts(
     // Add vaalOrbs update if provided (absolute value)
     if (vaalOrbsNewValue !== undefined) {
       update.vaalOrbs = vaalOrbsNewValue
+      console.log(`[Collection] updateCardCounts: Setting vaalOrbs to ${vaalOrbsNewValue}`);
     }
 
     // Remove vaalOrbs from the object before sending (it's a top-level property)
@@ -107,7 +114,9 @@ export async function updateCardCounts(
       finalUpdate.vaalOrbs = vaalOrbsNewValue
     }
 
+    console.log(`[Collection] updateCardCounts: Sending update with ${Object.keys(finalUpdate).length} entries`);
     const success = await ApiService.updateUserCollection(username, finalUpdate, config)
+    console.log(`[Collection] updateCardCounts: Update result: ${success}`);
 
     if (success) {
       // Log collection state AFTER API update (what we sent)

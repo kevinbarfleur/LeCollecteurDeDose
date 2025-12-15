@@ -130,13 +130,9 @@ const showGameOfflineMessage = computed(() => {
         <!-- Game Offline Message (shown on all pages except admin when API is offline) -->
         <ClientOnly>
           <GameOfflineMessage v-if="showGameOfflineMessage" />
-          <template #fallback>
-            <slot />
-          </template>
         </ClientOnly>
-        <div v-if="!showGameOfflineMessage">
-          <slot />
-        </div>
+        <!-- Always render slot, GameOfflineMessage will overlay if needed -->
+        <slot />
       </div>
     </main>
 

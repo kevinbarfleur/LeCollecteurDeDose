@@ -50,8 +50,12 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   // ==========================================
   
   const executeNothing = async (): Promise<OutcomeResult> => {
-    if (!cardRef.value) return { success: false };
+    if (!cardRef.value) {
+      console.error('[VaalOutcomes] executeNothing: cardRef is null');
+      return { success: false };
+    }
 
+    console.log('[VaalOutcomes] executeNothing: Starting nothing outcome');
     isAnimating.value = true;
 
     // Brief disappointed flash
@@ -74,6 +78,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     isAnimating.value = false;
     
+    console.log('[VaalOutcomes] executeNothing: Completed successfully');
     return { success: true };
   };
 
@@ -84,8 +89,12 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   
   const executeFoil = async (): Promise<OutcomeResult> => {
     if (!cardRef.value || !displayCard.value) {
+      console.error('[VaalOutcomes] executeFoil: cardRef or displayCard is null');
       return { success: false };
     }
+
+    console.log(`[VaalOutcomes] executeFoil: Starting foil transformation for card ${displayCard.value.name} (UID: ${displayCard.value.uid})`);
+    console.log(`[VaalOutcomes] executeFoil: Card is currently ${displayCard.value.foil ? 'foil' : 'normal'}`);
 
     // Log collection state BEFORE modification
     logCollectionState('FOIL: Before modification', localCollection.value, 0, {
@@ -165,13 +174,17 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
 
     // Sync with API: normal: -1, foil: +1
     if (onSyncRequired) {
+      console.log('[VaalOutcomes] executeFoil: Calling onSyncRequired to sync foil transformation');
       const baseUid = Math.floor(currentCard.uid)
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
       updates.set(baseUid, { normalDelta: -1, foilDelta: 1, cardData: { ...currentCard, foil: true } })
       await onSyncRequired(updates, -1, 'foil') // Consume 1 vaalOrb
+      console.log('[VaalOutcomes] executeFoil: Sync completed');
     } else {
+      console.warn('[VaalOutcomes] executeFoil: onSyncRequired callback not available');
     }
 
+    console.log('[VaalOutcomes] executeFoil: Completed successfully');
     return { success: true };
   };
 
@@ -197,8 +210,12 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   
   const executeTransform = async (): Promise<OutcomeResult> => {
     if (!cardRef.value || !displayCard.value) {
+      console.error('[VaalOutcomes] executeTransform: cardRef or displayCard is null');
       return { success: false };
     }
+
+    const currentCard = displayCard.value;
+    console.log(`[VaalOutcomes] executeTransform: Starting transformation for card ${currentCard.name} (UID: ${currentCard.uid}, Tier: ${currentCard.tier})`);
 
     // Log collection state BEFORE modification
     logCollectionState('TRANSFORM: Before modification', localCollection.value, 0, {
@@ -211,7 +228,6 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
 
     isAnimating.value = true;
     
-    const currentCard = displayCard.value;
     const currentTier = currentCard.tier as CardTier;
     const tierColors = getTierColors(currentTier);
     
@@ -220,7 +236,10 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       (c) => c.tier === currentTier && c.id !== currentCard.id
     );
     
+    console.log(`[VaalOutcomes] executeTransform: Found ${sameTierCards.length} cards in tier ${currentTier}`);
+    
     if (sameTierCards.length === 0) {
+      console.error('[VaalOutcomes] executeTransform: No other cards in this tier');
       isAnimating.value = false;
       return { success: false, message: 'No other cards in this tier' };
     }
@@ -228,6 +247,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     // Pick a random card from the same tier
     const randomIndex = Math.floor(Math.random() * sameTierCards.length);
     const newCardTemplate = sameTierCards[randomIndex];
+    console.log(`[VaalOutcomes] executeTransform: Selected new card: ${newCardTemplate.name} (UID: ${newCardTemplate.uid})`);
     
     const cardElement = cardRef.value;
     
@@ -242,12 +262,17 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       foil: isCardFoil(currentCard),
     };
     
+    console.log(`[VaalOutcomes] executeTransform: New card will be ${newCard.foil ? 'foil' : 'normal'} (preserving original foil status)`);
+    
     // PRELOAD the new card's image BEFORE starting animation
     const newImageUrl = newCard.gameData?.img;
     if (newImageUrl) {
       try {
+        console.log(`[VaalOutcomes] executeTransform: Preloading image: ${newImageUrl}`);
         await preloadImage(newImageUrl);
+        console.log('[VaalOutcomes] executeTransform: Image preloaded successfully');
       } catch (e) {
+        console.error('[VaalOutcomes] executeTransform: Failed to preload image:', e);
       }
     }
     
@@ -329,6 +354,9 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
           (c) => c.uid === currentCard.uid
         );
         if (cardIndex !== -1) {
+          console.log(`[VaalOutcomes] executeTransform: Updating collection at index ${cardIndex}`);
+          console.log(`[VaalOutcomes] executeTransform: Old card: ${currentCard.name} (UID: ${currentCard.uid})`);
+          console.log(`[VaalOutcomes] executeTransform: New card: ${newCard.name} (UID: ${newCard.uid})`);
           localCollection.value[cardIndex] = newCard;
           
           // Log collection state AFTER modification
@@ -343,6 +371,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
               foil: newCard.foil,
             }
           });
+        } else {
+          console.error(`[VaalOutcomes] executeTransform: Card not found in collection (UID: ${currentCard.uid})`);
         }
       },
     });
@@ -371,27 +401,35 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
 
     // Sync with API: old card normal: -1, new card normal: +1
     if (onSyncRequired) {
+      console.log('[VaalOutcomes] executeTransform: Calling onSyncRequired to sync transformation');
       const transformSyncInfo = {
         oldCard: currentCard.name,
         newCard: newCard.name,
         oldUid: currentCard.uid,
         newUid: newCard.uid
       };
+      console.log(`[VaalOutcomes] executeTransform: Sync info:`, transformSyncInfo);
       const oldBaseUid = Math.floor(currentCard.uid)
       const newBaseUid = Math.floor(newCard.uid)
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
       
       // Remove old card - include cardData for logging
       updates.set(oldBaseUid, { normalDelta: -1, foilDelta: 0, cardData: currentCard })
+      console.log(`[VaalOutcomes] executeTransform: Removing old card (UID: ${oldBaseUid})`);
       
       // Add new card (preserve foil status) - include cardData
       const foilDelta = isCardFoil(newCard) ? 1 : 0
       const normalDelta = isCardFoil(newCard) ? 0 : 1
       updates.set(newBaseUid, { normalDelta, foilDelta, cardData: newCard })
+      console.log(`[VaalOutcomes] executeTransform: Adding new card (UID: ${newBaseUid}, normalDelta: ${normalDelta}, foilDelta: ${foilDelta})`);
       
       await onSyncRequired(updates, -1, 'transform') // Consume 1 vaalOrb
+      console.log('[VaalOutcomes] executeTransform: Sync completed');
     } else {
+      console.warn('[VaalOutcomes] executeTransform: onSyncRequired callback not available');
     }
+    
+    console.log('[VaalOutcomes] executeTransform: Completed successfully');
 
     return { success: true, newCard };
   };
@@ -403,12 +441,15 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   
   const executeDuplicate = async (): Promise<OutcomeResult> => {
     if (!cardRef.value || !displayCard.value) {
+      console.error('[VaalOutcomes] executeDuplicate: cardRef or displayCard is null');
       return { success: false };
     }
 
+    const originalCard = displayCard.value;
+    console.log(`[VaalOutcomes] executeDuplicate: Starting duplication for card ${originalCard.name} (UID: ${originalCard.uid})`);
+
     isAnimating.value = true;
     
-    const originalCard = displayCard.value;
     const currentTier = originalCard.tier as CardTier;
     const tierColors = getTierColors(currentTier);
     const cardElement = cardRef.value;
@@ -429,11 +470,13 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     // Generate a unique decimal suffix (0.0001 to 0.9999) to ensure local uniqueness
     // Use a counter-based approach to avoid collisions
     const existingMatchingCards = localCollection.value.filter(c => Math.floor(c.uid) === baseUid);
+    console.log(`[VaalOutcomes] executeDuplicate: Found ${existingMatchingCards.length} existing cards with base UID ${baseUid}`);
     const decimalSuffix = (existingMatchingCards.length + 1) * 0.0001; // 0.0001, 0.0002, 0.0003, etc.
     const duplicateCard: Card = {
       ...originalCard,
       uid: baseUid + decimalSuffix, // Add small decimal for local uniqueness
     };
+    console.log(`[VaalOutcomes] executeDuplicate: Created duplicate with UID ${duplicateCard.uid} (base: ${baseUid}, suffix: ${decimalSuffix})`);
     
     // Get card position and dimensions
     const cardRect = cardElement.getBoundingClientRect();
@@ -600,7 +643,9 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       baseUid
     };
     
+    console.log(`[VaalOutcomes] executeDuplicate: Adding duplicate to collection (foil: ${duplicateCardWithFoil.foil})`);
     localCollection.value.push(duplicateCardWithFoil);
+    console.log(`[VaalOutcomes] executeDuplicate: Collection now has ${localCollection.value.length} cards`);
     
     // Log collection state AFTER modification
     logCollectionState('DUPLICATE: After modification', localCollection.value, 0, {
@@ -626,6 +671,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       originalCardUid: originalCard.uid,
       allMatchingCards: matchingCardsAfterAdd.map(c => ({ uid: c.uid, foil: c.foil, name: c.name }))
     };
+    console.log(`[VaalOutcomes] executeDuplicate: After add - Total matching cards: ${afterAddInfo.totalMatchingCards}, Normal: ${afterAddInfo.normalCount}, Foil: ${afterAddInfo.foilCount}`);
     
     isAnimating.value = false;
 
@@ -635,11 +681,13 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
 
     // Sync with API: same card, increase count (normal or foil depending on original)
     if (onSyncRequired) {
+      console.log('[VaalOutcomes] executeDuplicate: Calling onSyncRequired to sync duplication');
       const duplicateSyncInfo = {
         card: originalCard.name,
         uid: originalCard.uid,
         isFoil: isCardFoil(originalCard)
       };
+      console.log(`[VaalOutcomes] executeDuplicate: Sync info:`, duplicateSyncInfo);
       // baseUid already declared at line 407
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
       
@@ -647,14 +695,19 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       // Include cardData so the server knows which card to update
       if (isCardFoil(originalCard)) {
         updates.set(baseUid, { normalDelta: 0, foilDelta: 1, cardData: originalCard })
+        console.log(`[VaalOutcomes] executeDuplicate: Incrementing foil count for UID ${baseUid}`);
       } else {
         updates.set(baseUid, { normalDelta: 1, foilDelta: 0, cardData: originalCard })
+        console.log(`[VaalOutcomes] executeDuplicate: Incrementing normal count for UID ${baseUid}`);
       }
       
       await onSyncRequired(updates, -1, 'duplicate') // Consume 1 vaalOrb
+      console.log('[VaalOutcomes] executeDuplicate: Sync completed');
     } else {
+      console.warn('[VaalOutcomes] executeDuplicate: onSyncRequired callback not available');
     }
 
+    console.log('[VaalOutcomes] executeDuplicate: Completed successfully');
     return { success: true, newCard: duplicateCard };
   };
 

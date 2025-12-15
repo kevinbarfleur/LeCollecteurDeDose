@@ -142,9 +142,11 @@ async function sendErrorLogServer(log: ErrorLogInsert): Promise<void> {
     const config = useRuntimeConfig()
     const { createClient } = await import('@supabase/supabase-js')
     
+    // Use service role key on server-side for better security
+    // Even though RLS allows public INSERT, using service key is best practice
     const supabase = createClient<Database>(
       config.supabaseUrl,
-      config.supabaseKey
+      config.supabaseServiceKey || config.supabaseKey
     )
     
     const { error } = await supabase

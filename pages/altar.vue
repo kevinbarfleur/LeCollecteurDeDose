@@ -705,12 +705,16 @@ watch(vaalOrbs, async (newValue, oldValue) => {
 
 // Expose sync queue status for tests (update it reactively)
 if (import.meta.client) {
-  watch([syncQueueStatus, isSyncProcessing], () => {
+  watch([syncQueueStatus, () => isSyncProcessing], () => {
     if (typeof window !== 'undefined') {
       const status = (syncQueueStatus as any).value || { size: 0, isProcessing: false, currentOperation: null }
+      // isSyncProcessing is already a computed, access it correctly
+      const processingValue = typeof isSyncProcessing === 'boolean' 
+        ? isSyncProcessing 
+        : (isSyncProcessing as any).value ?? false
       ;(window as any).__syncQueueStatus = {
         size: status.size,
-        isProcessing: (isSyncProcessing as any).value ?? isSyncProcessing,
+        isProcessing: processingValue,
         currentOperation: status.currentOperation,
       }
     }
@@ -723,8 +727,12 @@ const handleSyncRequired = async (
   outcomeType?: string
 ) => {
   if (!loggedIn.value || !authUser.value?.displayName) {
+    console.log('[Altar] handleSyncRequired: User not logged in, skipping sync');
     return;
   }
+  
+  console.log(`[Altar] handleSyncRequired: Starting sync for outcome "${outcomeType || 'unknown'}"`);
+  console.log(`[Altar] handleSyncRequired: vaalOrbsDelta=${vaalOrbsDelta}, updatesCount=${updates.size}`);
   
   // Save state for rollback (BEFORE optimistic update)
   const vaalOrbsBefore = vaalOrbs.value;
@@ -739,8 +747,15 @@ const handleSyncRequired = async (
     updatesCount: updates.size,
   });
   
+  // Log detailed update information
+  console.log('[Altar] handleSyncRequired: Updates details:');
+  for (const [uid, changes] of updates.entries()) {
+    console.log(`[Altar]   - UID ${uid}: normalDelta=${changes.normalDelta}, foilDelta=${changes.foilDelta}, cardName=${changes.cardData?.name || 'N/A'}`);
+  }
+  
   // Update vaalOrbs locally first (optimistic update)
   const newVaalOrbsValue = Math.max(0, vaalOrbs.value + vaalOrbsDelta);
+  console.log(`[Altar] handleSyncRequired: Optimistic update - vaalOrbs: ${vaalOrbs.value} -> ${newVaalOrbsValue}`);
   vaalOrbs.value = newVaalOrbsValue;
   
   // Calculate current counts for each card to compute absolute values
@@ -791,6 +806,7 @@ const handleSyncRequired = async (
   // Enqueue sync operation with rollback support
   try {
     const operationId = `${outcomeType || 'unknown'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    console.log(`[Altar] handleSyncRequired: Enqueuing sync operation ${operationId}`);
     
     await enqueueSync({
       id: operationId,
@@ -804,6 +820,7 @@ const handleSyncRequired = async (
       },
       onSuccess: async () => {
         const syncStartTime = Date.now();
+        console.log(`[Altar] handleSyncRequired: Sync operation ${operationId} succeeded, starting reload`);
 
         // Log collection state AFTER sync (before reload)
         logCollectionState(`Sync: After (${outcomeType || 'unknown'})`, localCollection.value, vaalOrbs.value, {
@@ -822,11 +839,14 @@ const handleSyncRequired = async (
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           // Reload collection to ensure UI is up to date with server state
+          console.log(`[Altar] handleSyncRequired: Reloading collection after sync`);
           await loadCollection();
+          console.log(`[Altar] handleSyncRequired: Collection reloaded - ${localCollection.value.length} cards, ${vaalOrbs.value} vaalOrbs`);
           
           // Capture state AFTER sync and reload for diagnostic logging
           const stateAfterSync = createAltarState(localCollection.value, vaalOrbs.value);
           const apiResponseTime = Date.now() - syncStartTime;
+          console.log(`[Altar] handleSyncRequired: Sync completed in ${apiResponseTime}ms`);
           
           // Log diagnostic if we have state before
           if (diagnosticStateBefore.value && outcomeType && diagnosticCardInfo.value) {
@@ -870,8 +890,10 @@ const handleSyncRequired = async (
         }
       },
       onError: (error) => {
+        console.error(`[Altar] handleSyncRequired: Sync operation ${operationId} failed:`, error);
         // Rollback optimistic updates
         rollback();
+        console.log(`[Altar] handleSyncRequired: Rolled back optimistic updates`);
         
         // Check if this is a critical error that requires reload
         const isCriticalError = error.code === 'CRITICAL' || 
@@ -880,6 +902,7 @@ const handleSyncRequired = async (
           error.message?.includes('corruption')
         
         if (isCriticalError) {
+          console.error('[Altar] handleSyncRequired: Critical error detected, showing reload modal');
           showReloadModal({
             title: 'Oups, quelque chose a mal tourné',
             message: 'Une erreur critique s\'est produite lors de la synchronisation. Pour éviter toute corruption de données, veuillez recharger la page.',
@@ -971,16 +994,19 @@ onMounted(() => {
 })
 
 const cleanupAfterDestruction = async (destroyedCardUid: number) => {
+  console.log(`[Altar] cleanupAfterDestruction: Starting cleanup for card UID ${destroyedCardUid}`);
   const cardIndex = localCollection.value.findIndex(
     (c) => c.uid === destroyedCardUid
   );
-  
+
   if (cardIndex !== -1) {
     const destroyedCard = localCollection.value[cardIndex];
-    
+    console.log(`[Altar] cleanupAfterDestruction: Found card at index ${cardIndex}: ${destroyedCard.name} (UID: ${destroyedCard.uid}, foil: ${destroyedCard.foil})`);
+
     // Save state for rollback (BEFORE removal)
     const vaalOrbsBefore = vaalOrbs.value;
     const localCollectionBefore = JSON.parse(JSON.stringify(localCollection.value)) as Card[];
+    console.log(`[Altar] cleanupAfterDestruction: Before - ${localCollectionBefore.length} cards, ${vaalOrbsBefore} vaalOrbs`);
     
     // Log collection state BEFORE destruction
     logCollectionState('DESTROYED: Before modification', localCollectionBefore, vaalOrbsBefore, {
@@ -993,9 +1019,11 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
     
     // Remove card from collection (optimistic update)
     localCollection.value.splice(cardIndex, 1);
+    console.log(`[Altar] cleanupAfterDestruction: Removed card from collection, now ${localCollection.value.length} cards`);
     
     // Update vaalOrbs locally (optimistic update)
     const newVaalOrbsValue = Math.max(0, vaalOrbs.value - 1);
+    console.log(`[Altar] cleanupAfterDestruction: Updated vaalOrbs: ${vaalOrbs.value} -> ${newVaalOrbsValue}`);
     vaalOrbs.value = newVaalOrbsValue;
     
     // Log collection state AFTER destruction
@@ -1016,6 +1044,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
       const matchingCards = localCollection.value.filter(c => Math.floor(c.uid) === baseUid);
       const currentNormal = matchingCards.filter(c => !c.foil).length;
       const currentFoil = matchingCards.filter(c => c.foil).length;
+      console.log(`[Altar] cleanupAfterDestruction: After removal - UID ${baseUid}: ${currentNormal} normal, ${currentFoil} foil`);
       
       const updatesWithCurrentCounts = new Map<number, CardUpdate>();
       if (isCardFoil(destroyedCard)) {
@@ -1026,6 +1055,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
           currentFoil,
           cardData: destroyedCard 
         });
+        console.log(`[Altar] cleanupAfterDestruction: Removing foil card (UID: ${baseUid})`);
       } else {
         updatesWithCurrentCounts.set(baseUid, { 
           normalDelta: -1, 
@@ -1034,19 +1064,20 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
           currentFoil,
           cardData: destroyedCard 
         });
+        console.log(`[Altar] cleanupAfterDestruction: Removing normal card (UID: ${baseUid})`);
       }
       
       // Rollback function to restore previous state
       const rollback = () => {
-
+        console.log('[Altar] cleanupAfterDestruction: Rolling back optimistic updates');
         vaalOrbs.value = vaalOrbsBefore
         localCollection.value = localCollectionBefore
-
       }
       
       // Enqueue sync operation with rollback support
       try {
         const operationId = `destroyed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        console.log(`[Altar] cleanupAfterDestruction: Enqueuing sync operation ${operationId}`);
         
         await enqueueSync({
           id: operationId,
@@ -1060,6 +1091,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
           },
           onSuccess: async () => {
             const syncStartTime = Date.now();
+            console.log(`[Altar] cleanupAfterDestruction: Sync operation ${operationId} succeeded, starting reload`);
 
             isReloadingCollection.value = true;
             if (typeof window !== 'undefined') {
@@ -1067,7 +1099,9 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
             }
             try {
               await new Promise(resolve => setTimeout(resolve, 1000));
+              console.log(`[Altar] cleanupAfterDestruction: Reloading collection after sync`);
               await loadCollection();
+              console.log(`[Altar] cleanupAfterDestruction: Collection reloaded - ${localCollection.value.length} cards, ${vaalOrbs.value} vaalOrbs`);
 
               // Capture state AFTER sync and reload for diagnostic logging
               const stateAfterSync = createAltarState(localCollection.value, vaalOrbs.value);
@@ -1118,10 +1152,12 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
           },
         });
       } catch (error: any) {
-
+        console.error(`[Altar] cleanupAfterDestruction: Exception during sync:`, error);
         rollback();
       }
     }
+  } else {
+    console.warn(`[Altar] cleanupAfterDestruction: Card with UID ${destroyedCardUid} not found in collection`);
   }
 
   clearSnapshots();
@@ -1146,12 +1182,18 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
 };
 
 const destroyCard = async () => {
-  if (!altarCardRef.value || !displayCard.value) return;
+  if (!altarCardRef.value || !displayCard.value) {
+    console.error('[Altar] destroyCard: altarCardRef or displayCard is null');
+    return;
+  }
+
+  const destroyedCard = displayCard.value;
+  console.log(`[Altar] destroyCard: Starting destruction for card ${destroyedCard.name} (UID: ${destroyedCard.uid})`);
 
   isAnimating.value = true;
   isCardBeingDestroyed.value = true;
 
-  const destroyedCardUid = displayCard.value.uid;
+  const destroyedCardUid = destroyedCard.uid;
 
   const shakeTl = gsap.timeline();
   for (let i = 0; i < 6; i++) {
@@ -1317,38 +1359,48 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   // Execute the outcome animation first (for outcomes that produce a result)
   switch (outcome) {
     case "nothing":
-
+      console.log('[Altar] handleVaalOutcome: Executing nothing outcome');
       await executeNothing();
       // Sync: consume vaalOrb only
       if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
-
+        console.log('[Altar] handleVaalOutcome: Calling handleSyncRequired for nothing outcome');
         const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
         await handleSyncRequired(updates, -1, 'nothing'); // Consume 1 vaalOrb
-
+        console.log('[Altar] handleVaalOutcome: Nothing outcome sync completed');
       }
       break;
 
     case "foil":
+      console.log('[Altar] handleVaalOutcome: Executing foil outcome');
       await executeFoil();
+      console.log('[Altar] handleVaalOutcome: Foil outcome completed');
       // Sync handled by executeFoil via onSyncRequired callback
       break;
 
     case "destroyed":
+      console.log('[Altar] handleVaalOutcome: Executing destroyed outcome');
       await destroyCard();
+      console.log('[Altar] handleVaalOutcome: Destroyed outcome completed');
       // Sync handled by cleanupAfterDestruction
       break;
 
     case "transform":
+      console.log('[Altar] handleVaalOutcome: Executing transform outcome');
       // Transform returns the new card - capture it for the replay
       const transformResult = await executeTransform();
       if (transformResult.newCard) {
+        console.log(`[Altar] handleVaalOutcome: Transform completed, new card: ${transformResult.newCard.name}`);
         resultCardId = transformResult.newCard.id;
+      } else {
+        console.error('[Altar] handleVaalOutcome: Transform failed - no new card returned');
       }
       // Sync handled by executeTransform via onSyncRequired callback
       break;
 
     case "duplicate":
+      console.log('[Altar] handleVaalOutcome: Executing duplicate outcome');
       await executeDuplicate();
+      console.log('[Altar] handleVaalOutcome: Duplicate outcome completed');
       // Sync handled by executeDuplicate via onSyncRequired callback
       break;
   }

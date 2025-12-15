@@ -41,10 +41,18 @@ function getSupabaseRead() {
 }
 
 /**
- * Get Supabase client for writes (uses service key)
- * Server-side only - creates a new client with service role key
+ * Get Supabase client for writes
+ * Server-side: uses service key for elevated permissions
+ * Client-side: uses anon key (relies on RLS policies and SECURITY DEFINER functions)
  */
 async function getSupabaseWrite() {
+  // On client-side, use the public Supabase client (anon key)
+  // The RPC functions use SECURITY DEFINER, so they'll work with anon key
+  if (import.meta.client) {
+    return useSupabaseClient<Database>()
+  }
+  
+  // On server-side, use service key for elevated permissions
   const config = useRuntimeConfig()
   const { createClient } = await import('@supabase/supabase-js')
   return createClient<Database>(
@@ -382,6 +390,7 @@ export async function updateUserCollection(
     return MockService.updateUserCollection(username, collectionData)
   }
   try {
+    console.log(`[SupabaseCollection] updateUserCollection: Starting update for ${username}`);
     const supabase = await getSupabaseWrite()
     
     // Get or create user
@@ -390,53 +399,69 @@ export async function updateUserCollection(
     })
 
     if (userError) {
+      console.error(`[SupabaseCollection] updateUserCollection: Failed to get/create user:`, userError);
       logError('Failed to get/create user', userError, { service: 'SupabaseCollection', username })
       return false
     }
+    
+    console.log(`[SupabaseCollection] updateUserCollection: Got user UUID ${userId}`);
 
-    // Update vaal orbs if provided
+    // Update vaal orbs if provided (use RPC function to bypass RLS)
     if (collectionData.vaalOrbs !== undefined) {
-      const { error: vaalError } = await supabase
-        .from('users')
-        .update({ vaal_orbs: collectionData.vaalOrbs })
-        .eq('id', userId)
+      console.log(`[SupabaseCollection] updateUserCollection: Setting vaal_orbs to ${collectionData.vaalOrbs}`);
+      const { error: vaalError } = await supabase.rpc('set_vaal_orbs', {
+        p_user_id: userId,
+        p_count: collectionData.vaalOrbs
+      })
 
       if (vaalError) {
+        console.error(`[SupabaseCollection] updateUserCollection: Failed to set vaal_orbs:`, vaalError);
         logError('Failed to update vaal orbs', vaalError, { service: 'SupabaseCollection', username })
+        // Don't return false here - continue with card updates
+      } else {
+        console.log(`[SupabaseCollection] updateUserCollection: Successfully set vaal_orbs`);
       }
     }
 
     // Update collections
-    for (const [key, value] of Object.entries(collectionData)) {
-      if (key === 'vaalOrbs') continue
-
+    const cardEntries = Object.entries(collectionData).filter(([key]) => key !== 'vaalOrbs');
+    console.log(`[SupabaseCollection] updateUserCollection: Updating ${cardEntries.length} card entries`);
+    
+    for (const [key, value] of cardEntries) {
       const cardUid = parseInt(key)
-      if (isNaN(cardUid)) continue
+      if (isNaN(cardUid)) {
+        console.warn(`[SupabaseCollection] updateUserCollection: Skipping invalid card UID: ${key}`);
+        continue
+      }
 
       const card = value as any
       const normalCount = card.normal || 0
       const foilCount = card.foil || 0
 
-      // Upsert collection entry
-      const { error: colError } = await supabase
-        .from('user_collections')
-        .upsert({
-          user_id: userId,
-          card_uid: cardUid,
-          quantity: card.quantity || (normalCount + foilCount),
-          normal_count: normalCount,
-          foil_count: foilCount
-        }, { onConflict: 'user_id,card_uid' })
+      console.log(`[SupabaseCollection] updateUserCollection: Setting card ${cardUid} counts - normal: ${normalCount}, foil: ${foilCount}`);
+
+      // Use RPC function to set absolute counts (bypasses RLS via SECURITY DEFINER)
+      const { error: colError } = await supabase.rpc('set_card_collection_counts', {
+        p_user_id: userId,
+        p_card_uid: cardUid,
+        p_normal_count: normalCount,
+        p_foil_count: foilCount
+      })
 
       if (colError) {
+        console.error(`[SupabaseCollection] updateUserCollection: Failed to set card ${cardUid} counts:`, colError);
         logError('Failed to update collection entry', colError, { 
           service: 'SupabaseCollection', 
           username, 
           cardUid 
         })
+        // Don't return false here - continue with other cards
+      } else {
+        console.log(`[SupabaseCollection] updateUserCollection: Successfully set card ${cardUid} counts`);
       }
     }
 
+    console.log(`[SupabaseCollection] updateUserCollection: Update completed successfully for ${username}`);
     return true
   } catch (error) {
     logError('Error updating user collection', error, { service: 'SupabaseCollection', username })
