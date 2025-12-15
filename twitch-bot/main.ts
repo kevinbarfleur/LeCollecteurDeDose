@@ -104,6 +104,7 @@ interface TriggerConfig {
 
 const recentUsers: RecentUser[] = []
 const targetedUsers: TargetedUser[] = []
+const allTrackedUsers: Set<string> = new Set() // All unique users tracked since bot start
 const MAX_RECENT_USERS = 50
 
 // Load trigger configuration from Supabase
@@ -309,6 +310,23 @@ function getRandomActiveUser(): string | null {
   // Random selection among targetable users
   const randomIndex = Math.floor(Math.random() * targetableUsers.length)
   return targetableUsers[randomIndex].username
+}
+
+// Get random user for manual trigger (all tracked users, no cooldown)
+function getRandomUserForManualTrigger(): string | null {
+  // Convert Set to Array
+  const trackedArray = Array.from(allTrackedUsers)
+  
+  if (trackedArray.length === 0) {
+    // Fallback to recent users if no tracked users yet
+    if (recentUsers.length === 0) return null
+    const randomIndex = Math.floor(Math.random() * recentUsers.length)
+    return recentUsers[randomIndex].username
+  }
+  
+  // Random selection from all tracked users
+  const randomIndex = Math.floor(Math.random() * trackedArray.length)
+  return trackedArray[randomIndex]
 }
 
 // Mark user as targeted
@@ -797,13 +815,13 @@ async function alchGoMisclick(userId: string, username: string): Promise<{ succe
 }
 
 // Trade Scam - Transfer card to another user (checks if source has cards)
-async function tradeScam(userId: string, username: string): Promise<{ success: boolean, message: string }> {
+async function tradeScam(userId: string, username: string, isManual: boolean = false): Promise<{ success: boolean, message: string }> {
   if (!supabase) {
     return { success: false, message: '❌ Service non disponible' }
   }
 
-  // Get another random active user as target
-  const targetUsername = getRandomActiveUser()
+  // Get another random user as target (use manual selection if manual trigger)
+  const targetUsername = isManual ? getRandomUserForManualTrigger() : getRandomActiveUser()
   if (!targetUsername || targetUsername.toLowerCase() === username.toLowerCase()) {
     return { success: false, message: `🤝 @${username} n'a personne à scammer... le scam échoue.` }
   }
@@ -889,7 +907,7 @@ async function atlasInfluence(userId: string, username: string): Promise<{ succe
 }
 
 // Execute trigger
-async function executeTrigger(triggerType: string, username: string): Promise<{ success: boolean, message: string }> {
+async function executeTrigger(triggerType: string, username: string, isManual: boolean = false): Promise<{ success: boolean, message: string }> {
   if (!supabase) {
     return { success: false, message: '❌ Service non disponible' }
   }
@@ -904,6 +922,11 @@ async function executeTrigger(triggerType: string, username: string): Promise<{ 
 
   if (userError || !userId) {
     return { success: false, message: `❌ Erreur lors de la récupération du profil de @${username}` }
+  }
+
+  // Log manual triggers for debugging
+  if (isManual) {
+    console.log(`🎮 Manual trigger "${triggerType}" executed on @${username}`)
   }
 
   switch (triggerType) {
@@ -922,7 +945,7 @@ async function executeTrigger(triggerType: string, username: string): Promise<{ 
     case 'alchMisclick':
       return await alchGoMisclick(userId, username)
     case 'tradeScam':
-      return await tradeScam(userId, username)
+      return await tradeScam(userId, username, isManual)
     case 'chrisVision':
       return await chrisWilsonsVision(userId, username)
     case 'atlasInfluence':
@@ -1033,6 +1056,100 @@ async function handleRequest(req: Request): Promise<Response> {
         JSON.stringify({ error: 'Invalid request' }),
         {
           status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+  }
+
+  // Webhook endpoint for manual trigger execution
+  if (req.method === 'POST' && url.pathname === '/webhook/trigger-manual') {
+    try {
+      const body = await req.json()
+      const { triggerType, isManual } = body
+
+      if (!triggerType) {
+        return new Response(
+          JSON.stringify({ error: 'Missing triggerType' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      // Validate trigger type
+      const validTriggers = [
+        'blessingRNGesus',
+        'cartographersGift',
+        'mirrorTier',
+        'einharApproved',
+        'heistTax',
+        'sirusVoice',
+        'alchMisclick',
+        'tradeScam',
+        'chrisVision',
+        'atlasInfluence'
+      ]
+
+      if (!validTriggers.includes(triggerType)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid triggerType. Must be one of: ${validTriggers.join(', ')}` }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      // Get random user for manual trigger (all tracked users, no cooldown)
+      const targetUser = getRandomUserForManualTrigger()
+      
+      if (!targetUser) {
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: 'No users available',
+            message: 'Aucun utilisateur disponible pour déclencher le trigger'
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      // Execute trigger (isManual=true bypasses cooldown)
+      const result = await executeTrigger(triggerType, targetUser, true)
+
+      // Send message to chat if successful or failed (both send messages)
+      if (result.message) {
+        client.say(`#${TWITCH_CHANNEL_NAME}`, result.message)
+      }
+
+      // Return result
+      return new Response(
+        JSON.stringify({
+          success: result.success,
+          triggerType,
+          targetUser,
+          message: result.message
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    } catch (error) {
+      console.error('Error handling manual trigger:', error)
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Internal server error',
+          message: error instanceof Error ? error.message : 'Erreur interne'
+        }),
+        {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )

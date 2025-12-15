@@ -54,6 +54,9 @@ export default defineNuxtConfig({
         url: process.env.SUPABASE_URL || '',
         key: process.env.SUPABASE_KEY || '',
       },
+      // Bot webhook URL for manual trigger execution
+      // Can be overridden via BOT_WEBHOOK_URL environment variable
+      botWebhookUrl: process.env.BOT_WEBHOOK_URL,
     }
   },
 

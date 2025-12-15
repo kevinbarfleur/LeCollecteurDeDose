@@ -516,6 +516,66 @@ const configLabels: Record<string, string> = {
   auto_triggers_min_users_for_cooldown: 'Minimum utilisateurs actifs',
   auto_triggers_user_activity_window: 'Fenêtre d\'activité'
 };
+
+// Map config keys to trigger types for manual triggering
+const configKeyToTriggerType: Record<string, string> = {
+  trigger_blessing_rngesus: 'blessingRNGesus',
+  trigger_cartographers_gift: 'cartographersGift',
+  trigger_mirror_tier: 'mirrorTier',
+  trigger_einhar_approved: 'einharApproved',
+  trigger_heist_tax: 'heistTax',
+  trigger_sirus_voice: 'sirusVoice',
+  trigger_alch_misclick: 'alchMisclick',
+  trigger_trade_scam: 'tradeScam',
+  trigger_chris_vision: 'chrisVision',
+  trigger_atlas_influence: 'atlasInfluence'
+};
+
+// Manual trigger execution
+const manualTriggerLoading = ref<Record<string, boolean>>({});
+const manualTriggerMessage = ref<{ type: 'success' | 'error'; text: string; triggerType?: string } | null>(null);
+
+const triggerManualTrigger = async (triggerType: string) => {
+  manualTriggerLoading.value[triggerType] = true;
+  manualTriggerMessage.value = null;
+  
+  try {
+    const response = await $fetch<any>('/api/admin/trigger-manual', {
+      method: 'POST',
+      body: {
+        triggerType
+      }
+    });
+
+    if (response.ok && response.result?.success) {
+      manualTriggerMessage.value = {
+        type: 'success',
+        text: response.result.message || `✅ Trigger "${triggerType}" exécuté avec succès sur @${response.result.targetUser}`,
+        triggerType
+      };
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        manualTriggerMessage.value = null;
+      }, 5000);
+    } else {
+      throw new Error(response.result?.message || response.message || 'Échec du déclenchement');
+    }
+  } catch (error: any) {
+    manualTriggerMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.data?.message || error.message || 'Impossible de déclencher le trigger'}`,
+      triggerType
+    };
+    
+    // Clear message after 5 seconds
+    setTimeout(() => {
+      manualTriggerMessage.value = null;
+    }, 5000);
+  } finally {
+    manualTriggerLoading.value[triggerType] = false;
+  }
+};
 </script>
 
 <template>
@@ -942,7 +1002,7 @@ const configLabels: Record<string, string> = {
 
               <!-- Config form -->
               <div v-else class="flex flex-col gap-6">
-                <!-- Message -->
+                <!-- Config save message -->
                 <div
                   v-if="botConfigMessage"
                   class="p-3 rounded text-center font-display text-base"
@@ -952,6 +1012,18 @@ const configLabels: Record<string, string> = {
                   }"
                 >
                   {{ botConfigMessage.text }}
+                </div>
+
+                <!-- Manual trigger message -->
+                <div
+                  v-if="manualTriggerMessage"
+                  class="p-3 rounded text-center font-display text-base"
+                  :class="{
+                    'bg-green-900/20 border border-green-700/40 text-green-200': manualTriggerMessage.type === 'success',
+                    'bg-red-900/20 border border-red-700/40 text-red-200': manualTriggerMessage.type === 'error'
+                  }"
+                >
+                  {{ manualTriggerMessage.text }}
                 </div>
 
                 <!-- Config groups -->
@@ -978,22 +1050,35 @@ const configLabels: Record<string, string> = {
                         <!-- Boolean toggle -->
                         <RunicRadio
                           v-if="key === 'auto_triggers_enabled'"
-                          v-model="autoTriggersEnabledModel"
+                          :model-value="botConfig[key] === 'true'"
                           :toggle="true"
                           size="md"
                           toggle-color="default"
                           :disabled="botConfigSaving"
+                          @update:model-value="saveBotConfigValue(key, $event ? 'true' : 'false')"
                         />
-                        <!-- Number input -->
-                        <input
-                          v-else
-                          v-model="botConfig[key]"
-                          type="number"
-                          step="any"
-                          class="w-32 px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-base transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] disabled:opacity-50 disabled:cursor-not-allowed"
-                          :disabled="botConfigSaving"
-                          @blur="saveBotConfigValue(key, botConfig[key])"
-                        />
+                        <!-- Number input with play button for triggers -->
+                        <template v-else>
+                          <input
+                            v-model="botConfig[key]"
+                            type="number"
+                            step="any"
+                            class="w-32 px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-base transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="botConfigSaving"
+                            @blur="saveBotConfigValue(key, botConfig[key])"
+                          />
+                          <!-- Play button for trigger probabilities -->
+                          <button
+                            v-if="configKeyToTriggerType[key]"
+                            @click="triggerManualTrigger(configKeyToTriggerType[key])"
+                            :disabled="manualTriggerLoading[configKeyToTriggerType[key]] || botConfigSaving"
+                            class="w-10 h-10 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
+                            :title="`Déclencher ${configLabels[key]} manuellement`"
+                          >
+                            <span v-if="manualTriggerLoading[configKeyToTriggerType[key]]" class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                            <span v-else>▶️</span>
+                          </button>
+                        </template>
                       </div>
                     </div>
                   </div>
