@@ -241,23 +241,34 @@ Si vous voyez `📨 Received webhook message: ...` dans les logs Railway, le web
 **Problème** : Railway arrête le conteneur avec `SIGTERM` même si le bot fonctionne.
 
 **Solutions** :
-1. **Vérifiez le Start Command** :
-   - Doit être `node index.js` (pas `npm start`)
-   - `npm start` fait que npm devient le processus principal et ne gère pas correctement les signaux
+
+1. **⚠️ CRITIQUE - Vérifiez le Start Command dans Railway Dashboard** :
+   - Allez dans Railway Dashboard → Votre service → **Settings** → **Deploy**
+   - **Custom Start Command** doit être : `node index.js`
+   - ⚠️ **PAS** `npm start` (même si `railway.json` est configuré)
+   - ⚠️ Railway peut ignorer `railway.json` si vous avez défini manuellement dans le dashboard
    
-2. **Vérifiez le Health Check** :
+2. **⚠️ CRITIQUE - Désactivez l'option "Serverless"** :
+   - Allez dans Railway Dashboard → Votre service → **Settings** → **Deploy**
+   - Cherchez **"Serverless"** ou **"Scale to Zero"**
+   - **DÉSACTIVEZ** cette option si elle est activée
+   - Cette option arrête les conteneurs après inactivité
+   
+3. **Vérifiez le Health Check** :
    - Le endpoint `/health` doit répondre rapidement
-   - Testez : `curl https://votre-service.railway.app/health`
+   - Testez : `curl https://lecollecteurdedose-production.up.railway.app/health`
    - Doit retourner `{"status":"ok","bot":"connected",...}`
    
-3. **Vérifiez les logs** :
+4. **Vérifiez les logs** :
    - Le serveur HTTP doit démarrer AVANT la connexion Twitch
    - Vous devriez voir : `📡 Webhook server listening on port XXXX` avant `✅ Bot connected`
    
-4. **Configuration Railway** :
+5. **Configuration Railway** :
    - Settings → Health Check → Path : `/health`
    - Settings → Health Check → Timeout : 300 secondes
-   - Settings → Deploy → Restart Policy : `ON_FAILURE`
+   - Settings → Deploy → Restart Policy : `ALWAYS` (pas `ON_FAILURE`)
+
+> **📚 Pour plus de détails**, consultez [RAILWAY_TROUBLESHOOTING.md](./RAILWAY_TROUBLESHOOTING.md)
 
 ### Les messages de handle-reward ne s'affichent pas dans le chat
 

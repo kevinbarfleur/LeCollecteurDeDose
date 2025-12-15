@@ -112,6 +112,10 @@ webhookServer.listen(PORT, '0.0.0.0', () => {
   // This ensures Railway can do health checks immediately
   console.log('🔌 Connecting to Twitch...')
   client.connect()
+  
+  // Keep the process alive - prevent Railway from thinking the service is inactive
+  // Railway needs to see that the HTTP server is actively listening
+  console.log('✅ Service ready and listening for requests')
 })
 
 client.on('message', async (channel, tags, message, self) => {
@@ -270,9 +274,13 @@ process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, disconnecting bot...')
   client.disconnect()
   if (webhookServer) {
-    webhookServer.close()
+    webhookServer.close(() => {
+      console.log('🛑 Server closed, exiting...')
+      process.exit(0)
+    })
+  } else {
+    process.exit(0)
   }
-  process.exit(0)
 })
 
 process.on('SIGINT', () => {
