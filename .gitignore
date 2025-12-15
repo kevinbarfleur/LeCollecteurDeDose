@@ -49,3 +49,7 @@ coverage
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Deno lockfile (should not be committed - causes issues with Railway)
+deno.lock
+**/deno.lock
