@@ -2,14 +2,18 @@
 interface Props {
   value: number | string;
   label?: string;
-  color?: "default" | "t0" | "t1" | "t2" | "t3";
+  color?: "default" | "t0" | "t1" | "t2" | "t3" | "vaal";
   size?: "sm" | "md" | "lg";
+  icon?: string;
+  iconSrc?: string;
 }
 
 withDefaults(defineProps<Props>(), {
   label: undefined,
   color: "default",
   size: "md",
+  icon: undefined,
+  iconSrc: undefined,
 });
 </script>
 
@@ -24,6 +28,8 @@ withDefaults(defineProps<Props>(), {
       <div class="runic-number__corner runic-number__corner--bl"></div>
       <div class="runic-number__corner runic-number__corner--br"></div>
 
+      <img v-if="iconSrc" :src="iconSrc" alt="" class="runic-number__icon-img" />
+      <span v-else-if="icon" class="runic-number__icon">{{ icon }}</span>
       <span class="runic-number__value">{{ value }}</span>
     </div>
     <span v-if="label" class="runic-number__label">{{ label }}</span>
@@ -169,7 +175,7 @@ withDefaults(defineProps<Props>(), {
   padding: 0.375rem 0.625rem;
 }
 .runic-number--sm .runic-number__value {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
 }
 .runic-number--sm .runic-number__label {
   font-size: 0.75rem;
@@ -290,6 +296,42 @@ withDefaults(defineProps<Props>(), {
 }
 .runic-number--t3:hover .runic-number__label {
   color: rgba(90, 90, 95, 0.85);
+}
+
+.runic-number--vaal {
+  --number-color: #c45050;
+  --number-glow: rgba(160, 60, 60, 0.25);
+  --accent-rgb: 160, 60, 60;
+}
+.runic-number--vaal .runic-number__cavity {
+  border-color: rgba(180, 50, 50, 0.25);
+  border-top-color: rgba(140, 40, 40, 0.3);
+  border-bottom-color: rgba(180, 50, 50, 0.15);
+}
+.runic-number--vaal .runic-number__label {
+  color: rgba(180, 50, 50, 0.7);
+}
+.runic-number--vaal:hover .runic-number__label {
+  color: rgba(200, 60, 60, 0.9);
+}
+
+/* Icon */
+.runic-number__icon {
+  position: relative;
+  z-index: 1;
+  font-size: 0.85em;
+  margin-right: 0.25em;
+  opacity: 0.9;
+}
+
+.runic-number__icon-img {
+  position: relative;
+  z-index: 1;
+  width: 1.25em;
+  height: 1.25em;
+  margin-right: 0.25em;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 /* Responsive */

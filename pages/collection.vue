@@ -269,13 +269,6 @@ const filteredIndividualCards = computed(() => {
                   color="default"
                   size="lg"
                 />
-                <div class="collection-main-stats__divider"></div>
-                <RunicNumber
-                  :value="stats.unique"
-                  :label="t('collection.stats.unique')"
-                  color="default"
-                  size="lg"
-                />
               </div>
 
               <div class="collection-tiers">
@@ -454,17 +447,6 @@ const filteredIndividualCards = computed(() => {
     border-left: 1px solid rgba(50, 48, 45, 0.25);
     border-right: 1px solid rgba(50, 48, 45, 0.25);
   }
-}
-
-.collection-main-stats__divider {
-  width: 1px;
-  height: 45px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(80, 70, 60, 0.3),
-    transparent
-  );
 }
 
 .collection-tiers {

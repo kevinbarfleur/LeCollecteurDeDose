@@ -1543,7 +1543,6 @@ const {
   removeOrb: physicsRemoveOrb,
   isPointInContainer: isPointInPhysicsContainer,
   getContainerBounds: getPhysicsContainerBounds,
-  overflowCount: physicsOverflowCount,
   pushOrbsFrom: physicsPushOrbsFrom,
 } = useVaalOrbsPhysics({
   containerRef: orbsPhysicsContainerRef,
@@ -2262,7 +2261,12 @@ const endDragOrb = async () => {
                       t("altar.vaalOrbs.rec")
                     }}</span>
                   </span>
-                  <span class="vaal-header__count">{{ vaalOrbs }}</span>
+                  <RunicNumber
+                    :value="vaalOrbs"
+                    color="vaal"
+                    size="sm"
+                    icon-src="/images/vaal-risitas.png"
+                  />
                   <RunicButton
                     variant="ghost"
                     size="sm"
@@ -2349,16 +2353,6 @@ const endDragOrb = async () => {
                   </div>
                 </div>
               </template>
-
-              <!-- Overflow badge (orbs in reserve) -->
-              <div
-                v-if="physicsOverflowCount > 0"
-                class="vaal-orbs-overflow-badge"
-                :title="t('altar.vaalOrbs.overflow', { count: physicsOverflowCount })"
-              >
-                <span class="vaal-orbs-overflow-badge__icon">◇</span>
-                <span class="vaal-orbs-overflow-badge__count">+{{ physicsOverflowCount }}</span>
-              </div>
 
               <!-- Empty state -->
               <div v-if="vaalOrbs === 0" class="vaal-orbs-empty">
@@ -3271,26 +3265,6 @@ const endDragOrb = async () => {
   letter-spacing: 0.05em;
 }
 
-.vaal-header__count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 10px;
-  background: linear-gradient(
-    180deg,
-    rgba(175, 96, 37, 0.2) 0%,
-    rgba(175, 96, 37, 0.1) 100%
-  );
-  border: 1px solid rgba(175, 96, 37, 0.4);
-  border-radius: 14px;
-  font-family: "Cinzel", serif;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-accent);
-}
-
 .vaal-header__settings {
   padding: 0.375rem !important;
 }
@@ -3393,72 +3367,6 @@ const endDragOrb = async () => {
 }
 
 /* Removed vaal-orbs-loading styles - replaced by SyncStatusBanner */
-
-/* ==========================================
-   OVERFLOW BADGE
-   ========================================== */
-.vaal-orbs-overflow-badge {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-
-  display: flex;
-  align-items: center;
-  gap: 4px;
-
-  padding: 4px 10px;
-  background: linear-gradient(
-    135deg,
-    rgba(175, 96, 37, 0.9),
-    rgba(139, 69, 19, 0.9)
-  );
-  border: 1px solid rgba(255, 200, 100, 0.4);
-  border-radius: 12px;
-
-  font-family: "Fontin SmallCaps", serif;
-  font-size: 0.875rem;
-  color: #ffd700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-
-  /* Glow effect */
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.4),
-    0 0 12px rgba(175, 96, 37, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-
-  /* Subtle pulse animation */
-  animation: overflow-pulse 2s ease-in-out infinite;
-
-  z-index: 10;
-  pointer-events: none; /* Don't block drag */
-}
-
-.vaal-orbs-overflow-badge__icon {
-  font-size: 0.75rem;
-  opacity: 0.8;
-}
-
-.vaal-orbs-overflow-badge__count {
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
-
-@keyframes overflow-pulse {
-  0%, 100% {
-    opacity: 1;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.4),
-      0 0 12px rgba(175, 96, 37, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-  50% {
-    opacity: 0.9;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.4),
-      0 0 20px rgba(175, 96, 37, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-}
 
 /* ==========================================
    VAAL ORB ITEM
