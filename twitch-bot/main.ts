@@ -117,7 +117,13 @@ console.log(`   Channel: ${TWITCH_CHANNEL_NAME}`)
 console.log(`   Username: ${TWITCH_BOT_USERNAME}`)
 
 // Start HTTP server first (Railway needs this for health checks)
-const server = Deno.serve({ port: PORT, hostname: '0.0.0.0' }, handleRequest)
+// Use AbortController for graceful shutdown
+const abortController = new AbortController()
+const server = Deno.serve({ 
+  port: PORT, 
+  hostname: '0.0.0.0',
+  signal: abortController.signal 
+}, handleRequest)
 console.log(`📡 Webhook server listening on port ${PORT}`)
 console.log(`   Endpoint: http://0.0.0.0:${PORT}/webhook/message`)
 console.log(`   Health check: http://0.0.0.0:${PORT}/health`)
@@ -288,7 +294,8 @@ Deno.addSignalListener('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, disconnecting bot...')
   isConnected = false
   client.disconnect()
-  server.shutdown()
+  abortController.abort()
+  await server.finished
   console.log('🛑 Server closed, exiting...')
   Deno.exit(0)
 })
@@ -297,7 +304,8 @@ Deno.addSignalListener('SIGINT', async () => {
   console.log('🛑 SIGINT received, disconnecting bot...')
   isConnected = false
   client.disconnect()
-  server.shutdown()
+  abortController.abort()
+  await server.finished
   Deno.exit(0)
 })
 
