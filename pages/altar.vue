@@ -56,8 +56,8 @@ const user = computed(() => ({
 // USER DATA - Vaal Orbs & Collection (Local Session Copy)
 // ==========================================
 
-// Vaal Orbs - loaded from API or mock
-const vaalOrbs = ref(14);
+// Vaal Orbs - loaded from API (starts at 0, updated after API load)
+const vaalOrbs = ref(0);
 
 // Local session copy of the collection - persists during the session
 const localCollection = ref<Card[]>([]);
@@ -1549,7 +1549,7 @@ const {
   containerRef: orbsPhysicsContainerRef,
   orbCount: vaalOrbs,
   orbSize: 44,
-  maxVisibleOrbs: 15,
+  maxVisibleOrbs: 5, // TODO: remettre à 15 après les tests
 });
 
 // Track if physics is ready
@@ -1906,7 +1906,13 @@ const endDragOrb = async () => {
 
     // NOTE: Don't decrement vaalOrbs here - it's handled by handleSyncRequired
     // via vaalOrbsDelta in each outcome (duplicate, destroyed, transform, etc.)
-    // Physics sync happens automatically via watch on vaalOrbs count
+
+    // Remove the dragged orb from physics world
+    // This will spawn a new orb from reserve if available (via removeOrb logic)
+    if (currentDragIndex !== null) {
+      physicsRemoveOrb(currentDragIndex);
+    }
+
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
     resetHeartbeatEffects(); // Reset heartbeat and isOrbOverCard
