@@ -10,20 +10,75 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const WEBHOOK_SECRET = Deno.env.get('TWITCH_WEBHOOK_SECRET') || ''
 
-// Verify Twitch webhook signature
-function verifySignature(message: string, signature: string, secret: string): boolean {
+// Convert ArrayBuffer to hex string
+function bufferToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+// Verify Twitch webhook signature using HMAC SHA256
+// Twitch signature format: "sha256=<hex_signature>"
+// Message format: messageId + timestamp + body
+async function verifySignature(message: string, signature: string, secret: string): Promise<boolean> {
   if (!secret) {
     console.warn('⚠️  WEBHOOK_SECRET not set, skipping signature verification')
     return true
   }
-  
-  const crypto = globalThis.crypto
-  const encoder = new TextEncoder()
-  const key = encoder.encode(secret)
-  
-  // Twitch uses HMAC SHA256
-  // Note: This is a simplified check - in production, use proper HMAC verification
-  return true // TODO: Implement proper HMAC verification
+
+  // Extract the hex signature (remove "sha256=" prefix)
+  const expectedSignature = signature.startsWith('sha256=')
+    ? signature.slice(7)
+    : signature
+
+  if (!expectedSignature) {
+    console.error('❌ No signature provided in header')
+    return false
+  }
+
+  try {
+    const encoder = new TextEncoder()
+
+    // Import the secret as a CryptoKey for HMAC
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+
+    // Sign the message with HMAC SHA256
+    const signatureBuffer = await crypto.subtle.sign(
+      'HMAC',
+      cryptoKey,
+      encoder.encode(message)
+    )
+
+    // Convert to hex string
+    const computedSignature = bufferToHex(signatureBuffer)
+
+    // Constant-time comparison to prevent timing attacks
+    if (computedSignature.length !== expectedSignature.length) {
+      console.error('❌ Signature length mismatch')
+      return false
+    }
+
+    let result = 0
+    for (let i = 0; i < computedSignature.length; i++) {
+      result |= computedSignature.charCodeAt(i) ^ expectedSignature.charCodeAt(i)
+    }
+
+    const isValid = result === 0
+    if (!isValid) {
+      console.error('❌ Signature verification failed')
+    }
+
+    return isValid
+  } catch (error) {
+    console.error('❌ Error verifying signature:', error)
+    return false
+  }
 }
 
 serve(async (req) => {
@@ -56,9 +111,10 @@ serve(async (req) => {
       
       const body = await req.text()
       
-      // Verify signature
-      if (!verifySignature(`${messageId}${timestamp}${body}`, signature, WEBHOOK_SECRET)) {
-        console.error('❌ Invalid signature')
+      // Verify signature (Twitch EventSub HMAC SHA256)
+      const isValidSignature = await verifySignature(`${messageId}${timestamp}${body}`, signature, WEBHOOK_SECRET)
+      if (!isValidSignature) {
+        console.error('❌ Invalid signature - rejecting webhook')
         return new Response('Invalid signature', { status: 403 })
       }
       
