@@ -7,7 +7,8 @@
  */
 
 import tmi from "npm:tmi.js@^1.8.5"
-import { createClient } from "npm:@supabase/supabase-js@^2"
+// Pin to 2.87.2 - version 2.87.3 has ESM compatibility issues with Deno
+import { createClient } from "npm:@supabase/supabase-js@2.87.2"
 import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
 
 // Load .env file for local development

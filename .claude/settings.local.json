@@ -37,7 +37,9 @@
       "Bash(git push:*)",
       "WebSearch",
       "WebFetch(domain:dev.twitch.tv)",
-      "Bash(npx nuxi typecheck:*)"
+      "Bash(npx nuxi typecheck:*)",
+      "mcp__Railway__list-services",
+      "mcp__Railway__list-deployments"
     ]
   }
 }
