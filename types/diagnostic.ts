@@ -4,11 +4,25 @@
  * Types for diagnostic logging and application behavior tracking
  */
 
-export type DiagnosticCategory = 'altar' | 'admin'
+export type DiagnosticCategory = 'altar' | 'admin' | 'reward' | 'trigger'
 
 export type AltarActionType = 'vaal_outcome' | 'load_collection'
 
 export type AdminActionType = 'toggle_altar' | 'toggle_activity_logs' | 'switch_data_source'
+
+export type RewardActionType = 'booster_purchase' | 'vaal_orbs_purchase'
+
+export type TriggerActionType = 
+  | 'blessingRNGesus' 
+  | 'cartographersGift' 
+  | 'mirrorTier' 
+  | 'einharApproved' 
+  | 'heistTax' 
+  | 'sirusVoice' 
+  | 'alchMisclick' 
+  | 'tradeScam' 
+  | 'chrisVision' 
+  | 'atlasInfluence'
 
 export type ValidationStatus = 'ok' | 'warning' | 'error'
 
@@ -36,6 +50,21 @@ export interface AdminState {
   data_source?: 'api' | 'test'
 }
 
+// State structures for reward diagnostics
+export interface RewardState {
+  vaal_orbs_count?: number
+  total_cards_count?: number
+  booster_count?: number
+}
+
+// State structures for trigger diagnostics
+export interface TriggerState {
+  vaal_orbs_count?: number
+  total_cards_count?: number
+  foil_count?: number
+  normal_count?: number
+}
+
 // Action details for altar
 export interface AltarActionDetails {
   card_id?: string
@@ -51,11 +80,32 @@ export interface AdminActionDetails {
   admin_user_id?: string
 }
 
+// Action details for reward
+export interface RewardActionDetails {
+  reward_id?: string
+  reward_type?: 'booster' | 'vaal_orbs'
+  cards_received?: Array<{ card_uid: number; card_name: string; is_foil: boolean }>
+  vaal_orbs_added?: number
+  booster_id?: string
+  bot_message_sent?: boolean
+  bot_message_error?: string
+}
+
+// Action details for trigger
+export interface TriggerActionDetails {
+  trigger_type?: string
+  target_username?: string
+  success?: boolean
+  message?: string
+  error?: string
+  is_manual?: boolean
+}
+
 // Union type for action details
-export type ActionDetails = AltarActionDetails | AdminActionDetails
+export type ActionDetails = AltarActionDetails | AdminActionDetails | RewardActionDetails | TriggerActionDetails
 
 // Union type for state
-export type DiagnosticState = AltarState | AdminState
+export type DiagnosticState = AltarState | AdminState | RewardState | TriggerState
 
 export interface DiagnosticLogInsert {
   category: DiagnosticCategory

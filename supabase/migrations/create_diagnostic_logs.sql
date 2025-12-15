@@ -4,7 +4,7 @@
 -- Create diagnostic_logs table
 CREATE TABLE IF NOT EXISTS diagnostic_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  category TEXT NOT NULL CHECK (category IN ('altar', 'admin')),
+  category TEXT NOT NULL CHECK (category IN ('altar', 'admin', 'reward', 'trigger')),
   action_type TEXT NOT NULL,
   user_id TEXT,
   username TEXT,

@@ -890,6 +890,83 @@ async function atlasInfluence(userId: string, username: string): Promise<{ succe
   }
 }
 
+// Helper function to get user state for diagnostics
+async function getUserTriggerState(userId: string): Promise<any> {
+  if (!supabase) {
+    return { vaal_orbs_count: 0, total_cards_count: 0, foil_count: 0, normal_count: 0 }
+  }
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select(`
+        vaal_orbs,
+        user_collections (quantity, normal_count, foil_count)
+      `)
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.error('Error fetching user trigger state:', error)
+      return { vaal_orbs_count: 0, total_cards_count: 0, foil_count: 0, normal_count: 0 }
+    }
+
+    const totalCards = user.user_collections?.reduce((sum: number, col: any) => sum + (col.quantity || 0), 0) || 0
+    const totalFoil = user.user_collections?.reduce((sum: number, col: any) => sum + (col.foil_count || 0), 0) || 0
+    const totalNormal = user.user_collections?.reduce((sum: number, col: any) => sum + (col.normal_count || 0), 0) || 0
+
+    return {
+      vaal_orbs_count: user.vaal_orbs || 0,
+      total_cards_count: totalCards,
+      foil_count: totalFoil,
+      normal_count: totalNormal
+    }
+  } catch (error) {
+    console.error('Error in getUserTriggerState:', error)
+    return { vaal_orbs_count: 0, total_cards_count: 0, foil_count: 0, normal_count: 0 }
+  }
+}
+
+// Helper function to log trigger diagnostic
+async function logTriggerDiagnostic(
+  username: string,
+  userId: string,
+  triggerType: string,
+  stateBefore: any,
+  stateAfter: any,
+  success: boolean,
+  message: string,
+  error?: string,
+  isManual: boolean = false
+): Promise<void> {
+  if (!supabase) return
+
+  try {
+    await supabase.from('diagnostic_logs').insert({
+      category: 'trigger',
+      action_type: triggerType,
+      user_id: userId,
+      username: username,
+      state_before: stateBefore,
+      state_after: stateAfter,
+      action_details: {
+        trigger_type: triggerType,
+        target_username: username,
+        success: success,
+        message: message,
+        error: error || undefined,
+        is_manual: isManual
+      },
+      validation_status: success ? 'ok' : 'error',
+      validation_notes: success ? 'Trigger executed successfully' : (error || 'Trigger execution failed'),
+      created_at: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('❌ Failed to log trigger diagnostic:', error)
+    // Don't fail the trigger if logging fails
+  }
+}
+
 // Execute trigger
 async function executeTrigger(triggerType: string, username: string, isManual: boolean = false): Promise<{ success: boolean, message: string }> {
   if (!supabase) {
@@ -908,35 +985,68 @@ async function executeTrigger(triggerType: string, username: string, isManual: b
     return { success: false, message: `❌ Erreur lors de la récupération du profil de @${username}` }
   }
 
+  // Get state before
+  const stateBefore = await getUserTriggerState(userId)
+
   // Log manual triggers for debugging
   if (isManual) {
     console.log(`🎮 Manual trigger "${triggerType}" executed on @${username}`)
   }
 
+  let result: { success: boolean, message: string }
+
   switch (triggerType) {
     case 'blessingRNGesus':
-      return await blessingOfRNGesus(userId, username)
+      result = await blessingOfRNGesus(userId, username)
+      break
     case 'cartographersGift':
-      return await cartographersGift(userId, username)
+      result = await cartographersGift(userId, username)
+      break
     case 'mirrorTier':
-      return await mirrorTierMoment(userId, username)
+      result = await mirrorTierMoment(userId, username)
+      break
     case 'einharApproved':
-      return await einharApproved(userId, username)
+      result = await einharApproved(userId, username)
+      break
     case 'heistTax':
-      return await heistTax(userId, username)
+      result = await heistTax(userId, username)
+      break
     case 'sirusVoice':
-      return await sirusVoiceLine(userId, username)
+      result = await sirusVoiceLine(userId, username)
+      break
     case 'alchMisclick':
-      return await alchGoMisclick(userId, username)
+      result = await alchGoMisclick(userId, username)
+      break
     case 'tradeScam':
-      return await tradeScam(userId, username, isManual)
+      result = await tradeScam(userId, username, isManual)
+      break
     case 'chrisVision':
-      return await chrisWilsonsVision(userId, username)
+      result = await chrisWilsonsVision(userId, username)
+      break
     case 'atlasInfluence':
-      return await atlasInfluence(userId, username)
+      result = await atlasInfluence(userId, username)
+      break
     default:
-      return { success: false, message: '❌ Trigger inconnu' }
+      result = { success: false, message: '❌ Trigger inconnu' }
   }
+
+  // Get state after
+  const stateAfter = await getUserTriggerState(userId)
+
+  // Log diagnostic
+  await logTriggerDiagnostic(
+    username,
+    userId,
+    triggerType,
+    stateBefore,
+    stateAfter,
+    result.success,
+    result.message,
+    result.success ? undefined : result.message,
+    isManual
+  )
+
+  return result
 }
 
 // Schedule next trigger
