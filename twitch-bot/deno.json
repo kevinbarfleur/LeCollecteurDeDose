@@ -1,9 +1,5 @@
 {
   "tasks": {
     "start": "deno run --allow-net --allow-env --allow-read main.ts"
-  },
-  "imports": {
-    "twitch_irc": "https://deno.land/x/twitch_irc@v0.9.0/mod.ts",
-    "supabase": "https://esm.sh/@supabase/supabase-js@2"
   }
 }

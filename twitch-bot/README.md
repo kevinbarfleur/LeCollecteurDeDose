@@ -104,17 +104,17 @@ Pour tester le bot en local, consultez [QUICK_START.md](./QUICK_START.md)
 
 ## 📚 Bibliothèques Utilisées
 
-- **twitch_irc** : Client Twitch IRC pour Deno
-  - Documentation : https://deno.land/x/twitch_irc
-- **@supabase/supabase-js** : Client Supabase (via esm.sh)
-- **Deno std/http** : Serveur HTTP natif Deno
+- **tmi.js** : Client Twitch IRC (via npm, support natif Deno)
+  - Documentation : https://github.com/tmijs/tmi.js
+- **@supabase/supabase-js** : Client Supabase (via npm)
+- **Deno.serve** : Serveur HTTP natif Deno
 
 ## 🔄 Différences avec Node.js
 
-- `tmi.js` → `twitch_irc` (Deno)
-- `http` → `serve()` de Deno std
+- Utilise `npm:tmi.js` (support natif npm de Deno)
+- `http.createServer` → `Deno.serve()`
 - `process.on('SIGTERM')` → `Deno.addSignalListener('SIGTERM')`
-- Pas de `package.json` ou `npm install` nécessaire
+- Pas de `package.json` ou `npm install` nécessaire (Deno gère npm automatiquement)
 
 ## 🐛 Dépannage
 

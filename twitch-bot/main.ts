@@ -1,14 +1,13 @@
 /**
  * Twitch Bot Service for Railway - Deno Version
  * 
- * Handles Twitch chat interactions using twitch_irc
+ * Handles Twitch chat interactions using tmi.js (via npm)
  * Interacts with Supabase for collection queries and stats
  * Rewards are handled by Supabase Edge Functions
  */
 
-import { Client } from "https://deno.land/x/twitch_irc@v0.9.0/mod.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
+import tmi from "npm:tmi.js@^1.8.5"
+import { createClient } from "npm:@supabase/supabase-js@^2"
 
 // Get environment variables
 const TWITCH_BOT_USERNAME = Deno.env.get("TWITCH_BOT_USERNAME") || ""
@@ -29,11 +28,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 }
 
 // Initialize Twitch client
-const client = new Client({
-  credentials: {
-    nick: TWITCH_BOT_USERNAME,
-    pass: TWITCH_BOT_OAUTH_TOKEN
-  }
+const client = new tmi.Client({
+  identity: {
+    username: TWITCH_BOT_USERNAME,
+    password: TWITCH_BOT_OAUTH_TOKEN
+  },
+  channels: [TWITCH_CHANNEL_NAME]
 })
 
 let isConnected = false
@@ -78,7 +78,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
       if (message && channel) {
         console.log(`📨 Received webhook message: ${message}`)
-        await client.say(`#${channel}`, message)
+        client.say(`#${channel}`, message)
         return new Response(
           JSON.stringify({ ok: true }),
           {
@@ -117,7 +117,7 @@ console.log(`   Channel: ${TWITCH_CHANNEL_NAME}`)
 console.log(`   Username: ${TWITCH_BOT_USERNAME}`)
 
 // Start HTTP server first (Railway needs this for health checks)
-const server = serve(handleRequest, { port: PORT, hostname: '0.0.0.0' })
+const server = Deno.serve({ port: PORT, hostname: '0.0.0.0' }, handleRequest)
 console.log(`📡 Webhook server listening on port ${PORT}`)
 console.log(`   Endpoint: http://0.0.0.0:${PORT}/webhook/message`)
 console.log(`   Health check: http://0.0.0.0:${PORT}/health`)
@@ -128,38 +128,37 @@ await new Promise(resolve => setTimeout(resolve, 1000))
 
 // Connect to Twitch
 console.log('🔌 Connecting to Twitch...')
-await client.connect()
-await client.join(`#${TWITCH_CHANNEL_NAME}`)
+client.connect().catch(console.error)
 
 // Twitch client event handlers
-client.on('open', () => {
+client.on('connected', () => {
   isConnected = true
   console.log(`✅ Bot connected to Twitch chat: ${TWITCH_CHANNEL_NAME}`)
 })
 
-client.on('close', () => {
+client.on('disconnected', () => {
   isConnected = false
   console.log('❌ Bot disconnected from Twitch')
 })
 
-client.on('privmsg', async ({ user, message, channel }) => {
+client.on('message', async (channel, tags, message, self) => {
   // Ignore messages from the bot itself
-  if (user.login === TWITCH_BOT_USERNAME.toLowerCase()) return
+  if (self) return
 
-  const username = user.login
+  const username = tags.username
   const command = message.toLowerCase().trim()
   const parts = command.split(' ')
 
   // Simple ping command
   if (command === '!ping') {
-    await client.say(channel, 'Pong!')
+    client.say(channel, 'Pong!')
     return
   }
 
   // !collection - Show user's collection stats
   if (command === '!collection' || command.startsWith('!collection ')) {
     if (!supabase) {
-      await client.say(channel, '❌ Service non disponible')
+      client.say(channel, '❌ Service non disponible')
       return
     }
 
@@ -182,12 +181,12 @@ client.on('privmsg', async ({ user, message, channel }) => {
 
       if (error) {
         console.error('Error fetching collection:', error)
-        await client.say(channel, `❌ Erreur lors de la récupération de la collection`)
+        client.say(channel, `❌ Erreur lors de la récupération de la collection`)
         return
       }
 
       if (!user) {
-        await client.say(channel, `@${targetUser} n'a pas encore de collection`)
+        client.say(channel, `@${targetUser} n'a pas encore de collection`)
         return
       }
 
@@ -195,10 +194,10 @@ client.on('privmsg', async ({ user, message, channel }) => {
       const totalFoil = user.user_collections?.reduce((sum: number, col: any) => sum + (col.foil_count || 0), 0) || 0
       const vaalOrbs = user.vaal_orbs || 0
 
-      await client.say(channel, `📦 @${targetUser} : ${totalCards} cartes (${totalFoil} ✨) | ${vaalOrbs} Vaal Orbs`)
+      client.say(channel, `📦 @${targetUser} : ${totalCards} cartes (${totalFoil} ✨) | ${vaalOrbs} Vaal Orbs`)
     } catch (error) {
       console.error('Error in !collection command:', error)
-      await client.say(channel, '❌ Erreur lors de la récupération de la collection')
+      client.say(channel, '❌ Erreur lors de la récupération de la collection')
     }
     return
   }
@@ -206,7 +205,7 @@ client.on('privmsg', async ({ user, message, channel }) => {
   // !stats - Show user's stats
   if (command === '!stats' || command.startsWith('!stats ')) {
     if (!supabase) {
-      await client.say(channel, '❌ Service non disponible')
+      client.say(channel, '❌ Service non disponible')
       return
     }
 
@@ -226,12 +225,12 @@ client.on('privmsg', async ({ user, message, channel }) => {
 
       if (error) {
         console.error('Error fetching stats:', error)
-        await client.say(channel, `❌ Erreur lors de la récupération des stats`)
+        client.say(channel, `❌ Erreur lors de la récupération des stats`)
         return
       }
 
       if (!user) {
-        await client.say(channel, `@${targetUser} n'a pas encore de stats`)
+        client.say(channel, `@${targetUser} n'a pas encore de stats`)
         return
       }
 
@@ -239,10 +238,10 @@ client.on('privmsg', async ({ user, message, channel }) => {
       const totalBoosters = user.user_boosters?.length || 0
       const vaalOrbs = user.vaal_orbs || 0
 
-      await client.say(channel, `📊 @${targetUser} : ${totalCards} cartes | ${totalBoosters} boosters ouverts | ${vaalOrbs} Vaal Orbs`)
+      client.say(channel, `📊 @${targetUser} : ${totalCards} cartes | ${totalBoosters} boosters ouverts | ${vaalOrbs} Vaal Orbs`)
     } catch (error) {
       console.error('Error in !stats command:', error)
-      await client.say(channel, '❌ Erreur lors de la récupération des stats')
+      client.say(channel, '❌ Erreur lors de la récupération des stats')
     }
     return
   }
@@ -250,7 +249,7 @@ client.on('privmsg', async ({ user, message, channel }) => {
   // !vaal - Show user's Vaal Orbs
   if (command === '!vaal' || command.startsWith('!vaal ')) {
     if (!supabase) {
-      await client.say(channel, '❌ Service non disponible')
+      client.say(channel, '❌ Service non disponible')
       return
     }
 
@@ -265,20 +264,20 @@ client.on('privmsg', async ({ user, message, channel }) => {
 
       if (error) {
         console.error('Error fetching vaal orbs:', error)
-        await client.say(channel, `❌ Erreur lors de la récupération des Vaal Orbs`)
+        client.say(channel, `❌ Erreur lors de la récupération des Vaal Orbs`)
         return
       }
 
       if (!user) {
-        await client.say(channel, `@${targetUser} n'a pas encore de Vaal Orbs`)
+        client.say(channel, `@${targetUser} n'a pas encore de Vaal Orbs`)
         return
       }
 
       const vaalOrbs = user.vaal_orbs || 0
-      await client.say(channel, `💎 @${targetUser} a ${vaalOrbs} Vaal Orbs`)
+      client.say(channel, `💎 @${targetUser} a ${vaalOrbs} Vaal Orbs`)
     } catch (error) {
       console.error('Error in !vaal command:', error)
-      await client.say(channel, '❌ Erreur lors de la récupération des Vaal Orbs')
+      client.say(channel, '❌ Erreur lors de la récupération des Vaal Orbs')
     }
     return
   }
@@ -288,8 +287,8 @@ client.on('privmsg', async ({ user, message, channel }) => {
 Deno.addSignalListener('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, disconnecting bot...')
   isConnected = false
-  await client.disconnect()
-  await server.shutdown()
+  client.disconnect()
+  server.shutdown()
   console.log('🛑 Server closed, exiting...')
   Deno.exit(0)
 })
@@ -297,8 +296,8 @@ Deno.addSignalListener('SIGTERM', async () => {
 Deno.addSignalListener('SIGINT', async () => {
   console.log('🛑 SIGINT received, disconnecting bot...')
   isConnected = false
-  await client.disconnect()
-  await server.shutdown()
+  client.disconnect()
+  server.shutdown()
   Deno.exit(0)
 })
 

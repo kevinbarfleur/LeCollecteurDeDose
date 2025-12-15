@@ -169,4 +169,4 @@ Appuyez sur `Ctrl+C` dans le terminal pour arrêter le bot proprement.
 
 ## 📚 Documentation Complète
 
-Pour plus de détails sur le déploiement sur Railway, consultez [DEPLOYMENT_RAILWAY.md](./DEPLOYMENT_RAILWAY.md)
+Pour plus de détails sur le déploiement sur Railway, consultez [README.md](./README.md)
