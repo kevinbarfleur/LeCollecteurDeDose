@@ -134,7 +134,7 @@ async function loadTriggerConfig(): Promise<TriggerConfig> {
     },
     targetCooldown: 600000,
     minUsersForCooldown: 3,
-    userActivityWindow: 3600000,
+    userActivityWindow: 900000,  // 15 minutes (was 1 hour)
   }
 
   if (!supabase) {
@@ -236,7 +236,7 @@ let triggerConfig: TriggerConfig = {
   },
   targetCooldown: 600000,
   minUsersForCooldown: 3,
-  userActivityWindow: 3600000,
+  userActivityWindow: 900000,  // 15 minutes (was 1 hour)
 }
 
 // Track user activity
