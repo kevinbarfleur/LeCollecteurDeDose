@@ -164,7 +164,7 @@ export async function getUserCollection(username: string): Promise<Record<string
           unique_cards (*)
         )
       `)
-      .eq('twitch_username', searchUsername)
+      .ilike('twitch_username', searchUsername)
       .maybeSingle()
 
     if (userError) {
@@ -232,7 +232,7 @@ export async function getUserCards(username: string): Promise<any[] | null> {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('twitch_username', username.toLowerCase())
+      .ilike('twitch_username', username.toLowerCase())
       .maybeSingle()
 
     if (userError) {
