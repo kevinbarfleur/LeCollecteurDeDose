@@ -8,6 +8,29 @@
 
 import tmi from "npm:tmi.js@^1.8.5"
 import { createClient } from "npm:@supabase/supabase-js@^2"
+import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
+
+// Load .env file for local development (only if file exists)
+// On Railway, environment variables are already set, so this won't override them
+// Try multiple locations: current directory, parent directory
+try {
+  // Try current directory first (twitch-bot/.env)
+  const env = await load({ export: true })
+  console.log('📄 Loaded .env file from current directory')
+} catch {
+  try {
+    // Try parent directory (.env at project root)
+    const env = await load({ 
+      envPath: '../.env',
+      export: true 
+    })
+    console.log('📄 Loaded .env file from parent directory')
+  } catch {
+    // .env file not found, that's okay - we'll use system environment variables
+    // This is normal on Railway where env vars are set directly
+    console.log('ℹ️  No .env file found, using system environment variables')
+  }
+}
 
 // Get environment variables
 const TWITCH_BOT_USERNAME = Deno.env.get("TWITCH_BOT_USERNAME") || ""
@@ -16,6 +39,16 @@ const TWITCH_CHANNEL_NAME = Deno.env.get("TWITCH_CHANNEL_NAME") || ""
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_KEY = Deno.env.get("SUPABASE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || ""
 const PORT = parseInt(Deno.env.get("PORT") || Deno.env.get("WEBHOOK_PORT") || "3001")
+
+// Debug: Log environment variables status (only in development)
+if (!Deno.env.get("RAILWAY_ENVIRONMENT")) {
+  console.log('🔍 Environment check:')
+  console.log(`   TWITCH_BOT_USERNAME: ${TWITCH_BOT_USERNAME ? '✅ Set' : '❌ Missing'}`)
+  console.log(`   TWITCH_BOT_OAUTH_TOKEN: ${TWITCH_BOT_OAUTH_TOKEN ? '✅ Set' : '❌ Missing'}`)
+  console.log(`   TWITCH_CHANNEL_NAME: ${TWITCH_CHANNEL_NAME ? '✅ Set' : '❌ Missing'}`)
+  console.log(`   SUPABASE_URL: ${SUPABASE_URL ? '✅ Set' : '❌ Missing'}`)
+  console.log(`   SUPABASE_KEY: ${SUPABASE_KEY ? '✅ Set' : '❌ Missing'}`)
+}
 
 // Initialize Supabase client
 let supabase: ReturnType<typeof createClient> | null = null
@@ -338,24 +371,26 @@ client.on('message', async (channel, tags, message, self) => {
 })
 
 // Handle process termination gracefully
-Deno.addSignalListener('SIGTERM', async () => {
-  console.log('🛑 SIGTERM received, disconnecting bot...')
+// Note: Windows only supports SIGINT, SIGBREAK, and SIGUP
+// SIGTERM is only available on Unix-like systems (Linux, macOS)
+const gracefulShutdown = async (signal: string) => {
+  console.log(`🛑 ${signal} received, disconnecting bot...`)
   isConnected = false
   client.disconnect()
   abortController.abort()
   await server.finished
   console.log('🛑 Server closed, exiting...')
   Deno.exit(0)
-})
+}
 
-Deno.addSignalListener('SIGINT', async () => {
-  console.log('🛑 SIGINT received, disconnecting bot...')
-  isConnected = false
-  client.disconnect()
-  abortController.abort()
-  await server.finished
-  Deno.exit(0)
-})
+// Add SIGTERM listener only on Unix-like systems (Linux, macOS)
+// Railway uses Linux, so SIGTERM will work there
+if (Deno.build.os !== 'windows') {
+  Deno.addSignalListener('SIGTERM', () => gracefulShutdown('SIGTERM'))
+}
+
+// SIGINT works on all platforms (Ctrl+C)
+Deno.addSignalListener('SIGINT', () => gracefulShutdown('SIGINT'))
 
 // Keep the process alive - prevent Railway from thinking the service is inactive
 // Railway needs to see active network connections or HTTP activity
