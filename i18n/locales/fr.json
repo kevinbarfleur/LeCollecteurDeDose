@@ -98,7 +98,8 @@
       "recording": "Sacrifice consigné…",
       "rec": "REC",
       "loading": "Chargement…",
-      "syncing": "Synchronisation en cours…"
+      "syncing": "Synchronisation en cours…",
+      "overflow": "{count} orbes en réserve"
     },
     "preferences": {
       "title": "Préférences",

@@ -39,7 +39,10 @@
       "WebFetch(domain:dev.twitch.tv)",
       "Bash(npx nuxi typecheck:*)",
       "mcp__Railway__list-services",
-      "mcp__Railway__list-deployments"
+      "mcp__Railway__list-deployments",
+      "Bash(npm install matter-js)",
+      "Bash(npm install:*)",
+      "Bash(npx nuxi:*)"
     ]
   }
 }

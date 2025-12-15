@@ -19,6 +19,7 @@ import {
   type VariationGroup,
 } from "~/composables/useCardGrouping";
 import { useDisintegrationEffect } from "~/composables/useDisintegrationEffect";
+import { useVaalOrbsPhysics, type OrbPosition } from "~/composables/useVaalOrbsPhysics";
 import { useCollectionSync } from "~/composables/useCollectionSyncStore";
 import { useSyncQueue } from "~/composables/useSyncQueueStore";
 import { useAltarDebug } from "~/composables/useAltarDebug";
@@ -1528,6 +1529,81 @@ const altarPlatformRef = ref<HTMLElement | null>(null);
 const floatingOrbRef = ref<HTMLElement | null>(null);
 const orbRefs = ref<HTMLElement[]>([]);
 
+// Physics container ref for Vaal Orbs
+const orbsPhysicsContainerRef = ref<HTMLElement | null>(null);
+
+// Initialize Vaal Orbs physics
+const {
+  positions: orbPositions,
+  initPhysics,
+  destroyPhysics,
+  startDrag: physicsStartDrag,
+  dropOrbAt: physicsDropOrbAt,
+  respawnFromTop: physicsRespawnFromTop,
+  removeOrb: physicsRemoveOrb,
+  isPointInContainer: isPointInPhysicsContainer,
+  getContainerBounds: getPhysicsContainerBounds,
+  overflowCount: physicsOverflowCount,
+  pushOrbsFrom: physicsPushOrbsFrom,
+} = useVaalOrbsPhysics({
+  containerRef: orbsPhysicsContainerRef,
+  orbCount: vaalOrbs,
+  orbSize: 44,
+  maxVisibleOrbs: 15,
+});
+
+// Track if physics is ready
+const isPhysicsReady = computed(() => orbPositions.value.length > 0);
+
+// Watch handles for cleanup
+let stopContainerWatch: (() => void) | null = null;
+let stopOrbsWatch: (() => void) | null = null;
+
+// Initialize physics when component mounts and container is available
+onMounted(async () => {
+  // Wait for next tick to ensure DOM is rendered
+  await nextTick();
+
+  // Watch for container to be ready, then initialize
+  stopContainerWatch = watch(
+    () => orbsPhysicsContainerRef.value,
+    async (container) => {
+      if (container && vaalOrbs.value > 0) {
+        await nextTick();
+        const bounds = container.getBoundingClientRect();
+        if (bounds.width > 0 && bounds.height > 0) {
+          await initPhysics();
+          if (stopContainerWatch) {
+            stopContainerWatch();
+            stopContainerWatch = null;
+          }
+        }
+      }
+    },
+    { immediate: true }
+  );
+
+  // Also watch for vaalOrbs to become available (from API)
+  stopOrbsWatch = watch(
+    () => vaalOrbs.value,
+    async (count) => {
+      if (count > 0 && orbsPhysicsContainerRef.value && !isPhysicsReady.value) {
+        await nextTick();
+        const bounds = orbsPhysicsContainerRef.value.getBoundingClientRect();
+        if (bounds.width > 0 && bounds.height > 0) {
+          await initPhysics();
+        }
+      }
+    }
+  );
+});
+
+onUnmounted(() => {
+  if (stopContainerWatch) stopContainerWatch();
+  if (stopOrbsWatch) stopOrbsWatch();
+  destroyPhysics();
+});
+
 // Store origin position for return animation
 let originX = 0;
 let originY = 0;
@@ -1641,6 +1717,23 @@ const setOrbRef = (el: HTMLElement | null, index: number) => {
   }
 };
 
+// Handle mouse movement over orbs container for brush/sweep effect
+const handleOrbsContainerMouseMove = (event: MouseEvent) => {
+  // Don't push orbs if we're dragging one
+  if (isDraggingOrb.value) return;
+
+  // Get position relative to container
+  const container = orbsPhysicsContainerRef.value;
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  // Push orbs away from cursor (subtle effect)
+  physicsPushOrbsFrom(x, y, 28, 0.0018);
+};
+
 const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   // Cannot use Vaal Orb during critical operations or on already foil cards
   if (
@@ -1665,7 +1758,7 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
   const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
   const clientY = "touches" in event ? event.touches[0].clientY : event.clientY;
 
-  // Get the origin position of the orb element
+  // Get the origin position from physics-positioned orb element
   const orbElement = orbRefs.value[index];
   if (orbElement) {
     const rect = orbElement.getBoundingClientRect();
@@ -1676,6 +1769,9 @@ const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
     clickOffsetX = clientX - originX;
     clickOffsetY = clientY - originY;
   }
+
+  // Detach orb from physics simulation during drag
+  physicsStartDrag(index);
 
   isDraggingOrb.value = true;
   draggedOrbIndex.value = index;
@@ -1786,6 +1882,8 @@ const onDragOrb = (event: MouseEvent | TouchEvent) => {
 const endDragOrb = async () => {
   if (!isDraggingOrb.value) return;
 
+  const currentDragIndex = draggedOrbIndex.value;
+
   document.removeEventListener("mousemove", onDragOrb);
   document.removeEventListener("mouseup", endDragOrb);
   document.removeEventListener("touchmove", onDragOrb);
@@ -1808,6 +1906,7 @@ const endDragOrb = async () => {
 
     // NOTE: Don't decrement vaalOrbs here - it's handled by handleSyncRequired
     // via vaalOrbsDelta in each outcome (duplicate, destroyed, transform, etc.)
+    // Physics sync happens automatically via watch on vaalOrbs count
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
     resetHeartbeatEffects(); // Reset heartbeat and isOrbOverCard
@@ -1821,32 +1920,53 @@ const endDragOrb = async () => {
       cancelRecording();
     }
 
-    // Return to origin with smooth GSAP animation directly on DOM element
+    // Check if orb was dropped inside the physics container
+    const containerBounds = getPhysicsContainerBounds();
+    const orbCenterX = currentX - clickOffsetX;
+    const orbCenterY = currentY - clickOffsetY;
+
+    // Calculate position relative to physics container
+    let dropInContainer = false;
+    let relativeX = 0;
+    let relativeY = 0;
+
+    if (containerBounds) {
+      relativeX = orbCenterX - containerBounds.left - 22; // Center to top-left (half orb size)
+      relativeY = orbCenterY - containerBounds.top - 22;
+
+      // Check if drop position is within container bounds
+      dropInContainer =
+        relativeX >= -22 &&
+        relativeX <= containerBounds.width &&
+        relativeY >= -22 &&
+        relativeY <= containerBounds.height;
+    }
+
+    // Animate floating orb fade out
     isReturningOrb.value = true;
-    resetHeartbeatEffects(); // Reset heartbeat when returning
+    resetHeartbeatEffects();
 
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
         gsap.to(floatingOrbRef.value, {
-          left: originX,
-          top: originY,
-          scale: 0.8,
-          duration: 0.4,
-          ease: "power2.out",
-          onComplete: resolve,
-        });
-      });
-
-      // Quick fade out at origin
-      await new Promise<void>((resolve) => {
-        gsap.to(floatingOrbRef.value, {
           opacity: 0,
           scale: 0.6,
-          duration: 0.15,
+          duration: 0.2,
           ease: "power2.in",
           onComplete: resolve,
         });
       });
+    }
+
+    // Re-add orb to physics at appropriate position
+    if (currentDragIndex !== null) {
+      if (dropInContainer) {
+        // Drop at the release position within the box
+        physicsDropOrbAt(currentDragIndex, relativeX, relativeY);
+      } else {
+        // Respawn from top of the box
+        physicsRespawnFromTop(currentDragIndex);
+      }
     }
 
     isDraggingOrb.value = false;
@@ -2164,31 +2284,75 @@ const endDragOrb = async () => {
               :has-error="!!syncError"
               :error-message="syncError?.message"
             />
-            
-            <div class="vaal-orbs-inventory">
-              <button
-                v-for="(_, index) in vaalOrbs"
-                :key="index"
-                :ref="(el) => setOrbRef(el as HTMLElement, index)"
-                class="vaal-orb"
-                :class="{
-                  'vaal-orb--disabled':
-                    !isCardOnAltar ||
-                    isBlockingInteractions ||
-                    isReturningOrb ||
-                    isCurrentCardFoil,
-                  'vaal-orb--dragging': draggedOrbIndex === index,
-                }"
-                :disabled="isBlockingInteractions"
-                @mousedown="(e) => startDragOrb(e, index)"
-                @touchstart="(e) => startDragOrb(e, index)"
+
+            <!-- Physics-enabled orbs container -->
+            <div
+              ref="orbsPhysicsContainerRef"
+              class="vaal-orbs-physics-container"
+              @mousemove="handleOrbsContainerMouseMove"
+            >
+              <!-- Physics-controlled orbs (when physics is ready) -->
+              <template v-if="isPhysicsReady">
+                <div
+                  v-for="(orb, index) in orbPositions"
+                  :key="orb.id"
+                  :ref="(el) => setOrbRef(el as HTMLElement, index)"
+                  class="vaal-orb vaal-orb--physics"
+                  :class="{
+                    'vaal-orb--disabled':
+                      !isCardOnAltar ||
+                      isBlockingInteractions ||
+                      isReturningOrb ||
+                      isCurrentCardFoil,
+                    'vaal-orb--dragging': orb.isBeingDragged,
+                  }"
+                  :style="{
+                    transform: `translate(${orb.x}px, ${orb.y}px) rotate(${orb.angle}rad)`
+                  }"
+                  @mousedown="(e) => startDragOrb(e, index)"
+                  @touchstart="(e) => startDragOrb(e, index)"
+                >
+                  <img
+                    :src="cardBackLogoUrl"
+                    alt="Vaal Orb"
+                    class="vaal-orb__image"
+                  />
+                </div>
+              </template>
+
+              <!-- Fallback: static orbs while physics initializes -->
+              <template v-else-if="vaalOrbs > 0">
+                <div class="vaal-orbs-fallback">
+                  <div
+                    v-for="index in vaalOrbs"
+                    :key="index"
+                    class="vaal-orb vaal-orb--static"
+                    :class="{
+                      'vaal-orb--disabled':
+                        !isCardOnAltar ||
+                        isBlockingInteractions ||
+                        isReturningOrb ||
+                        isCurrentCardFoil,
+                    }"
+                  >
+                    <img
+                      :src="cardBackLogoUrl"
+                      alt="Vaal Orb"
+                      class="vaal-orb__image"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <!-- Overflow badge (orbs in reserve) -->
+              <div
+                v-if="physicsOverflowCount > 0"
+                class="vaal-orbs-overflow-badge"
+                :title="t('altar.vaalOrbs.overflow', { count: physicsOverflowCount })"
               >
-                <img
-                  :src="cardBackLogoUrl"
-                  alt="Vaal Orb"
-                  class="vaal-orb__image"
-                />
-              </button>
+                <span class="vaal-orbs-overflow-badge__icon">◇</span>
+                <span class="vaal-orbs-overflow-badge__count">+{{ physicsOverflowCount }}</span>
+              </div>
 
               <!-- Empty state -->
               <div v-if="vaalOrbs === 0" class="vaal-orbs-empty">
@@ -3170,14 +3334,36 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   VAAL ORBS INVENTORY
+   VAAL ORBS PHYSICS CONTAINER
    ========================================== */
-.vaal-orbs-inventory {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  min-height: 80px;
+.vaal-orbs-physics-container {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  min-height: 140px;
+  overflow: hidden;
+
+  /* Subtle container styling */
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  border-radius: 6px;
+  border: 1px solid rgba(60, 50, 40, 0.3);
+
+  /* Inner shadow for depth */
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 rgba(80, 70, 60, 0.1);
+}
+
+/* Empty state centered in physics container */
+.vaal-orbs-physics-container .vaal-orbs-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .vaal-orbs-empty {
@@ -3203,19 +3389,111 @@ const endDragOrb = async () => {
 /* Removed vaal-orbs-loading styles - replaced by SyncStatusBanner */
 
 /* ==========================================
+   OVERFLOW BADGE
+   ========================================== */
+.vaal-orbs-overflow-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  padding: 4px 10px;
+  background: linear-gradient(
+    135deg,
+    rgba(175, 96, 37, 0.9),
+    rgba(139, 69, 19, 0.9)
+  );
+  border: 1px solid rgba(255, 200, 100, 0.4);
+  border-radius: 12px;
+
+  font-family: "Fontin SmallCaps", serif;
+  font-size: 0.875rem;
+  color: #ffd700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+
+  /* Glow effect */
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 0 12px rgba(175, 96, 37, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  /* Subtle pulse animation */
+  animation: overflow-pulse 2s ease-in-out infinite;
+
+  z-index: 10;
+  pointer-events: none; /* Don't block drag */
+}
+
+.vaal-orbs-overflow-badge__icon {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.vaal-orbs-overflow-badge__count {
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+@keyframes overflow-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 0 12px rgba(175, 96, 37, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 0 20px rgba(175, 96, 37, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ==========================================
    VAAL ORB ITEM
    ========================================== */
 .vaal-orb {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   background: transparent;
   border: none;
   cursor: grab;
   opacity: 1;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.4s ease,
-    opacity 0.4s ease;
+  transition: filter 0.4s ease, opacity 0.4s ease;
+}
+
+/* Physics-positioned orbs */
+.vaal-orb--physics {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  /* No CSS transition on transform - Matter.js handles the movement */
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+/* Fallback container while physics initializes */
+.vaal-orbs-fallback {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  width: 100%;
+  height: 100%;
+}
+
+/* Static orbs (fallback) */
+.vaal-orb--static {
+  flex-shrink: 0;
 }
 
 .vaal-orb:active {

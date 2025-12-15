@@ -19,6 +19,7 @@
     "disintegrate": "^1.0.1",
     "gsap": "^3.13.0",
     "html2canvas": "^1.4.1",
+    "matter-js": "^0.20.0",
     "nuxt": "^3.17.4",
     "nuxt-auth-utils": "^0.5.25",
     "pinia": "^2.1.7",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@nuxt/devtools": "^2.4.0",
     "@nuxtjs/tailwindcss": "^6.13.2",
+    "@types/matter-js": "^0.20.2",
     "@vueuse/nuxt": "^13.0.0",
     "typescript": "^5.8.3"
   }
