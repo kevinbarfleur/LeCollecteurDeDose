@@ -71,13 +71,13 @@ export default defineEventHandler(async (event) => {
   // Check environment variable first (highest priority)
   const envBotUrl = process.env.BOT_WEBHOOK_URL
   
-  // In dev mode: ALWAYS use localhost, ignore Railway URL from env/config
+  // In dev mode: ALWAYS use localhost (127.0.0.1 for IPv4 compatibility), ignore Railway URL from env/config
   // This ensures local development uses the local bot which has the latest endpoints
   // Note: Railway bot needs to be deployed with the latest code to support /webhook/trigger-manual
   // To test Railway bot, deploy to production or set BOT_WEBHOOK_URL_FORCE_RAILWAY=true
   const forceRailway = process.env.BOT_WEBHOOK_URL_FORCE_RAILWAY === 'true'
   const botWebhookUrl = (isDev && !forceRailway)
-    ? 'http://localhost:3001'
+    ? 'http://127.0.0.1:3001'  // Use 127.0.0.1 instead of localhost to avoid IPv6 issues on Windows
     : (envBotUrl || config.public.botWebhookUrl || 'https://lecollecteurdedose-production.up.railway.app')
   
   // Ensure URL has protocol
@@ -93,6 +93,7 @@ export default defineEventHandler(async (event) => {
     
     // First, check if bot is available via health check
     const healthCheckUrl = `${webhookUrl}/health`
+    
     console.log(`[Admin] Checking bot health at: ${healthCheckUrl}`)
     try {
       const healthResponse = await fetch(healthCheckUrl, {
@@ -111,7 +112,15 @@ export default defineEventHandler(async (event) => {
       console.log(`[Admin] Bot health check passed:`, healthData)
     } catch (healthError: any) {
       console.error(`[Admin] Health check failed:`, healthError)
-      const errorMsg = isDev
+      
+      // Check if it's a connection refused error (bot not running)
+      const isConnectionRefused = healthError.message?.includes('ECONNREFUSED') || 
+                                   healthError.message?.includes('fetch failed') ||
+                                   healthError.cause?.code === 'ECONNREFUSED'
+      
+      const errorMsg = isDev && isConnectionRefused
+        ? `Bot non démarré. Démarrez le bot dans un terminal séparé avec: cd twitch-bot && deno task start`
+        : isDev
         ? `Bot non disponible. Démarrez le bot avec: cd twitch-bot && deno task start. Erreur: ${healthError.message}`
         : `Bot service unavailable. Vérifiez que le bot Railway est déployé. Erreur: ${healthError.message}`
       throw createError({ 
@@ -121,6 +130,7 @@ export default defineEventHandler(async (event) => {
     }
     
     const webhookEndpoint = `${webhookUrl}/webhook/trigger-manual`
+    
     console.log(`[Admin] Calling bot webhook: ${webhookEndpoint}`)
     
     // Call bot webhook to trigger the manual trigger

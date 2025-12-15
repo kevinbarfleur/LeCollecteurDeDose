@@ -1068,16 +1068,18 @@ const triggerManualTrigger = async (triggerType: string) => {
                             @blur="saveBotConfigValue(key, botConfig[key])"
                           />
                           <!-- Play button for trigger probabilities -->
-                          <button
+                          <RunicButton
                             v-if="configKeyToTriggerType[key]"
                             @click="triggerManualTrigger(configKeyToTriggerType[key])"
                             :disabled="manualTriggerLoading[configKeyToTriggerType[key]] || botConfigSaving"
-                            class="w-10 h-10 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
+                            variant="secondary"
+                            size="sm"
+                            :icon="manualTriggerLoading[configKeyToTriggerType[key]] ? undefined : 'play'"
                             :title="`Déclencher ${configLabels[key]} manuellement`"
+                            class="!w-10 !h-10 !p-0 !min-w-0 !gap-0 !flex items-center justify-center"
                           >
-                            <span v-if="manualTriggerLoading[configKeyToTriggerType[key]]" class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                            <span v-else>▶️</span>
-                          </button>
+                            <span v-if="manualTriggerLoading[configKeyToTriggerType[key]]" class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
+                          </RunicButton>
                         </template>
                       </div>
                     </div>
