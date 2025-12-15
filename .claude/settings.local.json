@@ -34,7 +34,10 @@
       "mcp__supabase__get_logs",
       "Bash(curl:*)",
       "Bash(openssl rand:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:dev.twitch.tv)",
+      "Bash(npx nuxi typecheck:*)"
     ]
   }
 }

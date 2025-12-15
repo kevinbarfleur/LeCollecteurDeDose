@@ -412,6 +412,8 @@
   "activityLogs": {
     "title": "Activité des Exilés",
     "toggleLabel": "Voir l'activité",
+    "tabActivity": "Activité",
+    "tabHistory": "Twitch",
     "empty": "Aucune activité. Les exilés farmment leur dépression.",
     "noResults": "Aucune trace de l'exile recherché.",
     "searchPlaceholder": "Joueur ou carte…",
@@ -422,7 +424,11 @@
     "minutesAgo": "Il y a {n} min",
     "hoursAgo": "Il y a {n}h",
     "replay": "Voir",
-    "watchReplay": "Regarder le sacrifice"
+    "watchReplay": "Regarder le sacrifice",
+    "loadingHistory": "Chargement de ton historique…",
+    "noTriggerHistory": "Tu n'as pas encore été touché par le destin des Vaal.",
+    "cardsChange": "Cartes : {before} → {after}",
+    "vaalsChange": "Vaal Orbs : {before} → {after}"
   },
   "legal": {
     "title": "Mentions Légales",

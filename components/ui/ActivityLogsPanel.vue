@@ -2,8 +2,98 @@
 import { useActivityLogs } from "~/composables/useActivityLogs";
 import { VAAL_OUTCOMES, type VaalOutcome } from "~/types/vaalOutcome";
 import poeUniques from "~/data/poe_uniques.json";
+import type { Database } from "~/types/database";
 
 const { t } = useI18n();
+const { loggedIn, user } = useUserSession();
+const supabase = useSupabaseClient<Database>();
+
+// Tab state (only shown if logged in)
+const activeTab = ref<'activity' | 'history'>('activity');
+
+// Trigger history for current user
+interface TriggerLog {
+  id: string;
+  action_type: string;
+  action_details: {
+    message?: string;
+    success?: boolean;
+    trigger_type?: string;
+  } | null;
+  state_before: Record<string, any> | null;
+  state_after: Record<string, any> | null;
+  created_at: string;
+}
+
+const triggerHistory = ref<TriggerLog[]>([]);
+const isLoadingHistory = ref(false);
+
+// Trigger icons mapping
+const triggerIcons: Record<string, string> = {
+  blessingRNGesus: '✨',
+  cartographersGift: '📦',
+  mirrorTier: '🪞',
+  einharApproved: '🦎',
+  heistTax: '💰',
+  sirusVoice: '💀',
+  alchMisclick: '🧪',
+  tradeScam: '🤝',
+  chrisVision: '👁️',
+  atlasInfluence: '🗺️',
+};
+
+// Fetch trigger history for current user
+async function fetchTriggerHistory() {
+  if (!user.value?.displayName) return;
+
+  isLoadingHistory.value = true;
+  try {
+    const { data, error } = await supabase
+      .from('diagnostic_logs')
+      .select('id, action_type, action_details, state_before, state_after, created_at')
+      .eq('category', 'trigger')
+      .ilike('username', user.value.displayName)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      triggerHistory.value = data as TriggerLog[];
+    }
+  } catch (err) {
+    console.error('Error fetching trigger history:', err);
+  } finally {
+    isLoadingHistory.value = false;
+  }
+}
+
+// Fetch history when switching to history tab
+watch(activeTab, (newTab) => {
+  if (newTab === 'history' && triggerHistory.value.length === 0) {
+    fetchTriggerHistory();
+  }
+});
+
+// Get trigger icon
+const getTriggerIcon = (actionType: string): string => {
+  return triggerIcons[actionType] || '🎲';
+};
+
+// Get trigger display name
+const getTriggerName = (actionType: string): string => {
+  const names: Record<string, string> = {
+    blessingRNGesus: 'Blessing of RNGesus',
+    cartographersGift: "Cartographer's Gift",
+    mirrorTier: 'Mirror Tier',
+    einharApproved: 'Einhar Approved',
+    heistTax: 'Heist Tax',
+    sirusVoice: 'Sirus Voice Line',
+    alchMisclick: 'Alch Misclick',
+    tradeScam: 'Trade Scam',
+    chrisVision: "Chris Wilson's Vision",
+    atlasInfluence: 'Atlas Influence',
+  };
+  return names[actionType] || actionType;
+};
 
 const {
   logs,
@@ -224,8 +314,20 @@ const getOutcomeClass = (outcome: string): string => {
           <div class="activity-panel__header-edge"></div>
         </div>
 
-        <!-- Filters section -->
-        <div class="activity-panel__filters">
+        <!-- Tab selector (only if logged in) -->
+        <div v-if="loggedIn" class="activity-panel__tabs">
+          <RunicRadio
+            v-model="activeTab"
+            :options="[
+              { value: 'activity', label: t('activityLogs.tabActivity') },
+              { value: 'history', label: t('activityLogs.tabHistory') }
+            ]"
+            size="sm"
+          />
+        </div>
+
+        <!-- Filters section (only for activity tab) -->
+        <div v-if="activeTab === 'activity'" class="activity-panel__filters">
           <RunicInput
             v-model="searchQuery"
             :placeholder="t('activityLogs.searchPlaceholder')"
@@ -244,30 +346,32 @@ const getOutcomeClass = (outcome: string): string => {
 
         <!-- Content -->
         <div class="activity-panel__content">
-          <template v-if="filteredLogs.length === 0">
-            <div class="activity-empty">
-              <div class="activity-empty__icon-wrapper">
-                <span class="activity-empty__rune activity-empty__rune--left"
-                  >◆</span
-                >
-                <span class="activity-empty__icon">{{
-                  searchQuery || selectedOutcome ? "🔍" : "📜"
-                }}</span>
-                <span class="activity-empty__rune activity-empty__rune--right"
-                  >◆</span
-                >
+          <!-- Activity Tab -->
+          <template v-if="activeTab === 'activity'">
+            <template v-if="filteredLogs.length === 0">
+              <div class="activity-empty">
+                <div class="activity-empty__icon-wrapper">
+                  <span class="activity-empty__rune activity-empty__rune--left"
+                    >◆</span
+                  >
+                  <span class="activity-empty__icon">{{
+                    searchQuery || selectedOutcome ? "🔍" : "📜"
+                  }}</span>
+                  <span class="activity-empty__rune activity-empty__rune--right"
+                    >◆</span
+                  >
+                </div>
+                <p class="activity-empty__text">
+                  {{
+                    searchQuery || selectedOutcome
+                      ? t("activityLogs.noResults")
+                      : t("activityLogs.empty")
+                  }}
+                </p>
               </div>
-              <p class="activity-empty__text">
-                {{
-                  searchQuery || selectedOutcome
-                    ? t("activityLogs.noResults")
-                    : t("activityLogs.empty")
-                }}
-              </p>
-            </div>
-          </template>
+            </template>
 
-          <TransitionGroup
+            <TransitionGroup
             v-else
             name="log-item"
             tag="ul"
@@ -355,6 +459,69 @@ const getOutcomeClass = (outcome: string): string => {
               </RunicBox>
             </li>
           </TransitionGroup>
+          </template>
+
+          <!-- History Tab -->
+          <template v-else-if="activeTab === 'history'">
+            <!-- Loading state -->
+            <div v-if="isLoadingHistory" class="activity-empty">
+              <div class="activity-empty__icon-wrapper">
+                <span class="activity-empty__rune activity-empty__rune--left">◆</span>
+                <span class="activity-empty__icon">⏳</span>
+                <span class="activity-empty__rune activity-empty__rune--right">◆</span>
+              </div>
+              <p class="activity-empty__text">{{ t('activityLogs.loadingHistory') }}</p>
+            </div>
+
+            <!-- Empty state -->
+            <div v-else-if="triggerHistory.length === 0" class="activity-empty">
+              <div class="activity-empty__icon-wrapper">
+                <span class="activity-empty__rune activity-empty__rune--left">◆</span>
+                <span class="activity-empty__icon">🎲</span>
+                <span class="activity-empty__rune activity-empty__rune--right">◆</span>
+              </div>
+              <p class="activity-empty__text">{{ t('activityLogs.noTriggerHistory') }}</p>
+            </div>
+
+            <!-- History list -->
+            <ul v-else class="activity-list">
+              <li v-for="log in triggerHistory" :key="log.id" class="history-entry">
+                <RunicBox padding="none" class="history-entry__box">
+                  <!-- Header with trigger type -->
+                  <div class="history-entry__header">
+                    <span class="history-entry__icon">{{ getTriggerIcon(log.action_type) }}</span>
+                    <span class="history-entry__name">{{ getTriggerName(log.action_type) }}</span>
+                  </div>
+
+                  <!-- Content -->
+                  <div class="history-entry__content">
+                    <p v-if="log.action_details?.message" class="history-entry__message">
+                      {{ log.action_details.message }}
+                    </p>
+
+                    <!-- State changes if available -->
+                    <div v-if="log.state_before && log.state_after" class="history-entry__state">
+                      <span v-if="log.state_before.total_cards_count !== log.state_after.total_cards_count" class="history-entry__change">
+                        {{ t('activityLogs.cardsChange', {
+                          before: log.state_before.total_cards_count,
+                          after: log.state_after.total_cards_count
+                        }) }}
+                      </span>
+                      <span v-if="log.state_before.vaal_orbs_count !== log.state_after.vaal_orbs_count" class="history-entry__change">
+                        {{ t('activityLogs.vaalsChange', {
+                          before: log.state_before.vaal_orbs_count,
+                          after: log.state_after.vaal_orbs_count
+                        }) }}
+                      </span>
+                    </div>
+
+                    <!-- Timestamp -->
+                    <span class="history-entry__time">{{ formatRelativeTime(log.created_at) }}</span>
+                  </div>
+                </RunicBox>
+              </li>
+            </ul>
+          </template>
         </div>
       </div>
     </Transition>
@@ -1287,5 +1454,89 @@ const getOutcomeClass = (outcome: string): string => {
     opacity: 0;
     transform: translateX(-20px);
   }
+}
+
+/* ==========================================
+   TABS SECTION
+   ========================================== */
+.activity-panel__tabs {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(50, 45, 40, 0.3);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* ==========================================
+   HISTORY ENTRY - Trigger event style
+   ========================================== */
+.history-entry {
+  list-style: none;
+}
+
+.history-entry__box {
+  overflow: hidden;
+}
+
+.history-entry__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(
+    180deg,
+    rgba(35, 30, 45, 0.5) 0%,
+    rgba(25, 22, 32, 0.3) 100%
+  );
+  border-bottom: 1px solid rgba(80, 70, 100, 0.3);
+}
+
+.history-entry__icon {
+  font-size: 1.125rem;
+}
+
+.history-entry__name {
+  font-family: "Cinzel", serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgba(180, 170, 200, 0.9);
+}
+
+.history-entry__content {
+  padding: 0.625rem 0.75rem;
+}
+
+.history-entry__message {
+  margin: 0 0 0.5rem 0;
+  font-family: "Crimson Text", serif;
+  font-size: 0.875rem;
+  color: rgba(200, 195, 190, 0.9);
+  line-height: 1.4;
+}
+
+.history-entry__state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.history-entry__change {
+  font-family: "Crimson Text", serif;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  color: rgba(160, 155, 150, 0.8);
+}
+
+.history-entry__time {
+  display: block;
+  font-family: "Crimson Text", serif;
+  font-size: 0.75rem;
+  color: rgba(120, 115, 110, 0.7);
+  text-align: right;
 }
 </style>
