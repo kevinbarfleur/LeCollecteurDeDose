@@ -326,13 +326,13 @@ export async function getAllUniqueCards(userId?: string): Promise<any[] | null> 
       return null
     }
 
-    // If userId is provided, fetch owned cards to determine which ones to limit
+    // If userId is provided (Twitch user ID), fetch owned cards to determine which ones to limit
     let ownedCardUids: Set<number> = new Set()
     if (userId) {
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('id')
-        .eq('id', userId)
+        .eq('twitch_user_id', userId)
         .maybeSingle()
 
       if (!userError && user) {

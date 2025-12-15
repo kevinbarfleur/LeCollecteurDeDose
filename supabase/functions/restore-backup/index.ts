@@ -22,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { backupId } = await req.json()
+    const { backupId, restoreMode = 'permissive' } = await req.json()
 
     if (!backupId) {
       return new Response(JSON.stringify({ error: 'backupId is required' }), {
@@ -31,7 +31,14 @@ serve(async (req) => {
       })
     }
 
-    console.log(`📥 Starting backup restoration for backup: ${backupId}`)
+    if (restoreMode !== 'strict' && restoreMode !== 'permissive') {
+      return new Response(JSON.stringify({ error: 'restoreMode must be either "strict" or "permissive"' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    console.log(`📥 Starting backup restoration for backup: ${backupId} (mode: ${restoreMode})`)
 
     // Fetch the backup
     const { data: backup, error: backupError } = await supabase
@@ -54,7 +61,7 @@ serve(async (req) => {
     }
 
     const restoreReport = {
-      users: { created: 0, updated: 0, errors: [] as string[] },
+      users: { created: 0, updated: 0, deleted: 0, errors: [] as string[] },
       collections: { restored: 0, errors: [] as string[] },
       boosters: { created: 0, errors: [] as string[] },
       uniqueCards: { restored: 0, errors: [] as string[] },
@@ -128,6 +135,106 @@ serve(async (req) => {
       }
     }
 
+    // 2.5. Collect all usernames from backup
+    const usernamesInBackup = new Set<string>()
+    if (backup.user_collection && typeof backup.user_collection === 'object') {
+      for (const username of Object.keys(backup.user_collection)) {
+        usernamesInBackup.add(username.toLowerCase())
+      }
+    }
+    if (backup.user_cards && typeof backup.user_cards === 'object') {
+      for (const usernameLower of Object.keys(backup.user_cards)) {
+        usernamesInBackup.add(usernameLower.toLowerCase())
+      }
+    }
+
+    // 2.6. STRICT MODE: Delete users not in backup
+    if (restoreMode === 'strict') {
+      console.log(`🗑️ STRICT MODE: Identifying users to delete...`)
+      
+      // Fetch all users from database
+      const { data: allUsers, error: allUsersError } = await supabase
+        .from('users')
+        .select('id, twitch_username')
+
+      if (allUsersError) {
+        console.error('❌ Error fetching all users:', allUsersError)
+        restoreReport.users.errors.push(`Failed to fetch all users: ${allUsersError.message}`)
+      } else if (allUsers) {
+        // Identify users not in backup
+        const usersToDelete = allUsers.filter(user => {
+          const usernameLower = user.twitch_username?.toLowerCase()
+          return usernameLower && !usernamesInBackup.has(usernameLower)
+        })
+
+        console.log(`🗑️ STRICT MODE: Found ${usersToDelete.length} users to delete (not in backup)`)
+
+        // Delete users not in backup (CASCADE will delete collections and boosters)
+        for (const userToDelete of usersToDelete) {
+          try {
+            const { error: deleteError } = await supabase
+              .from('users')
+              .delete()
+              .eq('id', userToDelete.id)
+
+            if (deleteError) {
+              restoreReport.users.errors.push(`User ${userToDelete.twitch_username}: ${deleteError.message}`)
+              console.error(`❌ Error deleting user ${userToDelete.twitch_username}:`, deleteError)
+            } else {
+              restoreReport.users.deleted++
+              console.log(`✓ Deleted user ${userToDelete.twitch_username} (not in backup)`)
+            }
+          } catch (error: any) {
+            restoreReport.users.errors.push(`User ${userToDelete.twitch_username}: ${error.message}`)
+            console.error(`❌ Error deleting user ${userToDelete.twitch_username}:`, error)
+          }
+        }
+      }
+    }
+
+    // 2.7. Clean up existing data BEFORE restoring (critical step)
+    // For users in backup, delete their existing collections and boosters
+    console.log(`🧹 Cleaning up existing data for ${usernamesInBackup.size} users before restore...`)
+    for (const username of usernamesInBackup) {
+      try {
+        // Get user ID
+        const { data: userId, error: userError } = await supabase.rpc('get_or_create_user', {
+          p_twitch_username: username
+        })
+
+        if (userError || !userId) {
+          console.warn(`⚠️ Could not get user ${username} for cleanup: ${userError?.message || 'Failed to get user'}`)
+          continue
+        }
+
+        // Delete all existing boosters for this user (cascade will delete booster_cards)
+        const { error: boostersDeleteError } = await supabase
+          .from('user_boosters')
+          .delete()
+          .eq('user_id', userId)
+
+        if (boostersDeleteError) {
+          console.warn(`⚠️ Error deleting boosters for ${username}: ${boostersDeleteError.message}`)
+        } else {
+          console.log(`✓ Deleted existing boosters for ${username}`)
+        }
+
+        // Delete all existing collections for this user
+        const { error: collectionsDeleteError } = await supabase
+          .from('user_collections')
+          .delete()
+          .eq('user_id', userId)
+
+        if (collectionsDeleteError) {
+          console.warn(`⚠️ Error deleting collections for ${username}: ${collectionsDeleteError.message}`)
+        } else {
+          console.log(`✓ Deleted existing collections for ${username}`)
+        }
+      } catch (error: any) {
+        console.warn(`⚠️ Error during cleanup for ${username}: ${error.message}`)
+      }
+    }
+
     // 3. Restore user_collections
     if (backup.user_collection && typeof backup.user_collection === 'object') {
       console.log(`🃏 Restoring collections...`)
@@ -155,6 +262,9 @@ serve(async (req) => {
             const cardData = value as any
             const normalCount = cardData.normal || 0
             const foilCount = cardData.foil || 0
+
+            // Skip cards with 0 count (they shouldn't be in the backup, but just in case)
+            if (normalCount === 0 && foilCount === 0) continue
 
             try {
               const { error } = await supabase.rpc('set_card_collection_counts', {

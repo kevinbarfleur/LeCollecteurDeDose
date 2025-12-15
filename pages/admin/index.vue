@@ -90,6 +90,7 @@ const isCreatingBackup = ref(false);
 const backupsList = ref<Array<{ id: string; backup_date: string; backup_time: string; created_at: string; user_collection?: any; uniques?: any }>>([]);
 const isLoadingBackups = ref(false);
 const selectedBackupId = ref<string>('');
+const restoreMode = ref<'strict' | 'permissive'>('permissive');
 const isRestoringBackup = ref(false);
 const restoreBackupMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -203,10 +204,14 @@ const restoreBackup = async () => {
   }
   
   // Confirm action (critical operation)
+  const modeDescription = restoreMode.value === 'strict' 
+    ? t("admin.dataSource.restoreMode.strict.description")
+    : t("admin.dataSource.restoreMode.permissive.description");
+  
   const confirmed = await confirm({
-    title: 'Restaurer un backup',
-    message: '⚠️ ATTENTION : Cette opération va remplacer toutes les données actuelles par celles du backup sélectionné. Cette action est irréversible. Êtes-vous sûr de vouloir continuer ?',
-    confirmText: 'Oui, restaurer',
+    title: t("admin.dataSource.restoreConfirmTitle"),
+    message: `${t("admin.dataSource.restoreConfirmMessage")}\n\n${modeDescription}`,
+    confirmText: t("admin.dataSource.restoreConfirmButton"),
     cancelText: t("common.cancel"),
     variant: 'warning',
   });
@@ -235,14 +240,27 @@ const restoreBackup = async () => {
         'Authorization': `Bearer ${supabaseKey}`,
       },
       body: {
-        backupId: selectedBackupId.value
+        backupId: selectedBackupId.value,
+        restoreMode: restoreMode.value
       },
     }) as { ok: boolean; message?: string; report?: any };
 
     if (response.ok) {
+      const report = response.report;
+      let successText = t("admin.dataSource.restoreSuccess");
+      if (report) {
+        const stats = [];
+        if (report.users?.updated) stats.push(`${t("admin.dataSource.restoreStats.users")}: ${report.users.updated}`);
+        if (report.users?.deleted) stats.push(`${t("admin.dataSource.restoreStats.deleted")}: ${report.users.deleted}`);
+        if (report.collections?.restored) stats.push(`${t("admin.dataSource.restoreStats.collections")}: ${report.collections.restored}`);
+        if (report.boosters?.created) stats.push(`${t("admin.dataSource.restoreStats.boosters")}: ${report.boosters.created}`);
+        if (stats.length > 0) {
+          successText += ` ${stats.join(", ")}`;
+        }
+      }
       restoreBackupMessage.value = {
         type: 'success',
-        text: `✅ Backup restauré avec succès ! ${response.report ? `Utilisateurs: ${response.report.users.updated}, Collections: ${response.report.collections.restored}, Boosters: ${response.report.boosters.created}` : ''}`
+        text: successText
       };
       // Clear selection
       selectedBackupId.value = '';
@@ -1284,6 +1302,30 @@ const triggerManualTrigger = async (triggerType: string) => {
                           placeholder="Sélectionner un backup"
                           :disabled="isRestoringBackup"
                         />
+                        
+                        <!-- Restore Mode Select -->
+                        <div v-if="selectedBackupId" class="flex flex-col gap-2">
+                          <label class="font-display text-sm font-semibold text-poe-text">
+                            {{ t("admin.dataSource.restoreMode.label") }}
+                          </label>
+                          <RunicSelect
+                            v-model="restoreMode"
+                            :options="[
+                              { value: 'permissive', label: t('admin.dataSource.restoreMode.permissive.label') },
+                              { value: 'strict', label: t('admin.dataSource.restoreMode.strict.label') }
+                            ]"
+                            size="md"
+                            :disabled="isRestoringBackup"
+                          />
+                          <p class="font-body text-xs text-poe-text-dim leading-relaxed">
+                            <span v-if="restoreMode === 'strict'">
+                              {{ t("admin.dataSource.restoreMode.strict.description") }}
+                            </span>
+                            <span v-else>
+                              {{ t("admin.dataSource.restoreMode.permissive.description") }}
+                            </span>
+                          </p>
+                        </div>
                         
                         <!-- Restore Button -->
                         <RunicButton

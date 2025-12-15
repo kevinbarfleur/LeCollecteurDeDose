@@ -300,7 +300,28 @@
       "backupConfirmTitle": "Créer un Backup",
       "backupConfirmMessage": "Tu vas créer un backup des données actuelles de Supabase. Cette action récupère toutes les données depuis Supabase et les sauvegarde dans la table backup. Es-tu sûr de vouloir continuer ?",
       "backupSuccess": "✅ Backup créé avec succès !",
-      "backupError": "❌ Erreur lors de la création du backup."
+      "backupError": "❌ Erreur lors de la création du backup.",
+      "restoreConfirmTitle": "Restaurer un backup",
+      "restoreConfirmMessage": "⚠️ ATTENTION : Cette opération va remplacer toutes les données actuelles par celles du backup sélectionné. Cette action est irréversible.",
+      "restoreConfirmButton": "Oui, restaurer",
+      "restoreSuccess": "✅ Backup restauré avec succès !",
+      "restoreMode": {
+        "label": "Mode de restauration",
+        "strict": {
+          "label": "Mode strict",
+          "description": "Mode strict : Restaure exactement l'état du backup. Tous les utilisateurs qui ne sont pas dans le backup seront supprimés avec toutes leurs données (collections, boosters)."
+        },
+        "permissive": {
+          "label": "Mode permissif",
+          "description": "Mode permissif : Restaure les données des utilisateurs présents dans le backup. Les nouveaux utilisateurs créés après le backup seront conservés."
+        }
+      },
+      "restoreStats": {
+        "users": "Utilisateurs",
+        "deleted": "Supprimés",
+        "collections": "Collections",
+        "boosters": "Boosters"
+      }
     },
     "diagnostics": {
       "title": "Diagnostics",
