@@ -14,12 +14,12 @@ import (
 
 	"github.com/gempir/go-twitch-irc/v3"
 	"github.com/joho/godotenv"
-	"github.com/supabase-community/supabase-go"
+	"github.com/supabase-community/postgrest-go"
 )
 
 type Bot struct {
 	client   *twitch.Client
-	supabase *supabase.Client
+	supabase *postgrest.Client
 	channel  string
 	username string
 	server   *http.Server
@@ -63,16 +63,27 @@ func NewBot() (*Bot, error) {
 	client := twitch.NewClient(botUsername, oauthToken)
 	client.Join(channelName)
 
-	// Initialize Supabase client
-	var supabaseClient *supabase.Client
+	// Initialize Supabase/PostgREST client
+	var supabaseClient *postgrest.Client
 	if supabaseURL != "" && supabaseKey != "" {
-		var err error
-		supabaseClient, err = supabase.NewClient(supabaseURL, supabaseKey, nil)
-		if err != nil {
-			log.Printf("⚠️  Warning: Failed to initialize Supabase client: %v", err)
-		} else {
-			log.Println("✅ Supabase client initialized")
+		// PostgREST endpoint is typically SUPABASE_URL/rest/v1
+		// But we need to construct it properly
+		postgrestURL := supabaseURL
+		if !strings.HasSuffix(postgrestURL, "/rest/v1") {
+			if strings.HasSuffix(postgrestURL, "/") {
+				postgrestURL += "rest/v1"
+			} else {
+				postgrestURL += "/rest/v1"
+			}
 		}
+		
+		// Create PostgREST client with API key in headers
+		headers := map[string]string{
+			"apikey":        supabaseKey,
+			"Authorization": "Bearer " + supabaseKey,
+		}
+		supabaseClient = postgrest.NewClient(postgrestURL, "public", headers)
+		log.Println("✅ Supabase client initialized")
 	} else {
 		log.Println("⚠️  Supabase credentials not found - chat commands requiring Supabase will be disabled")
 	}
@@ -226,8 +237,8 @@ func (b *Bot) handleCollectionCommand(message twitch.PrivateMessage, parts []str
 		} `json:"user_collections"`
 	}
 
-	data, _, err := b.supabase.From("users").
-		Select("twitch_username,vaal_orbs,user_collections(quantity,normal_count,foil_count)", "exact", false).
+	response, err := b.supabase.From("users").
+		Select("twitch_username,vaal_orbs,user_collections(quantity,normal_count,foil_count)", "", false).
 		Eq("twitch_username", targetUser).
 		Execute()
 
@@ -237,7 +248,7 @@ func (b *Bot) handleCollectionCommand(message twitch.PrivateMessage, parts []str
 		return
 	}
 
-	if err := json.Unmarshal(data, &result); err != nil {
+	if err := json.Unmarshal(response, &result); err != nil {
 		log.Printf("Error unmarshaling collection: %v", err)
 		b.client.Say(message.Channel, fmt.Sprintf("❌ Erreur lors de la récupération de la collection"))
 		return
@@ -286,8 +297,8 @@ func (b *Bot) handleStatsCommand(message twitch.PrivateMessage, parts []string) 
 		} `json:"user_boosters"`
 	}
 
-	data, _, err := b.supabase.From("users").
-		Select("twitch_username,vaal_orbs,user_collections(quantity),user_boosters(id)", "exact", false).
+	response, err := b.supabase.From("users").
+		Select("twitch_username,vaal_orbs,user_collections(quantity),user_boosters(id)", "", false).
 		Eq("twitch_username", targetUser).
 		Execute()
 
@@ -297,7 +308,7 @@ func (b *Bot) handleStatsCommand(message twitch.PrivateMessage, parts []string) 
 		return
 	}
 
-	if err := json.Unmarshal(data, &result); err != nil {
+	if err := json.Unmarshal(response, &result); err != nil {
 		log.Printf("Error unmarshaling stats: %v", err)
 		b.client.Say(message.Channel, fmt.Sprintf("❌ Erreur lors de la récupération des stats"))
 		return
@@ -338,8 +349,8 @@ func (b *Bot) handleVaalCommand(message twitch.PrivateMessage, parts []string) {
 		VaalOrbs       int    `json:"vaal_orbs"`
 	}
 
-	data, _, err := b.supabase.From("users").
-		Select("twitch_username,vaal_orbs", "exact", false).
+	response, err := b.supabase.From("users").
+		Select("twitch_username,vaal_orbs", "", false).
 		Eq("twitch_username", targetUser).
 		Execute()
 
@@ -349,7 +360,7 @@ func (b *Bot) handleVaalCommand(message twitch.PrivateMessage, parts []string) {
 		return
 	}
 
-	if err := json.Unmarshal(data, &result); err != nil {
+	if err := json.Unmarshal(response, &result); err != nil {
 		log.Printf("Error unmarshaling vaal orbs: %v", err)
 		b.client.Say(message.Channel, fmt.Sprintf("❌ Erreur lors de la récupération des Vaal Orbs"))
 		return
