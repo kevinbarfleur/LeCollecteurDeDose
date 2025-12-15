@@ -44,7 +44,7 @@ export async function checkAdminStatus(userId: string | undefined | null): Promi
     .select('is_active')
     .eq('twitch_user_id', userId)
     .eq('is_active', true)
-    .single()
+    .maybeSingle()
 
   const isAdmin = !error && data?.is_active === true
 
