@@ -32,7 +32,7 @@ export const useCatalogueStore = defineStore('catalogue', () => {
   const catalogueCount = computed(() => catalogue.value?.length || 0)
 
   // Actions
-  async function fetchCatalogue(force: boolean = false): Promise<void> {
+  async function fetchCatalogue(force: boolean = false, userId?: string): Promise<void> {
     // Return cached data if valid and not forcing refresh
     if (!force && isCacheValid.value && catalogue.value) {
       logInfo('Using cached catalogue', { store: 'Catalogue', action: 'fetchCatalogue', cached: true })
@@ -44,13 +44,13 @@ export const useCatalogueStore = defineStore('catalogue', () => {
       return
     }
 
-    logInfo('Fetching catalogue', { store: 'Catalogue', action: 'fetchCatalogue', force })
+    logInfo('Fetching catalogue', { store: 'Catalogue', action: 'fetchCatalogue', force, userId: userId ? userId.slice(0, 8) : 'none' })
     isLoading.value = true
     apiStore.setLoading(true)
 
     try {
       const config = apiStore.getApiConfig()
-      const uniques = await ApiService.fetchUniques(config)
+      const uniques = await ApiService.fetchUniques(config, userId)
 
       if (uniques) {
         const cards = transformUniquesToCards(uniques)

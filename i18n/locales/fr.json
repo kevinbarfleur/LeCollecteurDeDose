@@ -182,7 +182,8 @@
     "clear": "Effacer",
     "select": "Sélectionner…",
     "selected": "{count} sélectionnés",
-    "unknownCard": "Reliques non identifiées"
+    "unknownCard": "Reliques non identifiées",
+    "clickToReveal": "Cliquez pour révéler des indices"
   },
   "sorting": {
     "rarityAsc": "Rareté (les plus précieuses en premier)",

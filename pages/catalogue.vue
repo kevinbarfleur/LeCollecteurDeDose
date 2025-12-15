@@ -25,8 +25,9 @@ onMounted(async () => {
     isLoadingCatalogue.value = true;
     try {
       // Load catalogue from cache (or fetch if cache is empty)
-      // This will only fetch once per page session, then use cache
-      const cachedCards = await loadCatalogue(false);
+      // Pass userId to limit information for non-owned cards
+      const userId = loggedIn.value ? authUser.value?.id : undefined;
+      const cachedCards = await loadCatalogue(false, userId);
       if (cachedCards) {
         apiAllCards.value = cachedCards;
       } else {
@@ -51,9 +52,11 @@ watch([isSupabaseData, isInitializing], async ([isSupabase, initializing]) => {
   }
 
   // Always load catalogue data (works for both API and test mode)
+  // Pass userId to limit information for non-owned cards
   isLoadingCatalogue.value = true;
   try {
-    const cachedCards = await loadCatalogue(false);
+    const userId = loggedIn.value ? authUser.value?.id : undefined;
+    const cachedCards = await loadCatalogue(false, userId);
     if (cachedCards) {
       apiAllCards.value = cachedCards;
     } else {
@@ -64,6 +67,28 @@ watch([isSupabaseData, isInitializing], async ([isSupabase, initializing]) => {
     apiAllCards.value = cached || [];
   } finally {
     isLoadingCatalogue.value = false;
+  }
+});
+
+// Watch for login/logout changes - reload catalogue with appropriate data limitation
+watch([loggedIn, () => authUser.value?.id], async ([isLoggedIn, userId]) => {
+  if (isSupabaseData.value && !isInitializing.value) {
+    isLoadingCatalogue.value = true;
+    try {
+      // Force refresh to get correct limited/unlimited data based on login status
+      const currentUserId = isLoggedIn ? userId : undefined;
+      const cachedCards = await loadCatalogue(true, currentUserId);
+      if (cachedCards) {
+        apiAllCards.value = cachedCards;
+      } else {
+        apiAllCards.value = [];
+      }
+    } catch (error) {
+      const cached = getCachedCatalogue();
+      apiAllCards.value = cached || [];
+    } finally {
+      isLoadingCatalogue.value = false;
+    }
   }
 });
 

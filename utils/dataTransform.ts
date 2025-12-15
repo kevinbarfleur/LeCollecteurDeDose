@@ -222,3 +222,35 @@ export function mergeUserDataToCards(
   return collectionCards
 }
 
+/**
+ * Sanitize a card for catalogue display
+ * For non-owned cards, removes sensitive information (name, image, wikiUrl) to prevent spoilers
+ * 
+ * @param card - The card to sanitize
+ * @param isOwned - Whether the card is owned by the user
+ * @returns The card with limited information if not owned, full card if owned
+ */
+export function sanitizeCardForCatalogue(card: Card, isOwned: boolean): Card {
+  if (isOwned) {
+    // Return full card for owned cards
+    return card
+  }
+
+  // For non-owned cards, create a limited version
+  // Remove: name, gameData.img, wikiUrl
+  // Keep: uid, id, tier, rarity, itemClass, flavourText, gameData (without img), relevanceScore
+  const sanitizedGameData: CardGameData = {
+    ...card.gameData,
+    img: '', // Remove image URL
+    foilImg: undefined, // Remove foil image URL
+  }
+
+  return {
+    ...card,
+    name: '', // Remove name
+    wikiUrl: '', // Remove wiki URL
+    gameData: sanitizedGameData,
+    isLimited: true, // Mark as limited
+  }
+}
+

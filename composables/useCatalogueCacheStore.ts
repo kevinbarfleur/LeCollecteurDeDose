@@ -14,8 +14,8 @@ export function useCatalogueCache() {
     return catalogueStore.catalogue
   }
 
-  const loadCatalogue = async (forceRefresh: boolean = false): Promise<Card[] | null> => {
-    await catalogueStore.fetchCatalogue(forceRefresh)
+  const loadCatalogue = async (forceRefresh: boolean = false, userId?: string): Promise<Card[] | null> => {
+    await catalogueStore.fetchCatalogue(forceRefresh, userId)
     return catalogueStore.catalogue
   }
 

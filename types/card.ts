@@ -36,6 +36,7 @@ export interface Card {
   foil?: boolean  // true if foil variant
   variation?: CardVariation  // DEPRECATED: use foil instead - kept for backwards compatibility
   relevanceScore?: number  // Optional score from POE wiki data
+  isLimited?: boolean  // true if card has limited information (no name, img, wikiUrl) - for non-owned cards in catalogue
 }
 
 // Helper function to check if a card is foil (supports both formats)

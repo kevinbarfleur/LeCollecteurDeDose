@@ -48,7 +48,11 @@ const previewViewRef = ref<HTMLElement | null>(null);
 const detailViewRef = ref<HTMLElement | null>(null);
 
 const isOwned = computed(() => props.owned !== false);
+const isLimited = computed(() => props.card.isLimited === true);
 const cardBackLogoUrl = "/images/orb.png";
+
+// State for limited card revelation
+const isLimitedRevealed = ref(false);
 
 type AnimationState = "idle" | "animating" | "expanded";
 const animationState = ref<AnimationState>("idle");
@@ -211,47 +215,123 @@ const closeCard = async () => {
     );
   }
 
-  currentTimeline
-    .to(
-      staggerElements,
-      {
-        opacity: 0,
-        duration: 0.15,
-        ease: "power2.in",
-      },
-      dezoomDuration
-    )
-    .to(
-      previewView,
-      {
-        opacity: 1,
-        duration: 0.2,
-        ease: "power2.out",
-      },
-      dezoomDuration + 0.05
-    )
-    .to(
-      card,
-      {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-        duration: 0.4,
-        ease: "power3.out",
-      },
-      dezoomDuration + 0.05
-    )
-    .to(
-      overlay,
-      {
-        opacity: 0,
-        backdropFilter: "blur(0px)",
-        duration: 0.35,
-        ease: "power2.in",
-      },
-      dezoomDuration + 0.1
-    );
+  // For limited cards, flip back synchronized with dezoom
+  if (isLimited.value && !isOwned.value) {
+    // Force border to disappear immediately - use both inline style and class
+    card.classList.add("game-card--border-hidden");
+    card.style.setProperty("border", "none", "important");
+    card.style.setProperty("border-color", "transparent", "important");
+    card.style.setProperty("border-width", "0", "important");
+    
+    currentTimeline
+      // Overlay disappears immediately, before flip/dezoom starts
+      .to(
+        overlay,
+        {
+          opacity: 0,
+          backdropFilter: "blur(0px)",
+          duration: 0.15,
+          ease: "power2.in",
+        },
+        0
+      )
+      .to(
+        staggerElements,
+        {
+          opacity: 0,
+          duration: 0.15,
+          ease: "power2.in",
+        },
+        dezoomDuration
+      )
+      // Synchronize flip back and dezoom: both happen simultaneously
+      // Keep border invisible during entire animation
+      .set(card, {
+        border: "none",
+        borderColor: "transparent",
+        borderWidth: 0,
+      }, dezoomDuration)
+      .to(
+        card,
+        {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          rotationY: 0, // Flip back synchronized with dezoom
+          duration: 0.4,
+          ease: "power3.out",
+        },
+        dezoomDuration
+      )
+      // Switch faces during flip back (synchronized with dezoom)
+      .to(
+        detailView,
+        {
+          opacity: 0,
+          rotationY: 180,
+          duration: 0.4,
+          ease: "power3.out",
+        },
+        dezoomDuration
+      )
+      .to(
+        previewView,
+        {
+          opacity: 1,
+          rotationY: 0,
+          display: "flex",
+          duration: 0.4,
+          ease: "power3.out",
+        },
+        dezoomDuration
+      )
+      .set(previewView, { display: "flex" }, dezoomDuration + 0.4)
+      .set(detailView, { display: "none" }, dezoomDuration + 0.4);
+  } else {
+    // Normal close for owned cards
+    currentTimeline
+      .to(
+        staggerElements,
+        {
+          opacity: 0,
+          duration: 0.15,
+          ease: "power2.in",
+        },
+        dezoomDuration
+      )
+      .to(
+        previewView,
+        {
+          opacity: 1,
+          duration: 0.2,
+          ease: "power2.out",
+        },
+        dezoomDuration + 0.05
+      )
+      .to(
+        card,
+        {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          duration: 0.4,
+          ease: "power3.out",
+        },
+        dezoomDuration + 0.05
+      )
+      .to(
+        overlay,
+        {
+          opacity: 0,
+          backdropFilter: "blur(0px)",
+          duration: 0.35,
+          ease: "power2.in",
+        },
+        dezoomDuration + 0.1
+      );
+  }
 };
 
 const resetToIdle = () => {
@@ -259,9 +339,23 @@ const resetToIdle = () => {
   originalRect.value = null;
   currentTimeline = null;
   zoomLevel.value = 1;
+  isLimitedRevealed.value = false;
 
   if (floatingCardRef.value) {
-    gsap.set(floatingCardRef.value, { clearProps: "all" });
+    // Remove border-hidden class and clear all inline styles
+    floatingCardRef.value.classList.remove("game-card--border-hidden");
+    gsap.set(floatingCardRef.value, { 
+      clearProps: "all",
+      border: "",
+      borderColor: "",
+      borderWidth: "",
+    });
+  }
+  if (previewViewRef.value) {
+    gsap.set(previewViewRef.value, { clearProps: "all" });
+  }
+  if (detailViewRef.value) {
+    gsap.set(detailViewRef.value, { clearProps: "all" });
   }
 };
 
@@ -291,7 +385,119 @@ const onFloatingWheel = (e: WheelEvent) => {
   }
 };
 
+const openLimitedCard = async () => {
+  if (!isLimited.value || !cardRef.value) return;
+
+  if (currentTimeline) {
+    currentTimeline.kill();
+  }
+
+  const rect = cardRef.value.getBoundingClientRect();
+  originalRect.value = rect;
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const targetWidth = Math.min(360, viewportWidth - 40);
+  const targetHeight = targetWidth * 1.4;
+  const centerX = (viewportWidth - targetWidth) / 2;
+  const centerY = (viewportHeight - targetHeight) / 2;
+
+  animationState.value = "animating";
+  isLimitedRevealed.value = true;
+
+  await nextTick();
+
+  const card = floatingCardRef.value;
+  const overlay = overlayRef.value;
+  const previewView = previewViewRef.value;
+  const detailView = detailViewRef.value;
+
+  if (!card || !overlay || !previewView || !detailView) return;
+
+  gsap.set(card, {
+    position: "fixed",
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+    zIndex: 1000,
+    rotationY: 0, // Start from back (0 degrees)
+  });
+
+  gsap.set(overlay, { opacity: 0, backdropFilter: "blur(0px)" });
+  gsap.set(previewView, { opacity: 1, rotationY: 0, display: "flex" }); // Back face visible
+  gsap.set(detailView, { opacity: 0, rotationY: 180, display: "flex" }); // Front face hidden initially
+
+  currentTimeline = gsap.timeline({
+    onComplete: () => {
+      animationState.value = "expanded";
+    },
+  });
+
+  // Animate overlay and card position/scale
+  currentTimeline
+    .to(
+      overlay,
+      {
+        opacity: 1,
+        backdropFilter: "blur(12px)",
+        duration: 0.45,
+        ease: "power2.out",
+      },
+      0
+    )
+    // Synchronize zoom and flip: both happen simultaneously
+    .to(
+      card,
+      {
+        top: centerY,
+        left: centerX,
+        width: targetWidth,
+        height: targetHeight,
+        rotationY: 180, // Flip synchronized with zoom
+        duration: 0.45,
+        ease: "power3.out",
+      },
+      0
+    )
+    // Switch faces during flip (synchronized with zoom/flip)
+    .to(
+      previewView,
+      {
+        opacity: 0,
+        rotationY: 180,
+        duration: 0.45,
+        ease: "power3.out",
+      },
+      0
+    )
+    .to(
+      detailView,
+      {
+        opacity: 1,
+        rotationY: 0,
+        duration: 0.45,
+        ease: "power3.out",
+      },
+      0
+    )
+    // Ensure detail view is visible after flip
+    .set(detailView, { display: "flex" }, 0.45)
+    .set(previewView, { display: "none" }, 0.45);
+};
+
 const handleClick = () => {
+  // Handle limited card revelation with animation
+  if (isLimited.value && !isOwned.value) {
+    if (animationState.value === "idle") {
+      openLimitedCard();
+    } else if (animationState.value === "expanded") {
+      closeCard();
+    }
+    emit("click", props.card);
+    return;
+  }
+
   if (!isOwned.value) return;
 
   // In preview-only mode, don't open detail view (parent handles it)
@@ -467,8 +673,13 @@ const onFloatingMouseMove = (e: MouseEvent) => {
 
   // Reduce tilt intensity when zoomed for better UX
   const tiltIntensity = zoomLevel.value > 1 ? 5 : 8;
-  const rotateY = ((x - centerX) / centerX) * tiltIntensity;
+  const tiltRotateY = ((x - centerX) / centerX) * tiltIntensity;
   const rotateX = ((centerY - y) / centerY) * tiltIntensity;
+
+  // For limited cards, preserve the 180° flip rotation and only apply tilt on X axis
+  // For owned cards, apply normal tilt on both axes
+  const baseRotationY = isLimited.value && !isOwned.value ? 180 : 0;
+  const rotateY = baseRotationY + tiltRotateY;
 
   // Apply slight scale boost on top of current zoom
   const hoverScale = zoomLevel.value * 1.02;
@@ -502,9 +713,11 @@ const onFloatingMouseEnter = () => {
 const onFloatingMouseLeave = () => {
   isFloatingHovering.value = false;
   if (floatingCardRef.value && animationState.value === "expanded") {
+    // For limited cards, preserve the 180° flip rotation when resetting tilt
+    const baseRotationY = isLimited.value && !isOwned.value ? 180 : 0;
     gsap.to(floatingCardRef.value, {
       rotateX: 0,
-      rotateY: 0,
+      rotateY: baseRotationY, // Preserve flip rotation for limited cards
       scale: zoomLevel.value, // Keep current zoom level
       duration: 0.5,
       ease: "power2.out",
@@ -623,7 +836,8 @@ const showOverlay = computed(() => animationState.value !== "idle");
               </svg>
             </button>
 
-            <div ref="previewViewRef" class="card-view card-view--preview">
+            <!-- Preview view for owned cards -->
+            <div v-if="isOwned" ref="previewViewRef" class="card-view card-view--preview">
               <div class="game-card__frame">
                 <div class="game-card__bg"></div>
               </div>
@@ -662,7 +876,31 @@ const showOverlay = computed(() => animationState.value !== "idle");
               </div>
             </div>
 
-            <div ref="detailViewRef" class="card-view card-view--detail">
+            <!-- Preview view for limited cards (back face) -->
+            <div v-else-if="isLimited" ref="previewViewRef" class="card-view card-view--preview card-view--back">
+              <div class="game-card__frame game-card__frame--back">
+                <div class="game-card__bg game-card__bg--back"></div>
+                <div class="card-back__border"></div>
+                <span class="card-back__rune card-back__rune--tl">✧</span>
+                <span class="card-back__rune card-back__rune--tr">✧</span>
+                <span class="card-back__rune card-back__rune--bl">✧</span>
+                <span class="card-back__rune card-back__rune--br">✧</span>
+              </div>
+              <div class="card-back__logo-wrapper">
+                <img
+                  :src="cardBackLogoUrl"
+                  alt="Le Collecteur de Dose"
+                  class="card-back__logo"
+                />
+              </div>
+              <div class="card-back__decoration">
+                <div class="card-back__line card-back__line--top"></div>
+                <div class="card-back__line card-back__line--bottom"></div>
+              </div>
+            </div>
+
+            <!-- Detail view for owned cards -->
+            <div v-if="isOwned" ref="detailViewRef" class="card-view card-view--detail">
               <div
                 class="detail__title-bar detail__stagger"
                 style="--stagger: 0"
@@ -760,6 +998,30 @@ const showOverlay = computed(() => animationState.value !== "idle");
                 </span>
               </div>
             </div>
+
+            <!-- Limited card detail view (no image, reorganized structure) -->
+            <div v-else-if="isLimited" ref="detailViewRef" class="card-view card-view--detail card-view--limited">
+              <!-- Wrapper to compensate for rotationY: 180 inversion -->
+              <div class="card-view__content-wrapper">
+                <!-- Type at the top as title -->
+                <div class="detail__limited-title detail__stagger" style="--stagger: 0">
+                  <span class="detail__limited-type">{{ card.itemClass }}</span>
+                </div>
+
+                <!-- Flavour text centered in the middle -->
+                <div class="detail__limited-flavour detail__stagger" style="--stagger: 1">
+                  <p v-if="card.flavourText" class="detail__limited-flavour-text">"{{ card.flavourText }}"</p>
+                  <p v-else class="detail__limited-flavour-empty">—</p>
+                </div>
+
+                <!-- Tier and rarity at the bottom, minimal -->
+                <div class="detail__limited-footer detail__stagger" style="--stagger: 2">
+                  <span class="detail__limited-tier">{{ card.tier }}</span>
+                  <span class="detail__limited-divider">◆</span>
+                  <span class="detail__limited-rarity">{{ card.rarity }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </article>
       </div>
@@ -767,16 +1029,21 @@ const showOverlay = computed(() => animationState.value !== "idle");
 
     <div v-if="isFloating && isOwned" class="game-card-placeholder" />
 
-    <!-- Back card (not owned) - Custom tilt like detail view -->
-    <div v-if="!isOwned" class="card-tilt-container">
+    <!-- Back card (not owned or limited not revealed) - Custom tilt like detail view -->
+    <div v-if="!isOwned && (!isLimited || !isLimitedRevealed)" class="card-tilt-container">
       <article
         ref="cardRef"
-        tabindex="-1"
-        :aria-label="t('common.unknownCard')"
+        role="button"
+        tabindex="0"
+        :aria-label="isLimited ? t('common.clickToReveal') : t('common.unknownCard')"
         class="game-card game-card--back game-card--preview"
+        :class="{ 'game-card--limited': isLimited }"
         @mouseenter="onMouseEnter"
         @mouseleave="onMouseLeave"
         @mousemove="onMouseMove"
+        @click="handleClick"
+        @keydown.enter="handleClick"
+        @keydown.space="handleClick"
       >
         <div class="game-card__frame game-card__frame--back">
           <div class="game-card__bg game-card__bg--back"></div>
@@ -799,6 +1066,7 @@ const showOverlay = computed(() => animationState.value !== "idle");
         </div>
       </article>
     </div>
+
 
     <!-- Front card (owned) - Custom tilt like detail view -->
     <div v-if="isOwned && !isFloating" class="card-tilt-container">
@@ -1543,6 +1811,22 @@ const showOverlay = computed(() => animationState.value !== "idle");
   will-change: transform;
 }
 
+.game-card--floating.game-card--border-hidden {
+  border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+}
+
+/* Override tier-specific border colors when border is hidden */
+.game-card--floating.game-card--border-hidden.game-card--t0,
+.game-card--floating.game-card--border-hidden.game-card--t1,
+.game-card--floating.game-card--border-hidden.game-card--t2,
+.game-card--floating.game-card--border-hidden.game-card--t3 {
+  border: none !important;
+  border-color: transparent !important;
+  border-width: 0 !important;
+}
+
 /* Zoomed state indicator */
 .game-card--floating.game-card--zoomed {
   cursor: zoom-out;
@@ -1700,5 +1984,117 @@ const showOverlay = computed(() => animationState.value !== "idle");
 }
 .card-back__line--bottom {
   bottom: 45px;
+}
+
+/* Limited card styles */
+.game-card--limited {
+  cursor: pointer;
+  position: relative;
+}
+
+.game-card--limited:hover {
+  transform: scale(1.02);
+  transition: transform 0.2s ease;
+}
+
+/* Limited card view in floating detail */
+.card-view--limited {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  justify-content: space-between;
+}
+
+/* Wrapper to compensate for rotationY: 180 inversion - flip text back */
+.card-view--limited .card-view__content-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transform: scaleX(-1); /* Compensate for parent rotationY: 180 to fix text mirroring */
+  transform-style: preserve-3d;
+}
+
+.detail__limited-title {
+  padding: 8px 0;
+  text-align: center;
+}
+
+.detail__limited-type {
+  font-family: "Cinzel", serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(175, 135, 80, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px rgba(175, 135, 80, 0.3);
+}
+
+.detail__limited-flavour {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  min-height: 0;
+}
+
+.detail__limited-flavour-text {
+  font-family: "Crimson Text", serif;
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(175, 135, 80, 0.85);
+  font-style: italic;
+  text-align: center;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.detail__limited-flavour-empty {
+  font-family: "Crimson Text", serif;
+  font-size: 11px;
+  color: rgba(175, 135, 80, 0.4);
+  font-style: italic;
+  text-align: center;
+}
+
+.detail__limited-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+  opacity: 0.7;
+}
+
+.detail__limited-tier {
+  font-family: "Cinzel", serif;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(175, 135, 80, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail__limited-divider {
+  font-size: 7px;
+  color: rgba(175, 135, 80, 0.5);
+}
+
+.detail__limited-rarity {
+  font-family: "Crimson Text", serif;
+  font-size: 9px;
+  color: rgba(175, 135, 80, 0.8);
+  text-transform: capitalize;
+}
+
+/* Back face in floating view for limited cards */
+.card-view--back {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
 }
 </style>

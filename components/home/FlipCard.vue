@@ -111,28 +111,28 @@ const truncatedFlavour = computed(() => {
       <div class="card-front">
         <!-- Title bar -->
         <div class="detail__title-bar">
-          <span class="detail__name">{{ card.name }}</span>
+          <span class="detail__name">{{ card.isLimited ? '???' : card.name }}</span>
           <span class="detail__tier-badge">{{ card.tier }}</span>
         </div>
 
         <!-- Artwork -->
         <div
           class="detail__artwork"
-          :class="{ 'detail__artwork--foil': isFoil }"
+          :class="{ 'detail__artwork--foil': isFoil, 'detail__artwork--limited': card.isLimited }"
         >
           <!-- Cosmos layers for foil -->
-          <template v-if="isFoil">
+          <template v-if="isFoil && !card.isLimited">
             <div class="cosmos-layer"></div>
             <div class="cosmos-glare"></div>
           </template>
           <img
-            v-if="cardImage"
+            v-if="cardImage && !card.isLimited"
             :src="cardImage"
-            :alt="card.name"
+            :alt="card.isLimited ? 'Carte limitée' : card.name"
             class="detail__image"
           />
-          <div v-else class="detail__image-placeholder">
-            <span>?</span>
+          <div v-else class="detail__image-placeholder" :class="{ 'detail__image-placeholder--limited': card.isLimited }">
+            <span>{{ card.isLimited ? '?' : '?' }}</span>
           </div>
         </div>
 
@@ -166,8 +166,8 @@ const truncatedFlavour = computed(() => {
         <!-- Bottom info -->
         <div class="detail__bottom-info">
           <span class="detail__collector-number">#{{ card.uid }}</span>
-          <span class="detail__wiki-link">Wiki ↗</span>
-          <span v-if="card.gameData?.weight" class="detail__weight">
+          <span v-if="!card.isLimited" class="detail__wiki-link">Wiki ↗</span>
+          <span v-if="card.gameData?.weight && !card.isLimited" class="detail__weight">
             ◆ {{ card.gameData.weight }}
           </span>
         </div>
@@ -893,5 +893,43 @@ const truncatedFlavour = computed(() => {
 /* Foil cards get subtle glow - front face only */
 .flip-card--foil .card-front {
   box-shadow: 0 0 15px rgba(201, 162, 39, 0.12), 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* Limited card styles */
+.detail__artwork--limited {
+  background: linear-gradient(
+    135deg,
+    rgba(40, 30, 25, 0.3) 0%,
+    rgba(60, 50, 40, 0.2) 50%,
+    rgba(40, 30, 25, 0.3) 100%
+  );
+  backdrop-filter: blur(3px);
+  position: relative;
+}
+
+.detail__artwork--limited::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 0, 0, 0.1) 10px,
+    rgba(0, 0, 0, 0.1) 20px
+  );
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.detail__image-placeholder--limited {
+  opacity: 0.4;
+  font-size: 24px;
+  color: rgba(175, 135, 80, 0.5);
+}
+
+.detail__name {
+  opacity: 0.5;
+  font-style: italic;
 }
 </style>

@@ -58,10 +58,11 @@ export async function fetchUserCards(
 
 /**
  * Fetch all unique cards (catalogue)
+ * @param userId - Optional user ID to limit information for non-owned cards
  */
-export async function fetchUniques(config: ApiServiceConfig = {}): Promise<any[] | null> {
+export async function fetchUniques(config: ApiServiceConfig = {}, userId?: string): Promise<any[] | null> {
   try {
-    const result = await SupabaseCollectionService.getAllUniqueCards()
+    const result = await SupabaseCollectionService.getAllUniqueCards(userId)
     return result
   } catch (error) {
     logError('Failed to fetch uniques', error, { service: 'ApiService' })

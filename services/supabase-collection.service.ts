@@ -9,6 +9,8 @@
 import { logError } from './logger.service'
 import type { Database } from '~/types/database'
 import * as MockService from './supabase-mock.service'
+import { sanitizeCardForCatalogue } from '~/utils/dataTransform'
+import type { Card } from '~/types/card'
 
 /**
  * Check if we're in mock mode
@@ -290,14 +292,17 @@ export async function getUserCards(username: string): Promise<any[] | null> {
 /**
  * Get all unique cards (catalogue)
  * Returns format compatible with existing API: Array<Card>
+ * 
+ * @param userId - Optional user ID to filter owned cards. If provided, non-owned cards will have limited information (no name, img, wikiUrl)
  */
-export async function getAllUniqueCards(): Promise<any[] | null> {
+export async function getAllUniqueCards(userId?: string): Promise<any[] | null> {
   if (await isMockMode()) {
     return MockService.getAllUniqueCards()
   }
   try {
     const supabase = getSupabaseRead()
     
+    // Fetch all cards
     const { data: cards, error } = await supabase
       .from('unique_cards')
       .select('*')
@@ -313,18 +318,50 @@ export async function getAllUniqueCards(): Promise<any[] | null> {
       return null
     }
 
-    const result = (cards || []).map(card => ({
-      uid: card.uid,
-      id: card.id,
-      name: card.name,
-      itemClass: card.item_class,
-      rarity: card.rarity,
-      tier: card.tier,
-      flavourText: card.flavour_text,
-      wikiUrl: card.wiki_url,
-      gameData: card.game_data,
-      relevanceScore: card.relevance_score
-    }))
+    // If userId is provided, fetch owned cards to determine which ones to limit
+    let ownedCardUids: Set<number> = new Set()
+    if (userId) {
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (!userError && user) {
+        const { data: userCollections, error: collectionsError } = await supabase
+          .from('user_collections')
+          .select('card_uid')
+          .eq('user_id', user.id)
+
+        if (!collectionsError && userCollections) {
+          ownedCardUids = new Set(userCollections.map(col => col.card_uid))
+        }
+      }
+    }
+
+    // Transform cards and apply sanitization for non-owned cards
+    const result = (cards || []).map(card => {
+      const transformedCard: Card = {
+        uid: card.uid,
+        id: card.id,
+        name: card.name,
+        itemClass: card.item_class,
+        rarity: card.rarity,
+        tier: card.tier,
+        flavourText: card.flavour_text,
+        wikiUrl: card.wiki_url,
+        gameData: card.game_data,
+        relevanceScore: card.relevance_score
+      }
+
+      // If userId is provided, sanitize non-owned cards
+      if (userId) {
+        const isOwned = ownedCardUids.has(card.uid)
+        return sanitizeCardForCatalogue(transformedCard, isOwned)
+      }
+
+      return transformedCard
+    })
     
     return result
   } catch (error) {
