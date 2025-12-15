@@ -313,7 +313,6 @@ const waitForTimeline = (
     // Safety timeout - force resolve if animation takes too long
     setTimeout(() => {
       if (!resolved) {
-        console.warn("Animation safety timeout triggered");
         timeline.kill();
         safeResolve();
       }
@@ -521,7 +520,6 @@ const renewDeck = async () => {
       renewalContext = null;
     }
   } catch (error) {
-    console.error("Renewal animation error:", error);
     // Force cleanup on error
     ejectingCards.value = [];
     arrivingCards.value = [];

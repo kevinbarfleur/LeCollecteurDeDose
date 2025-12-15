@@ -10,7 +10,7 @@ const { t } = useI18n();
 useHead({ title: t("meta.catalogue.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
-const { isApiData, isInitializing } = useDataSource();
+const { isSupabaseData, isInitializing } = useDataSource();
 const { fetchUserCollection, fetchUserCards } = useApi();
 const { loadCatalogue, getCachedCatalogue, isLoading: isCatalogueLoading } = useCatalogueCache();
 
@@ -21,7 +21,7 @@ const isLoadingCatalogue = ref(false);
 
 // Load catalogue data once on mount (cached, only fetches once per page session)
 onMounted(async () => {
-  if (isApiData.value && !isInitializing.value) {
+  if (isSupabaseData.value && !isInitializing.value) {
     isLoadingCatalogue.value = true;
     try {
       // Load catalogue from cache (or fetch if cache is empty)
@@ -44,7 +44,7 @@ onMounted(async () => {
 });
 
 // Watch for data source changes - reload data when switching between API and test
-watch([isApiData, isInitializing], async ([isApi, initializing]) => {
+watch([isSupabaseData, isInitializing], async ([isSupabase, initializing]) => {
   // Don't do anything while initializing
   if (initializing) {
     return;
@@ -68,7 +68,7 @@ watch([isApiData, isInitializing], async ([isApi, initializing]) => {
 });
 
 // Watch for user collection changes (this can change, so we always fetch it)
-watch([loggedIn, () => authUser.value?.displayName, isApiData, isInitializing], 
+watch([loggedIn, () => authUser.value?.displayName, isSupabaseData, isInitializing], 
   async ([isLoggedIn, displayName, isApi, initializing]) => {
     // Don't do anything while initializing
     if (initializing) {
@@ -104,7 +104,7 @@ watch([loggedIn, () => authUser.value?.displayName, isApiData, isInitializing],
 
 // Also watch for catalogue loading state
 watch(isCatalogueLoading, (loading) => {
-  if (loading && isApiData.value) {
+  if (loading && isSupabaseData.value) {
     isLoadingCatalogue.value = true;
   }
 });

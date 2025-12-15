@@ -9,7 +9,7 @@ import { defineStore } from 'pinia'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { fetchAppSettings, updateAppSetting, subscribeToAppSettings } from '~/services/supabase.service'
 import { useDataSourceStore } from './dataSource.store'
-import { logInfo, logError } from '~/services/logger.service'
+import { logError } from '~/services/logger.service'
 import { logAdminAction } from '~/services/diagnosticLogger.service'
 
 interface Settings {
@@ -37,7 +37,8 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
   // Getters
   const currentSettings = computed<Settings>(() => {
     const dataSourceStore = useDataSourceStore()
-    return dataSourceStore.isTestData ? settings.value.test : settings.value.api
+    // Use 'api' settings for both 'api' and 'supabase' modes (both are production)
+    return dataSourceStore.isMockData ? settings.value.test : settings.value.api
   })
 
   const altarOpen = computed(() => currentSettings.value.altarOpen)
@@ -55,7 +56,6 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
         } else {
           settings.value.api.altarOpen = newValue
         }
-        logInfo('Setting applied', { store: 'AppSettings', action: 'applySetting', key, dataMode, value: newValue })
         break
       }
       case 'activity_logs_enabled': {
@@ -66,7 +66,6 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
         } else {
           settings.value.api.activityLogsEnabled = newValue
         }
-        logInfo('Setting applied', { store: 'AppSettings', action: 'applySetting', key, dataMode, value: newValue })
         break
       }
     }
@@ -74,11 +73,9 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
 
   async function fetchSettings(): Promise<void> {
     isLoading.value = true
-    logInfo('Fetching app settings', { store: 'AppSettings', action: 'fetchSettings' })
 
     try {
       const data = await fetchAppSettings()
-      logInfo('Settings fetched', { store: 'AppSettings', action: 'fetchSettings', count: data.length })
 
       for (const setting of data) {
         const dataMode = (setting.data_mode as string) || 'api'
@@ -97,20 +94,18 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     userId: string,
     dataMode: 'api' | 'test' = 'api'
   ): Promise<void> {
-    logInfo('Updating setting', { store: 'AppSettings', action: 'updateSetting', key, dataMode })
     await updateAppSetting(key, value, userId, dataMode)
     // The realtime subscription will update the state automatically
   }
 
   async function toggleAltar(userId: string): Promise<void> {
     const dataSourceStore = useDataSourceStore()
-    const currentDataMode = dataSourceStore.isTestData ? 'test' : 'api'
+    // Use 'api' mode for both 'api' and 'supabase' (both are production)
+    const currentDataMode = dataSourceStore.isMockData ? 'test' : 'api'
     const currentValue = currentDataMode === 'test' 
       ? settings.value.test.altarOpen 
       : settings.value.api.altarOpen
     const newValue = !currentValue
-
-    logInfo('Toggling altar', { store: 'AppSettings', action: 'toggleAltar', dataMode: currentDataMode, from: currentValue, to: newValue })
     
     // Log diagnostic before updating
     if (import.meta.client) {
@@ -127,13 +122,12 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
 
   async function toggleActivityLogs(userId: string): Promise<void> {
     const dataSourceStore = useDataSourceStore()
-    const currentDataMode = dataSourceStore.isTestData ? 'test' : 'api'
+    // Use 'api' mode for both 'api' and 'supabase' (both are production)
+    const currentDataMode = dataSourceStore.isMockData ? 'test' : 'api'
     const currentValue = currentDataMode === 'test'
       ? settings.value.test.activityLogsEnabled
       : settings.value.api.activityLogsEnabled
     const newValue = !currentValue
-
-    logInfo('Toggling activity logs', { store: 'AppSettings', action: 'toggleActivityLogs', dataMode: currentDataMode, from: currentValue, to: newValue })
     
     // Log diagnostic before updating
     if (import.meta.client) {
@@ -150,7 +144,8 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
 
   async function setActivityLogsEnabled(enabled: boolean, userId: string): Promise<void> {
     const dataSourceStore = useDataSourceStore()
-    const currentDataMode = dataSourceStore.isTestData ? 'test' : 'api'
+    // Use 'api' mode for both 'api' and 'supabase' (both are production)
+    const currentDataMode = dataSourceStore.isMockData ? 'test' : 'api'
     await updateSetting('activity_logs_enabled', { enabled }, userId, currentDataMode)
   }
 
@@ -181,10 +176,8 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
   }
 
   async function initialize(): Promise<void> {
-    logInfo('Initializing app settings store', { store: 'AppSettings', action: 'initialize' })
     await fetchSettings()
     subscribeToRealtime()
-    logInfo('App settings store initialized', { store: 'AppSettings', action: 'initialize', connected: isConnected.value })
   }
 
   // Auto-initialize on client

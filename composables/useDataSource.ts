@@ -1,6 +1,22 @@
 /**
- * @deprecated Use useDataSourceStore instead
- * This file is kept for backward compatibility and re-exports the new store-based composable
+ * Composable wrapper for Data Source Store
+ * 
+ * Provides a composable interface that uses the Pinia store
  */
 
-export { useDataSource } from './useDataSourceStore'
+import { useDataSourceStore as useDataSourceStorePinia } from '~/stores/dataSource.store'
+
+export function useDataSource() {
+  const store = useDataSourceStorePinia()
+
+  return {
+    dataSource: computed(() => store.source),
+    isInitializing: computed(() => !store.isInitialized),
+    isMockData: computed(() => store.isMockData),
+    isSupabaseData: computed(() => store.isSupabaseData),
+    apiUrl: computed(() => store.apiUrl),
+    setDataSource: store.setDataSource,
+    toggleDataSource: store.toggleDataSource,
+    initialize: store.initialize,
+  }
+}

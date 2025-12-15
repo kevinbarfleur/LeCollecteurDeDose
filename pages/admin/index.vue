@@ -6,10 +6,16 @@ definePageMeta({
 const { t } = useI18n();
 const { user } = useUserSession();
 const { altarOpen, isLoading, isConnected, toggleAltar, activityLogsEnabled, toggleActivityLogs } = useAppSettings();
-const { dataSource, setDataSource, isApiData, isTestData } = useDataSource();
+const { dataSource, setDataSource, isSupabaseData, isMockData } = useDataSource();
 const { forcedOutcome } = useAltarDebug();
 const { getForcedOutcomeOptions } = await import('~/types/vaalOutcome');
 const { fetchUserCollections, fetchUniques, fetchUserCards } = useApi();
+
+// Bot action triggers
+const botActionUsername = ref('');
+const isTriggeringBooster = ref(false);
+const isTriggeringVaalOrbs = ref(false);
+const botActionMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
 
 useHead({ title: t("admin.meta.title") });
 
@@ -41,10 +47,10 @@ const handleActivityLogsToggle = async () => {
   }
 };
 
-// Data source options for RunicRadio
+// Data source options for RunicSelect
 const dataSourceOptions = computed(() => [
-  { value: "api", label: t("admin.dataSource.api"), color: "default" },
-  { value: "test", label: t("admin.dataSource.test"), color: "default" },
+  { value: "supabase", label: t("admin.dataSource.supabase") },
+  { value: "mock", label: t("admin.dataSource.test") },
 ]);
 
 
@@ -102,7 +108,7 @@ const createBackup = async () => {
   }
 };
 
-// Sync test data from real API
+// Sync mock data from Supabase production data
 const isSyncingTestData = ref(false);
 const syncTestData = async () => {
   if (isSyncingTestData.value) return;
@@ -128,50 +134,21 @@ const syncTestData = async () => {
   
   isSyncingTestData.value = true;
   try {
-
-    // Fetch data through Nuxt proxy (bypassing useApi to avoid mode issues)
-    // The proxy handles authentication and routing to the real API
-
-    // Fetch all data through the Nuxt proxy (server-side proxy handles auth)
-
-    const userCollectionsResponse = await $fetch('/api/data/userCollection', {
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    }).catch((error) => {
-
-      return null;
-    });
-    const userCollections = userCollectionsResponse as Record<string, any> || null;
-
-    const uniquesResponse = await $fetch('/api/data/uniques', {
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    }).catch((error) => {
-
-      return null;
-    });
-    const uniques = uniquesResponse as any[] || null;
+    // Fetch data directly from Supabase production database
+    const { getAllUserCollections, getAllUniqueCards, getUserCards } = await import('~/services/supabase-collection.service');
+    
+    const userCollections = await getAllUserCollections().catch(() => null);
+    const uniques = await getAllUniqueCards().catch(() => null);
     
     // Get all users from collections
     const users = userCollections ? Object.keys(userCollections) : [];
 
-    // Fetch userCards for each user through Nuxt proxy
-
+    // Fetch userCards for each user
     const userCardsPromises = users.map(async (user) => {
       try {
-        const cards = await $fetch(`/api/data/usercards/${user}`, {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }).catch((error) => {
-
-          return [];
-        });
+        const cards = await getUserCards(user).catch(() => []);
         return { user, cards: cards || [] };
       } catch (error) {
-
         return { user, cards: [] };
       }
     });
@@ -224,21 +201,27 @@ const syncTestData = async () => {
 // Confirmation modal composable
 const { confirm } = useConfirmModal();
 
+// Helper function to get data source label
+const getDataSourceLabel = (source: "supabase" | "mock") => {
+  if (source === "mock") return t("admin.dataSource.test");
+  return t("admin.dataSource.supabase");
+};
+
 // Computed for data source v-model - now with confirmation
 const dataSourceModel = computed({
   get: () => dataSource.value,
-  set: async (value: "api" | "test") => {
+  set: async (value: "supabase" | "mock") => {
     // Ask for confirmation for any change
     if (value !== dataSource.value) {
       const confirmed = await confirm({
         title: t("admin.dataSource.confirmTitle"),
         message: t("admin.dataSource.confirmMessage", {
-          from: dataSource.value === "api" ? t("admin.dataSource.api") : t("admin.dataSource.test"),
-          to: value === "api" ? t("admin.dataSource.api") : t("admin.dataSource.test"),
+          from: getDataSourceLabel((dataSource.value as any) === "mock" ? "mock" : "supabase"),
+          to: getDataSourceLabel(value),
         }),
         confirmText: t("admin.dataSource.confirmButton"),
         cancelText: t("common.cancel"),
-        variant: value === "api" ? "warning" : "default", // Warning when switching to API (production)
+        variant: "default",
       });
       
       if (!confirmed) {
@@ -285,6 +268,83 @@ const activityLogsEnabledModel = computed({
 // Altar Debug settings
 const forcedOutcomeOptions = computed(() => getForcedOutcomeOptions(t));
 
+// Bot action handlers
+const triggerBooster = async () => {
+  if (!botActionUsername.value || isTriggeringBooster.value) return;
+  
+  isTriggeringBooster.value = true;
+  botActionMessage.value = null;
+
+  try {
+    const response = await $fetch('/api/admin/trigger-bot-action', {
+      method: 'POST',
+      body: {
+        action: 'booster',
+        username: botActionUsername.value
+      }
+    });
+
+    if (response.ok) {
+      botActionMessage.value = {
+        type: 'success',
+        text: response.message || `✅ Booster ouvert pour ${botActionUsername.value} !`
+      };
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        botActionMessage.value = null;
+      }, 5000);
+    } else {
+      throw new Error('Failed to trigger booster');
+    }
+  } catch (error: any) {
+    botActionMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.message || 'Impossible d\'ouvrir le booster'}`
+    };
+  } finally {
+    isTriggeringBooster.value = false;
+  }
+};
+
+const triggerVaalOrbs = async () => {
+  if (!botActionUsername.value || isTriggeringVaalOrbs.value) return;
+  
+  isTriggeringVaalOrbs.value = true;
+  botActionMessage.value = null;
+
+  try {
+    const response = await $fetch('/api/admin/trigger-bot-action', {
+      method: 'POST',
+      body: {
+        action: 'vaal_orbs',
+        username: botActionUsername.value
+      }
+    });
+
+    if (response.ok) {
+      botActionMessage.value = {
+        type: 'success',
+        text: response.message || `✅ 5 Vaal Orbs ajoutés pour ${botActionUsername.value} !`
+      };
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        botActionMessage.value = null;
+      }, 5000);
+    } else {
+      throw new Error('Failed to trigger vaal orbs');
+    }
+  } catch (error: any) {
+    botActionMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.message || 'Impossible d\'ajouter les Vaal Orbs'}`
+    };
+  } finally {
+    isTriggeringVaalOrbs.value = false;
+  }
+};
+
 // Vaal Orbs debug control (only in mock mode)
 const debugVaalOrbs = ref(14);
 const isUpdatingVaalOrbs = ref(false);
@@ -317,6 +377,205 @@ const updateDebugVaalOrbs = (delta: number) => {
     window.dispatchEvent(new CustomEvent('altar:updateVaalOrbs', { detail: { value: newValue } }));
   }
 };
+
+// Navigation tabs
+const activeTab = ref<'main' | 'advanced'>('main');
+const tabOptions = computed(() => [
+  { value: 'main', label: 'Actions Principales' },
+  { value: 'advanced', label: 'Actions Avancées' },
+]);
+
+// Bot config modal
+const showBotConfigModal = ref(false);
+const botConfig = ref<Record<string, string>>({});
+const botConfigLoading = ref(false);
+const botConfigSaving = ref(false);
+const botConfigMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
+// Load bot config
+const loadBotConfig = async () => {
+  botConfigLoading.value = true;
+  try {
+    const response = await $fetch('/api/admin/bot-config');
+    if (response.ok && response.config) {
+      botConfig.value = response.config;
+    }
+  } catch (error: any) {
+    console.error('Error loading bot config:', error);
+    botConfigMessage.value = {
+      type: 'error',
+      text: `Erreur lors du chargement: ${error.message || 'Erreur inconnue'}`
+    };
+  } finally {
+    botConfigLoading.value = false;
+  }
+};
+
+// Save bot config value
+const saveBotConfigValue = async (key: string, value: string) => {
+  botConfigSaving.value = true;
+  botConfigMessage.value = null;
+  
+  try {
+    const response = await $fetch('/api/admin/bot-config', {
+      method: 'POST',
+      body: {
+        key,
+        value
+      }
+    });
+
+    if (response.ok) {
+      botConfig.value[key] = value;
+      botConfigMessage.value = {
+        type: 'success',
+        text: response.message || 'Configuration sauvegardée'
+      };
+      
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        botConfigMessage.value = null;
+      }, 3000);
+    } else {
+      throw new Error('Failed to save config');
+    }
+  } catch (error: any) {
+    botConfigMessage.value = {
+      type: 'error',
+      text: `Erreur: ${error.message || 'Impossible de sauvegarder'}`
+    };
+  } finally {
+    botConfigSaving.value = false;
+  }
+};
+
+// Watch modal visibility to load config when opened
+watch(showBotConfigModal, (isOpen) => {
+  if (isOpen) {
+    loadBotConfig();
+  }
+});
+
+// Config groups for organization
+const configGroups = computed(() => ({
+  activation: {
+    title: 'Activation',
+    keys: ['auto_triggers_enabled']
+  },
+  intervals: {
+    title: 'Intervalles (secondes)',
+    keys: ['auto_triggers_min_interval', 'auto_triggers_max_interval']
+  },
+  probabilities: {
+    title: 'Probabilités des Triggers (0.0 - 1.0)',
+    keys: [
+      'trigger_blessing_rngesus',
+      'trigger_cartographers_gift',
+      'trigger_mirror_tier',
+      'trigger_einhar_approved',
+      'trigger_heist_tax',
+      'trigger_sirus_voice',
+      'trigger_alch_misclick',
+      'trigger_trade_scam',
+      'trigger_chris_vision',
+      'trigger_atlas_influence'
+    ]
+  },
+  buffs: {
+    title: 'Buffs Temporaires',
+    keys: ['atlas_influence_duration', 'atlas_influence_foil_boost']
+  },
+  antiFocus: {
+    title: 'Anti-Focus (millisecondes)',
+    keys: [
+      'auto_triggers_target_cooldown',
+      'auto_triggers_min_users_for_cooldown',
+      'auto_triggers_user_activity_window'
+    ]
+  }
+}));
+
+// Config labels
+const configLabels: Record<string, string> = {
+  auto_triggers_enabled: 'Activer les triggers automatiques',
+  auto_triggers_min_interval: 'Intervalle minimum',
+  auto_triggers_max_interval: 'Intervalle maximum',
+  trigger_blessing_rngesus: 'Blessing of RNGesus',
+  trigger_cartographers_gift: 'Cartographer\'s Gift',
+  trigger_mirror_tier: 'Mirror-tier Moment',
+  trigger_einhar_approved: 'Einhar Approved',
+  trigger_heist_tax: 'Heist Tax',
+  trigger_sirus_voice: 'Sirus Voice Line',
+  trigger_alch_misclick: 'Alch & Go Misclick',
+  trigger_trade_scam: 'Trade Scam',
+  trigger_chris_vision: 'Chris Wilson\'s Vision',
+  trigger_atlas_influence: 'Atlas Influence',
+  atlas_influence_duration: 'Durée (minutes)',
+  atlas_influence_foil_boost: 'Bonus chance foil',
+  auto_triggers_target_cooldown: 'Cooldown de ciblage',
+  auto_triggers_min_users_for_cooldown: 'Minimum utilisateurs actifs',
+  auto_triggers_user_activity_window: 'Fenêtre d\'activité'
+};
+
+// Map config keys to trigger types for manual triggering
+const configKeyToTriggerType: Record<string, string> = {
+  trigger_blessing_rngesus: 'blessingRNGesus',
+  trigger_cartographers_gift: 'cartographersGift',
+  trigger_mirror_tier: 'mirrorTier',
+  trigger_einhar_approved: 'einharApproved',
+  trigger_heist_tax: 'heistTax',
+  trigger_sirus_voice: 'sirusVoice',
+  trigger_alch_misclick: 'alchMisclick',
+  trigger_trade_scam: 'tradeScam',
+  trigger_chris_vision: 'chrisVision',
+  trigger_atlas_influence: 'atlasInfluence'
+};
+
+// Manual trigger execution
+const manualTriggerLoading = ref<Record<string, boolean>>({});
+const manualTriggerMessage = ref<{ type: 'success' | 'error'; text: string; triggerType?: string } | null>(null);
+
+const triggerManualTrigger = async (triggerType: string) => {
+  manualTriggerLoading.value[triggerType] = true;
+  manualTriggerMessage.value = null;
+  
+  try {
+    const response = await $fetch<any>('/api/admin/trigger-manual', {
+      method: 'POST',
+      body: {
+        triggerType
+      }
+    });
+
+    if (response.ok && response.result?.success) {
+      manualTriggerMessage.value = {
+        type: 'success',
+        text: response.result.message || `✅ Trigger "${triggerType}" exécuté avec succès sur @${response.result.targetUser}`,
+        triggerType
+      };
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        manualTriggerMessage.value = null;
+      }, 5000);
+    } else {
+      throw new Error(response.result?.message || response.message || 'Échec du déclenchement');
+    }
+  } catch (error: any) {
+    manualTriggerMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.data?.message || error.message || 'Impossible de déclencher le trigger'}`,
+      triggerType
+    };
+    
+    // Clear message after 5 seconds
+    setTimeout(() => {
+      manualTriggerMessage.value = null;
+    }, 5000);
+  } finally {
+    manualTriggerLoading.value[triggerType] = false;
+  }
+};
 </script>
 
 <template>
@@ -331,643 +590,533 @@ const updateDebugVaalOrbs = (delta: number) => {
 
       <!-- Main content -->
       <RunicBox attached padding="lg">
-        <div class="admin-content">
+        <div class="flex flex-col gap-6">
           <!-- Status Bar -->
-          <div class="admin-status-bar">
-            <div class="admin-status-bar__item">
+          <div class="flex items-center gap-4 p-3.5 px-4 bg-black/20 border border-poe-border/30 rounded-md">
+            <div class="flex items-center gap-2.5">
               <span
-                class="admin-status-bar__indicator"
+                class="w-2.5 h-2.5 rounded-full animate-pulse"
                 :class="
                   isConnected
-                    ? 'admin-status-bar__indicator--connected'
-                    : 'admin-status-bar__indicator--disconnected'
+                    ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]'
+                    : 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]'
                 "
               />
-              <span class="admin-status-bar__text">
+              <span class="font-body text-lg text-poe-text-dim font-medium">
                 {{ isConnected ? t("admin.connected") : t("admin.disconnected") }}
               </span>
             </div>
-            <div class="admin-status-bar__divider"></div>
-            <div class="admin-status-bar__item admin-status-bar__user">
+            <div class="w-px h-6 bg-poe-border/30"></div>
+            <div class="flex items-center gap-3 ml-auto">
               <img
                 v-if="user?.avatar"
                 :src="user.avatar"
                 :alt="user.displayName"
-                class="admin-status-bar__avatar"
+                class="w-8 h-8 rounded-full border-2 border-accent/50"
               />
-              <div class="admin-status-bar__user-info">
-                <span class="admin-status-bar__name">{{ user?.displayName }}</span>
-                <span class="admin-status-bar__id">{{ user?.id?.slice(0, 8) }}...</span>
+              <div class="flex flex-col gap-0.5">
+                <span class="font-display text-lg font-semibold text-poe-text">{{ user?.displayName }}</span>
+                <span class="font-body text-base text-poe-text-dim italic">{{ user?.id?.slice(0, 8) }}...</span>
               </div>
             </div>
           </div>
 
-          <!-- Dashboard Grid -->
-          <div class="admin-dashboard-grid">
-            <!-- Card 1: Contrôles Principaux -->
-            <ClientOnly>
-              <div class="admin-card">
-                <div class="admin-card__header admin-card__header--default">
-                  <h2 class="admin-card__header-title">CONTRÔLES PRINCIPAUX</h2>
-                </div>
-                <div class="admin-card__content">
-                  <!-- Altar Control -->
-                  <div class="admin-card__row">
-                    <div class="admin-card__row-content">
-                      <label class="admin-card__row-label">Contrôle de l'Autel</label>
-                      <p class="admin-card__row-description">
-                        {{ t("admin.altar.description") }}
-                      </p>
-                    </div>
-                    <div class="admin-card__row-control">
-                      <span class="admin-card__row-status" :class="altarOpen ? 'admin-card__row-status--open' : 'admin-card__row-status--closed'">
-                        {{ altarOpen ? t("admin.altar.open") : t("admin.altar.closed") }}
-                      </span>
-                      <RunicRadio
-                        v-model="altarOpenModel"
-                        :toggle="true"
-                        size="md"
-                        toggle-color="default"
-                        :disabled="isLoading || isTogglingAltar"
-                      />
-                    </div>
-                  </div>
+          <!-- Navigation Tabs -->
+          <div class="flex justify-center my-6">
+            <RunicRadio
+              v-model="activeTab"
+              :options="tabOptions"
+              size="md"
+            />
+          </div>
 
-                  <!-- Activity Logs Control -->
-                  <div class="admin-card__row">
-                    <div class="admin-card__row-content">
-                      <label class="admin-card__row-label">Panneau de Logs d'Activité</label>
-                      <p class="admin-card__row-description">
-                        {{ t("admin.activityLogs.description") }}
-                      </p>
-                    </div>
-                    <div class="admin-card__row-control">
-                      <span class="admin-card__row-status" :class="activityLogsEnabled ? 'admin-card__row-status--open' : 'admin-card__row-status--closed'">
-                        {{ activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled") }}
-                      </span>
-                      <RunicRadio
-                        v-model="activityLogsEnabledModel"
-                        :toggle="true"
-                        size="md"
-                        toggle-color="default"
-                        :disabled="isLoading || isTogglingActivityLogs"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <template #fallback>
-                <div class="admin-card">
-                  <div class="admin-card__header admin-card__header--default">
-                    <h2 class="admin-card__header-title">CONTRÔLES PRINCIPAUX</h2>
-                  </div>
-                </div>
-              </template>
-            </ClientOnly>
-
-            <!-- Card 2: Outils de Test -->
-            <ClientOnly>
-              <div class="admin-card">
-                <div class="admin-card__header admin-card__header--default">
-                  <h2 class="admin-card__header-title">OUTILS DE TEST</h2>
-                </div>
-                <div class="admin-card__content">
-                  <!-- Data Source -->
-                  <div class="admin-card__row">
-                    <div class="admin-card__row-content">
-                      <label class="admin-card__row-label">Source des Données</label>
-                    </div>
-                    <div class="admin-card__row-control">
-                      <RunicRadio
-                        v-model="dataSourceModel"
-                        :options="dataSourceOptions"
-                        size="md"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Force Outcome -->
-                  <div class="admin-card__row">
-                    <div class="admin-card__row-content">
-                      <label class="admin-card__row-label">Forcer l'Issue de Corruption</label>
-                    </div>
-                    <div class="admin-card__row-control">
-                      <RunicSelect
-                        v-model="forcedOutcome"
-                        :options="forcedOutcomeOptions"
-                        size="md"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Vaal Orbs -->
-                  <div v-if="isTestData" class="admin-card__row">
-                    <div class="admin-card__row-content">
-                      <label class="admin-card__row-label">Vaal Orbs</label>
-                      <p class="admin-card__row-description">
-                        Nombre de Vaal Orbs disponibles pour les tests
-                      </p>
-                    </div>
-                    <div class="admin-card__row-control">
-                      <div class="admin-card__number-control">
-                        <button
-                          class="admin-card__number-btn"
-                          :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
-                          @click="updateDebugVaalOrbs(-1)"
+          <!-- Actions Principales -->
+          <div v-show="activeTab === 'main'" class="flex flex-col gap-8">
+            <!-- Section: Contrôles Principaux -->
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="CONTRÔLES PRINCIPAUX"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
+                    <!-- Altar Control -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Contrôle de l'Autel</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          {{ t("admin.altar.description") }}
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <span 
+                          class="font-display text-[0.9375rem] font-bold tracking-wider uppercase whitespace-nowrap px-2.5 py-1.5 rounded"
+                          :class="altarOpen ? 'text-green-400 bg-green-400/15 border border-green-400/30' : 'text-red-400 bg-red-400/15 border border-red-400/30'"
                         >
-                          −
-                        </button>
-                        <span class="admin-card__number-value">{{ debugVaalOrbs }}</span>
-                        <button
-                          class="admin-card__number-btn"
-                          :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
-                          @click="updateDebugVaalOrbs(1)"
+                          {{ altarOpen ? t("admin.altar.open") : t("admin.altar.closed") }}
+                        </span>
+                        <RunicRadio
+                          v-model="altarOpenModel"
+                          :toggle="true"
+                          size="md"
+                          toggle-color="default"
+                          :disabled="isLoading || isTogglingAltar"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Activity Logs Control -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Panneau de Logs d'Activité</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          {{ t("admin.activityLogs.description") }}
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <span 
+                          class="font-display text-[0.9375rem] font-bold tracking-wider uppercase whitespace-nowrap px-2.5 py-1.5 rounded"
+                          :class="activityLogsEnabled ? 'text-green-400 bg-green-400/15 border border-green-400/30' : 'text-red-400 bg-red-400/15 border border-red-400/30'"
                         >
-                          +
-                        </button>
+                          {{ activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled") }}
+                        </span>
+                        <RunicRadio
+                          v-model="activityLogsEnabledModel"
+                          :toggle="true"
+                          size="md"
+                          toggle-color="default"
+                          :disabled="isLoading || isTogglingActivityLogs"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Bot Triggers Configuration -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Triggers Automatiques</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Gérer les paramètres des triggers automatiques du bot Twitch
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="secondary"
+                          @click="showBotConfigModal = true"
+                        >
+                          ⚙️ Configurer
+                        </RunicButton>
                       </div>
                     </div>
                   </div>
-                  <div v-else class="admin-card__row">
-                    <p class="admin-card__hint">
-                      {{ t("admin.altarDebug.apiModeHint") }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <template #fallback>
-                <div class="admin-card">
-                  <div class="admin-card__header admin-card__header--default">
-                    <h2 class="admin-card__header-title">OUTILS DE TEST</h2>
-                  </div>
-                </div>
-              </template>
-            </ClientOnly>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="flex flex-col gap-5">
+                      <p class="font-body text-lg">Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
+          </div>
 
-            <!-- Card 3: Gestion des Données -->
-            <ClientOnly>
-              <div class="admin-card">
-                <div class="admin-card__header admin-card__header--default">
-                  <h2 class="admin-card__header-title">GESTION DES DONNÉES</h2>
-                </div>
-                <div class="admin-card__content admin-card__content--actions">
-                  <RunicButton
-                    size="md"
-                    variant="primary"
-                    :disabled="isCreatingBackup"
-                    @click="createBackup"
-                    class="admin-card__action-btn"
-                  >
-                    <span v-if="isCreatingBackup" class="admin-card__action-loading">
-                      <span class="admin-card__action-spinner"></span>
-                      {{ t("admin.dataSource.backingUp") }}
-                    </span>
-                    <span v-else>
-                      {{ t("admin.dataSource.backupButton") }}
-                    </span>
-                  </RunicButton>
-
-                  <RunicButton
-                    v-if="isTestData"
-                    size="md"
-                    variant="primary"
-                    :disabled="isSyncingTestData"
-                    @click="syncTestData"
-                    class="admin-card__action-btn"
-                  >
-                    <span v-if="isSyncingTestData" class="admin-card__action-loading">
-                      <span class="admin-card__action-spinner"></span>
-                      {{ t("admin.dataSource.syncing") }}
-                    </span>
-                    <span v-else>
-                      {{ t("admin.dataSource.syncButton") }}
-                    </span>
-                  </RunicButton>
-                </div>
-              </div>
-              <template #fallback>
-                <div class="admin-card">
-                  <div class="admin-card__header admin-card__header--default">
-                    <h2 class="admin-card__header-title">GESTION DES DONNÉES</h2>
+          <!-- Actions Avancées -->
+          <div v-show="activeTab === 'advanced'" class="flex flex-col gap-8">
+            <!-- Section: Logs et Diagnostic -->
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="LOGS ET DIAGNOSTIC"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Logs d'Erreurs</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Visualiser et gérer les erreurs de l'application pour le débogage
+                        </p>
+                      </div>
+                    </div>
+                    <RunicButton
+                      to="/admin/errors"
+                      icon="external"
+                      variant="primary"
+                      size="md"
+                      class="w-full mt-2"
+                    >
+                      VOIR LES LOGS
+                    </RunicButton>
                   </div>
-                </div>
-              </template>
-            </ClientOnly>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="admin-section__content">
+                      <p>Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
 
-            <!-- Card 4: Logs et Diagnostic -->
-            <ClientOnly>
-              <div class="admin-card">
-                <div class="admin-card__header admin-card__header--accent">
-                  <h2 class="admin-card__header-title">LOGS ET DIAGNOSTIC</h2>
-                </div>
-                <div class="admin-card__content">
-                  <div class="admin-card__row">
-                    <div class="admin-card__row-content">
-                      <label class="admin-card__row-label">Logs d'Erreurs</label>
-                      <p class="admin-card__row-description">
-                        Visualiser et gérer les erreurs de l'application pour le débogage
+            <!-- Section: Outils de Test -->
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="OUTILS DE TEST"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
+                    <!-- Data Source -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Source des Données</label>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicSelect
+                          v-model="dataSourceModel"
+                          :options="dataSourceOptions"
+                          size="md"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Force Outcome -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Forcer l'Issue de Corruption</label>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicSelect
+                          v-model="forcedOutcome"
+                          :options="forcedOutcomeOptions"
+                          size="md"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Vaal Orbs -->
+                    <div v-if="isMockData" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Vaal Orbs</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Nombre de Vaal Orbs disponibles pour les tests
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <div class="flex items-center justify-center gap-4 p-2 px-3 bg-black/30 border border-poe-border/40 rounded-md">
+                          <button
+                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
+                            @click="updateDebugVaalOrbs(-1)"
+                          >
+                            −
+                          </button>
+                          <span class="font-display text-[1.375rem] font-bold text-poe-text min-w-[2.5ch] text-center">{{ debugVaalOrbs }}</span>
+                          <button
+                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
+                            @click="updateDebugVaalOrbs(1)"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <p class="font-body text-lg text-poe-text-dim/60 text-center italic m-0 py-2">
+                        Les contrôles de debug Vaal Orbs sont disponibles uniquement en mode mock.
                       </p>
                     </div>
+
+                    <!-- Bot Actions -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Actions du Bot</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Déclencher des actions du bot pour tester
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Username input for bot actions -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Nom d'utilisateur</label>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <input
+                          v-model="botActionUsername"
+                          type="text"
+                          class="w-full px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-lg transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-poe-text/40"
+                          placeholder="Nom d'utilisateur Twitch"
+                          :disabled="isTriggeringBooster || isTriggeringVaalOrbs"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Bot action buttons -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Actions disponibles</label>
+                      </div>
+                      <div class="flex flex-col gap-3 flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="primary"
+                          :disabled="!botActionUsername || isTriggeringBooster || isTriggeringVaalOrbs"
+                          @click="triggerBooster"
+                          class="w-full"
+                        >
+                          <span v-if="!isTriggeringBooster">🎁 Ouvrir un Booster</span>
+                          <span v-else>Ouverture...</span>
+                        </RunicButton>
+                        <RunicButton
+                          size="md"
+                          variant="secondary"
+                          :disabled="!botActionUsername || isTriggeringBooster || isTriggeringVaalOrbs"
+                          @click="triggerVaalOrbs"
+                          class="w-full"
+                        >
+                          <span v-if="!isTriggeringVaalOrbs">✨ Acheter 5 Vaal Orbs</span>
+                          <span v-else>Achat...</span>
+                        </RunicButton>
+                      </div>
+                    </div>
+
+                    <!-- Bot action message -->
+                    <div v-if="botActionMessage" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div 
+                        class="w-full p-3 rounded text-center font-display text-lg"
+                        :class="{
+                          'bg-green-900/20 border border-green-700/40 text-green-200': botActionMessage.type === 'success',
+                          'bg-red-900/20 border border-red-700/40 text-red-200': botActionMessage.type === 'error'
+                        }"
+                      >
+                        {{ botActionMessage.text }}
+                      </div>
+                    </div>
                   </div>
-                  <RunicButton
-                    to="/admin/errors"
-                    icon="external"
-                    variant="primary"
-                    size="md"
-                    class="admin-card__action-btn admin-card__action-btn--full"
-                  >
-                    VOIR LES LOGS
-                  </RunicButton>
-                </div>
-              </div>
-              <template #fallback>
-                <div class="admin-card">
-                  <div class="admin-card__header admin-card__header--accent">
-                    <h2 class="admin-card__header-title">LOGS ET DIAGNOSTIC</h2>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="flex flex-col gap-5">
+                      <p class="font-body text-lg">Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
+
+            <!-- Section: Gestion des Données -->
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="GESTION DES DONNÉES"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-3.5">
+                    <RunicButton
+                      size="md"
+                      variant="primary"
+                      :disabled="isCreatingBackup"
+                      @click="createBackup"
+                      class="w-full"
+                    >
+                      <span v-if="isCreatingBackup" class="flex items-center gap-2.5">
+                        <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                        {{ t("admin.dataSource.backingUp") }}
+                      </span>
+                      <span v-else>
+                        {{ t("admin.dataSource.backupButton") }}
+                      </span>
+                    </RunicButton>
+
+                    <RunicButton
+                      v-if="isMockData"
+                      size="md"
+                      variant="primary"
+                      :disabled="isSyncingTestData"
+                      @click="syncTestData"
+                      class="w-full"
+                    >
+                      <span v-if="isSyncingTestData" class="flex items-center gap-2.5">
+                        <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                        {{ t("admin.dataSource.syncing") }}
+                      </span>
+                      <span v-else>
+                        {{ t("admin.dataSource.syncButton") }}
+                      </span>
+                    </RunicButton>
                   </div>
-                </div>
-              </template>
-            </ClientOnly>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="flex flex-col gap-5">
+                      <p class="font-body text-lg">Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
           </div>
         </div>
       </RunicBox>
+
+      <!-- Bot Config Modal -->
+      <ClientOnly>
+        <div
+          v-if="showBotConfigModal"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          @click.self="showBotConfigModal = false"
+        >
+          <RunicBox
+            class="max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4"
+            padding="lg"
+          >
+            <div class="flex flex-col gap-6">
+              <!-- Header -->
+              <div class="flex items-center justify-between">
+                <RunicHeader
+                  title="Triggers Automatiques"
+                  attached
+                />
+                <button
+                  @click="showBotConfigModal = false"
+                  class="w-8 h-8 flex items-center justify-center text-poe-text-dim hover:text-poe-text transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <!-- Loading state -->
+              <div v-if="botConfigLoading" class="flex items-center justify-center py-8">
+                <span class="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></span>
+                <span class="ml-3 font-body text-lg text-poe-text-dim">Chargement...</span>
+              </div>
+
+              <!-- Config form -->
+              <div v-else class="flex flex-col gap-6">
+                <!-- Config save message -->
+                <div
+                  v-if="botConfigMessage"
+                  class="p-3 rounded text-center font-display text-base"
+                  :class="{
+                    'bg-green-900/20 border border-green-700/40 text-green-200': botConfigMessage.type === 'success',
+                    'bg-red-900/20 border border-red-700/40 text-red-200': botConfigMessage.type === 'error'
+                  }"
+                >
+                  {{ botConfigMessage.text }}
+                </div>
+
+                <!-- Manual trigger message -->
+                <div
+                  v-if="manualTriggerMessage"
+                  class="p-3 rounded text-center font-display text-base"
+                  :class="{
+                    'bg-green-900/20 border border-green-700/40 text-green-200': manualTriggerMessage.type === 'success',
+                    'bg-red-900/20 border border-red-700/40 text-red-200': manualTriggerMessage.type === 'error'
+                  }"
+                >
+                  {{ manualTriggerMessage.text }}
+                </div>
+
+                <!-- Config groups -->
+                <div
+                  v-for="(group, groupKey) in configGroups"
+                  :key="groupKey"
+                  class="flex flex-col gap-4 pb-6 border-b border-poe-border/20 last:border-0 last:pb-0"
+                >
+                  <h3 class="font-display text-xl font-bold text-poe-text">{{ group.title }}</h3>
+                  
+                  <div class="flex flex-col gap-4">
+                    <div
+                      v-for="key in group.keys"
+                      :key="key"
+                      class="flex items-start justify-between gap-4"
+                    >
+                      <div class="flex-1 flex flex-col gap-1 min-w-0">
+                        <label class="font-display text-base font-semibold text-poe-text">
+                          {{ configLabels[key] || key }}
+                        </label>
+                        <span class="font-body text-sm text-poe-text-dim font-mono">{{ key }}</span>
+                      </div>
+                      <div class="flex items-center gap-3 flex-shrink-0">
+                        <!-- Boolean toggle -->
+                        <RunicRadio
+                          v-if="key === 'auto_triggers_enabled'"
+                          :model-value="botConfig[key] === 'true'"
+                          :toggle="true"
+                          size="md"
+                          toggle-color="default"
+                          :disabled="botConfigSaving"
+                          @update:model-value="saveBotConfigValue(key, $event ? 'true' : 'false')"
+                        />
+                        <!-- Number input with play button for triggers -->
+                        <template v-else>
+                          <input
+                            v-model="botConfig[key]"
+                            type="number"
+                            step="any"
+                            class="w-32 px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-base transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="botConfigSaving"
+                            @blur="saveBotConfigValue(key, botConfig[key])"
+                          />
+                          <!-- Play button for trigger probabilities -->
+                          <RunicButton
+                            v-if="configKeyToTriggerType[key]"
+                            @click="triggerManualTrigger(configKeyToTriggerType[key])"
+                            :disabled="manualTriggerLoading[configKeyToTriggerType[key]] || botConfigSaving"
+                            variant="secondary"
+                            size="sm"
+                            :icon="manualTriggerLoading[configKeyToTriggerType[key]] ? undefined : 'play'"
+                            :title="`Déclencher ${configLabels[key]} manuellement`"
+                            class="!w-10 !h-10 !p-0 !min-w-0 !gap-0 !flex items-center justify-center"
+                          >
+                            <span v-if="manualTriggerLoading[configKeyToTriggerType[key]]" class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
+                          </RunicButton>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Info message -->
+                <div class="p-4 bg-blue-900/20 border border-blue-700/40 rounded">
+                  <p class="font-body text-sm text-blue-200 m-0">
+                    💡 Les modifications sont sauvegardées automatiquement. Le bot rechargera la configuration au prochain redémarrage ou reconnexion.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </RunicBox>
+        </div>
+      </ClientOnly>
     </div>
   </NuxtLayout>
 </template>
 
 <style scoped>
 .admin-page {
-  max-width: 1200px;
+  @apply max-w-[1200px];
 }
 
 .admin-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* ==========================================
-   STATUS BAR
-   ========================================== */
-.admin-status-bar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.875rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(60, 55, 50, 0.3);
-  border-radius: 6px;
-}
-
-.admin-status-bar__item {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-}
-
-.admin-status-bar__divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(60, 55, 50, 0.3);
-}
-
-.admin-status-bar__indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-.admin-status-bar__indicator--connected {
-  background: #4ade80;
-  box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
-}
-
-.admin-status-bar__indicator--disconnected {
-  background: #f87171;
-  box-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
-  animation: none;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.admin-status-bar__text {
-  font-family: "Crimson Text", serif;
-  font-size: 0.875rem;
-  color: rgba(160, 150, 140, 0.85);
-  font-weight: 500;
-}
-
-.admin-status-bar__user {
-  margin-left: auto;
-  gap: 0.75rem;
-}
-
-.admin-status-bar__avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid rgba(175, 96, 37, 0.5);
-}
-
-.admin-status-bar__user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.admin-status-bar__name {
-  font-family: "Cinzel", serif;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: rgba(200, 190, 180, 0.95);
-}
-
-.admin-status-bar__id {
-  font-family: "Crimson Text", serif;
-  font-size: 0.75rem;
-  color: rgba(140, 130, 120, 0.7);
-  font-style: italic;
-}
-
-/* ==========================================
-   DASHBOARD GRID
-   ========================================== */
-.admin-dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-}
-
-/* ==========================================
-   ADMIN CARDS
-   ========================================== */
-.admin-card {
-  display: flex;
-  flex-direction: column;
-  background: rgba(18, 18, 22, 0.95);
-  border: 1px solid rgba(50, 45, 40, 0.4);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.admin-card__header {
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid rgba(50, 45, 40, 0.3);
-}
-
-.admin-card__header--default {
-  background: rgba(40, 38, 35, 0.6);
-}
-
-.admin-card__header--accent {
-  background: rgba(196, 80, 80, 0.2);
-  border-bottom-color: rgba(196, 80, 80, 0.3);
-}
-
-.admin-card__header-title {
-  font-family: "Cinzel", serif;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin: 0;
-}
-
-.admin-card__header--default .admin-card__header-title {
-  color: rgba(200, 190, 180, 0.9);
-}
-
-.admin-card__header--accent .admin-card__header-title {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.admin-card__content {
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.admin-card__content--actions {
-  gap: 0.875rem;
-}
-
-/* ==========================================
-   CARD ROWS
-   ========================================== */
-.admin-card__row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid rgba(50, 45, 40, 0.2);
-}
-
-.admin-card__row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.admin-card__row-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  min-width: 0;
-}
-
-.admin-card__row-label {
-  font-family: "Cinzel", serif;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: rgba(220, 210, 200, 0.95);
-  margin: 0;
-  line-height: 1.3;
-}
-
-.admin-card__row-description {
-  font-family: "Crimson Text", serif;
-  font-size: 0.8125rem;
-  color: rgba(140, 130, 120, 0.7);
-  line-height: 1.4;
-  margin: 0;
-}
-
-.admin-card__row-control {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  flex-shrink: 0;
-}
-
-.admin-card__row-status {
-  font-family: "Cinzel", serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 0.375rem 0.625rem;
-  border-radius: 4px;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.admin-card__row-status--open {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.15);
-  border: 1px solid rgba(74, 222, 128, 0.3);
-}
-
-.admin-card__row-status--closed {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.15);
-  border: 1px solid rgba(248, 113, 113, 0.3);
-}
-
-.admin-card__hint {
-  font-family: "Crimson Text", serif;
-  font-size: 0.8125rem;
-  color: rgba(120, 115, 110, 0.6);
-  text-align: center;
-  font-style: italic;
-  margin: 0;
-  padding: 0.5rem 0;
-}
-
-/* ==========================================
-   NUMBER CONTROL
-   ========================================== */
-.admin-card__number-control {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(60, 55, 50, 0.4);
-  border-radius: 6px;
-}
-
-.admin-card__number-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(175, 96, 37, 0.1);
-  border: 1px solid rgba(175, 96, 37, 0.3);
-  border-radius: 4px;
-  color: rgba(200, 190, 180, 0.9);
-  font-family: "Cinzel", serif;
-  font-size: 1.125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.admin-card__number-btn:hover:not(:disabled) {
-  background: rgba(175, 96, 37, 0.2);
-  border-color: rgba(175, 96, 37, 0.5);
-  color: #c9a227;
-}
-
-.admin-card__number-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.admin-card__number-value {
-  font-family: "Cinzel", serif;
-  font-size: 1.375rem;
-  font-weight: 700;
-  color: rgba(200, 190, 180, 0.95);
-  min-width: 2.5ch;
-  text-align: center;
-}
-
-/* ==========================================
-   ACTION BUTTONS
-   ========================================== */
-.admin-card__action-btn {
-  width: 100%;
-}
-
-.admin-card__action-btn--full {
-  margin-top: 0.5rem;
-}
-
-.admin-card__action-loading {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-}
-
-.admin-card__action-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ==========================================
-   RESPONSIVE
-   ========================================== */
-@media (max-width: 1024px) {
-  .admin-dashboard-grid {
-    grid-template-columns: 1fr;
-  }
+  @apply flex flex-col gap-6;
 }
 
 @media (max-width: 768px) {
   .admin-page {
-    padding: 0 0.5rem 1.5rem;
+    @apply px-2 pb-6;
   }
 
   .admin-content {
-    gap: 1.25rem;
-  }
-
-  .admin-status-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  .admin-status-bar__divider {
-    display: none;
-  }
-
-  .admin-status-bar__user {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .admin-card__row {
-    flex-direction: column;
-    gap: 0.875rem;
-    align-items: stretch;
-  }
-
-  .admin-card__row-control {
-    width: 100%;
-    justify-content: space-between;
+    @apply gap-5;
   }
 }
 </style>

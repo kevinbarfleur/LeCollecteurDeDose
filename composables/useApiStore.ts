@@ -24,6 +24,7 @@ export function useApi() {
       const config = getConfig()
       const result = await ApiService.fetchUserCollections(config)
       // If result is null and we're in API mode, it might indicate an API error
+      // Check for errors (config.isTestMode is now isMockMode for backward compatibility)
       if (result === null && !config.isTestMode) {
         if (!apiStore.error) {
           apiStore.setError({
@@ -61,6 +62,7 @@ export function useApi() {
       const result = await ApiService.fetchUserCollection(user, config)
       // If result is null and we're in API mode, it might indicate an API error
       // The error should already be set by the service, but we ensure it's tracked
+      // Check for errors (config.isTestMode is now isMockMode for backward compatibility)
       if (result === null && !config.isTestMode) {
         // Check if there was an error - if not, set a generic error
         if (!apiStore.error) {
@@ -98,6 +100,7 @@ export function useApi() {
       const config = getConfig()
       const result = await ApiService.fetchUserCards(user, config)
       // If result is null and we're in API mode, it might indicate an API error
+      // Check for errors (config.isTestMode is now isMockMode for backward compatibility)
       if (result === null && !config.isTestMode) {
         if (!apiStore.error) {
           apiStore.setError({

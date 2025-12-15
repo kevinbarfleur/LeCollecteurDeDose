@@ -10,6 +10,7 @@
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS + scoped CSS for complex effects
 - **Database**: Supabase (PostgreSQL)
+- **State Management**: Pinia stores
 - **Animations**: GSAP for complex animations
 - **i18n**: @nuxtjs/i18n (French/English)
 
@@ -67,19 +68,28 @@ const colors = getTierColors("T0");
 
 **Always check if a Runic component exists before creating custom UI.**
 
-| Component      | Usage                        |
-| -------------- | ---------------------------- |
-| `RunicButton`  | All buttons                  |
-| `RunicBox`     | Container with stone styling |
-| `RunicInput`   | Text inputs                  |
-| `RunicSelect`  | Dropdown selects             |
-| `RunicRadio`   | Toggle/radio groups          |
-| `RunicModal`   | All modal dialogs            |
-| `RunicIcon`    | SVG icons                    |
-| `RunicDivider` | Decorative separators        |
-| `RunicHeader`  | Section headers              |
-| `RunicNumber`  | Numeric inputs               |
-| `RunicStats`   | Statistics display           |
+| Component              | Usage                        |
+| ---------------------- | ---------------------------- |
+| `RunicButton`          | All buttons                  |
+| `RunicBox`             | Container with stone styling |
+| `RunicInput`           | Text inputs                  |
+| `RunicSelect`          | Dropdown selects             |
+| `RunicRadio`           | Toggle/radio groups          |
+| `RunicModal`           | All modal dialogs            |
+| `RunicConfirmModal`    | Confirmation dialogs         |
+| `RunicIcon`            | SVG icons                    |
+| `RunicDivider`         | Decorative separators        |
+| `RunicHeader`          | Section headers              |
+| `RunicNumber`          | Numeric inputs               |
+| `RunicStats`           | Statistics display           |
+| `RunicDateFilter`      | Date range filters           |
+| `ActivityLogsPanel`    | Activity logs display        |
+| `ActivityNotifications`| Activity notifications       |
+| `SyncStatusBanner`     | Sync status indicator        |
+| `TwitchLoginBtn`       | Twitch authentication        |
+| `LegalModal`           | Legal information modal      |
+| `ReloadModal`          | Reload confirmation modal    |
+| `CardGrid`             | Card grid layout             |
 
 ```vue
 <!-- ✅ Correct -->
@@ -116,7 +126,7 @@ Only use scoped CSS for complex visual effects that Tailwind cannot express.
 | `display: grid`            | `grid`                | `<div class="grid">`                |
 | `flex-direction: column`   | `flex-col`            | `<div class="flex-col">`            |
 | `align-items: center`      | `items-center`        | `<div class="items-center">`        |
-| `justify-content: center`  | `justify-center`      | `<div class="justify-center">`      |
+| `justify-content: center`  | `justify-center`      | `<div class="justify-center">`     |
 | `justify-content: between` | `justify-between`     | `<div class="justify-between">`     |
 | `gap: 0.5rem`              | `gap-2`               | `<div class="gap-2">`               |
 | `padding: 1rem`            | `p-4`                 | `<div class="p-4">`                 |
@@ -311,6 +321,14 @@ constants/
 types/
   card.ts                # camelCase
   vaalOutcome.ts
+
+stores/
+  api.store.ts           # camelCase with .store suffix
+  auth.store.ts
+
+services/
+  supabase.service.ts    # camelCase with .service suffix
+  supabase-collection.service.ts
 ```
 
 ---
@@ -402,18 +420,146 @@ export function useFeature(options?: Options) {
 
 ### Existing Composables
 
-| Composable             | Purpose                     |
-| ---------------------- | --------------------------- |
-| `useTierColors`        | Get tier-based colors       |
-| `useKeyboardShortcuts` | Keyboard event handling     |
-| `useCardGrouping`      | Group cards by variation    |
-| `useCardSorting`       | Sort cards with persistence |
-| `usePersistedFilter`   | SessionStorage filter state |
-| `useFoilEffect`        | Foil animation management   |
-| `useVaalOutcomes`      | Vaal orb outcome animations |
-| `useReplayRecorder`    | Record altar interactions   |
-| `useReplayPlayer`      | Playback recorded replays   |
-| `useActivityLogs`      | Realtime Supabase logs      |
+| Composable                  | Purpose                              |
+| --------------------------- | ------------------------------------ |
+| `useTierColors`             | Get tier-based colors                |
+| `useKeyboardShortcuts`       | Keyboard event handling              |
+| `useCardGrouping`           | Group cards by variation             |
+| `useCardSorting`            | Sort cards with persistence          |
+| `usePersistedFilter`        | SessionStorage filter state          |
+| `useFoilEffect`            | Foil animation management            |
+| `useVaalOutcomes`           | Vaal orb outcome animations          |
+| `useReplayRecorder`         | Record altar interactions            |
+| `useReplayPlayer`           | Playback recorded replays             |
+| `useActivityLogs`           | Realtime Supabase logs               |
+| `useApi`                    | API calls wrapper                    |
+| `useApiStatus`              | API status monitoring                |
+| `useApiStore`               | Access API Pinia store              |
+| `useAppSettings`            | App settings management              |
+| `useAppSettingsStore`       | Access app settings Pinia store     |
+| `useCollectionSync`         | Collection synchronization logic     |
+| `useCollectionSyncStore`    | Access collection sync Pinia store  |
+| `useCatalogueCache`         | Catalogue caching logic              |
+| `useCatalogueCacheStore`    | Access catalogue cache Pinia store  |
+| `useDataSource`             | Data source selection                |
+| `useDataSourceStore`        | Access data source Pinia store      |
+| `useSyncQueue`               | Sync queue management               |
+| `useSyncQueueStore`          | Access sync queue Pinia store       |
+| `useConfirmModal`           | Confirmation modal management        |
+| `useReloadModal`             | Reload modal management              |
+| `useAltarEffects`            | Altar visual effects                |
+| `useAltarAura`               | Altar aura effects                  |
+| `useAltarDebug`              | Altar debugging utilities           |
+| `useDisintegrationEffect`   | Disintegration animation            |
+| `useErrorLogger`             | Error logging utility               |
+| `useTestRunner`              | Test execution utility              |
+| `useDevTestMode`             | Development test mode               |
+
+---
+
+## 🗄️ State Management (Pinia Stores)
+
+### Available Stores
+
+| Store                    | Purpose                              |
+| ------------------------ | ------------------------------------ |
+| `api.store`              | API status and configuration         |
+| `appSettings.store`       | Application settings                 |
+| `auth.store`              | Authentication state                 |
+| `catalogue.store`        | Card catalogue data                  |
+| `dataSource.store`       | Data source selection (supabase/mock)|
+| `sync.store`             | Synchronization state                |
+
+### Using Stores
+
+```typescript
+// ✅ Correct: Use composables that wrap stores
+import { useApiStore } from "~/composables/useApiStore";
+import { useDataSourceStore } from "~/composables/useDataSourceStore";
+
+const apiStore = useApiStore();
+const dataSourceStore = useDataSourceStore();
+
+// Access store state
+const isApiOnline = apiStore.isOnline;
+const currentDataSource = dataSourceStore.currentSource; // 'supabase' | 'mock'
+
+// Call store actions
+await apiStore.checkStatus();
+dataSourceStore.setSource('mock');
+```
+
+---
+
+## 🔌 Services
+
+### Supabase Services
+
+The project uses service classes to abstract Supabase operations:
+
+| Service                          | Purpose                              |
+| -------------------------------- | ------------------------------------ |
+| `supabase.service.ts`            | Core Supabase client, admin checks, app settings |
+| `supabase-collection.service.ts` | Collection CRUD operations, routing based on dataSource |
+
+### Data Source Architecture
+
+The app supports two data sources:
+- **`supabase`**: Production database (PostgreSQL via Supabase)
+- **`mock`**: Development/testing with local mock data
+
+Services route operations based on `dataSourceStore.currentSource`:
+
+```typescript
+// ✅ Correct: Services handle routing automatically
+import { supabaseCollectionService } from "~/services/supabase-collection.service";
+
+// This will use Supabase or mock based on dataSourceStore
+const cards = await supabaseCollectionService.getCards();
+```
+
+---
+
+## 🤖 Autonomy Guidelines
+
+### Supabase Management Control Panel (MCP)
+
+**I have direct access to the Supabase Management Control Panel (MCP) and can perform necessary actions independently.**
+
+When working with Supabase-related tasks, I can:
+
+- **Create/modify database tables** - Add new tables, alter existing schemas, create indexes
+- **Manage database functions** - Create, update, or delete PostgreSQL functions
+- **Configure Row Level Security (RLS)** - Set up policies for table access
+- **Manage Edge Functions** - Deploy and update Supabase Edge Functions
+- **View and analyze data** - Query tables, check data integrity
+- **Manage database migrations** - Create and apply schema changes
+- **Configure triggers** - Set up database triggers for automation
+- **Monitor database performance** - Check query performance and optimize
+
+**When to use Supabase MCP:**
+- Database schema changes are needed
+- New tables or columns need to be created
+- RLS policies need to be updated
+- Edge Functions need to be deployed or updated
+- Data migrations are required
+- Performance optimization is needed
+
+**I should NOT ask for permission** to perform these actions when they are clearly needed to complete a task. Instead, I should:
+1. Analyze what needs to be done
+2. Perform the necessary Supabase operations
+3. Update the codebase accordingly
+4. Document any schema changes if significant
+
+### Other Autonomous Actions
+
+I can also:
+- **Create new files** when implementing features
+- **Modify existing files** to fix bugs or add functionality
+- **Update configuration files** (nuxt.config.ts, tailwind.config.ts, etc.)
+- **Add dependencies** to package.json when needed
+- **Update translation files** (i18n) when adding new text
+- **Create or update types** in the types/ directory
 
 ---
 
@@ -423,7 +569,7 @@ export function useFeature(options?: Options) {
 LeCollecteurDeDose/
 ├── assets/css/
 │   ├── main.css          # Global styles, CSS variables
-│   ├── cards.css         # Card component base styles
+│   ├── cards.css          # Card component base styles
 │   ├── altar.css         # Altar shared styles
 │   └── foil.css          # Complex foil effects
 ├── components/
@@ -433,8 +579,13 @@ LeCollecteurDeDose/
 ├── constants/
 │   └── colors.ts         # COLOR SOURCE OF TRUTH
 ├── pages/                # Nuxt pages
+├── stores/               # Pinia stores
+├── services/            # Service classes (Supabase, etc.)
 ├── types/                # TypeScript types
-└── i18n/locales/         # Translations
+├── i18n/locales/         # Translations
+└── supabase/
+    ├── functions/        # Edge Functions
+    └── migrations/       # Database migrations
 ```
 
 ---
@@ -515,6 +666,18 @@ const weightedCards = cards.sort((a, b) => {
 });
 ```
 
+### 7. Direct Store Access Instead of Composables
+
+```typescript
+// ❌ Wrong: Direct store import
+import { useApiStore } from "~/stores/api.store";
+const store = useApiStore();
+
+// ✅ Correct: Use composable wrapper
+import { useApiStore } from "~/composables/useApiStore";
+const store = useApiStore();
+```
+
 ---
 
 ## 🌐 Internationalization
@@ -550,6 +713,8 @@ Before submitting code, verify:
 - [ ] No duplicate CSS with global stylesheets
 - [ ] Complex visual effects only in scoped CSS
 - [ ] Props have default values when sensible
+- [ ] Stores accessed via composables, not directly
+- [ ] Services used for data operations, not direct Supabase calls
 
 ---
 
@@ -560,3 +725,6 @@ Before submitting code, verify:
 - **Design System Doc**: `DESIGN_SYSTEM.md`
 - **Tailwind Config**: `tailwind.config.ts`
 - **Global CSS**: `assets/css/main.css`
+- **Architecture**: `docs/ARCHITECTURE.md`
+- **Stores**: `stores/*.store.ts`
+- **Services**: `services/supabase*.service.ts`

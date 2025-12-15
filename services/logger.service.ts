@@ -32,9 +32,9 @@ function isLoggingEnabled(): boolean {
     // Access computed values - they're already computed refs
     // Use .value to get the actual boolean value
     const isAdmin = (authStore.isAdmin as any).value ?? false
-    const isTestData = (dataSourceStore.isTestData as any).value ?? false
+    const isMockData = (dataSourceStore.isMockData as any).value ?? false
     
-    return isAdmin && isTestData
+    return isAdmin && isMockData
   } catch {
     return false
   }

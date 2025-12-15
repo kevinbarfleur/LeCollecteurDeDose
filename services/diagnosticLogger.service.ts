@@ -50,13 +50,15 @@ function getUserInfo(): { user_id?: string; username?: string } {
 
 /**
  * Get data mode (client-side only)
+ * Returns 'api' for both 'api' and 'supabase' modes (both are production)
  */
 function getDataMode(): DataMode | undefined {
   if (!import.meta.client) return undefined
 
   try {
-    const { isApiData } = useDataSource()
-    return isApiData.value ? 'api' : 'test'
+    const { isSupabaseData, isMockData } = useDataSource()
+    // Supabase is production mode, mock is test mode
+    return isSupabaseData.value ? 'api' : 'test'
   } catch {
     return undefined
   }

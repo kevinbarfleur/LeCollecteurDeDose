@@ -34,7 +34,7 @@ export function useCollectionSync() {
     cards: Card[],
     vaalOrbs: number
   ): Promise<boolean> {
-    if (!dataSourceStore.isApiData) {
+    if (!dataSourceStore.isSupabaseData) {
       return true
     }
 
@@ -56,7 +56,7 @@ export function useCollectionSync() {
     cardUpdates: Map<number, CardUpdate>,
     vaalOrbsNewValue?: number
   ): Promise<boolean> {
-    if (!dataSourceStore.isApiData) {
+    if (!dataSourceStore.isSupabaseData) {
       return true
     }
 

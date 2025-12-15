@@ -39,7 +39,7 @@ const { altarOpen, isLoading: isLoadingSettings } = useAppSettings();
 useHead({ title: t("meta.altar.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
-const { isApiData, isInitializing } = useDataSource();
+const { isSupabaseData, isInitializing } = useDataSource();
 const { fetchUserCollection } = useApi();
 const { syncCollectionToApi, updateCardCounts, isSyncing: isCollectionSyncing } = useCollectionSync();
 const { isTestMode } = useDevTestMode();
@@ -142,7 +142,7 @@ const loadCollection = async () => {
 // Watch for data source changes and reload collection
 // Use a debounced approach to avoid multiple rapid calls
 let loadCollectionTimeout: ReturnType<typeof setTimeout> | null = null
-watch([isApiData, isInitializing, () => authUser.value?.displayName, loggedIn], async ([isApi, initializing, displayName, isLoggedIn]) => {
+watch([isSupabaseData, isInitializing, () => authUser.value?.displayName, loggedIn], async ([isSupabase, initializing, displayName, isLoggedIn]) => {
   // Don't reload while initializing
   if (initializing) {
     return;
@@ -180,7 +180,7 @@ onMounted(async () => {
   }
   
   // Listen for vaalOrbs updates from admin page (test mode only)
-  if (!isApiData && import.meta.client) {
+  if (!isSupabaseData.value && import.meta.client) {
     window.addEventListener('altar:updateVaalOrbs', ((e: CustomEvent<{ value: number }>) => {
       vaalOrbs.value = e.detail.value;
     }) as EventListener);
