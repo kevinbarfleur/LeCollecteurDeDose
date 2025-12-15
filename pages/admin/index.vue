@@ -517,6 +517,28 @@ const configLabels: Record<string, string> = {
   auto_triggers_user_activity_window: 'Fenêtre d\'activité'
 };
 
+// Config descriptions
+const configDescriptions: Record<string, string> = {
+  auto_triggers_enabled: 'Active ou désactive le système de triggers automatiques',
+  auto_triggers_min_interval: 'Délai minimum entre deux triggers (en secondes)',
+  auto_triggers_max_interval: 'Délai maximum entre deux triggers (en secondes)',
+  trigger_blessing_rngesus: 'Donne +1 Vaal Orb à l\'utilisateur',
+  trigger_cartographers_gift: 'Donne 1 carte aléatoire (non-foil) à l\'utilisateur',
+  trigger_mirror_tier: 'Duplique une carte aléatoire de la collection (nécessite des cartes)',
+  trigger_einhar_approved: 'Transforme une carte normale en foil (nécessite des cartes normales)',
+  trigger_heist_tax: 'Retire 1 Vaal Orb à l\'utilisateur (nécessite des Vaal Orbs)',
+  trigger_sirus_voice: 'Détruit une carte aléatoire de la collection (nécessite des cartes)',
+  trigger_alch_misclick: 'Reroll une carte aléatoire (nécessite des cartes)',
+  trigger_trade_scam: 'Transfère une carte à un autre utilisateur aléatoire (nécessite des cartes)',
+  trigger_chris_vision: 'Retire le foil d\'une carte foil (nécessite des cartes foil)',
+  trigger_atlas_influence: 'Ajoute un buff temporaire qui augmente la chance de foil',
+  atlas_influence_duration: 'Durée du buff Atlas Influence en minutes',
+  atlas_influence_foil_boost: 'Bonus de chance de foil (0.0 - 1.0) appliqué pendant le buff',
+  auto_triggers_target_cooldown: 'Temps avant de pouvoir cibler le même utilisateur (en millisecondes)',
+  auto_triggers_min_users_for_cooldown: 'Nombre minimum d\'utilisateurs actifs pour appliquer le cooldown strict',
+  auto_triggers_user_activity_window: 'Fenêtre de temps pour considérer un utilisateur comme actif (en millisecondes)'
+};
+
 // Map config keys to trigger types for manual triggering
 const configKeyToTriggerType: Record<string, string> = {
   trigger_blessing_rngesus: 'blessingRNGesus',
@@ -1044,7 +1066,10 @@ const triggerManualTrigger = async (triggerType: string) => {
                         <label class="font-display text-base font-semibold text-poe-text">
                           {{ configLabels[key] || key }}
                         </label>
-                        <span class="font-body text-sm text-poe-text-dim font-mono">{{ key }}</span>
+                        <p v-if="configDescriptions[key]" class="font-body text-sm text-poe-text-dim leading-relaxed m-0">
+                          {{ configDescriptions[key] }}
+                        </p>
+                        <span class="font-body text-xs text-poe-text-dim/60 font-mono">{{ key }}</span>
                       </div>
                       <div class="flex items-center gap-3 flex-shrink-0">
                         <!-- Boolean toggle -->
