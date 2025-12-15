@@ -6,6 +6,7 @@ definePageMeta({
 const { t } = useI18n();
 const { user } = useUserSession();
 const { altarOpen, isLoading, isConnected, toggleAltar, activityLogsEnabled, toggleActivityLogs } = useAppSettings();
+const { isMaintenanceMode, toggleMaintenanceMode, isLoading: isMaintenanceLoading } = useMaintenanceMode();
 const { dataSource, setDataSource, isSupabaseData, isMockData } = useDataSource();
 const { forcedOutcome } = useAltarDebug();
 const { getForcedOutcomeOptions } = await import('~/types/vaalOutcome');
@@ -26,6 +27,7 @@ useHead({ title: t("admin.meta.title") });
 // Local state for optimistic updates
 const isTogglingAltar = ref(false);
 const isTogglingActivityLogs = ref(false);
+const isTogglingMaintenance = ref(false);
 
 // Handle altar toggle
 const handleAltarToggle = async () => {
@@ -51,6 +53,31 @@ const handleActivityLogsToggle = async () => {
   }
 };
 
+// Handle maintenance mode toggle
+const handleMaintenanceToggle = async () => {
+  if (isTogglingMaintenance.value || !user.value?.id) return;
+  
+  // Ask for confirmation
+  const confirmed = await confirm({
+    title: isMaintenanceMode.value ? 'Désactiver le mode maintenance' : 'Activer le mode maintenance',
+    message: isMaintenanceMode.value 
+      ? 'Le royaume sera à nouveau accessible aux utilisateurs.'
+      : 'Le royaume sera mis en maintenance et les utilisateurs verront le message de maintenance.',
+    confirmText: isMaintenanceMode.value ? 'Désactiver' : 'Activer',
+    cancelText: t("common.cancel"),
+    variant: isMaintenanceMode.value ? "default" : "warning",
+  });
+  
+  if (!confirmed) return;
+  
+  isTogglingMaintenance.value = true;
+  try {
+    await toggleMaintenanceMode(user.value.id);
+  } finally {
+    isTogglingMaintenance.value = false;
+  }
+};
+
 // Data source options for RunicSelect
 const dataSourceOptions = computed(() => [
   { value: "supabase", label: t("admin.dataSource.supabase") },
@@ -58,8 +85,59 @@ const dataSourceOptions = computed(() => [
 ]);
 
 
-// Create manual backup
+// Backup management
 const isCreatingBackup = ref(false);
+const backupsList = ref<Array<{ id: string; backup_date: string; backup_time: string; created_at: string; user_collection?: any; uniques?: any }>>([]);
+const isLoadingBackups = ref(false);
+const selectedBackupId = ref<string>('');
+const isRestoringBackup = ref(false);
+const restoreBackupMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
+// Load backups list
+const loadBackups = async () => {
+  if (isLoadingBackups.value) return;
+  
+  isLoadingBackups.value = true;
+  try {
+    const supabase = useSupabaseClient();
+    const { data, error } = await supabase
+      .from('backup')
+      .select('id, backup_date, backup_time, created_at, user_collection, uniques')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('Error loading backups:', error);
+      return;
+    }
+
+    backupsList.value = (data || []).map(backup => ({
+      id: backup.id,
+      backup_date: backup.backup_date,
+      backup_time: backup.backup_time,
+      created_at: backup.created_at,
+      user_collection: backup.user_collection,
+      uniques: backup.uniques
+    }));
+  } catch (error: any) {
+    console.error('Error loading backups:', error);
+  } finally {
+    isLoadingBackups.value = false;
+  }
+};
+
+// Format backup display name
+const formatBackupName = (backup: { backup_date: string; backup_time: string; created_at: string; user_collection?: any; uniques?: any }) => {
+  const date = new Date(backup.created_at);
+  const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const usersCount = backup.user_collection ? Object.keys(backup.user_collection).length : 0;
+  const uniquesArray = Array.isArray(backup.uniques) ? backup.uniques : [];
+  const cardsCount = uniquesArray.length;
+  return `${dateStr} ${timeStr} (${usersCount} utilisateurs, ${cardsCount} cartes)`;
+};
+
+// Create manual backup
 const createBackup = async () => {
   if (isCreatingBackup.value) return;
   
@@ -103,6 +181,8 @@ const createBackup = async () => {
     });
 
     alert(t("admin.dataSource.backupSuccess"));
+    // Reload backups list after creating
+    await loadBackups();
   } catch (error: any) {
 
     const errorMessage = error.data?.message || error.message || 'Erreur inconnue';
@@ -111,6 +191,89 @@ const createBackup = async () => {
     isCreatingBackup.value = false;
   }
 };
+
+// Restore backup
+const restoreBackup = async () => {
+  if (isRestoringBackup.value || !selectedBackupId.value) return;
+  
+  // Check if user is authenticated
+  if (!user.value?.id) {
+    alert('Vous devez être connecté pour restaurer un backup.');
+    return;
+  }
+  
+  // Confirm action (critical operation)
+  const confirmed = await confirm({
+    title: 'Restaurer un backup',
+    message: '⚠️ ATTENTION : Cette opération va remplacer toutes les données actuelles par celles du backup sélectionné. Cette action est irréversible. Êtes-vous sûr de vouloir continuer ?',
+    confirmText: 'Oui, restaurer',
+    cancelText: t("common.cancel"),
+    variant: 'warning',
+  });
+  
+  if (!confirmed) {
+    return;
+  }
+  
+  isRestoringBackup.value = true;
+  restoreBackupMessage.value = null;
+  
+  try {
+    const config = useRuntimeConfig();
+    const supabaseUrl = config.public.supabase?.url || '';
+    const supabaseKey = config.public.supabase?.key || '';
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Configuration Supabase manquante');
+    }
+    
+    // Call the restore-backup Edge Function
+    const response = await $fetch(`${supabaseUrl}/functions/v1/restore-backup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
+      body: {
+        backupId: selectedBackupId.value
+      },
+    }) as { ok: boolean; message?: string; report?: any };
+
+    if (response.ok) {
+      restoreBackupMessage.value = {
+        type: 'success',
+        text: `✅ Backup restauré avec succès ! ${response.report ? `Utilisateurs: ${response.report.users.updated}, Collections: ${response.report.collections.restored}, Boosters: ${response.report.boosters.created}` : ''}`
+      };
+      // Clear selection
+      selectedBackupId.value = '';
+    } else {
+      const errorDetails = response.report ? JSON.stringify(response.report, null, 2) : '';
+      throw new Error(response.message || 'Erreur lors de la restauration' + (errorDetails ? `\n\n${errorDetails}` : ''));
+    }
+  } catch (error: any) {
+    const errorMessage = error.data?.message || error.message || 'Erreur inconnue';
+    restoreBackupMessage.value = {
+      type: 'error',
+      text: `❌ Erreur lors de la restauration : ${errorMessage}`
+    };
+  } finally {
+    isRestoringBackup.value = false;
+    
+    // Clear message after 10 seconds
+    if (restoreBackupMessage.value) {
+      setTimeout(() => {
+        restoreBackupMessage.value = null;
+      }, 10000);
+    }
+  }
+};
+
+// Load backups on mount
+if (import.meta.client) {
+  onMounted(() => {
+    loadBackups();
+  });
+}
 
 // Sync mock data from Supabase production data
 const isSyncingTestData = ref(false);
@@ -762,7 +925,7 @@ const triggerManualTrigger = async (triggerType: string) => {
                         </p>
                       </div>
                       <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <span 
+                        <span
                           class="font-display text-[0.9375rem] font-bold tracking-wider uppercase whitespace-nowrap px-2.5 py-1.5 rounded"
                           :class="activityLogsEnabled ? 'text-green-400 bg-green-400/15 border border-green-400/30' : 'text-red-400 bg-red-400/15 border border-red-400/30'"
                         >
@@ -775,6 +938,35 @@ const triggerManualTrigger = async (triggerType: string) => {
                           toggle-color="default"
                           :disabled="isLoading || isTogglingActivityLogs"
                         />
+                      </div>
+                    </div>
+
+                    <!-- Maintenance Mode Control -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Mode Maintenance</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Active le mode maintenance pour afficher le message "Le royaume est en service" sur toutes les pages interactives (catalogue, collection, autel).
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <span
+                          class="font-display text-[0.9375rem] font-bold tracking-wider uppercase whitespace-nowrap px-2.5 py-1.5 rounded"
+                          :class="isMaintenanceMode ? 'text-yellow-400 bg-yellow-400/15 border border-yellow-400/30' : 'text-gray-400 bg-gray-400/15 border border-gray-400/30'"
+                        >
+                          {{ isMaintenanceMode ? 'Activé' : 'Désactivé' }}
+                        </span>
+                        <RunicButton
+                          size="md"
+                          variant="primary"
+                          :disabled="isMaintenanceLoading || isTogglingMaintenance"
+                          @click="handleMaintenanceToggle"
+                        >
+                          <span v-if="!isTogglingMaintenance">
+                            {{ isMaintenanceMode ? 'Désactiver' : 'Activer' }}
+                          </span>
+                          <span v-else>En cours...</span>
+                        </RunicButton>
                       </div>
                     </div>
 
@@ -1037,39 +1229,115 @@ const triggerManualTrigger = async (triggerType: string) => {
               />
               <ClientOnly>
                 <RunicBox attached padding="lg">
-                  <div class="flex flex-col gap-3.5">
-                    <RunicButton
-                      size="md"
-                      variant="primary"
-                      :disabled="isCreatingBackup"
-                      @click="createBackup"
-                      class="w-full"
-                    >
-                      <span v-if="isCreatingBackup" class="flex items-center gap-2.5">
-                        <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                        {{ t("admin.dataSource.backingUp") }}
-                      </span>
-                      <span v-else>
-                        {{ t("admin.dataSource.backupButton") }}
-                      </span>
-                    </RunicButton>
+                  <div class="flex flex-col gap-5">
+                    <!-- Create Backup -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Créer un Backup</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Créer une sauvegarde complète de toutes les données (utilisateurs, collections, boosters, cartes, configuration)
+                        </p>
+                      </div>
+                      <div class="flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="primary"
+                          :disabled="isCreatingBackup"
+                          @click="createBackup"
+                        >
+                          <span v-if="isCreatingBackup" class="flex items-center gap-2.5">
+                            <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                            {{ t("admin.dataSource.backingUp") }}
+                          </span>
+                          <span v-else>
+                            {{ t("admin.dataSource.backupButton") }}
+                          </span>
+                        </RunicButton>
+                      </div>
+                    </div>
 
-                    <RunicButton
-                      v-if="isMockData"
-                      size="md"
-                      variant="primary"
-                      :disabled="isSyncingTestData"
-                      @click="syncTestData"
-                      class="w-full"
-                    >
-                      <span v-if="isSyncingTestData" class="flex items-center gap-2.5">
-                        <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                        {{ t("admin.dataSource.syncing") }}
-                      </span>
-                      <span v-else>
-                        {{ t("admin.dataSource.syncButton") }}
-                      </span>
-                    </RunicButton>
+                    <!-- Restore Backup -->
+                    <div class="flex flex-col gap-4 pb-5 border-b border-poe-border/20">
+                      <div class="flex items-start justify-between gap-6">
+                        <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                          <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Restaurer un Backup</label>
+                          <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                            Restaurer les données depuis un backup précédent. ⚠️ Cette opération remplace toutes les données actuelles.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <!-- Backup Select -->
+                      <div class="flex flex-col gap-3">
+                        <div v-if="isLoadingBackups" class="flex items-center gap-2 text-poe-text-dim">
+                          <span class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                          <span>Chargement des backups...</span>
+                        </div>
+                        <div v-else-if="backupsList.length === 0" class="text-poe-text-dim italic">
+                          Aucun backup disponible
+                        </div>
+                        <RunicSelect
+                          v-else
+                          v-model="selectedBackupId"
+                          :options="backupsList.map(b => ({ value: b.id, label: formatBackupName(b) }))"
+                          size="md"
+                          placeholder="Sélectionner un backup"
+                          :disabled="isRestoringBackup"
+                        />
+                        
+                        <!-- Restore Button -->
+                        <RunicButton
+                          size="md"
+                          variant="danger"
+                          :disabled="!selectedBackupId || isRestoringBackup"
+                          @click="restoreBackup"
+                          class="w-full"
+                        >
+                          <span v-if="!isRestoringBackup">🔄 Restaurer le backup sélectionné</span>
+                          <span v-else class="flex items-center gap-2.5">
+                            <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                            Restauration en cours...
+                          </span>
+                        </RunicButton>
+                        
+                        <!-- Restore Message -->
+                        <div v-if="restoreBackupMessage" 
+                          class="w-full p-3 rounded text-center font-display text-sm"
+                          :class="{
+                            'bg-green-900/20 border border-green-700/40 text-green-200': restoreBackupMessage.type === 'success',
+                            'bg-red-900/20 border border-red-700/40 text-red-200': restoreBackupMessage.type === 'error'
+                          }"
+                        >
+                          {{ restoreBackupMessage.text }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Sync Test Data -->
+                    <div v-if="isMockData" class="flex items-start justify-between gap-6">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Synchroniser les Données de Test</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Synchroniser les données de test depuis la base de données de production
+                        </p>
+                      </div>
+                      <div class="flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="primary"
+                          :disabled="isSyncingTestData"
+                          @click="syncTestData"
+                        >
+                          <span v-if="isSyncingTestData" class="flex items-center gap-2.5">
+                            <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                            {{ t("admin.dataSource.syncing") }}
+                          </span>
+                          <span v-else>
+                            {{ t("admin.dataSource.syncButton") }}
+                          </span>
+                        </RunicButton>
+                      </div>
+                    </div>
                   </div>
                 </RunicBox>
                 <template #fallback>

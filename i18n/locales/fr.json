@@ -295,7 +295,7 @@
       "syncSuccess": "✅ Données mock synchronisées avec succès depuis Supabase !",
       "syncStats": "Utilisateurs: {usersCount}, Cartes uniques: {uniquesCount}, Historiques: {userCardsCount}",
       "syncError": "❌ Erreur lors de la synchronisation des données mock.",
-      "backupButton": "Créer un Backup",
+      "backupButton": "Créer",
       "backingUp": "Création du backup en cours...",
       "backupConfirmTitle": "Créer un Backup",
       "backupConfirmMessage": "Tu vas créer un backup des données actuelles de Supabase. Cette action récupère toutes les données depuis Supabase et les sauvegarde dans la table backup. Es-tu sûr de vouloir continuer ?",

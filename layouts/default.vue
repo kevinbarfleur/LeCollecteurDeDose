@@ -4,7 +4,7 @@ const route = useRoute();
 const { user, loggedIn } = useUserSession();
 const { checkIsAdmin, isSupabaseData } = useDataSource();
 const { activityLogsEnabled } = useAppSettings();
-const { isApiOffline } = useApiStatus();
+const { shouldShowOfflineMessage } = useApiStatus();
 
 const navItems = computed(() => [
   { path: "/catalogue", label: t("nav.catalogue"), icon: "cards" },
@@ -34,12 +34,12 @@ watch(
 // Computed for template usage
 const canSeeAdminLink = computed(() => loggedIn.value && isAdmin.value);
 
-// Show game offline message when API is offline, but NOT on admin, about, or home pages
+// Show game offline message when API is offline or maintenance mode is enabled, but NOT on admin, about, or home pages
 const showGameOfflineMessage = computed(() => {
   // Never show on admin, about, or home pages
   if (route.path === '/admin' || route.path === '/about' || route.path === '/') return false;
-  // Only show if API mode is active and API is offline
-  return isSupabaseData.value && isApiOffline.value;
+  // Show if API mode is active and (API is offline OR maintenance mode is enabled)
+  return isSupabaseData.value && shouldShowOfflineMessage.value;
 });
 </script>
 
@@ -127,12 +127,14 @@ const showGameOfflineMessage = computed(() => {
         <div class="page-backdrop__corner page-backdrop__corner--br"></div>
       </div>
       <div class="main-content__inner">
-        <!-- Game Offline Message (shown on all pages except admin when API is offline) -->
+        <!-- Game Offline Message (shown on all pages except admin when API is offline or maintenance mode) -->
         <ClientOnly>
           <GameOfflineMessage v-if="showGameOfflineMessage" />
         </ClientOnly>
-        <!-- Always render slot, GameOfflineMessage will overlay if needed -->
-        <slot />
+        <!-- Hide slot content when maintenance/offline message is shown -->
+        <div v-if="!showGameOfflineMessage">
+          <slot />
+        </div>
       </div>
     </main>
 

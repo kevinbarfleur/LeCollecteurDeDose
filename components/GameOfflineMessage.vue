@@ -3,7 +3,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="game-offline min-h-[60vh] flex items-center justify-center py-12 px-4">
+  <div class="game-offline min-h-[calc(100vh-200px)] flex items-center justify-center py-12 px-4 w-full">
     <RunicBox padding="lg" max-width="500px" centered>
       <div class="game-offline__icon">
         <img

@@ -10,6 +10,7 @@
 import { useApi } from './useApiStore'
 import { useDataSource } from './useDataSourceStore'
 import { useApiStore } from '~/stores/api.store'
+import { useMaintenanceMode } from './useMaintenanceMode'
 
 // Track API status
 const isApiOffline = ref(false)
@@ -23,6 +24,7 @@ export function useApiStatus() {
   const { isSupabaseData } = useDataSource()
   const { fetchUserCollections } = useApi()
   const apiStore = useApiStore()
+  const { isMaintenanceMode } = useMaintenanceMode()
 
   /**
    * Check if API is available by making a lightweight request
@@ -162,8 +164,16 @@ export function useApiStatus() {
     })
   }
 
+  // Computed that combines API offline status with maintenance mode
+  // Maintenance mode takes priority - if enabled, show offline message
+  const shouldShowOfflineMessage = computed(() => {
+    return isMaintenanceMode.value || isApiOffline.value
+  })
+
   return {
     isApiOffline: computed(() => isApiOffline.value),
+    isMaintenanceMode,
+    shouldShowOfflineMessage,
     lastApiCheck: computed(() => lastApiCheck.value),
     checkApiStatus,
     startMonitoring,

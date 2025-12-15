@@ -468,6 +468,42 @@ export type Database = {
           }
         ]
       }
+      backup: {
+        Row: {
+          id: string
+          backup_date: string
+          backup_time: string
+          user_collection: Json
+          user_cards: Json
+          uniques: Json
+          bot_config: Json | null
+          app_settings: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          backup_date?: string
+          backup_time?: string
+          user_collection?: Json
+          user_cards?: Json
+          uniques?: Json
+          bot_config?: Json | null
+          app_settings?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          backup_date?: string
+          backup_time?: string
+          user_collection?: Json
+          user_cards?: Json
+          uniques?: Json
+          bot_config?: Json | null
+          app_settings?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

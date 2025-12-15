@@ -9,6 +9,18 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    })
+  }
+
   try {
     console.log('📦 Starting backup creation...')
 
@@ -31,7 +43,12 @@ serve(async (req) => {
       console.error('❌ Error fetching users:', usersError)
       return new Response(JSON.stringify({ error: 'Failed to fetch users', details: usersError.message }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        }
       })
     }
 
@@ -74,7 +91,12 @@ serve(async (req) => {
       console.error('❌ Error fetching unique cards:', cardsError)
       return new Response(JSON.stringify({ error: 'Failed to fetch unique cards', details: cardsError.message }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        }
       })
     }
 
@@ -159,13 +181,58 @@ serve(async (req) => {
       }
     }
 
+    // Fetch bot_config (important configuration)
+    const { data: botConfig, error: botConfigError } = await supabase
+      .from('bot_config')
+      .select('*')
+      .order('key', { ascending: true })
+
+    if (botConfigError) {
+      console.warn('⚠️ Error fetching bot_config:', botConfigError)
+    }
+
+    // Transform bot_config to simple key-value pairs
+    const botConfigMap: Record<string, string> = {}
+    if (botConfig) {
+      for (const config of botConfig) {
+        botConfigMap[config.key] = config.value
+      }
+    }
+
+    // Fetch app_settings (important application settings)
+    const { data: appSettings, error: appSettingsError } = await supabase
+      .from('app_settings')
+      .select('*')
+      .order('key', { ascending: true })
+
+    if (appSettingsError) {
+      console.warn('⚠️ Error fetching app_settings:', appSettingsError)
+    }
+
+    // Transform app_settings to key-value pairs with data_mode
+    const appSettingsMap: Record<string, any> = {}
+    if (appSettings) {
+      for (const setting of appSettings) {
+        const key = `${setting.key}_${setting.data_mode || 'api'}`
+        appSettingsMap[key] = {
+          key: setting.key,
+          value: setting.value,
+          data_mode: setting.data_mode || 'api',
+          updated_at: setting.updated_at,
+          updated_by: setting.updated_by
+        }
+      }
+    }
+
     // Insert backup into the backup table
     const { data: backupData, error: backupError } = await supabase
       .from('backup')
       .insert({
         user_collection: userCollections,
         user_cards: userCardsMap,
-        uniques: uniques
+        uniques: uniques,
+        bot_config: botConfigMap,
+        app_settings: appSettingsMap
       })
       .select()
       .single()
@@ -174,14 +241,21 @@ serve(async (req) => {
       console.error('❌ Error creating backup:', backupError)
       return new Response(JSON.stringify({ error: 'Failed to create backup', details: backupError.message }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        }
       })
     }
 
     const stats = {
       usersCount: Object.keys(userCollections).length,
       uniquesCount: uniques.length,
-      userCardsCount: Object.keys(userCardsMap).length
+      userCardsCount: Object.keys(userCardsMap).length,
+      botConfigCount: Object.keys(botConfigMap).length,
+      appSettingsCount: Object.keys(appSettingsMap).length
     }
 
     console.log(`✅ Backup created successfully:`, stats)
@@ -193,14 +267,24 @@ serve(async (req) => {
       stats
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      }
     })
 
   } catch (error) {
     console.error('❌ Unexpected error in daily-backup:', error)
     return new Response(JSON.stringify({ error: 'Internal server error', details: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      }
     })
   }
 })
