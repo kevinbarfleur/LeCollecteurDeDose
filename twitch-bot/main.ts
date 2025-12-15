@@ -996,6 +996,7 @@ async function executeRandomTrigger() {
 // HTTP server for webhooks and health checks
 async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
+  console.log(`📥 [${req.method}] ${url.pathname} - ${url.href}`)
   
   // CORS headers
   const corsHeaders = {

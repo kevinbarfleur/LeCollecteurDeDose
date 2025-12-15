@@ -64,23 +64,67 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get bot webhook URL from environment or config
-  const botWebhookUrl = config.public.botWebhookUrl || process.env.BOT_WEBHOOK_URL
+  // For local dev, prioritize localhost over Railway URL
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
   
-  if (!botWebhookUrl) {
-    throw createError({ 
-      statusCode: 500, 
-      message: 'Bot webhook URL not configured. Please set BOT_WEBHOOK_URL environment variable.' 
-    })
-  }
-
+  // In dev mode, prioritize localhost unless explicitly forced to use Railway
+  // Check environment variable first (highest priority)
+  const envBotUrl = process.env.BOT_WEBHOOK_URL
+  
+  // In dev mode: ALWAYS use localhost, ignore Railway URL from env/config
+  // This ensures local development uses the local bot which has the latest endpoints
+  // Note: Railway bot needs to be deployed with the latest code to support /webhook/trigger-manual
+  // To test Railway bot, deploy to production or set BOT_WEBHOOK_URL_FORCE_RAILWAY=true
+  const forceRailway = process.env.BOT_WEBHOOK_URL_FORCE_RAILWAY === 'true'
+  const botWebhookUrl = (isDev && !forceRailway)
+    ? 'http://localhost:3001'
+    : (envBotUrl || config.public.botWebhookUrl || 'https://lecollecteurdedose-production.up.railway.app')
+  
+  // Ensure URL has protocol
+  const finalBotUrl = botWebhookUrl.startsWith('http') 
+    ? botWebhookUrl 
+    : `https://${botWebhookUrl}`
+  
+  console.log(`[Admin] Using bot webhook URL: ${finalBotUrl} (dev: ${isDev}, forceRailway: ${forceRailway}, envBotUrl: ${envBotUrl || 'none'})`)
+  
   try {
-    // Ensure URL has protocol
-    const webhookUrl = botWebhookUrl.startsWith('http') 
-      ? botWebhookUrl 
-      : `https://${botWebhookUrl}`
+    // Use the final URL (already has protocol)
+    const webhookUrl = finalBotUrl
+    
+    // First, check if bot is available via health check
+    const healthCheckUrl = `${webhookUrl}/health`
+    console.log(`[Admin] Checking bot health at: ${healthCheckUrl}`)
+    try {
+      const healthResponse = await fetch(healthCheckUrl, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000) // 3 seconds timeout for health check
+      })
+      
+      console.log(`[Admin] Health check response: ${healthResponse.status} ${healthResponse.statusText}`)
+      
+      if (!healthResponse.ok) {
+        const healthText = await healthResponse.text().catch(() => '')
+        throw new Error(`Bot health check failed: ${healthResponse.status} - ${healthText}`)
+      }
+      
+      const healthData = await healthResponse.json().catch(() => ({}))
+      console.log(`[Admin] Bot health check passed:`, healthData)
+    } catch (healthError: any) {
+      console.error(`[Admin] Health check failed:`, healthError)
+      const errorMsg = isDev
+        ? `Bot non disponible. Démarrez le bot avec: cd twitch-bot && deno task start. Erreur: ${healthError.message}`
+        : `Bot service unavailable. Vérifiez que le bot Railway est déployé. Erreur: ${healthError.message}`
+      throw createError({ 
+        statusCode: 503, 
+        message: errorMsg
+      })
+    }
+    
+    const webhookEndpoint = `${webhookUrl}/webhook/trigger-manual`
+    console.log(`[Admin] Calling bot webhook: ${webhookEndpoint}`)
     
     // Call bot webhook to trigger the manual trigger
-    const response = await fetch(`${webhookUrl}/webhook/trigger-manual`, {
+    const response = await fetch(webhookEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,14 +132,40 @@ export default defineEventHandler(async (event) => {
       body: JSON.stringify({
         triggerType,
         isManual: true
-      })
+      }),
+      // Add timeout to avoid hanging
+      signal: AbortSignal.timeout(10000) // 10 seconds timeout
     })
 
+    console.log(`[Admin] Webhook response status: ${response.status} ${response.statusText}`)
+    
     if (!response.ok) {
-      const errorText = await response.text()
+      let errorText = 'Unknown error'
+      try {
+        errorText = await response.text()
+        console.error(`[Admin] Bot webhook error body: ${errorText}`)
+      } catch (e) {
+        errorText = `HTTP ${response.status} ${response.statusText}`
+        console.error(`[Admin] Failed to read error body:`, e)
+      }
+      
+      console.error(`[Admin] Bot webhook error: ${response.status} - ${errorText}`)
+      console.error(`[Admin] Requested URL: ${webhookEndpoint}`)
+      
+      // Provide more helpful error messages
+      if (response.status === 404) {
+        const helpMessage = isDev 
+          ? `Bot service endpoint not found (404). URL appelée: ${webhookEndpoint}. Vérifiez que le bot écoute bien sur le port 3001 et que l'endpoint /webhook/trigger-manual existe.`
+          : `Bot service endpoint not found. Vérifiez que le bot Railway est déployé et accessible à l'adresse: ${webhookUrl}`
+        throw createError({ 
+          statusCode: 503, 
+          message: helpMessage
+        })
+      }
+      
       throw createError({ 
         statusCode: response.status || 500, 
-        message: `Bot service error: ${errorText || 'Unknown error'}` 
+        message: `Bot service error (${response.status}): ${errorText}` 
       })
     }
 
@@ -122,14 +192,26 @@ export default defineEventHandler(async (event) => {
       throw error
     }
     
-    // Handle network errors
-    if (error.message?.includes('fetch')) {
+    // Handle timeout errors
+    if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
       throw createError({ 
-        statusCode: 503, 
-        message: 'Bot service unavailable. Please check if the bot is running.' 
+        statusCode: 504, 
+        message: `Timeout lors de l'appel au bot. Vérifiez que le bot est accessible à: ${botWebhookUrl}` 
       })
     }
     
+    // Handle network errors
+    if (error.message?.includes('fetch') || error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
+      const helpMessage = isDev 
+        ? `Bot service unavailable. Impossible de joindre le bot à l'adresse: ${botWebhookUrl}. Pour le développement local, démarrez le bot avec: cd twitch-bot && deno task start`
+        : `Bot service unavailable. Impossible de joindre le bot à l'adresse: ${botWebhookUrl}. Vérifiez que le bot Railway est déployé et accessible.`
+      throw createError({ 
+        statusCode: 503, 
+        message: helpMessage
+      })
+    }
+    
+    console.error('[Admin] Error triggering manual trigger:', error)
     throw createError({ 
       statusCode: 500, 
       message: error.message || 'Internal server error' 
