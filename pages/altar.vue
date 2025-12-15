@@ -23,7 +23,6 @@ import { useCollectionSync } from "~/composables/useCollectionSyncStore";
 import { useSyncQueue } from "~/composables/useSyncQueueStore";
 import { useAltarDebug } from "~/composables/useAltarDebug";
 import { transformUserCollectionToCards } from "~/utils/dataTransform";
-import { initTestRunner } from "~/test-scenarios/console";
 import { logCollectionState, logCollectionStateComparison } from "~/utils/collectionLogger";
 import { showReloadModal } from "~/composables/useReloadModal";
 import { logAltarAction, createAltarState } from "~/services/diagnosticLogger.service";
@@ -969,122 +968,6 @@ onMounted(() => {
     return counts
   }
 
-  // Get collection state helper
-  const getCollectionState = () => {
-    const state = {
-      cards: localCollection.value,
-      vaalOrbs: vaalOrbs.value,
-      cardCounts: calculateCardCounts(),
-    }
-
-    return state
-  }
-
-  // Simulate outcome helper
-  const simulateOutcome = async (outcome: string, cardUid?: number): Promise<void> => {
-
-    // If a specific card UID is provided, select that card
-    if (cardUid !== undefined) {
-      const targetCard = localCollection.value.find(c => Math.floor(c.uid) === Math.floor(cardUid))
-      if (!targetCard) {
-        throw new Error(`Card with UID ${cardUid} not found in collection`)
-      }
-      selectedCardId.value = targetCard.id
-      selectedVariation.value = targetCard.foil ? 'foil' : 'standard'
-      isCardOnAltar.value = true
-      await nextTick()
-      await new Promise(resolve => setTimeout(resolve, 100))
-    } else if (!isCardOnAltar.value) {
-      // Put a card on the altar if none
-      if (localCollection.value.length > 0) {
-        const firstCard = localCollection.value[0]
-        selectedCardId.value = firstCard.id
-        selectedVariation.value = firstCard.foil ? 'foil' : 'standard'
-        isCardOnAltar.value = true
-        // Wait for DOM to update so cardRef is available
-        await nextTick()
-        // Additional wait to ensure card element is rendered
-        await new Promise(resolve => setTimeout(resolve, 100))
-      } else {
-        throw new Error('No cards available for testing')
-      }
-    } else {
-      // Card already on altar, but ensure cardRef is available
-      await nextTick()
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-    }
-
-    // Verify cardRef is available for outcomes that need it
-    if (outcome !== 'nothing' && !altarCardRef.value) {
-
-      // Retry after a bit more time
-      await new Promise(resolve => setTimeout(resolve, 200))
-      if (!altarCardRef.value) {
-        throw new Error(`cardRef not available for outcome: ${outcome}. Cannot execute animation.`)
-      }
-    }
-
-    // Check vaalOrbs
-    if (vaalOrbs.value <= 0 && outcome !== 'nothing') {
-      throw new Error('Not enough vaalOrbs for this outcome')
-    }
-
-    // Execute outcome using the functions from useVaalOutcomes
-    // These functions will call onSyncRequired which is handleSyncRequired
-    switch (outcome.toLowerCase()) {
-      case 'nothing':
-        await executeNothing()
-        // For nothing, sync is handled manually in handleVaalOutcome
-        // But simulateOutcome calls executeNothing directly, so we need to sync manually
-        if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
-          const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
-          await handleSyncRequired(updates, -1, 'nothing');
-        }
-        break
-      case 'foil':
-        if (isCurrentCardFoil.value) {
-          throw new Error('Card is already foil')
-        }
-        await executeFoil()
-        // Sync is handled by executeFoil via onSyncRequired callback
-        break
-      case 'duplicate':
-        await executeDuplicate()
-        // Sync is handled by executeDuplicate via onSyncRequired callback
-        break
-      case 'destroyed':
-        await destroyCard()
-        // Sync is handled by cleanupAfterDestruction
-        break
-      case 'transform':
-        await executeTransform()
-        // Sync is handled by executeTransform via onSyncRequired callback
-        break
-      default:
-        throw new Error(`Unknown outcome: ${outcome}`)
-    }
-
-  }
-
-  // Get card by UID helper
-  const getCardByUid = (uid: number): Card | null => {
-    return localCollection.value.find(c => Math.floor(c.uid) === Math.floor(uid)) || null
-  }
-
-  // Add vaalOrbs helper (for testing)
-  const addVaalOrbs = (amount: number) => {
-    vaalOrbs.value = Math.max(0, vaalOrbs.value + amount)
-
-  }
-
-  // Initialize test runner
-  initTestRunner({
-    getCollectionState,
-    simulateOutcome,
-    getCardByUid,
-    addVaalOrbs,
-  })
 })
 
 const cleanupAfterDestruction = async (destroyedCardUid: number) => {
