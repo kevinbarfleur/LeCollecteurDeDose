@@ -1,26 +1,46 @@
-# Twitch Bot - Railway Deployment
+# Twitch Bot - Version Deno
 
-Service pour gérer le chat Twitch et interagir avec Supabase. Les récompenses Channel Points sont gérées par les Edge Functions Supabase.
+Version Deno du bot Twitch pour Railway. Cette version utilise Deno au lieu de Node.js pour une meilleure gestion des processus et des signaux.
+
+## 🚀 Avantages de Deno
+
+- ✅ **Meilleure gestion des signaux** : SIGTERM géré nativement
+- ✅ **Pas de npm** : Évite les problèmes de wrapper npm
+- ✅ **TypeScript natif** : Pas besoin de compilation
+- ✅ **Railway support** : Railway gère mieux Deno pour les services long-running
+
+## 📋 Prérequis
+
+- Deno installé (pour développement local)
+- Compte Railway
+- Token OAuth Twitch
 
 ## 🚀 Démarrage Local
 
 Pour tester le bot en local, consultez [QUICK_START.md](./QUICK_START.md)
 
-## 🚀 Déploiement Rapide sur Railway
+## 🚀 Déploiement sur Railway
 
 ### 1. Prérequis
 - Compte GitHub
 - Compte Railway (gratuit)
-- Token OAuth Twitch (voir [DEPLOYMENT_RAILWAY.md](./DEPLOYMENT_RAILWAY.md))
+- Token OAuth Twitch (voir ci-dessous)
 
-### 2. Déploiement
+### 2. Obtenir le Token OAuth Twitch
+
+1. Allez sur https://twitchapps.com/tmi/
+2. Cliquez sur "Connect with Twitch"
+3. Autorisez l'application
+4. Copiez le token généré (format: `oauth:xxxxx`)
+
+### 3. Déploiement
 
 1. **Créer un projet Railway** :
    - Allez sur https://railway.app
    - Créez un nouveau projet depuis GitHub
    - Sélectionnez ce repo et le dossier `twitch-bot`
 
-2. **Configurer les variables d'environnement** :
+2. **Configurer les variables d'environnement** dans Railway Dashboard :
    ```
    TWITCH_BOT_USERNAME=votre_bot_username
    TWITCH_BOT_OAUTH_TOKEN=oauth:votre_token
@@ -29,13 +49,23 @@ Pour tester le bot en local, consultez [QUICK_START.md](./QUICK_START.md)
    SUPABASE_KEY=votre_anon_key
    ```
 
-3. **Déployer** :
-   - Railway déploiera automatiquement
-   - Vérifiez les logs pour confirmer la connexion
+3. **Configurer Railway Dashboard** :
+   - **Settings** → **Deploy** → **Custom Start Command** : `deno run --allow-net --allow-env --allow-read main.ts`
+   - **Serverless** : Désactivé
+   - **Restart Policy** : `ALWAYS`
+   - **Health Check** : Path `/health`, Timeout `300s`
 
-## 📖 Documentation Complète
+4. **Créer un Public Domain** :
+   - **Settings** → **Networking** → Créer un domaine public
+   - Notez l'URL (ex: `https://votre-service.railway.app`)
 
-Pour un guide détaillé, consultez [DEPLOYMENT_RAILWAY.md](./DEPLOYMENT_RAILWAY.md)
+5. **Configurer Supabase Edge Function** :
+   - Dans `handle-reward`, configurez `BOT_WEBHOOK_URL` avec votre URL Railway
+   - Format : `https://votre-service.railway.app/webhook/message`
+
+6. **Vérifier le déploiement** :
+   - Testez le health check : `curl https://votre-service.railway.app/health`
+   - Vérifiez les logs Railway pour voir `✅ Bot connected to Twitch chat`
 
 ## 🔧 Variables d'Environnement
 
@@ -52,7 +82,7 @@ Pour un guide détaillé, consultez [DEPLOYMENT_RAILWAY.md](./DEPLOYMENT_RAILWAY
 
 ## 🎯 Fonctionnalités
 
-- ✅ Connexion au chat Twitch via TMI.js
+- ✅ Connexion au chat Twitch via `twitch_irc` (Deno)
 - ✅ Commandes chat interactives avec Supabase :
   - `!ping` → Répond `Pong!`
   - `!collection [username]` → Affiche la collection d'un utilisateur (cartes, foils, Vaal Orbs)
@@ -61,6 +91,7 @@ Pour un guide détaillé, consultez [DEPLOYMENT_RAILWAY.md](./DEPLOYMENT_RAILWAY
 - ✅ Webhook automatique pour recevoir messages des Edge Functions Supabase (handle-reward)
 - ✅ Reconnexion automatique en cas de déconnexion
 - ✅ Interaction directe avec Supabase Database
+- ✅ TypeScript natif avec Deno
 
 ## 📝 Notes
 
@@ -71,8 +102,46 @@ Pour un guide détaillé, consultez [DEPLOYMENT_RAILWAY.md](./DEPLOYMENT_RAILWAY
 - **Important** : Configurez `BOT_WEBHOOK_URL` dans Supabase Edge Functions avec l'URL publique de votre bot Railway
   - Format : `https://votre-service.railway.app/webhook/message`
 
+## 📚 Bibliothèques Utilisées
+
+- **twitch_irc** : Client Twitch IRC pour Deno
+  - Documentation : https://deno.land/x/twitch_irc
+- **@supabase/supabase-js** : Client Supabase (via esm.sh)
+- **Deno std/http** : Serveur HTTP natif Deno
+
+## 🔄 Différences avec Node.js
+
+- `tmi.js` → `twitch_irc` (Deno)
+- `http` → `serve()` de Deno std
+- `process.on('SIGTERM')` → `Deno.addSignalListener('SIGTERM')`
+- Pas de `package.json` ou `npm install` nécessaire
+
+## 🐛 Dépannage
+
+### Le bot s'arrête avec SIGTERM
+
+1. **Vérifiez Railway Dashboard** :
+   - **Settings** → **Deploy** → **Custom Start Command** = `deno run --allow-net --allow-env --allow-read main.ts`
+   - **Serverless** : Désactivé
+   - **Restart Policy** : `ALWAYS`
+   - **Health Check** : Path `/health`, Timeout `300s`
+
+2. **Vérifiez les logs** Railway pour voir les erreurs
+
+3. **Testez le health check** :
+   ```bash
+   curl https://votre-service.railway.app/health
+   ```
+
+### Le bot ne se connecte pas à Twitch
+
+1. Vérifiez le token OAuth (doit commencer par `oauth:`)
+2. Vérifiez que le nom d'utilisateur et la chaîne sont corrects
+3. Vérifiez les logs Railway pour les erreurs de connexion
+
 ## 🔗 Liens Utiles
 
-- [Railway Documentation](https://docs.railway.app)
-- [TMI.js Documentation](https://github.com/tmijs/tmi.js)
+- [Deno Documentation](https://deno.land/manual)
+- [Railway Deno Guide](https://docs.railway.com/guides/deno)
+- [twitch_irc Documentation](https://deno.land/x/twitch_irc)
 - [Twitch OAuth Token Generator](https://twitchapps.com/tmi/)

@@ -1,24 +1,24 @@
-# Guide de Démarrage Rapide - Bot Twitch Local
+# Guide de Démarrage Rapide - Bot Twitch Local (Deno)
 
-Ce guide vous explique comment lancer le bot Twitch en local pour tester.
+Ce guide vous explique comment lancer le bot Twitch en local pour tester avec Deno.
 
 ## 📋 Prérequis
 
-1. **Node.js** installé (version 18 ou supérieure)
+1. **Deno** installé (version 1.30 ou supérieure)
+   - Installation : https://deno.land/manual/getting_started/installation
 2. **Token OAuth Twitch** pour le bot
 3. **Nom d'utilisateur Twitch** du bot
 4. **Nom de votre chaîne Twitch**
 
 ## 🚀 Démarrage Rapide
 
-### 1. Installer les dépendances
+### 1. Vérifier Deno
 
 ```bash
-cd twitch-bot
-npm install
+deno --version
 ```
 
-### 2. Créer le fichier `.env`
+### 2. Configurer les variables d'environnement
 
 Créez un fichier `.env` à la racine du dossier `twitch-bot` avec le contenu suivant :
 
@@ -54,13 +54,13 @@ PORT=3001
 ### 4. Lancer le bot
 
 ```bash
-npm start
+deno run --allow-net --allow-env --allow-read main.ts
 ```
 
-Ou directement avec Node.js :
+Ou avec la tâche définie :
 
 ```bash
-node index.js
+deno task start
 ```
 
 ## ✅ Vérifier que ça fonctionne
@@ -74,6 +74,9 @@ Une fois lancé, vous devriez voir dans la console :
 ✅ Supabase client initialized
 📡 Webhook server listening on port 3001
    Endpoint: http://0.0.0.0:3001/webhook/message
+   Health check: http://0.0.0.0:3001/health
+✅ HTTP server ready - Railway can now perform health checks
+🔌 Connecting to Twitch...
 ✅ Bot connected to Twitch chat: MaChaine
 ```
 
@@ -124,12 +127,21 @@ Le webhook est **automatiquement activé** pour recevoir les messages de `handle
    - Pas de `#` au début
    - Nom exact de la chaîne (sans espaces)
 
-### Erreur "Cannot find module"
+### Erreur "Cannot find module" ou problèmes d'imports
 
-```bash
-cd twitch-bot
-npm install
-```
+Avec Deno, les modules sont téléchargés automatiquement. Si vous avez des problèmes :
+
+1. Vérifiez que Deno est bien installé :
+   ```bash
+   deno --version
+   ```
+
+2. Vérifiez votre connexion internet (Deno télécharge les modules depuis les URLs)
+
+3. Essayez de nettoyer le cache Deno :
+   ```bash
+   deno cache --reload main.ts
+   ```
 
 ### Le bot se déconnecte souvent
 
