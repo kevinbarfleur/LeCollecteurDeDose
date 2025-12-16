@@ -13,19 +13,35 @@ import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
 import { getRandomMessage, formatCardName } from "./triggerMessages.ts"
 
 /**
- * Calcule le temps restant jusqu'à minuit UTC (reset des limites quotidiennes)
+ * Calcule le temps restant jusqu'à 21h heure de Paris (reset des limites quotidiennes)
  * @returns Temps formaté: "3h45" ou "45 min"
  */
-function getTimeUntilMidnightUTC(): string {
+function getTimeUntilDailyReset(): string {
   const now = new Date()
-  const midnightUTC = new Date(Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() + 1,
-    0, 0, 0, 0
+
+  // Get current time in Paris (UTC+1 in winter, UTC+2 in summer)
+  // We need to find the next 21:00 Paris time
+  const parisOffset = getParisOffset(now)
+  const parisNow = new Date(now.getTime() + parisOffset * 60 * 60 * 1000)
+
+  // Get today at 21:00 Paris time
+  const parisToday21h = new Date(Date.UTC(
+    parisNow.getUTCFullYear(),
+    parisNow.getUTCMonth(),
+    parisNow.getUTCDate(),
+    21, 0, 0, 0
   ))
 
-  const diffMs = midnightUTC.getTime() - now.getTime()
+  // Convert Paris 21h back to UTC
+  const resetTimeUTC = new Date(parisToday21h.getTime() - parisOffset * 60 * 60 * 1000)
+
+  // If we're past 21h Paris, next reset is tomorrow
+  let nextReset = resetTimeUTC
+  if (now >= resetTimeUTC) {
+    nextReset = new Date(resetTimeUTC.getTime() + 24 * 60 * 60 * 1000)
+  }
+
+  const diffMs = nextReset.getTime() - now.getTime()
   const hours = Math.floor(diffMs / (1000 * 60 * 60))
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
 
@@ -33,6 +49,32 @@ function getTimeUntilMidnightUTC(): string {
     return `${hours}h${minutes.toString().padStart(2, '0')}`
   }
   return `${minutes} min`
+}
+
+/**
+ * Get Paris timezone offset in hours (handles DST)
+ * Paris is UTC+1 in winter, UTC+2 in summer
+ */
+function getParisOffset(date: Date): number {
+  // Last Sunday of March at 2:00 -> DST starts (UTC+2)
+  // Last Sunday of October at 3:00 -> DST ends (UTC+1)
+  const year = date.getUTCFullYear()
+
+  // Find last Sunday of March
+  const march31 = new Date(Date.UTC(year, 2, 31, 1, 0, 0)) // March 31 at 01:00 UTC
+  const dstStart = new Date(march31)
+  dstStart.setUTCDate(31 - march31.getUTCDay()) // Go back to last Sunday
+
+  // Find last Sunday of October
+  const oct31 = new Date(Date.UTC(year, 9, 31, 1, 0, 0)) // October 31 at 01:00 UTC
+  const dstEnd = new Date(oct31)
+  dstEnd.setUTCDate(31 - oct31.getUTCDay()) // Go back to last Sunday
+
+  // Check if we're in DST period
+  if (date >= dstStart && date < dstEnd) {
+    return 2 // UTC+2 (summer time)
+  }
+  return 1 // UTC+1 (winter time)
 }
 
 // Load .env file for local development
@@ -564,7 +606,7 @@ async function handleCommand(
       }
 
       if (!limitResult?.success) {
-        sendResponse(`⚠️ @${username}, Zana refuse de t'ouvrir plus de maps aujourd'hui. Reviens dans ${getTimeUntilMidnightUTC()}, Exile !`)
+        sendResponse(`⚠️ @${username}, Zana refuse de t'ouvrir plus de maps aujourd'hui. Reviens dans ${getTimeUntilDailyReset()}, Exile !`)
         return
       }
 
@@ -630,7 +672,7 @@ async function handleCommand(
       }
 
       if (!limitResult?.success) {
-        sendResponse(`⚠️ @${username}, le temple d'Atziri est épuisé pour aujourd'hui. Reviens dans ${getTimeUntilMidnightUTC()}, Exile !`)
+        sendResponse(`⚠️ @${username}, le temple d'Atziri est épuisé pour aujourd'hui. Reviens dans ${getTimeUntilDailyReset()}, Exile !`)
         return
       }
 
@@ -1335,6 +1377,59 @@ async function handleRequest(req: Request): Promise<Response> {
           success: false,
           error: 'Internal server error',
           message: error instanceof Error ? error.message : 'Erreur interne'
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+  }
+
+  // Webhook endpoint for daily limits reset announcement
+  if (req.method === 'POST' && url.pathname === '/webhook/daily-reset-announcement') {
+    try {
+      const body = await req.json()
+      const { resetCount } = body
+
+      // Send the announcement message to Twitch chat
+      const message = `🌀 Une confrontation entre le Shaper et l'Elder a déchiré la réalité ! Les maps semblent à nouveau accessibles... !booster !vaals`
+
+      if (isConnected) {
+        await client.say(`#${TWITCH_CHANNEL_NAME}`, message)
+        console.log(`[ADMIN] Daily limits reset announcement sent (${resetCount} records reset)`)
+      } else {
+        console.warn('[ADMIN] Cannot send announcement - bot not connected to Twitch')
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Bot not connected to Twitch'
+          }),
+          {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message,
+          resetCount
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    } catch (error) {
+      console.error('Error sending daily reset announcement:', error)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to send announcement',
+          message: error instanceof Error ? error.message : 'Unknown error'
         }),
         {
           status: 500,

@@ -1001,6 +1001,47 @@ const configKeyToTriggerType: Record<string, string> = {
 const manualTriggerLoading = ref<Record<string, boolean>>({});
 const manualTriggerMessage = ref<{ type: 'success' | 'error'; text: string; triggerType?: string } | null>(null);
 
+// Daily limits reset
+const isResettingDailyLimits = ref(false);
+const dailyLimitsResetMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
+const resetDailyLimits = async () => {
+  if (isResettingDailyLimits.value) return;
+
+  isResettingDailyLimits.value = true;
+  dailyLimitsResetMessage.value = null;
+
+  try {
+    const response = await $fetch<any>('/api/admin/reset-daily-limits', {
+      method: 'POST'
+    });
+
+    if (response.ok) {
+      dailyLimitsResetMessage.value = {
+        type: 'success',
+        text: `✅ Limites réinitialisées ! (${response.resetCount} enregistrements) - Message envoyé: ${response.announcement}`
+      };
+
+      setTimeout(() => {
+        dailyLimitsResetMessage.value = null;
+      }, 5000);
+    } else {
+      throw new Error(response.message || 'Échec de la réinitialisation');
+    }
+  } catch (error: any) {
+    dailyLimitsResetMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.data?.message || error.message || 'Impossible de réinitialiser les limites'}`
+    };
+
+    setTimeout(() => {
+      dailyLimitsResetMessage.value = null;
+    }, 5000);
+  } finally {
+    isResettingDailyLimits.value = false;
+  }
+};
+
 const triggerManualTrigger = async (triggerType: string) => {
   manualTriggerLoading.value[triggerType] = true;
   manualTriggerMessage.value = null;
@@ -1201,6 +1242,34 @@ const triggerManualTrigger = async (triggerType: string) => {
                           @click="showBotConfigModal = true"
                         >
                           ⚙️ Configurer
+                        </RunicButton>
+                      </div>
+                    </div>
+
+                    <!-- Daily Limits Reset -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Reset Limites Quotidiennes</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Réinitialise les !booster et !vaals pour tous les utilisateurs
+                        </p>
+                        <p
+                          v-if="dailyLimitsResetMessage"
+                          class="font-body text-base mt-1 m-0"
+                          :class="dailyLimitsResetMessage.type === 'success' ? 'text-green-400' : 'text-red-400'"
+                        >
+                          {{ dailyLimitsResetMessage.text }}
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="danger"
+                          :disabled="isResettingDailyLimits"
+                          @click="resetDailyLimits"
+                        >
+                          <span v-if="!isResettingDailyLimits">🌀 Reset All</span>
+                          <span v-else>En cours...</span>
                         </RunicButton>
                       </div>
                     </div>
