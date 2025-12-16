@@ -1613,7 +1613,7 @@ const {
   containerRef: orbsPhysicsContainerRef,
   orbCount: vaalOrbs,
   orbSize: 44,
-  maxVisibleOrbs: 5, // TODO: remettre à 15 après les tests
+  maxVisibleOrbs: 20,
 });
 
 // Track if physics is ready

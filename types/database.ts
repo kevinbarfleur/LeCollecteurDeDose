@@ -579,6 +579,30 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      get_ladder_stats: {
+        Args: Record<string, never>
+        Returns: {
+          user_id: string
+          twitch_username: string
+          display_name: string
+          avatar_url: string | null
+          unique_cards: number
+          total_cards: number
+          foil_count: number
+          t0_count: number
+          t1_count: number
+          t2_count: number
+          t3_count: number
+        }[]
+      }
+      get_ladder_global_stats: {
+        Args: Record<string, never>
+        Returns: {
+          total_players: number
+          total_cards_distributed: number
+          total_unique_cards: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -622,4 +646,8 @@ export interface ActivityLogsEnabledSetting {
 export interface DevTestModeSetting {
   enabled: boolean
 }
+
+// Ladder and stats types
+export type LadderPlayerRow = Database['public']['Functions']['get_ladder_stats']['Returns'][number]
+export type LadderGlobalStatsRow = Database['public']['Functions']['get_ladder_global_stats']['Returns'][number]
 

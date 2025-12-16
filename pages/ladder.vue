@@ -27,21 +27,37 @@ const isCurrentUser = (player: any) => {
   return player.displayName?.toLowerCase() === authUser.value?.displayName?.toLowerCase()
 }
 
-// Stats for RunicStats component
+// Primary stats for RunicStats component
 const statsItems = computed(() => [
   { value: globalStats.value?.totalPlayers ?? 0, label: t('ladder.stats.players') },
   { value: globalStats.value?.totalCardsDistributed ?? 0, label: t('ladder.stats.distributed') },
+  { value: globalStats.value?.totalUniqueCards ?? 0, label: t('ladder.stats.catalogue') },
 ])
 
 // Split players into podium (top 3) and rest
 const podiumPlayers = computed(() => players.value.slice(0, 3))
 const restPlayers = computed(() => players.value.slice(3))
 
-// Get rank class for header color
-const getRankClass = (rank: number) => {
-  if (rank === 1) return 'rank--gold'
-  if (rank === 2) return 'rank--silver'
-  if (rank === 3) return 'rank--bronze'
+// Reorder podium for visual display: 2nd | 1st | 3rd
+const orderedPodium = computed(() => {
+  const top3 = podiumPlayers.value
+  if (top3.length < 3) return top3
+  return [top3[1], top3[0], top3[2]] // 2nd, 1st, 3rd
+})
+
+// Get podium step class
+const getPodiumStepClass = (rank: number) => {
+  if (rank === 1) return 'podium-step--first'
+  if (rank === 2) return 'podium-step--second'
+  if (rank === 3) return 'podium-step--third'
+  return ''
+}
+
+// Get rank medal style class
+const getRankMedalClass = (rank: number) => {
+  if (rank === 1) return 'rank-medal--gold'
+  if (rank === 2) return 'rank-medal--silver'
+  if (rank === 3) return 'rank-medal--bronze'
   return ''
 }
 </script>
@@ -72,65 +88,82 @@ const getRankClass = (rank: number) => {
         </RunicButton>
       </div>
 
-      <!-- Podium - Top 3 Players -->
-      <div v-else-if="podiumPlayers.length > 0" class="ladder-podium">
-        <div
-          v-for="player in podiumPlayers"
-          :key="player.userId"
-          class="ladder-podium__card"
-        >
-          <RunicBox
-            padding="none"
-            class="ladder-podium__box"
-            :class="{ 'ladder-podium__box--current': isCurrentUser(player) }"
+      <!-- Podium - Top 3 Players (Staircase layout: 2nd | 1st | 3rd) -->
+      <div v-else-if="podiumPlayers.length > 0" class="podium">
+        <div class="podium__stage">
+          <div
+            v-for="player in orderedPodium"
+            :key="player.userId"
+            class="podium__step"
+            :class="getPodiumStepClass(player.rank)"
           >
-            <!-- Header with rank -->
-            <div class="ladder-podium__header" :class="getRankClass(player.rank)">
-              <span class="ladder-podium__header-rune">◆</span>
-              <span class="ladder-podium__header-rank">#{{ player.rank }}</span>
-              <span class="ladder-podium__header-rune">◆</span>
-            </div>
-
-            <!-- Content -->
-            <div class="ladder-podium__content">
-              <!-- Avatar -->
-              <div class="ladder-podium__avatar">
-                <img
-                  v-if="player.avatarUrl"
-                  :src="player.avatarUrl"
-                  :alt="player.displayName"
-                  class="ladder-podium__avatar-img"
+            <!-- Player Card with RunicHeader + RunicBox -->
+            <div
+              class="podium__card"
+              :class="[
+                { 'podium__card--current': isCurrentUser(player) },
+                getRankMedalClass(player.rank)
+              ]"
+            >
+              <!-- RunicHeader with rank as title -->
+              <div class="podium__header-wrapper" :class="getRankMedalClass(player.rank)">
+                <RunicHeader
+                  :title="`#${player.rank}`"
+                  :centered="true"
+                  :attached="true"
                 />
-                <span v-else class="ladder-podium__avatar-placeholder">
-                  {{ player.displayName?.charAt(0)?.toUpperCase() || '?' }}
-                </span>
               </div>
 
-              <!-- Username -->
-              <span class="ladder-podium__username">{{ player.displayName }}</span>
+              <!-- RunicBox attached below -->
+              <RunicBox padding="none" :attached="true" class="podium__box">
+                <div class="podium__content">
+                  <!-- Avatar -->
+                  <div class="podium__avatar" :class="getRankMedalClass(player.rank)">
+                    <img
+                      v-if="player.avatarUrl"
+                      :src="player.avatarUrl"
+                      :alt="player.displayName"
+                      class="podium__avatar-img"
+                    />
+                    <span v-else class="podium__avatar-placeholder">
+                      {{ player.displayName?.charAt(0)?.toUpperCase() || '?' }}
+                    </span>
+                  </div>
 
-              <!-- Progress -->
-              <div class="ladder-podium__progress">
-                <div class="ladder-podium__progress-bar">
-                  <div
-                    class="ladder-podium__progress-fill"
-                    :style="{ width: `${player.completionPercent}%` }"
-                  ></div>
+                  <!-- Username -->
+                  <span class="podium__username">{{ player.displayName }}</span>
+
+                  <!-- Progress -->
+                  <div class="podium__progress">
+                    <RunicProgressBar
+                      :value="player.completionPercent"
+                      size="md"
+                    />
+                  </div>
+
+                  <!-- Stats with RunicNumber -->
+                  <div class="podium__stats">
+                    <div class="podium__stat-item">
+                      <RunicNumber
+                        :value="player.uniqueCards"
+                        :label="`/ ${globalStats?.totalUniqueCards}`"
+                        color="default"
+                        size="sm"
+                      />
+                    </div>
+                    <div class="podium__stat-item podium__stat-item--foil">
+                      <RunicNumber
+                        :value="player.foilCount"
+                        label="foils"
+                        color="t0"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <span class="ladder-podium__progress-text">{{ player.completionPercent }}%</span>
-              </div>
-
-              <!-- Stats -->
-              <div class="ladder-podium__stats">
-                <span class="ladder-podium__stat">
-                  {{ player.uniqueCards }}/{{ globalStats?.totalUniqueCards }}
-                </span>
-                <span class="ladder-podium__stat ladder-podium__stat--foil">
-                  {{ player.foilCount }} foils
-                </span>
-              </div>
+              </RunicBox>
             </div>
-          </RunicBox>
+          </div>
         </div>
       </div>
 
@@ -142,17 +175,17 @@ const getRankClass = (rank: number) => {
             class="ladder-entry__box"
             :class="{ 'ladder-entry__box--current': isCurrentUser(player) }"
           >
-            <!-- Header with rank -->
-            <div class="ladder-entry__header">
-              <span class="ladder-entry__header-rune">◆</span>
-              <span class="ladder-entry__header-rank">#{{ player.rank }}</span>
-              <span class="ladder-entry__header-rune">◆</span>
-            </div>
-
-            <!-- Content -->
+            <!-- Content with inline rank -->
             <div class="ladder-entry__content">
-              <!-- User row -->
+              <!-- User row with rank, name, and stats -->
               <div class="ladder-entry__user-row">
+                <div class="ladder-entry__rank-badge">
+                  <RunicNumber
+                    :value="player.rank"
+                    color="default"
+                    size="sm"
+                  />
+                </div>
                 <div class="ladder-entry__avatar">
                   <img
                     v-if="player.avatarUrl"
@@ -165,27 +198,28 @@ const getRankClass = (rank: number) => {
                   </span>
                 </div>
                 <span class="ladder-entry__username">{{ player.displayName }}</span>
+
+                <!-- Stats inline -->
+                <div class="ladder-entry__stats">
+                  <span class="ladder-entry__stat">
+                    <span class="ladder-entry__stat-value">{{ player.uniqueCards }}</span>
+                    <span class="ladder-entry__stat-separator">/</span>
+                    <span class="ladder-entry__stat-total">{{ globalStats?.totalUniqueCards }}</span>
+                  </span>
+                  <span class="ladder-entry__stat-divider">◆</span>
+                  <span class="ladder-entry__stat ladder-entry__stat--foil">
+                    <span class="ladder-entry__stat-value">{{ player.foilCount }}</span>
+                    <span class="ladder-entry__stat-label">foils</span>
+                  </span>
+                </div>
               </div>
 
               <!-- Progress row -->
               <div class="ladder-entry__progress-row">
-                <div class="ladder-entry__progress-bar">
-                  <div
-                    class="ladder-entry__progress-fill"
-                    :style="{ width: `${player.completionPercent}%` }"
-                  ></div>
-                </div>
-                <span class="ladder-entry__progress-text">{{ player.completionPercent }}%</span>
-              </div>
-
-              <!-- Stats row -->
-              <div class="ladder-entry__stats-row">
-                <span class="ladder-entry__stat">
-                  {{ player.uniqueCards }}/{{ globalStats?.totalUniqueCards }} {{ t('ladder.columns.unique').toLowerCase() }}
-                </span>
-                <span class="ladder-entry__stat ladder-entry__stat--foil">
-                  {{ player.foilCount }} foils
-                </span>
+                <RunicProgressBar
+                  :value="player.completionPercent"
+                  size="sm"
+                />
               </div>
             </div>
           </RunicBox>
@@ -270,175 +304,148 @@ const getRankClass = (rank: number) => {
 }
 
 /* ==========================================
-   PODIUM - TOP 3 PLAYERS
+   PODIUM - STAIRCASE LAYOUT
    ========================================== */
-.ladder-podium {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+.podium {
+  margin-bottom: 2rem;
+  padding: 1rem 0;
 }
 
-@media (max-width: 768px) {
-  .ladder-podium {
-    grid-template-columns: 1fr;
-  }
-}
-
-.ladder-podium__card {
+.podium__stage {
   display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding-top: 2rem;
 }
 
-.ladder-podium__box {
+/* Podium Steps with different heights */
+.podium__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   flex: 1;
-  overflow: hidden;
+  max-width: 280px;
+  transition: transform 0.3s ease;
+}
+
+.podium__step:hover {
+  transform: translateY(-4px);
+}
+
+/* Staircase effect - 1st is tallest in center */
+.podium-step--first {
+  order: 2;
+  margin-top: 0;
+}
+
+.podium-step--second {
+  order: 1;
+  margin-top: 2.5rem;
+}
+
+.podium-step--third {
+  order: 3;
+  margin-top: 3.5rem;
+}
+
+/* Player Card */
+.podium__card {
+  width: 100%;
   position: relative;
 }
 
-.ladder-podium__box--current {
-  box-shadow: inset 0 0 25px rgba(175, 96, 37, 0.2), 0 0 20px rgba(175, 96, 37, 0.15);
-}
-
-.ladder-podium__box--current::before {
+.podium__card--current::before {
   content: '';
   position: absolute;
   inset: 0;
   border: 1px solid rgba(175, 96, 37, 0.4);
-  border-radius: inherit;
+  border-radius: 6px;
   pointer-events: none;
   z-index: 10;
+  box-shadow: 0 0 20px rgba(175, 96, 37, 0.15);
 }
 
-/* Podium Header */
-.ladder-podium__header {
+.podium__box {
+  overflow: hidden;
+}
+
+/* Header wrapper - styles the RunicHeader runes by rank color */
+.podium__header-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.95) 0%,
-    rgba(14, 14, 16, 0.9) 40%,
-    rgba(10, 10, 12, 0.95) 100%
-  );
-  border-bottom: 1px solid rgba(50, 48, 45, 0.5);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-.ladder-podium__header-rune {
-  font-size: 0.5rem;
-  color: rgba(100, 95, 90, 0.5);
-  transition: color 0.3s ease;
+/* Gold - Color the runes and title subtly */
+.podium__header-wrapper.rank-medal--gold :deep(.runic-header__rune) {
+  color: rgba(201, 162, 39, 0.7);
+  text-shadow: 0 0 8px rgba(201, 162, 39, 0.4);
 }
 
-.ladder-podium__header-rank {
-  font-family: 'Cinzel', serif;
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: rgba(140, 135, 130, 0.9);
-}
-
-/* Gold - Rank 1 */
-.ladder-podium__header.rank--gold {
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 4px,
-      rgba(201, 162, 39, 0.08) 4px,
-      rgba(201, 162, 39, 0.08) 8px
-    ),
-    linear-gradient(
-      180deg,
-      rgba(60, 45, 15, 0.7) 0%,
-      rgba(40, 30, 10, 0.4) 100%
-    );
-  border-bottom-color: rgba(201, 162, 39, 0.6);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(201, 162, 39, 0.2);
-}
-
-.ladder-podium__header.rank--gold .ladder-podium__header-rank {
+.podium__header-wrapper.rank-medal--gold :deep(.runic-header__title) {
   color: #d4af37;
-  text-shadow: 0 0 15px rgba(201, 162, 39, 0.6);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 12px rgba(201, 162, 39, 0.3);
 }
 
-.ladder-podium__header.rank--gold .ladder-podium__header-rune {
-  color: rgba(201, 162, 39, 0.8);
+.podium__header-wrapper.rank-medal--gold :deep(.runic-header__accent--left) {
+  background: linear-gradient(to right, rgba(201, 162, 39, 0.5), rgba(201, 162, 39, 0.2), transparent);
 }
 
-/* Silver - Rank 2 */
-.ladder-podium__header.rank--silver {
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 4px,
-      rgba(192, 192, 192, 0.06) 4px,
-      rgba(192, 192, 192, 0.06) 8px
-    ),
-    linear-gradient(
-      180deg,
-      rgba(50, 50, 55, 0.7) 0%,
-      rgba(35, 35, 38, 0.4) 100%
-    );
-  border-bottom-color: rgba(192, 192, 192, 0.5);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(192, 192, 192, 0.15);
+.podium__header-wrapper.rank-medal--gold :deep(.runic-header__accent--right) {
+  background: linear-gradient(to left, rgba(201, 162, 39, 0.5), rgba(201, 162, 39, 0.2), transparent);
 }
 
-.ladder-podium__header.rank--silver .ladder-podium__header-rank {
-  color: #d0d0d0;
-  text-shadow: 0 0 12px rgba(192, 192, 192, 0.5);
-}
-
-.ladder-podium__header.rank--silver .ladder-podium__header-rune {
+/* Silver - Color the runes and title subtly */
+.podium__header-wrapper.rank-medal--silver :deep(.runic-header__rune) {
   color: rgba(192, 192, 192, 0.7);
+  text-shadow: 0 0 8px rgba(192, 192, 192, 0.3);
 }
 
-/* Bronze - Rank 3 */
-.ladder-podium__header.rank--bronze {
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 4px,
-      rgba(205, 127, 50, 0.06) 4px,
-      rgba(205, 127, 50, 0.06) 8px
-    ),
-    linear-gradient(
-      180deg,
-      rgba(55, 40, 25, 0.7) 0%,
-      rgba(38, 28, 18, 0.4) 100%
-    );
-  border-bottom-color: rgba(205, 127, 50, 0.5);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(205, 127, 50, 0.15);
+.podium__header-wrapper.rank-medal--silver :deep(.runic-header__title) {
+  color: #c0c0c0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(192, 192, 192, 0.25);
 }
 
-.ladder-podium__header.rank--bronze .ladder-podium__header-rank {
-  color: #cd7f32;
-  text-shadow: 0 0 12px rgba(205, 127, 50, 0.5);
+.podium__header-wrapper.rank-medal--silver :deep(.runic-header__accent--left) {
+  background: linear-gradient(to right, rgba(192, 192, 192, 0.4), rgba(192, 192, 192, 0.15), transparent);
 }
 
-.ladder-podium__header.rank--bronze .ladder-podium__header-rune {
+.podium__header-wrapper.rank-medal--silver :deep(.runic-header__accent--right) {
+  background: linear-gradient(to left, rgba(192, 192, 192, 0.4), rgba(192, 192, 192, 0.15), transparent);
+}
+
+/* Bronze - Color the runes and title subtly */
+.podium__header-wrapper.rank-medal--bronze :deep(.runic-header__rune) {
   color: rgba(205, 127, 50, 0.7);
+  text-shadow: 0 0 8px rgba(205, 127, 50, 0.3);
+}
+
+.podium__header-wrapper.rank-medal--bronze :deep(.runic-header__title) {
+  color: #cd7f32;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(205, 127, 50, 0.25);
+}
+
+.podium__header-wrapper.rank-medal--bronze :deep(.runic-header__accent--left) {
+  background: linear-gradient(to right, rgba(205, 127, 50, 0.4), rgba(205, 127, 50, 0.15), transparent);
+}
+
+.podium__header-wrapper.rank-medal--bronze :deep(.runic-header__accent--right) {
+  background: linear-gradient(to left, rgba(205, 127, 50, 0.4), rgba(205, 127, 50, 0.15), transparent);
 }
 
 /* Podium Content */
-.ladder-podium__content {
+.podium__content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.25rem 1rem;
-  gap: 0.875rem;
+  padding: 1rem 0.875rem;
+  gap: 0.75rem;
 }
 
-/* Podium Avatar */
-.ladder-podium__avatar {
+/* Avatar */
+.podium__avatar {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   overflow: hidden;
   background: linear-gradient(
@@ -452,7 +459,7 @@ const getRankClass = (rank: number) => {
     0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.ladder-podium__avatar::before {
+.podium__avatar::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -461,44 +468,54 @@ const getRankClass = (rank: number) => {
   pointer-events: none;
 }
 
-.rank--gold + .ladder-podium__content .ladder-podium__avatar::before {
+.podium__avatar.rank-medal--gold::before {
   border-color: rgba(201, 162, 39, 0.5);
   box-shadow: 0 0 12px rgba(201, 162, 39, 0.3);
 }
 
-.rank--silver + .ladder-podium__content .ladder-podium__avatar::before {
+.podium__avatar.rank-medal--silver::before {
   border-color: rgba(192, 192, 192, 0.4);
   box-shadow: 0 0 10px rgba(192, 192, 192, 0.2);
 }
 
-.rank--bronze + .ladder-podium__content .ladder-podium__avatar::before {
+.podium__avatar.rank-medal--bronze::before {
   border-color: rgba(205, 127, 50, 0.4);
   box-shadow: 0 0 10px rgba(205, 127, 50, 0.2);
 }
 
-.ladder-podium__avatar-img {
+.podium__avatar-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.ladder-podium__avatar-placeholder {
+.podium__avatar-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'Cinzel', serif;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: rgba(140, 130, 120, 0.7);
   background: rgba(20, 18, 16, 0.9);
 }
 
-/* Podium Username */
-.ladder-podium__username {
+/* First place gets bigger avatar */
+.podium-step--first .podium__avatar {
+  width: 80px;
+  height: 80px;
+}
+
+.podium-step--first .podium__avatar-placeholder {
+  font-size: 1.5rem;
+}
+
+/* Username */
+.podium__username {
   font-family: 'Fontin SmallCaps', serif;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: rgba(200, 195, 190, 0.95);
   text-align: center;
@@ -509,88 +526,31 @@ const getRankClass = (rank: number) => {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* Podium Progress - Runic striped style */
-.ladder-podium__progress {
+.podium-step--first .podium__username {
+  font-size: 1.25rem;
+}
+
+/* Progress */
+.podium__progress {
+  width: 100%;
+}
+
+/* Stats Grid */
+.podium__stats {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
-}
-
-.ladder-podium__progress-bar {
-  position: relative;
-  flex: 1;
-  height: 14px;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.95) 0%,
-    rgba(14, 14, 16, 0.9) 40%,
-    rgba(10, 10, 12, 0.95) 100%
-  );
-  border-radius: 3px;
-  overflow: hidden;
-  box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.7),
-    inset 0 1px 2px rgba(0, 0, 0, 0.8),
-    0 1px 0 rgba(50, 45, 40, 0.3);
-  border: 1px solid rgba(35, 32, 28, 0.8);
-}
-
-.ladder-podium__progress-fill {
-  height: 100%;
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 3px,
-      rgba(255, 255, 255, 0.08) 3px,
-      rgba(255, 255, 255, 0.08) 6px
-    ),
-    linear-gradient(
-      180deg,
-      rgba(201, 122, 58, 0.95) 0%,
-      rgba(175, 96, 37, 0.9) 50%,
-      rgba(168, 100, 40, 0.95) 100%
-    );
-  border-radius: 2px;
-  transition: width 0.5s ease;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 150, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 0 8px rgba(175, 96, 37, 0.4);
-  border-right: 1px solid rgba(175, 135, 80, 0.5);
-}
-
-.ladder-podium__progress-text {
-  font-family: 'Cinzel', serif;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #c97a3a;
-  min-width: 50px;
-  text-align: right;
-  text-shadow: 0 0 8px rgba(175, 96, 37, 0.4);
-}
-
-/* Podium Stats */
-.ladder-podium__stats {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 0.625rem;
+  padding-top: 0.5rem;
   margin-top: 0.25rem;
   border-top: 1px solid rgba(50, 48, 45, 0.4);
 }
 
-.ladder-podium__stat {
-  font-family: 'Crimson Text', serif;
-  font-size: 0.9375rem;
-  color: rgba(150, 145, 140, 0.9);
-}
-
-.ladder-podium__stat--foil {
-  color: #d4af37;
-  text-shadow: 0 0 6px rgba(212, 175, 55, 0.3);
+.podium__stat-item {
+  flex: 1;
+  display: flex;
+  justify-content: center;
 }
 
 /* ==========================================
@@ -636,63 +596,39 @@ const getRankClass = (rank: number) => {
   z-index: 10;
 }
 
-/* Header with rank */
-.ladder-entry__header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 4px,
-      rgba(175, 135, 80, 0.04) 4px,
-      rgba(175, 135, 80, 0.04) 8px
-    ),
-    linear-gradient(
-      180deg,
-      rgba(8, 8, 10, 0.95) 0%,
-      rgba(14, 14, 16, 0.9) 40%,
-      rgba(10, 10, 12, 0.95) 100%
-    );
-  border-bottom: 1px solid rgba(50, 48, 45, 0.5);
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
-}
-
-.ladder-entry__header-rune {
-  font-size: 0.375rem;
-  color: rgba(175, 135, 80, 0.5);
-}
-
-.ladder-entry__header-rank {
-  font-family: 'Cinzel', serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: rgba(175, 135, 80, 0.8);
-}
-
 /* Content section */
 .ladder-entry__content {
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
 }
 
-/* User row */
+/* User row with integrated rank */
 .ladder-entry__user-row {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.75rem;
   margin-bottom: 0.625rem;
+}
+
+/* Rank badge using RunicNumber */
+.ladder-entry__rank-badge {
+  flex-shrink: 0;
+}
+
+.ladder-entry__rank-badge :deep(.runic-number__cavity) {
+  min-width: 42px;
+  min-height: 32px;
+  padding: 0.25rem 0.5rem;
+}
+
+.ladder-entry__rank-badge :deep(.runic-number__value) {
+  font-size: 0.9375rem;
 }
 
 .ladder-entry__avatar {
   position: relative;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   overflow: hidden;
   background: linear-gradient(
@@ -725,13 +661,14 @@ const getRankClass = (rank: number) => {
   align-items: center;
   justify-content: center;
   font-family: 'Cinzel', serif;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: rgba(140, 130, 120, 0.7);
   background: rgba(20, 18, 16, 0.9);
 }
 
 .ladder-entry__username {
+  flex: 1;
   font-family: 'Fontin SmallCaps', serif;
   font-size: 1.0625rem;
   font-weight: 600;
@@ -742,86 +679,67 @@ const getRankClass = (rank: number) => {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-/* Progress row - Runic striped style */
+/* Progress row */
 .ladder-entry__progress-row {
+  /* No bottom margin since stats moved inline */
+}
+
+/* Stats inline with username row */
+.ladder-entry__stats {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.625rem;
-}
-
-.ladder-entry__progress-bar {
-  position: relative;
-  flex: 1;
-  height: 12px;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 8, 10, 0.95) 0%,
-    rgba(14, 14, 16, 0.9) 40%,
-    rgba(10, 10, 12, 0.95) 100%
-  );
-  border-radius: 3px;
-  overflow: hidden;
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.6),
-    inset 0 1px 2px rgba(0, 0, 0, 0.7),
-    0 1px 0 rgba(50, 45, 40, 0.25);
-  border: 1px solid rgba(35, 32, 28, 0.7);
-}
-
-.ladder-entry__progress-fill {
-  height: 100%;
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 3px,
-      rgba(255, 255, 255, 0.08) 3px,
-      rgba(255, 255, 255, 0.08) 6px
-    ),
-    linear-gradient(
-      180deg,
-      rgba(201, 122, 58, 0.95) 0%,
-      rgba(175, 96, 37, 0.9) 50%,
-      rgba(168, 100, 40, 0.95) 100%
-    );
-  border-radius: 2px;
-  transition: width 0.5s ease;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 150, 0.25),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
-    0 0 6px rgba(175, 96, 37, 0.35);
-  border-right: 1px solid rgba(175, 135, 80, 0.4);
-}
-
-.ladder-entry__progress-text {
-  font-family: 'Cinzel', serif;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: #c97a3a;
-  min-width: 45px;
-  text-align: right;
-  text-shadow: 0 0 6px rgba(175, 96, 37, 0.3);
-}
-
-/* Stats row */
-.ladder-entry__stats-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(50, 48, 45, 0.35);
+  gap: 0.625rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .ladder-entry__stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
   font-family: 'Crimson Text', serif;
   font-size: 0.875rem;
   color: rgba(150, 145, 140, 0.9);
 }
 
-.ladder-entry__stat--foil {
-  color: #d4af37;
-  text-shadow: 0 0 5px rgba(212, 175, 55, 0.25);
+.ladder-entry__stat-value {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  color: rgba(200, 190, 175, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.ladder-entry__stat-separator {
+  color: rgba(100, 95, 90, 0.6);
+  margin: 0 0.125rem;
+}
+
+.ladder-entry__stat-total {
+  font-family: 'Cinzel', serif;
+  font-size: 0.8125rem;
+  color: rgba(120, 115, 110, 0.8);
+}
+
+.ladder-entry__stat-label {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: rgba(120, 115, 110, 0.7);
+  margin-left: 0.125rem;
+}
+
+.ladder-entry__stat-divider {
+  font-size: 0.375rem;
+  color: rgba(100, 90, 75, 0.5);
+}
+
+/* Foil stat with gold accent */
+.ladder-entry__stat--foil .ladder-entry__stat-value {
+  color: rgba(212, 175, 55, 0.9);
+  text-shadow: 0 0 6px rgba(212, 175, 55, 0.2), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.ladder-entry__stat--foil .ladder-entry__stat-label {
+  color: rgba(180, 150, 80, 0.7);
 }
 
 /* Empty State */
@@ -862,19 +780,217 @@ const getRankClass = (rank: number) => {
 /* ==========================================
    RESPONSIVE
    ========================================== */
-@media (max-width: 480px) {
-  .ladder-entry__stats-row {
+
+/* Tablet */
+@media (max-width: 768px) {
+  .podium__stage {
+    gap: 0.5rem;
+  }
+
+  .podium__step {
+    max-width: 220px;
+  }
+
+  .podium-step--second {
+    margin-top: 2rem;
+  }
+
+  .podium-step--third {
+    margin-top: 2.75rem;
+  }
+
+  .podium__avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .podium-step--first .podium__avatar {
+    width: 68px;
+    height: 68px;
+  }
+
+  .podium__username {
+    font-size: 1rem;
+  }
+
+  .podium-step--first .podium__username {
+    font-size: 1.125rem;
+  }
+
+  .podium__stats {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
+    gap: 0.5rem;
   }
 
-  .ladder-podium__progress-bar {
-    height: 12px;
+  /* Smaller header on tablet */
+  .podium__header-wrapper :deep(.runic-header__title) {
+    font-size: 1.25rem;
+  }
+}
+
+/* Mobile - Stack podium vertically */
+@media (max-width: 640px) {
+  .podium__stage {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 1rem;
   }
 
-  .ladder-entry__progress-bar {
-    height: 10px;
+  .podium__step {
+    max-width: 100%;
+    width: 100%;
+    margin-top: 0 !important;
+    order: unset !important;
+  }
+
+  /* Reorder for mobile: 1st, 2nd, 3rd from top to bottom */
+  .podium-step--first { order: 1 !important; }
+  .podium-step--second { order: 2 !important; }
+  .podium-step--third { order: 3 !important; }
+
+  .podium__step:hover {
+    transform: none;
+  }
+
+  .podium__card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .podium__box {
+    flex: 1;
+  }
+
+  .podium__content {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    gap: 0.625rem;
+  }
+
+  .podium__avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .podium-step--first .podium__avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .podium__username {
+    flex: 1;
+    text-align: left;
+    font-size: 1.0625rem;
+  }
+
+  .podium-step--first .podium__username {
+    font-size: 1.125rem;
+  }
+
+  .podium__progress {
+    width: 100%;
+    order: 3;
+  }
+
+  .podium__stats {
+    width: 100%;
+    order: 4;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 0.75rem;
+    padding-top: 0.625rem;
+  }
+
+  /* Compact header on mobile */
+  .podium__header-wrapper :deep(.runic-header) {
+    padding: 0.75rem 1rem 0.625rem;
+  }
+
+  .podium__header-wrapper :deep(.runic-header__title) {
+    font-size: 1.125rem;
+  }
+
+  .podium__header-wrapper :deep(.runic-header__rune) {
+    font-size: 0.4rem;
+    margin: 0 0.5rem;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .ladder-entry__user-row {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .ladder-entry__username {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .ladder-entry__stats {
+    gap: 0.375rem;
+    margin-left: auto;
+  }
+
+  .ladder-entry__stat {
+    font-size: 0.75rem;
+  }
+
+  .ladder-entry__stat-value {
+    font-size: 0.75rem;
+  }
+
+  .ladder-entry__stat-total {
+    font-size: 0.6875rem;
+  }
+
+  .ladder-entry__stat-label {
+    font-size: 0.625rem;
+  }
+
+  .ladder-entry__stat-divider {
+    display: none;
+  }
+
+  .ladder-entry__rank-badge :deep(.runic-number__cavity) {
+    min-width: 36px;
+    min-height: 28px;
+    padding: 0.1875rem 0.375rem;
+  }
+
+  .ladder-entry__rank-badge :deep(.runic-number__value) {
+    font-size: 0.8125rem;
+  }
+
+  .ladder-entry__avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .ladder-entry__username {
+    font-size: 0.9375rem;
+  }
+
+  .podium__stats {
+    gap: 0.5rem;
+  }
+
+  .podium__stat-item :deep(.runic-number__cavity) {
+    min-width: 40px;
+    min-height: 32px;
+    padding: 0.25rem 0.375rem;
+  }
+
+  .podium__stat-item :deep(.runic-number__value) {
+    font-size: 0.9375rem;
+  }
+
+  .podium__stat-item :deep(.runic-number__label) {
+    font-size: 0.625rem;
   }
 }
 </style>
