@@ -31,10 +31,14 @@ export const useDataSourceStore = defineStore('dataSource', () => {
 
   // Getters
   const isMockData = computed(() => {
+    // NEVER allow mock mode in production, even if localStorage says so
+    if (import.meta.prod) return false
     return source.value === 'mock'
   })
 
   const isSupabaseData = computed(() => {
+    // Always use Supabase in production
+    if (import.meta.prod) return true
     return source.value === 'supabase'
   })
 

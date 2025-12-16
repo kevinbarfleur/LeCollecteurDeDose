@@ -10,6 +10,7 @@ const navItems = computed(() => [
   { path: "/catalogue", label: t("nav.catalogue"), icon: "cards" },
   { path: "/collection", label: t("nav.collection"), icon: "user" },
   { path: "/altar", label: t("nav.altar"), icon: "altar" },
+  { path: "/ladder", label: t("nav.ladder"), icon: "trophy" },
   { path: "/about", label: t("nav.about"), icon: "info" },
 ]);
 

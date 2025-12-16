@@ -16,7 +16,8 @@ export default defineOAuthTwitchEventHandler({
       await supabase.rpc('link_oauth_user', {
         p_twitch_user_id: user.id,
         p_twitch_username: user.login,
-        p_display_name: user.display_name
+        p_display_name: user.display_name,
+        p_avatar_url: user.profile_image_url
       })
     } catch (error) {
       console.error('Failed to link OAuth user:', error)
