@@ -81,6 +81,13 @@ interface TargetedUser {
   triggerType?: string
 }
 
+// Track how many times each user has been targeted (for weighted selection)
+interface UserTargetCount {
+  username: string
+  count: number
+  lastTargeted: number
+}
+
 interface TriggerConfig {
   enabled: boolean
   minInterval: number
@@ -103,6 +110,7 @@ interface TriggerConfig {
 const recentUsers: RecentUser[] = []
 const targetedUsers: TargetedUser[] = []
 const allTrackedUsers: Set<string> = new Set() // All unique users tracked since bot start
+const userTargetCounts: Map<string, UserTargetCount> = new Map() // Track targeting history for fairness
 const MAX_RECENT_USERS = 50
 
 // Load trigger configuration from Supabase
@@ -244,12 +252,21 @@ let triggerConfig: TriggerConfig = {
 function trackUserActivity(username: string) {
   // Ignore bot itself
   if (username.toLowerCase() === TWITCH_BOT_USERNAME.toLowerCase()) return
-  
+
   const now = Date.now()
-  const existingIndex = recentUsers.findIndex(u => u.username.toLowerCase() === username.toLowerCase())
-  
+  const lowerUsername = username.toLowerCase()
+  const existingIndex = recentUsers.findIndex(u => u.username.toLowerCase() === lowerUsername)
+
   if (existingIndex >= 0) {
-    recentUsers[existingIndex].timestamp = now
+    // User already tracked - only update timestamp if they were inactive for a while
+    // This prevents active chatters from always being "fresh" in the list
+    const timeSinceLastActivity = now - recentUsers[existingIndex].timestamp
+    const refreshThreshold = Math.min(triggerConfig.userActivityWindow / 3, 300000) // 1/3 of window or 5 min max
+
+    if (timeSinceLastActivity > refreshThreshold) {
+      recentUsers[existingIndex].timestamp = now
+    }
+    // Otherwise, don't update - they're already "active enough"
   } else {
     recentUsers.push({ username, timestamp: now })
     // Keep list size manageable
@@ -257,7 +274,10 @@ function trackUserActivity(username: string) {
       recentUsers.shift()
     }
   }
-  
+
+  // Always track in allTrackedUsers for manual triggers
+  allTrackedUsers.add(username)
+
   // Cleanup old users
   const cutoff = now - triggerConfig.userActivityWindow
   const filtered = recentUsers.filter(u => u.timestamp > cutoff)
@@ -295,24 +315,57 @@ function canTargetUser(username: string): boolean {
   return (now - recentTarget.timestamp) >= triggerConfig.targetCooldown
 }
 
-// Get random active user (with anti-focus)
+// Get the weight for a user based on how many times they've been targeted
+// Users who have been targeted less get higher weight
+function getUserWeight(username: string): number {
+  const lowerUsername = username.toLowerCase()
+  const targetCount = userTargetCounts.get(lowerUsername)
+
+  if (!targetCount) {
+    // Never targeted = highest weight (10)
+    return 10
+  }
+
+  // Weight decreases with target count: 10, 5, 3.33, 2.5, 2, 1.67, ...
+  // Minimum weight is 1 to ensure everyone still has a chance
+  return Math.max(1, 10 / (targetCount.count + 1))
+}
+
+// Get random active user (with weighted fairness)
 function getRandomActiveUser(): string | null {
   cleanupOldTargets()
-  
+
   // Filter targetable users (not in cooldown)
   const targetableUsers = recentUsers.filter(
     u => canTargetUser(u.username)
   )
-  
+
   if (targetableUsers.length === 0) {
-    // If no targetable users, return last active user (fallback)
+    // If no targetable users and we have recent users, pick randomly (not the last one!)
     if (recentUsers.length === 0) return null
-    return recentUsers[recentUsers.length - 1].username
+    // Random fallback instead of always picking the last active user
+    const randomIndex = Math.floor(Math.random() * recentUsers.length)
+    return recentUsers[randomIndex].username
   }
-  
-  // Random selection among targetable users
-  const randomIndex = Math.floor(Math.random() * targetableUsers.length)
-  return targetableUsers[randomIndex].username
+
+  // Weighted random selection: users targeted less often have higher chance
+  const weights = targetableUsers.map(u => ({
+    username: u.username,
+    weight: getUserWeight(u.username)
+  }))
+
+  const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0)
+  let random = Math.random() * totalWeight
+
+  for (const w of weights) {
+    random -= w.weight
+    if (random <= 0) {
+      return w.username
+    }
+  }
+
+  // Fallback (shouldn't happen)
+  return targetableUsers[0].username
 }
 
 // Get random user for manual trigger (all tracked users, no cooldown)
@@ -335,15 +388,31 @@ function getRandomUserForManualTrigger(): string | null {
 // Mark user as targeted
 function markUserAsTargeted(username: string, triggerType: string) {
   const now = Date.now()
+  const lowerUsername = username.toLowerCase()
+
+  // Update targetedUsers (for cooldown)
   const existingIndex = targetedUsers.findIndex(
-    t => t.username.toLowerCase() === username.toLowerCase()
+    t => t.username.toLowerCase() === lowerUsername
   )
-  
+
   if (existingIndex >= 0) {
     targetedUsers[existingIndex].timestamp = now
     targetedUsers[existingIndex].triggerType = triggerType
   } else {
     targetedUsers.push({ username, timestamp: now, triggerType })
+  }
+
+  // Update target count (for weighted fairness)
+  const existingCount = userTargetCounts.get(lowerUsername)
+  if (existingCount) {
+    existingCount.count++
+    existingCount.lastTargeted = now
+  } else {
+    userTargetCounts.set(lowerUsername, {
+      username: username,
+      count: 1,
+      lastTargeted: now
+    })
   }
 }
 
@@ -611,7 +680,8 @@ async function cartographersGift(userId: string, username: string): Promise<{ su
     return { success: false, message: '❌ Erreur lors du cadeau du Cartographe' }
   }
 
-  return { success: true, message: `🗺️ @${username} reçoit un cadeau du Cartographe ! +1 carte` }
+  const cardName = result.card_name || 'une carte mystérieuse'
+  return { success: true, message: `🗺️ Le Cartographe offre "${cardName}" à @${username} !` }
 }
 
 // Mirror-tier Moment - Duplicate a card (checks if user has cards)
@@ -626,14 +696,15 @@ async function mirrorTierMoment(userId: string, username: string): Promise<{ suc
 
   if (error) {
     console.error('Error in mirrorTierMoment:', error)
-    return { success: false, message: `💎 @${username} cherche un miroir... mais sa collection est vide.` }
+    return { success: false, message: `💎 @${username} cherche un Mirror of Kalandra... mais sa collection est vide.` }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `💎 @${username} cherche un miroir... mais sa collection est vide.` }
+    return { success: false, message: `💎 @${username} cherche un Mirror of Kalandra... mais sa collection est vide.` }
   }
 
-  return { success: true, message: `💎 @${username} vit un moment Mirror-tier ! Une carte a été dupliquée !` }
+  const cardName = result.card_name || 'une carte'
+  return { success: true, message: `💎 MIRROR-TIER ! @${username} duplique "${cardName}" !` }
 }
 
 // Einhar Approved - Convert normal card to foil (checks if user has normal cards)
@@ -648,14 +719,15 @@ async function einharApproved(userId: string, username: string): Promise<{ succe
 
   if (error) {
     console.error('Error in einharApproved:', error)
-    return { success: false, message: `🦎 Einhar regarde @${username}... mais ne trouve rien à approuver.` }
+    return { success: false, message: `🦎 Einhar regarde @${username}... "You have nothing worth capturing, exile!"` }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `🦎 Einhar regarde @${username}... mais ne trouve rien à approuver.` }
+    return { success: false, message: `🦎 Einhar regarde @${username}... "You have nothing worth capturing, exile!"` }
   }
 
-  return { success: true, message: `🦎 Einhar approuve @${username} ! Une carte devient foil !` }
+  const cardName = result.card_name || 'une carte'
+  return { success: true, message: `🦎 "A worthy capture!" Einhar transforme "${cardName}" de @${username} en FOIL ✨` }
 }
 
 // Heist Tax - Steal 1 Vaal Orb (checks if user has Vaal Orbs)
@@ -701,7 +773,7 @@ async function sirusVoiceLine(userId: string, username: string): Promise<{ succe
 
   const cardName = result.card_name || 'une carte'
   const foilIndicator = result.is_foil ? ' ✨' : ''
-  return { success: true, message: `💀 "Die." - Sirus détruit ${cardName}${foilIndicator} de @${username}` }
+  return { success: true, message: `💀 "Die." - Sirus détruit "${cardName}"${foilIndicator} de @${username}` }
 }
 
 // Alch & Go Misclick - Reroll a card (checks if user has cards)
@@ -716,14 +788,16 @@ async function alchGoMisclick(userId: string, username: string): Promise<{ succe
 
   if (error) {
     console.error('Error in alchGoMisclick:', error)
-    return { success: false, message: `⚗️ @${username} cherche une carte à reroll... mais sa collection est vide.` }
+    return { success: false, message: `⚗️ @${username} tente un Alch & Go... mais n'a rien à alch !` }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `⚗️ @${username} cherche une carte à reroll... mais sa collection est vide.` }
+    return { success: false, message: `⚗️ @${username} tente un Alch & Go... mais n'a rien à alch !` }
   }
 
-  return { success: true, message: `⚗️ @${username} a fait un misclick ! Une carte a été rerollée` }
+  const oldCard = result.old_card_name || '???'
+  const newCard = result.new_card_name || '???'
+  return { success: true, message: `⚗️ MISCLICK ! @${username} reroll "${oldCard}" → "${newCard}"` }
 }
 
 // Trade Scam - Transfer card to another user (checks if source has cards)
@@ -735,7 +809,7 @@ async function tradeScam(userId: string, username: string, isManual: boolean = f
   // Get another random user as target (use manual selection if manual trigger)
   const targetUsername = isManual ? getRandomUserForManualTrigger() : getRandomActiveUser()
   if (!targetUsername || targetUsername.toLowerCase() === username.toLowerCase()) {
-    return { success: false, message: `🤝 @${username} n'a personne à scammer... le scam échoue.` }
+    return { success: false, message: `🤝 @${username} cherche une victime... mais personne n'est là !` }
   }
 
   // Get or create target user
@@ -764,7 +838,8 @@ async function tradeScam(userId: string, username: string, isManual: boolean = f
     return { success: false, message: `🤝 @${username} n'a rien à échanger... le scam échoue.` }
   }
 
-  return { success: true, message: `🤝 @${username} s'est fait scammer ! Une carte transférée à @${targetUsername}` }
+  const cardName = result.card_name || 'une carte'
+  return { success: true, message: `🤝 SCAM ! @${targetUsername} vole "${cardName}" à @${username} !` }
 }
 
 // Chris Wilson's Vision - Remove foil from a foil card (checks if user has foil cards)
@@ -779,14 +854,15 @@ async function chrisWilsonsVision(userId: string, username: string): Promise<{ s
 
   if (error) {
     console.error('Error in chrisWilsonsVision:', error)
-    return { success: false, message: `👓 Chris Wilson regarde @${username}... mais ne voit aucun foil à nerfer.` }
+    return { success: false, message: `👓 Chris Wilson regarde @${username}... "No foils to nerf here."` }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `👓 Chris Wilson regarde @${username}... mais ne voit aucun foil à nerfer.` }
+    return { success: false, message: `👓 Chris Wilson regarde @${username}... "No foils to nerf here."` }
   }
 
-  return { success: true, message: `👓 La vision de Chris Wilson frappe @${username} ! Le foil d'une carte a été retiré` }
+  const cardName = result.card_name || 'une carte'
+  return { success: true, message: `👓 NERF ! Chris Wilson retire le foil de "${cardName}" de @${username}` }
 }
 
 // Atlas Influence - Add temporary buff (always possible)
