@@ -1245,13 +1245,36 @@ const triggerManualTrigger = async (triggerType: string) => {
                         </RunicButton>
                       </div>
                     </div>
+                  </div>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="flex flex-col gap-5">
+                      <p class="font-body text-lg">Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
+          </div>
 
+          <!-- Actions Avancées -->
+          <div v-show="activeTab === 'advanced'" class="flex flex-col gap-8">
+            <!-- Section: Actions Bot -->
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="ACTIONS BOT"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
                     <!-- Daily Limits Reset -->
                     <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
                       <div class="flex-1 flex flex-col gap-1.5 min-w-0">
                         <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Reset Limites Quotidiennes</label>
                         <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Réinitialise les !booster et !vaals pour tous les utilisateurs
+                          Réinitialise les !booster et !vaals pour tous les utilisateurs et envoie une annonce dans le chat
                         </p>
                         <p
                           v-if="dailyLimitsResetMessage"
@@ -1284,10 +1307,7 @@ const triggerManualTrigger = async (triggerType: string) => {
                 </template>
               </ClientOnly>
             </div>
-          </div>
 
-          <!-- Actions Avancées -->
-          <div v-show="activeTab === 'advanced'" class="flex flex-col gap-8">
             <!-- Section: Logs et Diagnostic -->
             <div class="flex flex-col w-full">
               <RunicHeader

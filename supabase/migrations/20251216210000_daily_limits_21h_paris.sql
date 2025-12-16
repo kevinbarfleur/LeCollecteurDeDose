@@ -9,29 +9,29 @@
 CREATE OR REPLACE FUNCTION get_daily_reset_timestamp()
 RETURNS TIMESTAMPTZ
 LANGUAGE plpgsql
-IMMUTABLE
+STABLE
 AS $$
 DECLARE
-  v_paris_now TIMESTAMPTZ;
-  v_paris_today_21h TIMESTAMPTZ;
-  v_reset_timestamp TIMESTAMPTZ;
+  v_paris_now TIMESTAMP;
+  v_paris_21h TIMESTAMP;
+  v_reset_paris TIMESTAMP;
 BEGIN
-  -- Get current time in Paris timezone
-  v_paris_now := NOW() AT TIME ZONE 'Europe/Paris';
+  -- Get current time in Paris (as local timestamp without timezone)
+  v_paris_now := (NOW() AT TIME ZONE 'Europe/Paris');
 
-  -- Get today at 21:00 Paris time
-  v_paris_today_21h := DATE_TRUNC('day', v_paris_now) + INTERVAL '21 hours';
+  -- Get today at 21:00 Paris local time
+  v_paris_21h := DATE_TRUNC('day', v_paris_now) + INTERVAL '21 hours';
 
-  -- If we're before 21h Paris, the period started yesterday at 21h
-  -- If we're after 21h Paris, the period started today at 21h
-  IF v_paris_now < v_paris_today_21h THEN
-    v_reset_timestamp := v_paris_today_21h - INTERVAL '1 day';
+  -- If we're before 21h Paris, the current period started yesterday at 21h
+  -- If we're after 21h Paris, the current period started today at 21h
+  IF v_paris_now < v_paris_21h THEN
+    v_reset_paris := v_paris_21h - INTERVAL '1 day';
   ELSE
-    v_reset_timestamp := v_paris_today_21h;
+    v_reset_paris := v_paris_21h;
   END IF;
 
-  -- Convert back to UTC for storage
-  RETURN v_reset_timestamp AT TIME ZONE 'Europe/Paris';
+  -- Convert Paris local time back to UTC timestamptz
+  RETURN v_reset_paris AT TIME ZONE 'Europe/Paris';
 END;
 $$;
 
@@ -155,9 +155,10 @@ AS $$
 DECLARE
   v_affected_rows INTEGER;
 BEGIN
-  -- Reset all usage counts to 0
+  -- Reset all usage counts to 0 (WHERE true required by Supabase)
   UPDATE user_daily_limits
-  SET usage_count = 0, updated_at = NOW();
+  SET usage_count = 0, updated_at = NOW()
+  WHERE true;
 
   GET DIAGNOSTICS v_affected_rows = ROW_COUNT;
 
