@@ -101,7 +101,7 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
 
     for (const user of users || []) {
       const username = user.twitch_username
-      result[username] = { vaalOrbs: user.vaal_orbs || 1 }
+      result[username] = { vaalOrbs: user.vaal_orbs ?? 0 }
 
       for (const col of user.user_collections || []) {
         const card = col.unique_cards
@@ -182,7 +182,7 @@ export async function getUserCollection(username: string): Promise<Record<string
       return { vaalOrbs: 0 }
     }
 
-    const result: Record<string, any> = { vaalOrbs: user.vaal_orbs || 1 }
+    const result: Record<string, any> = { vaalOrbs: user.vaal_orbs ?? 0 }
 
     for (const col of user.user_collections || []) {
       const card = col.unique_cards
