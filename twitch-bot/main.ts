@@ -12,6 +12,29 @@ import { createClient } from "npm:@supabase/supabase-js@2.87.2"
 import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
 import { getRandomMessage, formatCardName } from "./triggerMessages.ts"
 
+/**
+ * Calcule le temps restant jusqu'à minuit UTC (reset des limites quotidiennes)
+ * @returns Temps formaté: "3h45" ou "45 min"
+ */
+function getTimeUntilMidnightUTC(): string {
+  const now = new Date()
+  const midnightUTC = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1,
+    0, 0, 0, 0
+  ))
+
+  const diffMs = midnightUTC.getTime() - now.getTime()
+  const hours = Math.floor(diffMs / (1000 * 60 * 60))
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+
+  if (hours > 0) {
+    return `${hours}h${minutes.toString().padStart(2, '0')}`
+  }
+  return `${minutes} min`
+}
+
 // Load .env file for local development
 try {
   await load({ export: true })
@@ -541,7 +564,7 @@ async function handleCommand(
       }
 
       if (!limitResult?.success) {
-        sendResponse(`⚠️ @${username}, Zana refuse de t'ouvrir plus de maps aujourd'hui. Reviens demain, Exile !`)
+        sendResponse(`⚠️ @${username}, Zana refuse de t'ouvrir plus de maps aujourd'hui. Reviens dans ${getTimeUntilMidnightUTC()}, Exile !`)
         return
       }
 
@@ -607,7 +630,7 @@ async function handleCommand(
       }
 
       if (!limitResult?.success) {
-        sendResponse(`⚠️ @${username}, le temple d'Atziri est épuisé pour aujourd'hui. Les Vaal te reverront demain, Exile !`)
+        sendResponse(`⚠️ @${username}, le temple d'Atziri est épuisé pour aujourd'hui. Reviens dans ${getTimeUntilMidnightUTC()}, Exile !`)
         return
       }
 
