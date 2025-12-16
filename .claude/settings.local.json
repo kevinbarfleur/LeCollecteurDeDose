@@ -42,7 +42,11 @@
       "mcp__Railway__list-deployments",
       "Bash(npm install matter-js)",
       "Bash(npm install:*)",
-      "Bash(npx nuxi:*)"
+      "Bash(npx nuxi:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(dir:*)"
     ]
   }
 }

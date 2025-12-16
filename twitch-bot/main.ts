@@ -10,6 +10,7 @@ import tmi from "npm:tmi.js@^1.8.5"
 // Pin to 2.87.2 - version 2.87.3 has ESM compatibility issues with Deno
 import { createClient } from "npm:@supabase/supabase-js@2.87.2"
 import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
+import { getRandomMessage, formatCardName } from "./triggerMessages.ts"
 
 // Load .env file for local development
 try {
@@ -661,7 +662,7 @@ async function blessingOfRNGesus(userId: string, username: string): Promise<{ su
     return { success: false, message: '❌ Erreur lors de la bénédiction de RNGesus' }
   }
 
-  return { success: true, message: `✨ @${username} reçoit la bénédiction de RNGesus ! +1 Vaal Orb` }
+  return { success: true, message: getRandomMessage('blessingRNGesus', 'success', { username }) }
 }
 
 // Cartographer's Gift - Give 1 random card (non-foil) (always possible)
@@ -681,7 +682,8 @@ async function cartographersGift(userId: string, username: string): Promise<{ su
   }
 
   const cardName = result.card_name || 'une carte mystérieuse'
-  return { success: true, message: `🗺️ Le Cartographe offre "${cardName}" à @${username} !` }
+  const card = formatCardName(cardName, false) // toujours non-foil
+  return { success: true, message: getRandomMessage('cartographersGift', 'success', { username, card }) }
 }
 
 // Mirror-tier Moment - Duplicate a card (checks if user has cards)
@@ -696,15 +698,16 @@ async function mirrorTierMoment(userId: string, username: string): Promise<{ suc
 
   if (error) {
     console.error('Error in mirrorTierMoment:', error)
-    return { success: false, message: `💎 @${username} cherche un Mirror of Kalandra... mais sa collection est vide.` }
+    return { success: false, message: getRandomMessage('mirrorTier', 'failure', { username }) }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `💎 @${username} cherche un Mirror of Kalandra... mais sa collection est vide.` }
+    return { success: false, message: getRandomMessage('mirrorTier', 'failure', { username }) }
   }
 
   const cardName = result.card_name || 'une carte'
-  return { success: true, message: `💎 MIRROR-TIER ! @${username} duplique "${cardName}" !` }
+  const card = formatCardName(cardName, result.is_foil || false)
+  return { success: true, message: getRandomMessage('mirrorTier', 'success', { username, card }) }
 }
 
 // Einhar Approved - Convert normal card to foil (checks if user has normal cards)
@@ -719,15 +722,16 @@ async function einharApproved(userId: string, username: string): Promise<{ succe
 
   if (error) {
     console.error('Error in einharApproved:', error)
-    return { success: false, message: `🦎 Einhar regarde @${username}... "You have nothing worth capturing, exile!"` }
+    return { success: false, message: getRandomMessage('einharApproved', 'failure', { username }) }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `🦎 Einhar regarde @${username}... "You have nothing worth capturing, exile!"` }
+    return { success: false, message: getRandomMessage('einharApproved', 'failure', { username }) }
   }
 
   const cardName = result.card_name || 'une carte'
-  return { success: true, message: `🦎 "A worthy capture!" Einhar transforme "${cardName}" de @${username} en FOIL ✨` }
+  const card = formatCardName(cardName, false) // la carte était normale avant conversion
+  return { success: true, message: getRandomMessage('einharApproved', 'success', { username, card }) }
 }
 
 // Heist Tax - Steal 1 Vaal Orb (checks if user has Vaal Orbs)
@@ -742,14 +746,14 @@ async function heistTax(userId: string, username: string): Promise<{ success: bo
 
   if (error) {
     console.error('Error in heistTax:', error)
-    return { success: false, message: `💰 @${username} n'a rien à voler... Heist repart bredouille.` }
+    return { success: false, message: getRandomMessage('heistTax', 'failure', { username }) }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `💰 @${username} n'a rien à voler... Heist repart bredouille.` }
+    return { success: false, message: getRandomMessage('heistTax', 'failure', { username }) }
   }
 
-  return { success: true, message: `💰 @${username} a été taxé par Heist ! -1 Vaal Orb` }
+  return { success: true, message: getRandomMessage('heistTax', 'success', { username }) }
 }
 
 // Sirus Voice Line - Destroy a random card (checks if user has cards)
@@ -764,16 +768,16 @@ async function sirusVoiceLine(userId: string, username: string): Promise<{ succe
 
   if (error) {
     console.error('Error in sirusVoiceLine:', error)
-    return { success: false, message: `💀 Sirus regarde @${username}... "Tu n'as rien à perdre."` }
+    return { success: false, message: getRandomMessage('sirusVoice', 'failure', { username }) }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `💀 Sirus regarde @${username}... "Tu n'as rien à perdre."` }
+    return { success: false, message: getRandomMessage('sirusVoice', 'failure', { username }) }
   }
 
   const cardName = result.card_name || 'une carte'
-  const foilIndicator = result.is_foil ? ' ✨' : ''
-  return { success: true, message: `💀 "Die." - Sirus détruit "${cardName}"${foilIndicator} de @${username}` }
+  const card = formatCardName(cardName, result.is_foil || false)
+  return { success: true, message: getRandomMessage('sirusVoice', 'success', { username, card }) }
 }
 
 // Alch & Go Misclick - Reroll a card (checks if user has cards)
@@ -788,16 +792,18 @@ async function alchGoMisclick(userId: string, username: string): Promise<{ succe
 
   if (error) {
     console.error('Error in alchGoMisclick:', error)
-    return { success: false, message: `⚗️ @${username} tente un Alch & Go... mais n'a rien à alch !` }
+    return { success: false, message: getRandomMessage('alchMisclick', 'failure', { username }) }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `⚗️ @${username} tente un Alch & Go... mais n'a rien à alch !` }
+    return { success: false, message: getRandomMessage('alchMisclick', 'failure', { username }) }
   }
 
-  const oldCard = result.old_card_name || '???'
-  const newCard = result.new_card_name || '???'
-  return { success: true, message: `⚗️ MISCLICK ! @${username} reroll "${oldCard}" → "${newCard}"` }
+  const oldCardName = result.old_card_name || '???'
+  const newCardName = result.new_card_name || '???'
+  const oldCard = formatCardName(oldCardName, result.old_is_foil || false)
+  const newCard = formatCardName(newCardName, result.new_is_foil || false)
+  return { success: true, message: getRandomMessage('alchMisclick', 'success', { username, oldCard, newCard }) }
 }
 
 // Trade Scam - Transfer card to another user (checks if source has cards)
@@ -809,7 +815,7 @@ async function tradeScam(userId: string, username: string, isManual: boolean = f
   // Get another random user as target (use manual selection if manual trigger)
   const targetUsername = isManual ? getRandomUserForManualTrigger() : getRandomActiveUser()
   if (!targetUsername || targetUsername.toLowerCase() === username.toLowerCase()) {
-    return { success: false, message: `🤝 @${username} cherche une victime... mais personne n'est là !` }
+    return { success: false, message: getRandomMessage('tradeScam', 'failureNoTarget', { username }) }
   }
 
   // Get or create target user
@@ -821,7 +827,7 @@ async function tradeScam(userId: string, username: string, isManual: boolean = f
   })
 
   if (targetError || !targetUserId) {
-    return { success: false, message: `🤝 @${username} n'a rien à échanger... le scam échoue.` }
+    return { success: false, message: getRandomMessage('tradeScam', 'failureNoCards', { username }) }
   }
 
   const { data: result, error } = await supabase.rpc('transfer_card', {
@@ -831,15 +837,16 @@ async function tradeScam(userId: string, username: string, isManual: boolean = f
 
   if (error) {
     console.error('Error in tradeScam:', error)
-    return { success: false, message: `🤝 @${username} n'a rien à échanger... le scam échoue.` }
+    return { success: false, message: getRandomMessage('tradeScam', 'failureNoCards', { username }) }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `🤝 @${username} n'a rien à échanger... le scam échoue.` }
+    return { success: false, message: getRandomMessage('tradeScam', 'failureNoCards', { username }) }
   }
 
   const cardName = result.card_name || 'une carte'
-  return { success: true, message: `🤝 SCAM ! @${targetUsername} vole "${cardName}" à @${username} !` }
+  const card = formatCardName(cardName, result.is_foil || false)
+  return { success: true, message: getRandomMessage('tradeScam', 'success', { username, targetUsername, card }) }
 }
 
 // Chris Wilson's Vision - Remove foil from a foil card (checks if user has foil cards)
@@ -854,15 +861,16 @@ async function chrisWilsonsVision(userId: string, username: string): Promise<{ s
 
   if (error) {
     console.error('Error in chrisWilsonsVision:', error)
-    return { success: false, message: `👓 Chris Wilson regarde @${username}... "No foils to nerf here."` }
+    return { success: false, message: getRandomMessage('chrisVision', 'failure', { username }) }
   }
 
   if (!result || !result.success) {
-    return { success: false, message: `👓 Chris Wilson regarde @${username}... "No foils to nerf here."` }
+    return { success: false, message: getRandomMessage('chrisVision', 'failure', { username }) }
   }
 
   const cardName = result.card_name || 'une carte'
-  return { success: true, message: `👓 NERF ! Chris Wilson retire le foil de "${cardName}" de @${username}` }
+  const card = formatCardName(cardName, false) // la carte n'est plus foil
+  return { success: true, message: getRandomMessage('chrisVision', 'success', { username, card }) }
 }
 
 // Atlas Influence - Add temporary buff (always possible)
@@ -887,10 +895,10 @@ async function atlasInfluence(userId: string, username: string): Promise<{ succe
     return { success: false, message: '❌ Erreur lors de l\'influence de l\'Atlas' }
   }
 
-  const boostPercent = Math.round(triggerConfig.buffs.atlasInfluence.foilBoost * 100)
+  const boostPercent = String(Math.round(triggerConfig.buffs.atlasInfluence.foilBoost * 100))
   return {
     success: true,
-    message: `🗺️ @${username} reçoit l'influence de l'Atlas ! +${boostPercent}% chance de foil sur la prochaine utilisation de l'autel`
+    message: getRandomMessage('atlasInfluence', 'success', { username, boostPercent })
   }
 }
 
@@ -1037,7 +1045,10 @@ async function executeTrigger(triggerType: string, username: string, isManual: b
   // Get state after
   const stateAfter = await getUserTriggerState(userId)
 
-  // Log diagnostic
+  // Log to Railway console
+  console.log(`[TRIGGER] ${triggerType} | @${username} | Success: ${result.success} | ${result.message}`)
+
+  // Log diagnostic to database
   await logTriggerDiagnostic(
     username,
     userId,
