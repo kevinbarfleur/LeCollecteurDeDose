@@ -446,12 +446,12 @@ onUnmounted(() => {
                 </span>
               </span>
 
-              <!-- Count badge -->
+              <!-- Count badge (only show when > 1) -->
               <span
-                v-if="option.count !== undefined"
+                v-if="option.count !== undefined && option.count > 1"
                 class="runic-select__option-count"
               >
-                {{ option.count }}
+                ×{{ option.count }}
               </span>
 
               <!-- Selected indicator (single mode) -->
@@ -958,16 +958,32 @@ onUnmounted(() => {
 .runic-select__option-count {
   flex-shrink: 0;
   font-family: "Cinzel", serif;
-  font-size: 0.6875rem;
-  color: rgba(140, 130, 120, 0.6);
-  background: rgba(0, 0, 0, 0.3);
-  padding: 2px 6px;
-  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #c9a227;
+  background: linear-gradient(
+    180deg,
+    rgba(175, 96, 37, 0.25) 0%,
+    rgba(140, 75, 25, 0.35) 100%
+  );
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(175, 96, 37, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 150, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.02em;
 }
 
 .runic-select__option--selected .runic-select__option-count {
-  color: rgba(175, 96, 37, 0.8);
-  background: rgba(175, 96, 37, 0.1);
+  color: #e8c547;
+  background: linear-gradient(
+    180deg,
+    rgba(195, 115, 50, 0.35) 0%,
+    rgba(160, 85, 30, 0.45) 100%
+  );
+  border-color: rgba(195, 115, 50, 0.7);
 }
 
 .runic-select__check {

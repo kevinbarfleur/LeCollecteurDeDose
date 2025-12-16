@@ -258,6 +258,18 @@ const cardOptionsByTier = computed(() => {
     }
   });
 
+  // Sort each tier by count (duplicates first), then by name
+  for (const tier of Object.keys(tiers) as CardTier[]) {
+    tiers[tier].sort((a, b) => {
+      // First sort by count descending (most duplicates first)
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      // Then alphabetically by name
+      return a.label.localeCompare(b.label);
+    });
+  }
+
   return tiers;
 });
 
