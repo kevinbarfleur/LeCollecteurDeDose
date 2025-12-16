@@ -167,7 +167,7 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
     
     for (const [userId, user] of mockUsers.entries()) {
       const username = user.twitch_username
-      result[username] = { vaalOrbs: user.vaal_orbs || 1 }
+      result[username] = { vaalOrbs: user.vaal_orbs ?? 0 }
       
       const collections = mockCollections.get(userId) || []
       
@@ -223,7 +223,7 @@ export async function getUserCollection(username: string): Promise<Record<string
     }
     
     const user = mockUsers.get(userId)!
-    const result: Record<string, any> = { vaalOrbs: user.vaal_orbs || 1 }
+    const result: Record<string, any> = { vaalOrbs: user.vaal_orbs ?? 0 }
     
     const collections = mockCollections.get(userId) || []
     

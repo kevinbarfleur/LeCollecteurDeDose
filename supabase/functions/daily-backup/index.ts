@@ -57,7 +57,7 @@ serve(async (req) => {
     
     for (const user of users || []) {
       const username = user.twitch_username
-      userCollections[username] = { vaalOrbs: user.vaal_orbs || 1 }
+      userCollections[username] = { vaalOrbs: user.vaal_orbs ?? 0 }
       
       for (const col of user.user_collections || []) {
         const card = col.unique_cards

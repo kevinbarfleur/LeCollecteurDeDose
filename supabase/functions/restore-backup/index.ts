@@ -106,7 +106,7 @@ serve(async (req) => {
       for (const [username, userData] of Object.entries(backup.user_collection)) {
         try {
           const userDataObj = userData as any
-          const vaalOrbs = userDataObj.vaalOrbs || 1
+          const vaalOrbs = userDataObj.vaalOrbs ?? 0
 
           // Get or create user
           const { data: userId, error: userError } = await supabase.rpc('get_or_create_user', {
