@@ -43,7 +43,6 @@ const { loggedIn, user: authUser } = useUserSession();
 const { isSupabaseData, isInitializing } = useDataSource();
 const { fetchUserCollection } = useApi();
 const { syncCollectionToApi, updateCardCounts, isSyncing: isCollectionSyncing } = useCollectionSync();
-const { isTestMode } = useDevTestMode();
 
 const user = computed(() => ({
   name: authUser.value?.displayName || "Guest",
@@ -232,8 +231,34 @@ const collection = computed(() => localCollection.value);
 // CARD GROUPING WITH VARIATIONS
 // ==========================================
 
-const { groupedCards, cardOptions } = useCardGrouping(collection, {
+const { groupedCards } = useCardGrouping(collection, {
   sortByNameWithinTier: true,
+});
+
+// Card options grouped by tier (excluding foil-only cards since they can't be vaaled)
+const cardOptionsByTier = computed(() => {
+  const tiers: Record<CardTier, { value: string; label: string; count: number }[]> = {
+    T0: [],
+    T1: [],
+    T2: [],
+    T3: [],
+  };
+
+  groupedCards.value.forEach((group) => {
+    // Find the standard variation - foil cards can't be vaaled
+    const standardVariation = group.variations.find(v => v.variation === 'standard');
+
+    // Only include cards that have at least one standard (non-foil) copy
+    if (standardVariation && standardVariation.count > 0) {
+      tiers[group.tier].push({
+        value: group.cardId,
+        label: group.name,
+        count: standardVariation.count, // Only count standard cards
+      });
+    }
+  });
+
+  return tiers;
 });
 
 // ==========================================
@@ -242,6 +267,73 @@ const { groupedCards, cardOptions } = useCardGrouping(collection, {
 
 const selectedCardId = ref<string>("");
 const selectedVariation = ref<CardVariation>("standard");
+
+// Track which tier the selection came from (for per-tier selects)
+const selectedTierSelects = reactive<Record<CardTier, string>>({
+  T0: "",
+  T1: "",
+  T2: "",
+  T3: "",
+});
+
+// Handle selection from a specific tier
+const selectFromTier = (tier: CardTier, cardId: string) => {
+  // Clear all other tier selections
+  (Object.keys(selectedTierSelects) as CardTier[]).forEach((t) => {
+    if (t !== tier) {
+      selectedTierSelects[t] = "";
+    }
+  });
+
+  // Update the main selected card
+  selectedCardId.value = cardId;
+  selectedTierSelects[tier] = cardId;
+};
+
+// Watch for changes in tier selects
+watch(
+  () => selectedTierSelects.T0,
+  (val) => { if (val) selectFromTier('T0', val); }
+);
+watch(
+  () => selectedTierSelects.T1,
+  (val) => { if (val) selectFromTier('T1', val); }
+);
+watch(
+  () => selectedTierSelects.T2,
+  (val) => { if (val) selectFromTier('T2', val); }
+);
+watch(
+  () => selectedTierSelects.T3,
+  (val) => { if (val) selectFromTier('T3', val); }
+);
+
+// Watch for collection changes and clear invalid selections
+// This handles cases where:
+// - A card is destroyed by Vaal Orb
+// - A card's tier changes due to transformation
+// - A card is no longer available (consumed all standard copies)
+watch(
+  cardOptionsByTier,
+  (newOptions) => {
+    // Check each tier select and clear if the card is no longer available
+    (['T0', 'T1', 'T2', 'T3'] as CardTier[]).forEach((tier) => {
+      const currentSelection = selectedTierSelects[tier];
+      if (currentSelection) {
+        const stillAvailable = newOptions[tier].some(opt => opt.value === currentSelection);
+        if (!stillAvailable) {
+          selectedTierSelects[tier] = "";
+          // If this was the active selection, also clear selectedCardId
+          if (selectedCardId.value === currentSelection) {
+            selectedCardId.value = "";
+          }
+        }
+      }
+    });
+  },
+  { deep: true }
+);
+
 const isCardFlipped = ref(false);
 const isCardOnAltar = ref(false);
 const isAltarActive = ref(false); // Visual state - fades out smoothly
@@ -682,52 +774,6 @@ type CardUpdate = { normalDelta: number; foilDelta: number; currentNormal?: numb
 // Sync queue for managing concurrent syncs
 const { enqueue: enqueueSync, queueStatus: syncQueueStatus, isProcessing: isSyncProcessing, syncError } = useSyncQueue()
 
-// Auto-credit vaalOrbs in localhost test mode when reaching 0
-const isAutoCrediting = ref(false);
-watch(vaalOrbs, async (newValue, oldValue) => {
-  // Only trigger when vaalOrbs reaches 0 (not when loading from API or initializing)
-  if (newValue === 0 && oldValue !== undefined && oldValue > 0 && !isAutoCrediting.value && !isLoadingCollection.value) {
-    // Check if we're in test mode (auto-credit vaalOrbs when reaching 0)
-    if (isTestMode.value && loggedIn.value && authUser.value?.displayName) {
-      isAutoCrediting.value = true;
-      
-      // Credit locally first (optimistic update)
-      const vaalOrbsBefore = vaalOrbs.value;
-      vaalOrbs.value = 5;
-      
-      // Sync with API using the sync queue
-      try {
-        const updates = new Map<number, CardUpdate>();
-        const operationId = `auto-credit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
-        await enqueueSync({
-          id: operationId,
-          username: authUser.value.displayName,
-          cardUpdates: updates,
-          vaalOrbsNewValue: 5,
-          outcomeType: 'auto-credit',
-          rollbackData: {
-            vaalOrbsBefore,
-            localCollectionBefore: JSON.parse(JSON.stringify(localCollection.value)) as Card[],
-          },
-          onSuccess: async () => {
-            // Auto-credit sync completed
-          },
-          onError: (error) => {
-            // Rollback on error
-            vaalOrbs.value = vaalOrbsBefore;
-          },
-        });
-      } catch (error) {
-        // Rollback on error
-        vaalOrbs.value = vaalOrbsBefore;
-      }
-      
-      isAutoCrediting.value = false;
-    }
-  }
-});
-
 // Expose sync queue status for tests (update it reactively)
 if (import.meta.client) {
   watch([syncQueueStatus, () => isSyncProcessing], () => {
@@ -1007,6 +1053,15 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
         selectedVariation.value = "standard";
       }
       selectedCardId.value = newCard.id;
+
+      // Update tier selects to reflect the new card's tier
+      // Reset all tier selects first, then set the new tier
+      resetAllTierSelects();
+      // Only set if not foil (foil cards can't be vaaled again)
+      if (!newCard.foil) {
+        selectedTierSelects[newCard.tier as CardTier] = newCard.id;
+      }
+
       // Re-capture snapshot for new card appearance
       nextTick(() => captureCardSnapshot());
     },
@@ -1213,6 +1268,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
   isAltarActive.value = false;
   isCardFlipped.value = false;
   selectedCardId.value = "";
+  resetAllTierSelects();
   isAnimating.value = false;
 
   if (altarCardRef.value) {
@@ -1506,6 +1562,14 @@ const ejectCard = async () => {
   isCardFlipped.value = false;
 };
 
+// Reset all tier selects
+const resetAllTierSelects = () => {
+  selectedTierSelects.T0 = "";
+  selectedTierSelects.T1 = "";
+  selectedTierSelects.T2 = "";
+  selectedTierSelects.T3 = "";
+};
+
 // Remove card from altar
 const removeCardFromAltar = async () => {
   if (!altarCardRef.value || isBlockingInteractions.value || !isCardOnAltar.value) return;
@@ -1514,6 +1578,7 @@ const removeCardFromAltar = async () => {
   await ejectCard();
 
   selectedCardId.value = "";
+  resetAllTierSelects();
   isAnimating.value = false;
 };
 
@@ -2074,25 +2139,65 @@ const endDragOrb = async () => {
           />
           <RunicBox padding="md" attached>
             <div class="selector-grid">
-              <!-- Card selection -->
-              <div class="selector-field">
-                <label class="selector-label">{{
-                  t("altar.selector.chooseCard")
-                }}</label>
-                <RunicSelect
-                  v-model="selectedCardId"
-                  :options="cardOptions"
-                  :placeholder="t('altar.selector.selectCard')"
-                  size="md"
-                  :searchable="true"
-                  :disabled="isBlockingInteractions"
-                />
+              <!-- Tier selects -->
+              <div class="selector-tiers">
+                <!-- T0 Select -->
+                <div class="selector-tier">
+                  <label class="selector-label selector-label--t0">T0</label>
+                  <RunicSelect
+                    v-model="selectedTierSelects.T0"
+                    :options="cardOptionsByTier.T0"
+                    placeholder="—"
+                    size="sm"
+                    :searchable="true"
+                    :disabled="isBlockingInteractions || cardOptionsByTier.T0.length === 0"
+                  />
+                </div>
+
+                <!-- T1 Select -->
+                <div class="selector-tier">
+                  <label class="selector-label selector-label--t1">T1</label>
+                  <RunicSelect
+                    v-model="selectedTierSelects.T1"
+                    :options="cardOptionsByTier.T1"
+                    placeholder="—"
+                    size="sm"
+                    :searchable="true"
+                    :disabled="isBlockingInteractions || cardOptionsByTier.T1.length === 0"
+                  />
+                </div>
+
+                <!-- T2 Select -->
+                <div class="selector-tier">
+                  <label class="selector-label selector-label--t2">T2</label>
+                  <RunicSelect
+                    v-model="selectedTierSelects.T2"
+                    :options="cardOptionsByTier.T2"
+                    placeholder="—"
+                    size="sm"
+                    :searchable="true"
+                    :disabled="isBlockingInteractions || cardOptionsByTier.T2.length === 0"
+                  />
+                </div>
+
+                <!-- T3 Select -->
+                <div class="selector-tier">
+                  <label class="selector-label selector-label--t3">T3</label>
+                  <RunicSelect
+                    v-model="selectedTierSelects.T3"
+                    :options="cardOptionsByTier.T3"
+                    placeholder="—"
+                    size="sm"
+                    :searchable="true"
+                    :disabled="isBlockingInteractions || cardOptionsByTier.T3.length === 0"
+                  />
+                </div>
               </div>
 
               <!-- Variation selection (if multiple) -->
               <div
                 v-if="selectedCardGroup?.hasMultipleVariations"
-                class="selector-field"
+                class="selector-field selector-field--variant"
               >
                 <label class="selector-label">{{
                   t("altar.selector.variant")
@@ -2101,7 +2206,7 @@ const endDragOrb = async () => {
                   v-model="selectedVariation"
                   :options="variationOptions"
                   :placeholder="t('altar.selector.chooseVariant')"
-                  size="md"
+                  size="sm"
                   :disabled="isBlockingInteractions"
                 />
               </div>
@@ -2112,7 +2217,7 @@ const endDragOrb = async () => {
                 class="selector-field selector-field--action"
               >
                 <RunicButton
-                  size="md"
+                  size="sm"
                   rune-left="✕"
                   rune-right="✕"
                   :disabled="isBlockingInteractions"
@@ -2650,35 +2755,83 @@ const endDragOrb = async () => {
 
 .selector-grid {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-@media (min-width: 640px) {
-  .selector-grid {
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 1.5rem;
-  }
-}
-
-.selector-field {
-  display: flex;
-  flex-direction: column;
+  align-items: flex-end;
   gap: 0.5rem;
   width: 100%;
 }
 
-@media (min-width: 640px) {
-  .selector-field {
-    flex: 0 0 auto;
-    width: 280px;
+/* Container for tier selects - takes all available space */
+.selector-tiers {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* Individual tier select - equal width distribution */
+.selector-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* Variant field when present */
+.selector-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.selector-field--variant {
+  flex: 0 0 100px;
+  min-width: 80px;
+}
+
+/* Action button - fixed width */
+.selector-field--action {
+  flex: 0 0 auto;
+  align-self: flex-end;
+}
+
+/* Responsive: stack on small screens */
+@media (max-width: 640px) {
+  .selector-grid {
+    flex-wrap: wrap;
+  }
+
+  .selector-tiers {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  .selector-tier {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: calc(50% - 0.25rem);
+  }
+
+  .selector-field--variant {
+    flex: 1 1 calc(50% - 0.25rem);
   }
 
   .selector-field--action {
     flex: 0 0 auto;
-    width: auto;
-    margin-left: auto;
+  }
+}
+
+@media (max-width: 400px) {
+  .selector-tier {
+    flex: 1 1 100%;
+  }
+
+  .selector-field--variant {
+    flex: 1 1 100%;
+  }
+
+  .selector-field--action {
+    width: 100%;
   }
 }
 
@@ -2689,6 +2842,26 @@ const endDragOrb = async () => {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: rgba(140, 130, 120, 0.8);
+}
+
+/* Tier-specific label colors */
+.selector-label--t0 {
+  color: var(--color-tier-t0, #e6b422);
+  text-shadow: 0 0 6px rgba(230, 180, 34, 0.3);
+}
+
+.selector-label--t1 {
+  color: var(--color-tier-t1, #a855f7);
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.3);
+}
+
+.selector-label--t2 {
+  color: var(--color-tier-t2, #3b82f6);
+  text-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+}
+
+.selector-label--t3 {
+  color: var(--color-tier-t3, rgba(180, 170, 160, 0.9));
 }
 
 /* ==========================================

@@ -1,8 +1,10 @@
 export default defineNuxtRouteMiddleware((to) => {
   const { loggedIn } = useUserSession()
 
-  // Protect collection page
-  if (to.path === '/collection' && !loggedIn.value) {
+  // Protected pages that require authentication
+  const protectedPaths = ['/collection', '/ladder']
+
+  if (protectedPaths.includes(to.path) && !loggedIn.value) {
     return navigateTo('/')
   }
 })

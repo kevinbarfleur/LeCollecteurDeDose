@@ -137,6 +137,7 @@ const updateDropdownPosition = () => {
   if (!triggerRef.value) return;
 
   const rect = triggerRef.value.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const spaceBelow = viewportHeight - rect.bottom;
   const spaceAbove = rect.top;
@@ -147,12 +148,28 @@ const updateDropdownPosition = () => {
   // Determine if dropdown should open above or below
   const openAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
+  // Use trigger width exactly - no minimum to avoid overflow
+  // Clamp to max available viewport space
+  const maxWidth = viewportWidth - 16; // 8px padding on each side
+  const dropdownWidth = Math.min(rect.width, maxWidth);
+
+  // Position at trigger's left edge
+  let left = rect.left;
+
+  // Ensure dropdown stays within viewport
+  if (left + dropdownWidth > viewportWidth - 8) {
+    left = viewportWidth - dropdownWidth - 8;
+  }
+  if (left < 8) {
+    left = 8;
+  }
+
   dropdownPosition.value = {
     top: openAbove
       ? rect.top - Math.min(dropdownHeight, spaceAbove - 10) - 4
       : rect.bottom + 4,
-    left: rect.left,
-    width: rect.width,
+    left,
+    width: dropdownWidth,
   };
 };
 
@@ -683,6 +700,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Ensure all dropdown children use border-box */
+.runic-select__dropdown *,
+.runic-select__dropdown *::before,
+.runic-select__dropdown *::after {
+  box-sizing: border-box;
 }
 
 /* ==========================================
@@ -695,6 +720,8 @@ onUnmounted(() => {
   padding: 8px 12px;
   border-bottom: 1px solid rgba(60, 55, 50, 0.3);
   background: rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .runic-select__search-icon {
@@ -706,7 +733,8 @@ onUnmounted(() => {
 }
 
 .runic-select__search-input {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -750,9 +778,11 @@ onUnmounted(() => {
    ========================================== */
 .runic-select__dropdown-inner {
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   min-height: 0;
   padding: 4px;
+  text-align: left;
 }
 
 /* Custom scrollbar */
@@ -802,6 +832,8 @@ onUnmounted(() => {
   text-align: left;
   position: relative;
   transition: all 0.2s ease;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Hover: runic borders */
@@ -889,11 +921,13 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  flex: 1;
+  flex: 1 1 0%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .runic-select__option-label {
+  display: block;
   font-family: "Crimson Text", serif;
   font-size: 1rem;
   color: #c8c8c8;
@@ -901,7 +935,8 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  width: 100%;
+  text-align: left;
 }
 
 .runic-select__option:hover .runic-select__option-label {
@@ -921,13 +956,13 @@ onUnmounted(() => {
 }
 
 .runic-select__option-count {
+  flex-shrink: 0;
   font-family: "Cinzel", serif;
   font-size: 0.6875rem;
   color: rgba(140, 130, 120, 0.6);
   background: rgba(0, 0, 0, 0.3);
   padding: 2px 6px;
   border-radius: 8px;
-  margin-left: auto;
 }
 
 .runic-select__option--selected .runic-select__option-count {
@@ -936,13 +971,11 @@ onUnmounted(() => {
 }
 
 .runic-select__check {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
   color: #c97a3a;
+  margin-left: auto;
 }
 
 /* ==========================================
@@ -978,10 +1011,19 @@ onUnmounted(() => {
 }
 
 .runic-select--sm .runic-select__option {
-  padding: 0.5rem 0.875rem;
+  padding: 0.5rem 0.75rem;
+  gap: 6px;
 }
 
 .runic-select--sm .runic-select__option-label {
+  font-size: 0.875rem;
+}
+
+.runic-select__dropdown--sm .runic-select__search {
+  padding: 6px 10px;
+}
+
+.runic-select__dropdown--sm .runic-select__search-input {
   font-size: 0.875rem;
 }
 

@@ -23,12 +23,16 @@
     },
     "replay": {
       "title": "Replay des Sacrifices - Le Collecteur de Dose"
+    },
+    "ladder": {
+      "title": "Classement des Exilés - Le Collecteur de Dose"
     }
   },
   "nav": {
     "catalogue": "Registre",
     "collection": "Ma Collection",
     "altar": "Autel",
+    "ladder": "Classement",
     "about": "À propos"
   },
   "auth": {
@@ -66,7 +70,7 @@
     }
   },
   "altar": {
-    "title": "L'Autel (Playground)",
+    "title": "L'Autel",
     "subtitle": "Approche, exile… et laisse la corruption juger ta dignité.",
     "closed": {
       "title": "L'Autel est Scellé",
@@ -147,6 +151,51 @@
       "t1": "T1",
       "t2": "T2",
       "t3": "T3"
+    }
+  },
+  "ladder": {
+    "title": "Classement des Exilés",
+    "subtitle": "Les collectionneurs les plus acharnés de Wraeclast.",
+    "loading": "Invocation des âmes errantes...",
+    "retry": "Réessayer",
+    "empty": "Aucun exilé n'a encore foulé ces terres.",
+    "emptyFiltered": "Aucun exilé ne correspond à tes critères. Assouplis ta recherche.",
+    "search": {
+      "placeholder": "Traquer un exilé..."
+    },
+    "sort": {
+      "label": "Trier par...",
+      "completion": "Complétion",
+      "unique": "Cartes uniques",
+      "total": "Total cartes",
+      "foils": "Foils",
+      "t0": "Cartes T0"
+    },
+    "filters": {
+      "label": "Filtres",
+      "clear": "Effacer filtres",
+      "hasFoils": "A des Foils",
+      "hasFoilsDesc": "Exilés possédant au moins une foil",
+      "hasT0": "A des T0",
+      "hasT0Desc": "Exilés possédant des cartes légendaires",
+      "min25": "25%+",
+      "min25Desc": "Complétion minimum 25%",
+      "min50": "50%+",
+      "min50Desc": "Complétion minimum 50%",
+      "min75": "75%+",
+      "min75Desc": "Complétion minimum 75%"
+    },
+    "stats": {
+      "players": "Exilés",
+      "distributed": "Cartes distribuées",
+      "catalogue": "Cartes au catalogue"
+    },
+    "columns": {
+      "player": "Exilé",
+      "completion": "Complétion",
+      "unique": "Uniques",
+      "total": "Total",
+      "foils": "Foils"
     }
   },
   "about": {
