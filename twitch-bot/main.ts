@@ -381,6 +381,12 @@ async function handleCommand(
     return
   }
 
+  // !ladder - Show the leaderboard link
+  if (command === '!ladder' || command === '!classement') {
+    sendResponse('🏛️ Le Hall des Grandmasters révèle ses secrets : https://le-collecteur-de-dose.vercel.app/ladder')
+    return
+  }
+
   // !vaalorb - Use a Vaal Orb on a random card (Path of Exile style)
   if (command === '!vaalorb') {
     if (!supabase) {
