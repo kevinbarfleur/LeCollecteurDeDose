@@ -1,10 +1,20 @@
-# Configuration de l'API Twitch Chatters
+# Configuration de l'API Twitch
 
-Ce document explique comment configurer l'API Twitch pour obtenir la liste complète des utilisateurs connectés au chat, incluant les "lurkers" (spectateurs silencieux).
+Ce document explique comment configurer l'API Twitch pour :
+1. **Recuperer les avatars** des utilisateurs automatiquement
+2. **Obtenir la liste des chatters** (lurkers inclus) pour un ciblage plus equitable
 
-## Pourquoi c'est utile
+## Fonctionnalites disponibles avec l'API Twitch
 
-Actuellement, le bot ne peut cibler que les utilisateurs qui ont **parlé** dans le chat. Avec l'API Chatters, on peut cibler **tous les spectateurs présents**, rendant le système beaucoup plus équitable.
+### 1. Avatars automatiques (App Access Token)
+Avec juste le Client ID et Client Secret, le bot peut :
+- Recuperer automatiquement l'avatar de chaque utilisateur cible
+- Backfill les avatars manquants via `/webhook/backfill-avatars`
+
+### 2. Liste des Chatters (User Access Token + Mod)
+Avec un token OAuth complet + droits moderateur :
+- Cibler tous les spectateurs, meme les lurkers
+- Distribution plus equitable des triggers
 
 | Avant (actuel) | Apres (avec API) |
 |----------------|------------------|

@@ -27,6 +27,10 @@ const TWITCH_BOT_USERNAME = Deno.env.get("TWITCH_BOT_USERNAME") || ""
 const TWITCH_BOT_OAUTH_TOKEN = Deno.env.get("TWITCH_BOT_OAUTH_TOKEN") || ""
 const TWITCH_CHANNEL_NAME = Deno.env.get("TWITCH_CHANNEL_NAME") || ""
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
+
+// Twitch API credentials for fetching user avatars (optional)
+const TWITCH_CLIENT_ID = Deno.env.get("TWITCH_CLIENT_ID") || ""
+const TWITCH_CLIENT_SECRET = Deno.env.get("TWITCH_CLIENT_SECRET") || ""
 // Prefer service role key for server-side operations (better security)
 // Fallback to anon key for backward compatibility (functions use SECURITY DEFINER, so anon key works)
 const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || 
@@ -40,8 +44,10 @@ if (!Deno.env.get("RAILWAY_ENVIRONMENT")) {
   console.log(`   TWITCH_BOT_USERNAME: ${TWITCH_BOT_USERNAME ? '✅ Set' : '❌ Missing'}`)
   console.log(`   TWITCH_BOT_OAUTH_TOKEN: ${TWITCH_BOT_OAUTH_TOKEN ? '✅ Set' : '❌ Missing'}`)
   console.log(`   TWITCH_CHANNEL_NAME: ${TWITCH_CHANNEL_NAME ? '✅ Set' : '❌ Missing'}`)
+  console.log(`   TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID ? '✅ Set' : '⚠️ Missing (avatars disabled)'}`)
+  console.log(`   TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET ? '✅ Set' : '⚠️ Missing (avatars disabled)'}`)
   console.log(`   SUPABASE_URL: ${SUPABASE_URL ? '✅ Set' : '❌ Missing'}`)
-  const keyType = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? 'Service Role' : 
+  const keyType = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? 'Service Role' :
                   Deno.env.get("SUPABASE_KEY") ? 'Anon' : 'Missing'
   console.log(`   SUPABASE_KEY: ${SUPABASE_KEY ? `✅ Set (${keyType})` : '❌ Missing'}`)
 }
@@ -53,6 +59,122 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 } else {
   console.error('⚠️  Supabase credentials not found - chat commands requiring Supabase will be disabled')
+}
+
+// ============================================================================
+// TWITCH API - Avatar fetching via Helix API
+// ============================================================================
+
+let twitchAppAccessToken: string | null = null
+let twitchTokenExpiry: number = 0
+
+// Get App Access Token for Twitch API
+async function getTwitchAppAccessToken(): Promise<string | null> {
+  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
+    return null
+  }
+
+  // Return cached token if still valid (with 5 min buffer)
+  if (twitchAppAccessToken && Date.now() < twitchTokenExpiry - 300000) {
+    return twitchAppAccessToken
+  }
+
+  try {
+    const response = await fetch('https://id.twitch.tv/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: TWITCH_CLIENT_ID,
+        client_secret: TWITCH_CLIENT_SECRET,
+        grant_type: 'client_credentials'
+      })
+    })
+
+    if (!response.ok) {
+      console.error('Failed to get Twitch App Access Token:', response.status)
+      return null
+    }
+
+    const data = await response.json()
+    twitchAppAccessToken = data.access_token
+    twitchTokenExpiry = Date.now() + (data.expires_in * 1000)
+    console.log('🔑 Twitch App Access Token obtained')
+    return twitchAppAccessToken
+  } catch (error) {
+    console.error('Error getting Twitch App Access Token:', error)
+    return null
+  }
+}
+
+// Fetch user avatar from Twitch API
+async function fetchTwitchUserAvatar(username: string): Promise<string | null> {
+  const token = await getTwitchAppAccessToken()
+  if (!token) return null
+
+  try {
+    const response = await fetch(
+      `https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Client-Id': TWITCH_CLIENT_ID
+        }
+      }
+    )
+
+    if (!response.ok) {
+      console.error(`Failed to fetch Twitch user ${username}:`, response.status)
+      return null
+    }
+
+    const data = await response.json()
+    if (data.data && data.data.length > 0) {
+      return data.data[0].profile_image_url || null
+    }
+    return null
+  } catch (error) {
+    console.error(`Error fetching Twitch user avatar for ${username}:`, error)
+    return null
+  }
+}
+
+// Update user avatar in database
+async function updateUserAvatar(userId: string, avatarUrl: string): Promise<void> {
+  if (!supabase || !avatarUrl) return
+
+  try {
+    await supabase
+      .from('users')
+      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+  } catch (error) {
+    console.error('Error updating user avatar:', error)
+  }
+}
+
+// Ensure user has an avatar (fetch from Twitch if missing)
+async function ensureUserAvatar(userId: string, username: string): Promise<void> {
+  if (!supabase || !TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return
+
+  try {
+    // Check if user already has an avatar
+    const { data: user } = await supabase
+      .from('users')
+      .select('avatar_url')
+      .eq('id', userId)
+      .single()
+
+    if (user?.avatar_url) return // Already has avatar
+
+    // Fetch avatar from Twitch API
+    const avatarUrl = await fetchTwitchUserAvatar(username)
+    if (avatarUrl) {
+      await updateUserAvatar(userId, avatarUrl)
+      console.log(`🖼️ Avatar fetched for ${username}`)
+    }
+  } catch (error) {
+    // Silently fail - avatar is not critical
+  }
 }
 
 // Initialize Twitch client
@@ -989,6 +1111,9 @@ async function executeTrigger(triggerType: string, username: string, isManual: b
     return { success: false, message: `❌ Erreur lors de la récupération du profil de @${username}` }
   }
 
+  // Ensure user has an avatar (async, non-blocking)
+  ensureUserAvatar(userId, username).catch(() => {})
+
   // Get state before
   const stateBefore = await getUserTriggerState(userId)
 
@@ -1306,6 +1431,73 @@ async function handleRequest(req: Request): Promise<Response> {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
+      )
+    }
+  }
+
+  // Webhook endpoint to backfill missing avatars
+  if (req.method === 'POST' && url.pathname === '/webhook/backfill-avatars') {
+    if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
+      return new Response(
+        JSON.stringify({ error: 'Twitch API credentials not configured' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!supabase) {
+      return new Response(
+        JSON.stringify({ error: 'Supabase not configured' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    try {
+      // Get users without avatars (limit to 100 per call to avoid rate limits)
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, twitch_username')
+        .is('avatar_url', null)
+        .limit(100)
+
+      if (error || !users) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch users' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      let updated = 0
+      let failed = 0
+
+      for (const user of users) {
+        const avatarUrl = await fetchTwitchUserAvatar(user.twitch_username)
+        if (avatarUrl) {
+          await updateUserAvatar(user.id, avatarUrl)
+          updated++
+        } else {
+          failed++
+        }
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
+      console.log(`🖼️ Avatar backfill: ${updated} updated, ${failed} failed`)
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          total: users.length,
+          updated,
+          failed,
+          remaining: users.length === 100 ? 'more users pending' : 'all done'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (error) {
+      console.error('Error in avatar backfill:', error)
+      return new Response(
+        JSON.stringify({ error: 'Internal server error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
   }
