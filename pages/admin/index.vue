@@ -638,6 +638,170 @@ const botConfigLoading = ref(false);
 const botConfigSaving = ref(false);
 const botConfigMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
 
+// New state management for pending changes (no auto-save)
+const pendingBotConfig = ref<Record<string, any>>({});
+const originalBotConfig = ref<Record<string, any>>({});
+const lockedTriggers = ref<Set<string>>(new Set());
+
+// Check if there are unsaved changes
+const hasUnsavedChanges = computed(() => {
+  return JSON.stringify(pendingBotConfig.value) !== JSON.stringify(originalBotConfig.value);
+});
+
+// Trigger list with emojis and effects for better UX
+const triggerList = [
+  { key: 'trigger_blessing_rngesus', emoji: '✨', label: 'Blessing RNGesus', effect: '+1 Vaal Orb', type: 'positive' },
+  { key: 'trigger_cartographers_gift', emoji: '🗺️', label: "Cartographer's Gift", effect: '+1 carte', type: 'positive' },
+  { key: 'trigger_mirror_tier', emoji: '💎', label: 'Mirror-Tier', effect: 'Duplique carte', type: 'positive' },
+  { key: 'trigger_einhar_approved', emoji: '🦎', label: 'Einhar Approved', effect: 'Normal → Foil', type: 'positive' },
+  { key: 'trigger_heist_tax', emoji: '💰', label: 'Heist Tax', effect: '-1 Vaal Orb', type: 'negative' },
+  { key: 'trigger_sirus_voice', emoji: '💀', label: 'Sirus Voice', effect: 'Détruit carte', type: 'negative' },
+  { key: 'trigger_alch_misclick', emoji: '⚗️', label: 'Alch Misclick', effect: 'Reroll carte', type: 'neutral' },
+  { key: 'trigger_trade_scam', emoji: '🤝', label: 'Trade Scam', effect: 'Vole carte', type: 'negative' },
+  { key: 'trigger_chris_vision', emoji: '👓', label: 'Chris Vision', effect: 'Retire foil', type: 'negative' },
+  { key: 'trigger_atlas_influence', emoji: '🌟', label: 'Atlas Influence', effect: 'Buff foil', type: 'positive' },
+];
+
+// Calculate total probability percentage
+const totalTriggerPercent = computed(() => {
+  return triggerList.reduce((sum, trigger) => {
+    const value = parseFloat(pendingBotConfig.value[trigger.key]) || 0;
+    return sum + Math.round(value * 100);
+  }, 0);
+});
+
+const isTotalValid = computed(() => totalTriggerPercent.value === 100);
+
+// Toggle lock on a trigger
+const toggleTriggerLock = (key: string) => {
+  if (lockedTriggers.value.has(key)) {
+    lockedTriggers.value.delete(key);
+  } else {
+    lockedTriggers.value.add(key);
+  }
+};
+
+// Auto-balance probabilities when one changes
+const adjustProbabilities = (changedKey: string, newValuePercent: number) => {
+  const newValue = newValuePercent / 100; // Convert to decimal
+  const triggerKeys = triggerList.map(t => t.key);
+  const unlockedTriggers = triggerKeys.filter(k => !lockedTriggers.value.has(k) && k !== changedKey);
+
+  // Calculate locked total (including the changed one)
+  let lockedTotal = newValue;
+  triggerKeys.forEach(k => {
+    if (lockedTriggers.value.has(k)) {
+      lockedTotal += parseFloat(pendingBotConfig.value[k]) || 0;
+    }
+  });
+
+  const remaining = Math.max(0, 1 - lockedTotal);
+
+  // Distribute proportionally to unlocked triggers
+  const currentUnlockedTotal = unlockedTriggers.reduce((sum, k) => sum + (parseFloat(pendingBotConfig.value[k]) || 0), 0);
+
+  unlockedTriggers.forEach(key => {
+    let ratio: number;
+    if (currentUnlockedTotal > 0) {
+      ratio = (parseFloat(pendingBotConfig.value[key]) || 0) / currentUnlockedTotal;
+    } else {
+      ratio = 1 / unlockedTriggers.length;
+    }
+    // Round to 2 decimal places
+    pendingBotConfig.value[key] = Math.max(0, Math.round(remaining * ratio * 100) / 100).toString();
+  });
+
+  pendingBotConfig.value[changedKey] = newValue.toString();
+};
+
+// Distribute probabilities evenly
+const distributeEvenly = () => {
+  const triggerKeys = triggerList.map(t => t.key);
+  const evenValue = Math.round(100 / triggerKeys.length) / 100;
+  const remainder = 1 - (evenValue * triggerKeys.length);
+
+  triggerKeys.forEach((key, index) => {
+    // Add remainder to first trigger to ensure total is 100%
+    const value = index === 0 ? evenValue + remainder : evenValue;
+    pendingBotConfig.value[key] = value.toString();
+  });
+
+  lockedTriggers.value.clear();
+};
+
+// Convert seconds to minutes for display
+const getMinutesFromSeconds = (key: string) => {
+  const seconds = parseFloat(pendingBotConfig.value[key]) || 0;
+  return Math.round(seconds / 60);
+};
+
+const setMinutesToSeconds = (key: string, minutes: number) => {
+  pendingBotConfig.value[key] = (minutes * 60).toString();
+};
+
+// Convert milliseconds to minutes for display
+const getMinutesFromMs = (key: string) => {
+  const ms = parseFloat(pendingBotConfig.value[key]) || 0;
+  return Math.round(ms / 60000);
+};
+
+const setMinutesToMs = (key: string, minutes: number) => {
+  pendingBotConfig.value[key] = (minutes * 60000).toString();
+};
+
+// Save all pending changes
+const saveAllBotConfig = async () => {
+  botConfigSaving.value = true;
+  botConfigMessage.value = null;
+
+  try {
+    const changedKeys = Object.keys(pendingBotConfig.value).filter(
+      key => pendingBotConfig.value[key] !== originalBotConfig.value[key]
+    );
+
+    for (const key of changedKeys) {
+      await $fetch('/api/admin/bot-config', {
+        method: 'POST',
+        body: { key, value: pendingBotConfig.value[key] }
+      });
+    }
+
+    // Update original to match pending
+    originalBotConfig.value = { ...pendingBotConfig.value };
+    botConfig.value = { ...pendingBotConfig.value };
+
+    // Reload bot config
+    try {
+      await $fetch('/api/admin/reload-bot-config', { method: 'POST' });
+    } catch (e) {
+      // Ignore reload errors
+    }
+
+    botConfigMessage.value = {
+      type: 'success',
+      text: '✅ Configuration sauvegardée et bot mis à jour'
+    };
+
+    setTimeout(() => {
+      botConfigMessage.value = null;
+    }, 3000);
+  } catch (error: any) {
+    botConfigMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.data?.message || error.message || 'Impossible de sauvegarder'}`
+    };
+  } finally {
+    botConfigSaving.value = false;
+  }
+};
+
+// Cancel pending changes
+const cancelBotConfigChanges = () => {
+  pendingBotConfig.value = { ...originalBotConfig.value };
+  lockedTriggers.value.clear();
+  botConfigMessage.value = null;
+};
+
 // Load bot config
 const loadBotConfig = async () => {
   botConfigLoading.value = true;
@@ -645,6 +809,10 @@ const loadBotConfig = async () => {
     const response = await $fetch('/api/admin/bot-config');
     if (response.ok && response.config) {
       botConfig.value = response.config;
+      // Initialize pending and original config for change tracking
+      pendingBotConfig.value = { ...response.config };
+      originalBotConfig.value = { ...response.config };
+      lockedTriggers.value.clear();
     }
   } catch (error: any) {
     console.error('Error loading bot config:', error);
@@ -1425,137 +1593,331 @@ const triggerManualTrigger = async (triggerType: string) => {
         </div>
       </RunicBox>
 
-      <!-- Bot Config Modal -->
+      <!-- Bot Config Modal - Runic Interface -->
       <ClientOnly>
-        <div
-          v-if="showBotConfigModal"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          @click.self="showBotConfigModal = false"
-        >
-          <RunicBox
-            class="max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4"
-            padding="lg"
-          >
-            <div class="flex flex-col gap-6">
-              <!-- Header -->
-              <div class="flex items-center justify-between">
-                <RunicHeader
-                  title="Triggers Automatiques"
-                  attached
-                />
-                <button
-                  @click="showBotConfigModal = false"
-                  class="w-8 h-8 flex items-center justify-center text-poe-text-dim hover:text-poe-text transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <!-- Loading state -->
-              <div v-if="botConfigLoading" class="flex items-center justify-center py-8">
-                <span class="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></span>
-                <span class="ml-3 font-body text-lg text-poe-text-dim">Chargement...</span>
-              </div>
-
-              <!-- Config form -->
-              <div v-else class="flex flex-col gap-6">
-                <!-- Config save message -->
-                <div
-                  v-if="botConfigMessage"
-                  class="p-3 rounded text-center font-display text-base"
-                  :class="{
-                    'bg-green-900/20 border border-green-700/40 text-green-200': botConfigMessage.type === 'success',
-                    'bg-red-900/20 border border-red-700/40 text-red-200': botConfigMessage.type === 'error'
-                  }"
-                >
-                  {{ botConfigMessage.text }}
+        <Teleport to="body">
+          <Transition name="triggers-modal">
+            <div
+              v-if="showBotConfigModal"
+              class="triggers-modal"
+              @click.self="!hasUnsavedChanges && (showBotConfigModal = false)"
+            >
+              <div class="triggers-modal__container">
+                <!-- Fixed Header -->
+                <div class="triggers-modal__header">
+                  <h2 class="triggers-modal__title">
+                    <span class="triggers-modal__icon">◆</span>
+                    Configuration des Triggers
+                    <span class="triggers-modal__icon">◆</span>
+                  </h2>
+                  <button
+                    @click="hasUnsavedChanges ? null : (showBotConfigModal = false)"
+                    :disabled="hasUnsavedChanges"
+                    class="triggers-modal__close"
+                    :title="hasUnsavedChanges ? 'Sauvegardez ou annulez les changements' : 'Fermer'"
+                  >
+                    <RunicIcon name="close" size="sm" />
+                  </button>
                 </div>
 
-                <!-- Manual trigger message -->
-                <div
-                  v-if="manualTriggerMessage"
-                  class="p-3 rounded text-center font-display text-base"
-                  :class="{
-                    'bg-green-900/20 border border-green-700/40 text-green-200': manualTriggerMessage.type === 'success',
-                    'bg-red-900/20 border border-red-700/40 text-red-200': manualTriggerMessage.type === 'error'
-                  }"
-                >
-                  {{ manualTriggerMessage.text }}
-                </div>
+                <!-- Scrollable Body -->
+                <div class="triggers-modal__body runic-scrollbar">
+                  <!-- Loading state -->
+                  <div v-if="botConfigLoading" class="triggers-modal__loading">
+                    <span class="triggers-modal__spinner"></span>
+                    <span>Chargement de la configuration...</span>
+                  </div>
 
-                <!-- Config groups -->
-                <div
-                  v-for="(group, groupKey) in configGroups"
-                  :key="groupKey"
-                  class="flex flex-col gap-4 pb-6 border-b border-poe-border/20 last:border-0 last:pb-0"
-                >
-                  <h3 class="font-display text-xl font-bold text-poe-text">{{ group.title }}</h3>
-                  
-                  <div class="flex flex-col gap-4">
+                  <!-- Config form -->
+                  <div v-else class="triggers-modal__content">
+                    <!-- Messages -->
                     <div
-                      v-for="key in group.keys"
-                      :key="key"
-                      class="flex items-start justify-between gap-4"
+                      v-if="botConfigMessage"
+                      class="triggers-message"
+                      :class="botConfigMessage.type === 'success' ? 'triggers-message--success' : 'triggers-message--error'"
                     >
-                      <div class="flex-1 flex flex-col gap-1 min-w-0">
-                        <label class="font-display text-base font-semibold text-poe-text">
-                          {{ configLabels[key] || key }}
-                        </label>
-                        <p v-if="configDescriptions[key]" class="font-body text-sm text-poe-text-dim leading-relaxed m-0">
-                          {{ configDescriptions[key] }}
-                        </p>
-                        <span class="font-body text-xs text-poe-text-dim/60 font-mono">{{ key }}</span>
+                      {{ botConfigMessage.text }}
+                    </div>
+
+                    <div
+                      v-if="manualTriggerMessage"
+                      class="triggers-message"
+                      :class="manualTriggerMessage.type === 'success' ? 'triggers-message--success' : 'triggers-message--error'"
+                    >
+                      {{ manualTriggerMessage.text }}
+                    </div>
+
+                    <!-- Section 1: Activation -->
+                    <RunicBox padding="md" class="triggers-box">
+                      <div class="triggers-box__header">
+                        <h3 class="triggers-box__title">Activation</h3>
                       </div>
-                      <div class="flex items-center gap-3 flex-shrink-0">
-                        <!-- Boolean toggle -->
+                      <div class="triggers-box__row">
+                        <div class="triggers-box__info">
+                          <span class="triggers-box__label">Triggers automatiques</span>
+                          <span class="triggers-box__desc">Active ou désactive le système de triggers</span>
+                        </div>
                         <RunicRadio
-                          v-if="key === 'auto_triggers_enabled'"
-                          :model-value="botConfig[key] === 'true'"
+                          :model-value="pendingBotConfig['auto_triggers_enabled'] === 'true'"
                           :toggle="true"
                           size="md"
                           toggle-color="default"
                           :disabled="botConfigSaving"
-                          @update:model-value="saveBotConfigValue(key, $event ? 'true' : 'false')"
+                          @update:model-value="pendingBotConfig['auto_triggers_enabled'] = $event ? 'true' : 'false'"
                         />
-                        <!-- Number input with play button for triggers -->
-                        <template v-else>
-                          <input
-                            v-model="botConfig[key]"
-                            type="number"
-                            step="any"
-                            class="w-32 px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-base transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] disabled:opacity-50 disabled:cursor-not-allowed"
-                            :disabled="botConfigSaving"
-                            @blur="saveBotConfigValue(key, botConfig[key])"
-                          />
-                          <!-- Play button for trigger probabilities -->
-                          <RunicButton
-                            v-if="configKeyToTriggerType[key]"
-                            @click="triggerManualTrigger(configKeyToTriggerType[key])"
-                            :disabled="manualTriggerLoading[configKeyToTriggerType[key]] || botConfigSaving"
-                            variant="secondary"
-                            size="sm"
-                            :icon="manualTriggerLoading[configKeyToTriggerType[key]] ? undefined : 'play'"
-                            :title="`Déclencher ${configLabels[key]} manuellement`"
-                            class="!w-10 !h-10 !p-0 !min-w-0 !gap-0 !flex items-center justify-center"
-                          >
-                            <span v-if="manualTriggerLoading[configKeyToTriggerType[key]]" class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0"></span>
-                          </RunicButton>
-                        </template>
                       </div>
-                    </div>
+                    </RunicBox>
+
+                    <!-- Section 2: Distribution des Triggers -->
+                    <RunicBox padding="md" class="triggers-box">
+                      <div class="triggers-box__header">
+                        <h3 class="triggers-box__title">Distribution des Triggers</h3>
+                        <div class="triggers-box__badge" :class="isTotalValid ? 'triggers-box__badge--valid' : 'triggers-box__badge--invalid'">
+                          Total: {{ totalTriggerPercent }}%
+                        </div>
+                      </div>
+
+                      <p class="triggers-box__intro">
+                        Ajustez les probabilités de chaque trigger. Verrouillez une valeur pour la protéger lors de l'auto-balance.
+                      </p>
+
+                      <!-- Trigger List -->
+                      <div class="trigger-list">
+                        <div
+                          v-for="trigger in triggerList"
+                          :key="trigger.key"
+                          class="trigger-row"
+                        >
+                          <div class="trigger-row__info">
+                            <span class="trigger-row__emoji">{{ trigger.emoji }}</span>
+                            <div class="trigger-row__text">
+                              <span class="trigger-row__label">{{ trigger.label }}</span>
+                              <span class="trigger-row__effect" :class="`trigger-row__effect--${trigger.type}`">{{ trigger.effect }}</span>
+                            </div>
+                          </div>
+                          <div class="trigger-row__controls">
+                            <RunicSlider
+                              :model-value="Math.round((parseFloat(pendingBotConfig[trigger.key]) || 0) * 100)"
+                              @update:model-value="adjustProbabilities(trigger.key, $event)"
+                              :min="0"
+                              :max="50"
+                              :step="1"
+                              :disabled="botConfigSaving || lockedTriggers.has(trigger.key)"
+                              value-suffix="%"
+                              size="sm"
+                            />
+                            <button
+                              @click="toggleTriggerLock(trigger.key)"
+                              :disabled="botConfigSaving"
+                              class="trigger-row__btn"
+                              :class="{ 'trigger-row__btn--locked': lockedTriggers.has(trigger.key) }"
+                              :title="lockedTriggers.has(trigger.key) ? 'Déverrouiller' : 'Verrouiller'"
+                            >
+                              {{ lockedTriggers.has(trigger.key) ? '🔒' : '🔓' }}
+                            </button>
+                            <button
+                              @click="triggerManualTrigger(configKeyToTriggerType[trigger.key])"
+                              :disabled="manualTriggerLoading[configKeyToTriggerType[trigger.key]] || botConfigSaving"
+                              class="trigger-row__btn trigger-row__btn--test"
+                              :title="`Tester ${trigger.label}`"
+                            >
+                              <span v-if="manualTriggerLoading[configKeyToTriggerType[trigger.key]]" class="trigger-row__spinner"></span>
+                              <span v-else>▶</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button @click="distributeEvenly" :disabled="botConfigSaving" class="triggers-box__action">
+                        🔄 Répartir également
+                      </button>
+                    </RunicBox>
+
+                    <!-- Section 3: Timing -->
+                    <RunicBox padding="md" class="triggers-box">
+                      <div class="triggers-box__header">
+                        <h3 class="triggers-box__title">Timing des Triggers</h3>
+                      </div>
+
+                      <div class="triggers-box__grid">
+                        <div class="triggers-box__card">
+                          <span class="triggers-box__label">Intervalle minimum</span>
+                          <RunicSlider
+                            :model-value="getMinutesFromSeconds('auto_triggers_min_interval')"
+                            @update:model-value="setMinutesToSeconds('auto_triggers_min_interval', $event)"
+                            :min="1"
+                            :max="30"
+                            :step="1"
+                            :disabled="botConfigSaving"
+                            value-suffix=" min"
+                            size="sm"
+                          />
+                        </div>
+                        <div class="triggers-box__card">
+                          <span class="triggers-box__label">Intervalle maximum</span>
+                          <RunicSlider
+                            :model-value="getMinutesFromSeconds('auto_triggers_max_interval')"
+                            @update:model-value="setMinutesToSeconds('auto_triggers_max_interval', $event)"
+                            :min="1"
+                            :max="60"
+                            :step="1"
+                            :disabled="botConfigSaving"
+                            value-suffix=" min"
+                            size="sm"
+                          />
+                        </div>
+                      </div>
+
+                      <p class="triggers-box__hint">
+                        Un trigger se déclenchera aléatoirement entre {{ getMinutesFromSeconds('auto_triggers_min_interval') }} et {{ getMinutesFromSeconds('auto_triggers_max_interval') }} minutes.
+                      </p>
+                    </RunicBox>
+
+                    <!-- Section 4: Protection Anti-Focus -->
+                    <RunicBox padding="md" class="triggers-box">
+                      <div class="triggers-box__header">
+                        <h3 class="triggers-box__title">Protection Anti-Focus</h3>
+                      </div>
+
+                      <div class="triggers-box__grid">
+                        <div class="triggers-box__card">
+                          <span class="triggers-box__label">Cooldown par joueur</span>
+                          <RunicSlider
+                            :model-value="getMinutesFromMs('auto_triggers_target_cooldown')"
+                            @update:model-value="setMinutesToMs('auto_triggers_target_cooldown', $event)"
+                            :min="1"
+                            :max="30"
+                            :step="1"
+                            :disabled="botConfigSaving"
+                            value-suffix=" min"
+                            size="sm"
+                          />
+                          <span class="triggers-box__desc">Délai avant de re-cibler le même joueur</span>
+                        </div>
+                        <div class="triggers-box__card">
+                          <span class="triggers-box__label">Fenêtre d'activité</span>
+                          <RunicSlider
+                            :model-value="getMinutesFromMs('auto_triggers_user_activity_window')"
+                            @update:model-value="setMinutesToMs('auto_triggers_user_activity_window', $event)"
+                            :min="5"
+                            :max="60"
+                            :step="5"
+                            :disabled="botConfigSaving"
+                            value-suffix=" min"
+                            size="sm"
+                          />
+                          <span class="triggers-box__desc">Temps pour considérer un joueur actif</span>
+                        </div>
+                      </div>
+
+                      <div class="triggers-box__row triggers-box__row--spaced">
+                        <div class="triggers-box__info">
+                          <span class="triggers-box__label">Joueurs min. pour cooldown strict</span>
+                          <span class="triggers-box__desc">Joueurs actifs requis pour appliquer le cooldown</span>
+                        </div>
+                        <input
+                          v-model="pendingBotConfig['auto_triggers_min_users_for_cooldown']"
+                          type="number"
+                          min="1"
+                          max="20"
+                          :disabled="botConfigSaving"
+                          class="triggers-box__input"
+                        />
+                      </div>
+                    </RunicBox>
+
+                    <!-- Section 5: Limites Journalières -->
+                    <RunicBox padding="md" class="triggers-box">
+                      <div class="triggers-box__header">
+                        <h3 class="triggers-box__title">Limites Journalières</h3>
+                      </div>
+
+                      <div class="triggers-box__grid">
+                        <div class="triggers-box__row triggers-box__row--compact">
+                          <div class="triggers-box__info">
+                            <span class="triggers-box__label">!booster par jour</span>
+                            <span class="triggers-box__desc">Max par utilisateur</span>
+                          </div>
+                          <input
+                            v-model="pendingBotConfig['daily_limit_booster']"
+                            type="number"
+                            min="1"
+                            max="100"
+                            :disabled="botConfigSaving"
+                            class="triggers-box__input"
+                          />
+                        </div>
+                        <div class="triggers-box__row triggers-box__row--compact">
+                          <div class="triggers-box__info">
+                            <span class="triggers-box__label">!vaals par jour</span>
+                            <span class="triggers-box__desc">Max par utilisateur</span>
+                          </div>
+                          <input
+                            v-model="pendingBotConfig['daily_limit_vaals']"
+                            type="number"
+                            min="1"
+                            max="100"
+                            :disabled="botConfigSaving"
+                            class="triggers-box__input"
+                          />
+                        </div>
+                      </div>
+                    </RunicBox>
+
+                    <!-- Section 6: Buff Atlas Influence -->
+                    <RunicBox padding="md" class="triggers-box">
+                      <div class="triggers-box__header">
+                        <h3 class="triggers-box__title">Buff Atlas Influence</h3>
+                      </div>
+
+                      <div class="triggers-box__card">
+                        <span class="triggers-box__label">Bonus chance foil sur l'autel</span>
+                        <RunicSlider
+                          :model-value="Math.round((parseFloat(pendingBotConfig['atlas_influence_foil_boost']) || 0) * 100)"
+                          @update:model-value="pendingBotConfig['atlas_influence_foil_boost'] = ($event / 100).toString()"
+                          :min="0"
+                          :max="100"
+                          :step="5"
+                          :disabled="botConfigSaving"
+                          value-prefix="+"
+                          value-suffix="%"
+                          size="sm"
+                        />
+                        <span class="triggers-box__desc">Bonus appliqué lors de la prochaine utilisation de l'autel (usage unique)</span>
+                      </div>
+                    </RunicBox>
                   </div>
                 </div>
 
-                <!-- Info message -->
-                <div class="p-4 bg-blue-900/20 border border-blue-700/40 rounded">
-                  <p class="font-body text-sm text-blue-200 m-0">
-                    💡 Les modifications sont sauvegardées automatiquement. Le bot rechargera la configuration au prochain redémarrage ou reconnexion.
-                  </p>
+                <!-- Fixed Footer -->
+                <div class="triggers-modal__footer">
+                  <div v-if="hasUnsavedChanges" class="triggers-modal__warning">
+                    ⚠️ Modifications non sauvegardées
+                  </div>
+                  <div class="triggers-modal__actions">
+                    <RunicButton
+                      @click="cancelBotConfigChanges"
+                      :disabled="!hasUnsavedChanges || botConfigSaving"
+                      variant="secondary"
+                      size="md"
+                    >
+                      Annuler
+                    </RunicButton>
+                    <RunicButton
+                      @click="saveAllBotConfig"
+                      :disabled="!hasUnsavedChanges || botConfigSaving || !isTotalValid"
+                      variant="primary"
+                      size="md"
+                    >
+                      <span v-if="botConfigSaving" class="triggers-modal__btn-spinner"></span>
+                      {{ botConfigSaving ? 'Sauvegarde...' : 'Sauvegarder' }}
+                    </RunicButton>
+                  </div>
                 </div>
               </div>
             </div>
-          </RunicBox>
-        </div>
+          </Transition>
+        </Teleport>
       </ClientOnly>
     </div>
   </NuxtLayout>
@@ -1577,6 +1939,562 @@ const triggerManualTrigger = async (triggerType: string) => {
 
   .admin-content {
     @apply gap-5;
+  }
+}
+
+/* ==========================================
+   TRIGGERS MODAL
+   ========================================== */
+
+.triggers-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.triggers-modal__container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 56rem;
+  max-height: calc(100vh - 2rem);
+  background: linear-gradient(180deg, rgba(18, 18, 22, 0.98) 0%, rgba(12, 12, 15, 0.99) 50%, rgba(14, 14, 18, 0.98) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(60, 55, 50, 0.4);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(80, 75, 70, 0.15);
+  overflow: hidden;
+}
+
+/* Fixed Header */
+.triggers-modal__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(180deg, rgba(25, 25, 30, 0.95) 0%, rgba(18, 18, 22, 0.9) 100%);
+  border-bottom: 1px solid rgba(60, 55, 50, 0.3);
+}
+
+.triggers-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #c9a227;
+  text-shadow: 0 0 20px rgba(201, 162, 39, 0.3);
+}
+
+.triggers-modal__icon {
+  font-size: 0.75rem;
+  color: rgba(175, 96, 37, 0.6);
+}
+
+.triggers-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  border-radius: 4px;
+  color: rgba(140, 130, 120, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.triggers-modal__close:hover:not(:disabled) {
+  background: rgba(175, 96, 37, 0.1);
+  border-color: rgba(175, 96, 37, 0.3);
+  color: rgba(175, 96, 37, 0.8);
+}
+
+.triggers-modal__close:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Scrollable Body */
+.triggers-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.triggers-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.triggers-modal__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem;
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+  color: rgba(200, 200, 200, 0.7);
+}
+
+.triggers-modal__spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid rgba(175, 96, 37, 0.3);
+  border-top-color: rgba(175, 96, 37, 0.8);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Fixed Footer */
+.triggers-modal__footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(180deg, rgba(18, 18, 22, 0.9) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border-top: 1px solid rgba(60, 55, 50, 0.3);
+}
+
+.triggers-modal__warning {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.875rem;
+  color: rgba(255, 200, 100, 0.9);
+}
+
+.triggers-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.triggers-modal__btn-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.5rem;
+}
+
+/* Modal Transitions */
+.triggers-modal-enter-active,
+.triggers-modal-leave-active {
+  transition: all 0.3s ease;
+}
+
+.triggers-modal-enter-active .triggers-modal__container,
+.triggers-modal-leave-active .triggers-modal__container {
+  transition: all 0.3s ease;
+}
+
+.triggers-modal-enter-from,
+.triggers-modal-leave-to {
+  opacity: 0;
+}
+
+.triggers-modal-enter-from .triggers-modal__container,
+.triggers-modal-leave-to .triggers-modal__container {
+  opacity: 0;
+  transform: scale(0.95) translateY(-10px);
+}
+
+/* ==========================================
+   TRIGGERS BOX (Content Sections)
+   ========================================== */
+
+.triggers-box {
+  margin-bottom: 0;
+}
+
+.triggers-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.triggers-box__title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #c9a227;
+  margin: 0;
+  text-shadow: 0 0 12px rgba(201, 162, 39, 0.2);
+}
+
+.triggers-box__badge {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.triggers-box__badge--valid {
+  background: rgba(34, 84, 61, 0.3);
+  color: #6ee7b7;
+  border: 1px solid rgba(34, 84, 61, 0.5);
+}
+
+.triggers-box__badge--invalid {
+  background: rgba(127, 29, 29, 0.3);
+  color: #fca5a5;
+  border: 1px solid rgba(127, 29, 29, 0.5);
+}
+
+.triggers-box__intro {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.875rem;
+  color: rgba(200, 200, 200, 0.6);
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+}
+
+.triggers-box__hint {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: rgba(175, 96, 37, 0.7);
+  margin: 0.75rem 0 0 0;
+}
+
+.triggers-box__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .triggers-box__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.triggers-box__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(40, 38, 35, 0.3);
+  border-radius: 4px;
+}
+
+.triggers-box__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.triggers-box__row--spaced {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(60, 55, 50, 0.15);
+}
+
+.triggers-box__row--compact {
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(40, 38, 35, 0.3);
+  border-radius: 4px;
+}
+
+.triggers-box__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.triggers-box__label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #e8e4df;
+}
+
+.triggers-box__desc {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.75rem;
+  color: rgba(200, 200, 200, 0.5);
+  line-height: 1.3;
+}
+
+.triggers-box__input {
+  width: 4rem;
+  padding: 0.375rem 0.5rem;
+  background: linear-gradient(180deg, rgba(8, 8, 10, 0.95) 0%, rgba(14, 14, 16, 0.9) 100%);
+  border: 1px solid rgba(35, 32, 28, 0.8);
+  border-radius: 4px;
+  color: #e8e4df;
+  font-family: 'Cinzel', serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.triggers-box__input:focus {
+  outline: none;
+  border-color: rgba(175, 96, 37, 0.5);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 8px rgba(175, 96, 37, 0.2);
+}
+
+.triggers-box__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.triggers-box__action {
+  margin-top: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(200, 200, 200, 0.7);
+  background: rgba(40, 38, 35, 0.3);
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.triggers-box__action:hover:not(:disabled) {
+  color: #e8e4df;
+  background: rgba(40, 38, 35, 0.5);
+  border-color: rgba(80, 70, 60, 0.4);
+}
+
+.triggers-box__action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ==========================================
+   TRIGGER LIST & ROWS
+   ========================================== */
+
+.trigger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.trigger-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(40, 38, 35, 0.25);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.trigger-row:hover {
+  border-color: rgba(60, 55, 50, 0.4);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.trigger-row__info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trigger-row__emoji {
+  font-size: 1.125rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.trigger-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.trigger-row__label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #e8e4df;
+}
+
+.trigger-row__effect {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.6875rem;
+}
+
+.trigger-row__effect--positive { color: #6ee7b7; }
+.trigger-row__effect--negative { color: #fca5a5; }
+.trigger-row__effect--neutral { color: #fcd34d; }
+
+.trigger-row__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-left: 2rem;
+}
+
+.trigger-row__btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 38, 35, 0.3);
+  border: 1px solid rgba(60, 55, 50, 0.3);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: rgba(200, 200, 200, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.trigger-row__btn:hover:not(:disabled) {
+  background: rgba(60, 55, 50, 0.4);
+  border-color: rgba(80, 70, 60, 0.5);
+  color: #e8e4df;
+}
+
+.trigger-row__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trigger-row__btn--locked {
+  color: #fcd34d;
+  border-color: rgba(180, 150, 40, 0.3);
+}
+
+.trigger-row__btn--test:hover:not(:disabled) {
+  background: rgba(175, 96, 37, 0.2);
+  border-color: rgba(175, 96, 37, 0.4);
+  color: rgba(175, 96, 37, 1);
+}
+
+.trigger-row__spinner {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ==========================================
+   MESSAGES
+   ========================================== */
+
+.triggers-message {
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-family: 'Crimson Text', serif;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.triggers-message--success {
+  background: rgba(34, 84, 61, 0.2);
+  border: 1px solid rgba(34, 84, 61, 0.4);
+  color: #6ee7b7;
+}
+
+.triggers-message--error {
+  background: rgba(127, 29, 29, 0.2);
+  border: 1px solid rgba(127, 29, 29, 0.4);
+  color: #fca5a5;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+@media (max-width: 640px) {
+  .triggers-modal {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .triggers-modal__container {
+    max-height: 90vh;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .triggers-modal__header {
+    padding: 0.875rem 1rem;
+  }
+
+  .triggers-modal__title {
+    font-size: 1rem;
+  }
+
+  .triggers-modal__body {
+    padding: 1rem;
+  }
+
+  .triggers-modal__footer {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .triggers-modal__warning {
+    text-align: center;
+  }
+
+  .triggers-modal__actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .triggers-modal__actions > * {
+    flex: 1;
+  }
+
+  .triggers-box__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+
+  .trigger-row__controls {
+    padding-left: 0;
   }
 }
 </style>
