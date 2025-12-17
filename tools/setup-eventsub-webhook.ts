@@ -15,11 +15,11 @@ const CLIENT_ID = process.env.TWITCH_CLIENT_ID
 const USER_TOKEN = process.env.TWITCH_USER_TOKEN
 const CHANNEL_ID = process.env.TWITCH_CHANNEL_ID
 const SUPABASE_URL = process.env.SUPABASE_URL
-const WEBHOOK_SECRET = process.env.TWITCH_WEBHOOK_SECRET || 'your-secret-here'
+const WEBHOOK_SECRET = process.env.TWITCH_WEBHOOK_SECRET
 
-if (!CLIENT_ID || !USER_TOKEN || !CHANNEL_ID || !SUPABASE_URL) {
+if (!CLIENT_ID || !USER_TOKEN || !CHANNEL_ID || !SUPABASE_URL || !WEBHOOK_SECRET) {
   console.error('❌ Missing required environment variables:')
-  console.error('   Required: TWITCH_CLIENT_ID, TWITCH_USER_TOKEN, TWITCH_CHANNEL_ID, SUPABASE_URL')
+  console.error('   Required: TWITCH_CLIENT_ID, TWITCH_USER_TOKEN, TWITCH_CHANNEL_ID, SUPABASE_URL, TWITCH_WEBHOOK_SECRET')
   process.exit(1)
 }
 
