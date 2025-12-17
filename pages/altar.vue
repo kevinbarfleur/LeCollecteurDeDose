@@ -623,6 +623,7 @@ const {
 const showShareModal = ref(false);
 const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
+const showVaalInfoModal = ref(false);
 const lastRecordedOutcome = ref<VaalOutcome | null>(null);
 
 // Close share modal and reset recording state to allow new recordings
@@ -2359,6 +2360,13 @@ const endDragOrb = async () => {
                       {{ t("altar.vaalOrbs.subtitle") }}
                     </template>
                   </p>
+                  <button
+                    type="button"
+                    class="vaal-info-link"
+                    @click="showVaalInfoModal = true"
+                  >
+                    {{ t("altar.vaalOrbs.infoLink") }}
+                  </button>
                 </div>
 
                 <div class="vaal-header__actions">
@@ -2724,8 +2732,32 @@ const endDragOrb = async () => {
         </Teleport>
       </div>
     </div>
+
+    <!-- Vaal Info Troll Modal -->
+    <RunicModal
+      v-model="showVaalInfoModal"
+      :title="t('altar.vaalOrbs.infoModal.title')"
+      icon="◆"
+      max-width="sm"
+    >
+      <div class="vaal-info-modal">
+        <div class="vaal-info-modal__icon">
+          <img
+            src="/images/vaal-risitas.png"
+            alt="Risitas"
+            class="vaal-info-modal__risitas"
+          />
+        </div>
+        <p class="vaal-info-modal__text">
+          {{ t("altar.vaalOrbs.infoModal.message") }}
+        </p>
+        <p class="vaal-info-modal__subtext">
+          {{ t("altar.vaalOrbs.infoModal.submessage") }}
+        </p>
+      </div>
+    </RunicModal>
   </NuxtLayout>
-  
+
   <!-- Reload Modal for Critical Errors -->
   <ReloadModal />
 </template>
@@ -3412,6 +3444,94 @@ const endDragOrb = async () => {
 .vaal-header__subtitle--foil {
   color: rgba(255, 215, 100, 0.8);
   font-style: normal;
+}
+
+/* Vaal Info Link - Troll link */
+.vaal-info-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: "Crimson Text", serif;
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: rgba(175, 96, 37, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.vaal-info-link:hover {
+  color: #c97a3a;
+  text-shadow: 0 0 8px rgba(175, 96, 37, 0.4);
+}
+
+.vaal-info-link::before {
+  content: "?";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 0.625rem;
+  font-style: normal;
+  font-weight: 600;
+  color: rgba(175, 96, 37, 0.8);
+  border: 1px solid rgba(175, 96, 37, 0.4);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.vaal-info-link:hover::before {
+  background: rgba(175, 96, 37, 0.15);
+  border-color: rgba(175, 96, 37, 0.6);
+}
+
+/* Vaal Info Modal Content */
+.vaal-info-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.25rem;
+}
+
+.vaal-info-modal__icon {
+  position: relative;
+}
+
+.vaal-info-modal__risitas {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+  animation: risitas-shake 0.5s ease-in-out;
+}
+
+@keyframes risitas-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.vaal-info-modal__text {
+  font-family: "Crimson Text", serif;
+  font-size: 1.125rem;
+  font-style: italic;
+  color: rgba(200, 190, 180, 0.9);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.vaal-info-modal__subtext {
+  font-family: "Crimson Text", serif;
+  font-size: 0.875rem;
+  color: rgba(140, 130, 120, 0.7);
+  margin: 0;
 }
 
 .vaal-header__actions {

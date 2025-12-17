@@ -103,7 +103,13 @@
       "rec": "REC",
       "loading": "Chargement…",
       "syncing": "Synchronisation en cours…",
-      "overflow": "{count} orbes en réserve"
+      "overflow": "{count} orbes en réserve",
+      "infoLink": "Infos sur les taux",
+      "infoModal": {
+        "title": "Taux de Corruption",
+        "message": "Tu croyais vraiment qu'on allait te donner les taux ? Tente ta chance comme un grand avec tes Vaal Orbs.",
+        "submessage": "La RNG ne négocie pas, exile."
+      }
     },
     "preferences": {
       "title": "Préférences",
