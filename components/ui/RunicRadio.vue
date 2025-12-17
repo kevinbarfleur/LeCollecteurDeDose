@@ -25,6 +25,11 @@ const emit = defineEmits<{
   "update:modelValue": [value: string | boolean];
 }>();
 
+// Refs for measuring option widths
+const optionRefs = ref<HTMLElement[]>([]);
+const optionWidths = ref<number[]>([]);
+const optionOffsets = ref<number[]>([]);
+
 // For toggle mode, create simple on/off options
 const effectiveOptions = computed(() => {
   if (props.toggle) {
@@ -51,16 +56,68 @@ const selectedIndex = computed(() => {
   );
 });
 
-// Calculate the position of the slider
+// Measure option dimensions
+const measureOptions = () => {
+  const widths: number[] = [];
+  const offsets: number[] = [];
+  let currentOffset = 0;
+
+  optionRefs.value.forEach((el) => {
+    if (el) {
+      const width = el.offsetWidth;
+      widths.push(width);
+      offsets.push(currentOffset);
+      currentOffset += width;
+    }
+  });
+
+  optionWidths.value = widths;
+  optionOffsets.value = offsets;
+};
+
+// Calculate the position of the slider based on measured dimensions
 const sliderStyle = computed(() => {
   const index = selectedIndex.value;
   const count = effectiveOptions.value.length;
-  if (index === -1) return { left: "0%", width: `${100 / count}%` };
+
+  // Fallback to percentage-based if measurements not ready
+  if (
+    optionWidths.value.length === 0 ||
+    optionWidths.value.length !== count ||
+    index === -1
+  ) {
+    return {
+      left: index === -1 ? "0px" : `${(index / count) * 100}%`,
+      width: `${100 / count}%`,
+    };
+  }
 
   return {
-    left: `${(index / count) * 100}%`,
-    width: `${100 / count}%`,
+    left: `${optionOffsets.value[index]}px`,
+    width: `${optionWidths.value[index]}px`,
   };
+});
+
+// Re-measure on mount and when options change
+onMounted(() => {
+  nextTick(measureOptions);
+});
+
+watch(
+  () => effectiveOptions.value,
+  () => {
+    nextTick(measureOptions);
+  },
+  { deep: true }
+);
+
+// Re-measure on window resize
+onMounted(() => {
+  window.addEventListener("resize", measureOptions);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", measureOptions);
 });
 
 // Get the color for the current selection
@@ -116,6 +173,7 @@ const handleToggleClick = () => {
       <button
         v-for="(option, index) in effectiveOptions"
         :key="option.value"
+        :ref="(el) => { if (el) optionRefs[index] = el as HTMLElement }"
         type="button"
         :role="toggle ? 'presentation' : 'radio'"
         :aria-checked="!toggle ? internalValue === option.value : undefined"
@@ -243,7 +301,7 @@ const handleToggleClick = () => {
 .runic-radio__option {
   position: relative;
   z-index: 1;
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -251,6 +309,7 @@ const handleToggleClick = () => {
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .runic-radio__label {
@@ -532,8 +591,10 @@ const handleToggleClick = () => {
 }
 
 /* In toggle mode, buttons are just visual - clicks go to the groove */
+/* Toggle mode uses equal-width options */
 .runic-radio--toggle .runic-radio__option {
   pointer-events: none;
+  flex: 1;
 }
 
 /* Off state - dimmed slider */
