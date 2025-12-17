@@ -77,36 +77,9 @@ export default defineEventHandler(async (event) => {
   
   try {
     const webhookUrl = finalBotUrl
-    const healthCheckUrl = `${webhookUrl}/health`
-    
-    try {
-      const healthResponse = await fetch(healthCheckUrl, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000)
-      })
-      
-      if (!healthResponse.ok) {
-        const healthText = await healthResponse.text().catch(() => '')
-        throw new Error(`Bot health check failed: ${healthResponse.status} - ${healthText}`)
-      }
-    } catch (healthError: any) {
-      
-      // Check if it's a connection refused error (bot not running)
-      const isConnectionRefused = healthError.message?.includes('ECONNREFUSED') || 
-                                   healthError.message?.includes('fetch failed') ||
-                                   healthError.cause?.code === 'ECONNREFUSED'
-      
-      const errorMsg = isDev && isConnectionRefused
-        ? `Bot non démarré. Démarrez le bot dans un terminal séparé avec: cd twitch-bot && deno task start`
-        : isDev
-        ? `Bot non disponible. Démarrez le bot avec: cd twitch-bot && deno task start. Erreur: ${healthError.message}`
-        : `Bot service unavailable. Vérifiez que le bot Railway est déployé. Erreur: ${healthError.message}`
-      throw createError({ 
-        statusCode: 503, 
-        message: errorMsg
-      })
-    }
-    
+    // Skip health check - the webhook call itself will fail if bot is down
+    // This saves ~3s latency on admin operations
+
     const webhookEndpoint = `${webhookUrl}/webhook/trigger-manual`
     
     console.log(`[Admin] Calling bot webhook: ${webhookEndpoint}`)

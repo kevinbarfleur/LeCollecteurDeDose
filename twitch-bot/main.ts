@@ -676,8 +676,8 @@ async function handleCommand(
         return
       }
 
-      // Add 5 Vaal Orbs
-      const { error: vaalError } = await supabase.rpc('update_vaal_orbs', {
+      // Add 5 Vaal Orbs (function now returns new count directly)
+      const { data: newVaalCount, error: vaalError } = await supabase.rpc('update_vaal_orbs', {
         p_user_id: userId,
         p_amount: 5
       })
@@ -688,14 +688,7 @@ async function handleCommand(
         return
       }
 
-      // Get updated count
-      const { data: user, error: fetchError } = await supabase
-        .from('users')
-        .select('vaal_orbs')
-        .eq('id', userId)
-        .single()
-
-      const vaalOrbs = user?.vaal_orbs || 0
+      const vaalOrbs = newVaalCount ?? 0
       const used = limitResult.used || 0
       const limit = limitResult.limit || triggerConfig.dailyLimits.vaals
       sendResponse(`💎 @${username} reçoit 5 Vaal Orbs ! Total: ${vaalOrbs} (${used}/${limit})`)

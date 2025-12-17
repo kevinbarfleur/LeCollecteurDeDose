@@ -81,35 +81,35 @@ const loadCollection = async () => {
 
   isLoadingCollection.value = true;
   try {
-    const userCollectionData = await fetchUserCollection(authUser.value.displayName);
-    
-    // Debug: Check which key was used (to detect duplicate entries)
-    const { fetchUserCollections } = useApi();
-    const allCollections = await fetchUserCollections();
-    const userLower = authUser.value.displayName.toLowerCase();
-    const matchingKeys = allCollections ? Object.keys(allCollections).filter(
-      key => key.toLowerCase() === userLower
-    ) : [];
-    
+    // Parallelize collection and buffs loading for better performance
+    const username = authUser.value.displayName;
+    const [userCollectionData, buffs] = await Promise.all([
+      fetchUserCollection(username),
+      getUserBuffs(username).catch(err => {
+        console.warn('[Altar] Failed to load buffs:', err);
+        return null;
+      })
+    ]);
+
     if (userCollectionData) {
       // Transform API data to Card[]
-      const userLower = authUser.value.displayName.toLowerCase()
+      const userLower = username.toLowerCase()
       const collectionWrapper = { [userLower]: userCollectionData }
       // Log collection state BEFORE loading (if we have a previous state)
-      const collectionBeforeLoad = localCollection.value.length > 0 
+      const collectionBeforeLoad = localCollection.value.length > 0
         ? JSON.parse(JSON.stringify(localCollection.value)) as Card[]
         : [];
       const vaalOrbsBeforeLoad = vaalOrbs.value;
-      
+
       localCollection.value = transformUserCollectionToCards(
         collectionWrapper,
-        authUser.value.displayName
+        username
       );
-      
+
       // Extract vaalOrbs - use the value from API, not the local optimistic value
       const apiVaalOrbs = typeof userCollectionData.vaalOrbs === 'number' ? userCollectionData.vaalOrbs : 0;
       vaalOrbs.value = apiVaalOrbs;
-      
+
       // Log collection state AFTER loading
       if (collectionBeforeLoad.length > 0) {
         logCollectionStateComparison(
@@ -125,22 +125,16 @@ const loadCollection = async () => {
           source: 'API',
         });
       }
-      
+
       if (localCollection.value.length === 0) {
         // Collection is empty - this is logged by collectionLogger
       }
 
-      // Load Atlas Influence buff if available
-      try {
-        const buffs = await getUserBuffs(authUser.value.displayName);
-        if (buffs?.atlas_influence?.type === 'single_use') {
-          atlasInfluenceBuff.value = { foilBoost: buffs.atlas_influence.data?.foil_boost || 0.10 };
-          console.log('[Altar] Atlas Influence buff loaded:', atlasInfluenceBuff.value);
-        } else {
-          atlasInfluenceBuff.value = null;
-        }
-      } catch (buffError) {
-        console.warn('[Altar] Failed to load buffs:', buffError);
+      // Process Atlas Influence buff (loaded in parallel above)
+      if (buffs?.atlas_influence?.type === 'single_use') {
+        atlasInfluenceBuff.value = { foilBoost: buffs.atlas_influence.data?.foil_boost || 0.10 };
+        console.log('[Altar] Atlas Influence buff loaded:', atlasInfluenceBuff.value);
+      } else {
         atlasInfluenceBuff.value = null;
       }
     } else {
@@ -925,9 +919,9 @@ const handleSyncRequired = async (
         }
         
         try {
-          // Wait longer to ensure Supabase has processed the update
-          // Supabase may need time to propagate the update, especially in test mode
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Small delay to ensure Supabase has processed the update
+          // Reduced from 2000ms to 500ms - Supabase has strong consistency
+          await new Promise(resolve => setTimeout(resolve, 500));
           
           // Reload collection to ensure UI is up to date with server state
           console.log(`[Altar] handleSyncRequired: Reloading collection after sync`);
