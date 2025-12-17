@@ -4,8 +4,8 @@
  */
 
 const BUCKET_NAME = 'card-images'
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 
 /**
  * Upload a card image to Supabase Storage
@@ -19,12 +19,12 @@ export async function uploadCardImage(
 ): Promise<string> {
   // Validate file type
   if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error(`Type de fichier non supporté. Utilisez: PNG, JPG ou WebP`)
+    throw new Error(`Type de fichier non supporté. Utilisez: PNG, JPG, WebP ou GIF`)
   }
 
   // Validate file size
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`Fichier trop volumineux. Maximum: 2MB`)
+    throw new Error(`Fichier trop volumineux. Maximum: 5MB`)
   }
 
   const supabase = useSupabaseClient()

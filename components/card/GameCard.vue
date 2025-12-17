@@ -24,10 +24,13 @@ const props = defineProps<{
   // Variation selector props (optional - for stack multi-variation support)
   variationOptions?: VariationOption[];
   selectedVariation?: string;
+  // Right panel offset for centering in admin view (optional)
+  centerOffset?: number;
 }>();
 
 const emit = defineEmits<{
   click: [card: Card];
+  close: [card: Card];
   "update:selectedVariation": [value: string];
 }>();
 
@@ -77,9 +80,11 @@ const openCard = async () => {
 
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const targetWidth = Math.min(360, viewportWidth - 40);
+  const offset = props.centerOffset || 0;
+  const availableWidth = viewportWidth - offset;
+  const targetWidth = Math.min(360, availableWidth - 40);
   const targetHeight = targetWidth * 1.4;
-  const centerX = (viewportWidth - targetWidth) / 2;
+  const centerX = (availableWidth - targetWidth) / 2;
   const centerY = (viewportHeight - targetHeight) / 2;
 
   animationState.value = "animating";
@@ -397,9 +402,11 @@ const openLimitedCard = async () => {
 
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const targetWidth = Math.min(360, viewportWidth - 40);
+  const offset = props.centerOffset || 0;
+  const availableWidth = viewportWidth - offset;
+  const targetWidth = Math.min(360, availableWidth - 40);
   const targetHeight = targetWidth * 1.4;
-  const centerX = (viewportWidth - targetWidth) / 2;
+  const centerX = (availableWidth - targetWidth) / 2;
   const centerY = (viewportHeight - targetHeight) / 2;
 
   animationState.value = "animating";
@@ -515,6 +522,7 @@ const handleClick = () => {
 const handleClose = () => {
   if (animationState.value === "expanded") {
     closeCard();
+    emit("close", props.card);
   }
 };
 
@@ -768,6 +776,12 @@ const cardClasses = computed(() => [
 ]);
 
 const showOverlay = computed(() => animationState.value !== "idle");
+
+// Expose methods for parent control
+defineExpose({
+  close: handleClose,
+  isExpanded: computed(() => animationState.value === "expanded"),
+});
 </script>
 
 <template>

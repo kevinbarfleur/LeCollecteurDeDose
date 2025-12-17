@@ -644,6 +644,7 @@ const registrySearch = ref('');
 const registryTierFilter = ref('');
 const showCardEditPanel = ref(false);
 const editingCard = ref<any | null>(null);
+const openedGameCardRef = ref<{ close: () => void } | null>(null);
 
 // Tier options for filter (with colors for RunicRadio)
 const tierFilterOptions = [
@@ -702,8 +703,44 @@ const openNewCard = () => {
 
 // Handle card save from edit panel
 const handleCardSave = (savedCard: any) => {
-  // Refresh catalogue to show updated card
-  loadRegistryCatalogue();
+  if (!savedCard) return;
+
+  // Update the card directly in registryCatalogue for reactivity
+  const index = registryCatalogue.value.findIndex((c: any) => c.uid === savedCard.uid);
+  if (index !== -1) {
+    // Use splice to ensure Vue reactivity triggers
+    registryCatalogue.value.splice(index, 1, { ...savedCard });
+  } else {
+    // New card - add to catalogue
+    registryCatalogue.value.unshift({ ...savedCard });
+  }
+
+  // Update editingCard to reflect changes in the panel
+  editingCard.value = { ...savedCard };
+};
+
+// Close everything (panel + detail view)
+const closeCardEditAll = () => {
+  showCardEditPanel.value = false;
+  editingCard.value = null;
+  if (openedGameCardRef.value?.close) {
+    openedGameCardRef.value.close();
+  }
+  openedGameCardRef.value = null;
+};
+
+// Handle GameCard detail view close -> close panel too
+const handleGameCardClose = () => {
+  showCardEditPanel.value = false;
+  editingCard.value = null;
+  openedGameCardRef.value = null;
+};
+
+// Store ref to opened GameCard
+const setGameCardRef = (el: any, card: any) => {
+  if (el && editingCard.value?.uid === card.uid) {
+    openedGameCardRef.value = el;
+  }
 };
 
 // Watch for tab change to load registry data
@@ -1770,10 +1807,13 @@ const triggerManualTrigger = async (triggerType: string) => {
                       <GameCard
                         v-for="card in filteredRegistryCards"
                         :key="card.uid"
+                        :ref="(el: any) => setGameCardRef(el, card)"
                         :card="card"
                         :owned="true"
-                        :preview-only="true"
+                        :center-offset="420"
+                        :class="{ 'registry-grid__card--selected': editingCard?.uid === card.uid }"
                         @click="openCardEdit"
+                        @close="handleGameCardClose"
                       />
                     </div>
 
@@ -1855,11 +1895,13 @@ const triggerManualTrigger = async (triggerType: string) => {
         </div>
       </RunicBox>
 
-      <!-- Card Edit Panel -->
-      <AdminCardEditPanel
-        v-model="showCardEditPanel"
+      <!-- Card Edit Side Panel -->
+      <AdminCardEditSidePanel
+        :is-open="showCardEditPanel"
         :card="editingCard"
+        @update:is-open="(val) => { if (!val) closeCardEditAll(); else showCardEditPanel = val; }"
         @save="handleCardSave"
+        @close="closeCardEditAll"
       />
 
       <!-- Bot Config Modal - Runic Interface -->
@@ -2789,5 +2831,12 @@ const triggerManualTrigger = async (triggerType: string) => {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 1.75rem;
   }
+}
+
+/* Selected card indicator in grid */
+.registry-grid__card--selected {
+  outline: 2px solid rgba(175, 96, 37, 0.8);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 </style>

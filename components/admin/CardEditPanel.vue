@@ -454,7 +454,7 @@ const removeImage = () => {
                 <div v-else class="card-edit-panel__upload-placeholder">
                   <span class="card-edit-panel__upload-icon">📁</span>
                   <span>Cliquer ou glisser une image</span>
-                  <span class="card-edit-panel__upload-hint">PNG, JPG, WebP - Max 2MB</span>
+                  <span class="card-edit-panel__upload-hint">PNG, JPG, WebP, GIF - Max 5MB</span>
                 </div>
               </div>
 
@@ -462,7 +462,7 @@ const removeImage = () => {
               <input
                 ref="fileInputRef"
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg,image/webp,image/gif"
                 class="card-edit-panel__file-input"
                 @change="handleFileSelect"
               />

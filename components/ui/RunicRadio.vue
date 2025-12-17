@@ -25,10 +25,10 @@ const emit = defineEmits<{
   "update:modelValue": [value: string | boolean];
 }>();
 
-// Refs for measuring option widths
-const optionRefs = ref<HTMLElement[]>([]);
-const optionWidths = ref<number[]>([]);
-const optionOffsets = ref<number[]>([]);
+// Ref for the groove container
+const grooveRef = ref<HTMLElement | null>(null);
+const sliderPosition = ref({ left: 0, width: 0 });
+const isMeasured = ref(false);
 
 // For toggle mode, create simple on/off options
 const effectiveOptions = computed(() => {
@@ -56,23 +56,24 @@ const selectedIndex = computed(() => {
   );
 });
 
-// Measure option dimensions
+// Measure option dimensions from DOM
 const measureOptions = () => {
-  const widths: number[] = [];
-  const offsets: number[] = [];
-  let currentOffset = 0;
+  if (!grooveRef.value) return;
 
-  optionRefs.value.forEach((el) => {
-    if (el) {
-      const width = el.offsetWidth;
-      widths.push(width);
-      offsets.push(currentOffset);
-      currentOffset += width;
-    }
-  });
+  const buttons = grooveRef.value.querySelectorAll('.runic-radio__option');
+  const index = selectedIndex.value;
 
-  optionWidths.value = widths;
-  optionOffsets.value = offsets;
+  if (index === -1 || !buttons[index]) {
+    isMeasured.value = false;
+    return;
+  }
+
+  const button = buttons[index] as HTMLElement;
+  sliderPosition.value = {
+    left: button.offsetLeft,
+    width: button.offsetWidth,
+  };
+  isMeasured.value = true;
 };
 
 // Calculate the position of the slider based on measured dimensions
@@ -80,27 +81,30 @@ const sliderStyle = computed(() => {
   const index = selectedIndex.value;
   const count = effectiveOptions.value.length;
 
-  // Fallback to percentage-based if measurements not ready
-  if (
-    optionWidths.value.length === 0 ||
-    optionWidths.value.length !== count ||
-    index === -1
-  ) {
+  // Use measured values if available
+  if (isMeasured.value && sliderPosition.value.width > 0) {
     return {
-      left: index === -1 ? "0px" : `${(index / count) * 100}%`,
-      width: `${100 / count}%`,
+      left: `${sliderPosition.value.left}px`,
+      width: `${sliderPosition.value.width}px`,
     };
   }
 
+  // Fallback to percentage-based
   return {
-    left: `${optionOffsets.value[index]}px`,
-    width: `${optionWidths.value[index]}px`,
+    left: index === -1 ? "0%" : `${(index / count) * 100}%`,
+    width: `${100 / count}%`,
   };
+});
+
+// Re-measure when selection changes
+watch(selectedIndex, () => {
+  nextTick(measureOptions);
 });
 
 // Re-measure on mount and when options change
 onMounted(() => {
   nextTick(measureOptions);
+  window.addEventListener("resize", measureOptions);
 });
 
 watch(
@@ -110,11 +114,6 @@ watch(
   },
   { deep: true }
 );
-
-// Re-measure on window resize
-onMounted(() => {
-  window.addEventListener("resize", measureOptions);
-});
 
 onUnmounted(() => {
   window.removeEventListener("resize", measureOptions);
@@ -162,6 +161,7 @@ const handleToggleClick = () => {
   >
     <!-- The carved groove/crevice background -->
     <div
+      ref="grooveRef"
       class="runic-radio__groove"
       :class="{
         'runic-radio__groove--clickable': toggle && !disabled,
@@ -173,7 +173,6 @@ const handleToggleClick = () => {
       <button
         v-for="(option, index) in effectiveOptions"
         :key="option.value"
-        :ref="(el) => { if (el) optionRefs[index] = el as HTMLElement }"
         type="button"
         :role="toggle ? 'presentation' : 'radio'"
         :aria-checked="!toggle ? internalValue === option.value : undefined"
