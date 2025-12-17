@@ -603,6 +603,21 @@ export type Database = {
           total_unique_cards: number
         }[]
       }
+      upsert_unique_card: {
+        Args: {
+          p_uid: number | null
+          p_id: string
+          p_name: string
+          p_item_class: string
+          p_rarity: string
+          p_tier: string
+          p_flavour_text?: string | null
+          p_wiki_url?: string | null
+          p_game_data?: Json
+          p_relevance_score?: number
+        }
+        Returns: Database['public']['Tables']['unique_cards']['Row']
+      }
     }
     Enums: {
       [_ in never]: never

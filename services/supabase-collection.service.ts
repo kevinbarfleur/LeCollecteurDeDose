@@ -555,3 +555,79 @@ export async function consumeUserBuff(username: string, buffType: string): Promi
     return false
   }
 }
+
+/**
+ * Form data interface for card editing
+ */
+export interface CardFormData {
+  uid?: number | null
+  id: string
+  name: string
+  itemClass: string
+  rarity: string
+  tier: string
+  flavourText: string | null
+  wikiUrl: string | null
+  gameData: {
+    weight: number
+    img: string
+    foilImg?: string
+  }
+  relevanceScore: number
+}
+
+/**
+ * Upsert a unique card (create or update)
+ * @param cardData - Card data to create or update
+ * @returns The created/updated card or null on error
+ */
+export async function upsertUniqueCard(cardData: CardFormData): Promise<Card | null> {
+  if (await isMockMode()) {
+    logError('upsertUniqueCard not supported in mock mode', undefined, { service: 'SupabaseCollection' })
+    return null
+  }
+
+  try {
+    const supabase = await getSupabaseWrite()
+
+    const { data, error } = await supabase.rpc('upsert_unique_card', {
+      p_uid: cardData.uid ?? null,
+      p_id: cardData.id,
+      p_name: cardData.name,
+      p_item_class: cardData.itemClass,
+      p_rarity: cardData.rarity,
+      p_tier: cardData.tier,
+      p_flavour_text: cardData.flavourText,
+      p_wiki_url: cardData.wikiUrl,
+      p_game_data: cardData.gameData,
+      p_relevance_score: cardData.relevanceScore
+    })
+
+    if (error) {
+      logError('Failed to upsert card', error, {
+        service: 'SupabaseCollection',
+        cardId: cardData.id,
+        errorCode: error.code,
+        errorMessage: error.message
+      })
+      return null
+    }
+
+    // Transform DB result to Card type
+    return {
+      uid: data.uid,
+      id: data.id,
+      name: data.name,
+      itemClass: data.item_class,
+      rarity: data.rarity as Card['rarity'],
+      tier: data.tier as Card['tier'],
+      flavourText: data.flavour_text,
+      wikiUrl: data.wiki_url || '',
+      gameData: data.game_data as Card['gameData'],
+      relevanceScore: data.relevance_score
+    }
+  } catch (error) {
+    logError('Error upserting card', error, { service: 'SupabaseCollection', cardId: cardData.id })
+    return null
+  }
+}

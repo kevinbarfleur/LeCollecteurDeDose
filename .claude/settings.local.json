@@ -46,7 +46,8 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(cat:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "mcp__supabase__search_docs"
     ]
   }
 }

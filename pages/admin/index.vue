@@ -625,11 +625,93 @@ const updateDebugVaalOrbs = (delta: number) => {
 };
 
 // Navigation tabs
-const activeTab = ref<'main' | 'advanced'>('main');
+type AdminTab = 'system' | 'bot' | 'data' | 'registry' | 'diagnostics';
+const activeTab = ref<AdminTab>('system');
 const tabOptions = computed(() => [
-  { value: 'main', label: 'Actions Principales' },
-  { value: 'advanced', label: 'Actions Avancées' },
+  { value: 'system', label: 'Systeme' },
+  { value: 'bot', label: 'Bot' },
+  { value: 'data', label: 'Donnees' },
+  { value: 'registry', label: 'Registre' },
+  { value: 'diagnostics', label: 'Diagnostics' },
 ]);
+
+// ==========================================
+// REGISTRE - Card Registry Management
+// ==========================================
+const registryCatalogue = ref<any[]>([]);
+const registryLoading = ref(false);
+const registrySearch = ref('');
+const registryTierFilter = ref('');
+const showCardEditPanel = ref(false);
+const editingCard = ref<any | null>(null);
+
+// Tier options for filter (with colors for RunicRadio)
+const tierFilterOptions = [
+  { value: '', label: 'Tous' },
+  { value: 'T0', label: 'T0', color: 't0' },
+  { value: 'T1', label: 'T1', color: 't1' },
+  { value: 'T2', label: 'T2', color: 't2' },
+  { value: 'T3', label: 'T3', color: 't3' },
+];
+
+// Load catalogue for registry
+const loadRegistryCatalogue = async () => {
+  if (registryLoading.value) return;
+  registryLoading.value = true;
+  try {
+    const { getAllUniqueCards } = await import('~/services/supabase-collection.service');
+    const cards = await getAllUniqueCards();
+    registryCatalogue.value = cards || [];
+  } catch (error) {
+    console.error('Error loading catalogue:', error);
+  } finally {
+    registryLoading.value = false;
+  }
+};
+
+// Filter cards for registry
+const filteredRegistryCards = computed(() => {
+  let cards = registryCatalogue.value;
+
+  if (registrySearch.value) {
+    const query = registrySearch.value.toLowerCase();
+    cards = cards.filter((card: any) =>
+      card.name?.toLowerCase().includes(query) ||
+      card.id?.toLowerCase().includes(query)
+    );
+  }
+
+  if (registryTierFilter.value) {
+    cards = cards.filter((card: any) => card.tier === registryTierFilter.value);
+  }
+
+  return cards;
+});
+
+// Open card edit panel
+const openCardEdit = (card: any) => {
+  editingCard.value = card;
+  showCardEditPanel.value = true;
+};
+
+// Open new card panel
+const openNewCard = () => {
+  editingCard.value = null;
+  showCardEditPanel.value = true;
+};
+
+// Handle card save from edit panel
+const handleCardSave = (savedCard: any) => {
+  // Refresh catalogue to show updated card
+  loadRegistryCatalogue();
+};
+
+// Watch for tab change to load registry data
+watch(activeTab, (newTab) => {
+  if (newTab === 'registry' && registryCatalogue.value.length === 0) {
+    loadRegistryCatalogue();
+  }
+});
 
 // Bot config modal
 const showBotConfigModal = ref(false);
@@ -1137,12 +1219,12 @@ const triggerManualTrigger = async (triggerType: string) => {
             />
           </div>
 
-          <!-- Actions Principales -->
-          <div v-show="activeTab === 'main'" class="flex flex-col gap-8">
+          <!-- Onglet: Controles Systeme -->
+          <div v-show="activeTab === 'system'" class="flex flex-col gap-8">
             <!-- Section: Contrôles Principaux -->
             <div class="flex flex-col w-full">
               <RunicHeader
-                title="CONTRÔLES PRINCIPAUX"
+                title="CONTROLES SYSTEME"
                 attached
               />
               <ClientOnly>
@@ -1227,24 +1309,6 @@ const triggerManualTrigger = async (triggerType: string) => {
                       </div>
                     </div>
 
-                    <!-- Bot Triggers Configuration -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Triggers Automatiques</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Gérer les paramètres des triggers automatiques du bot Twitch
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <RunicButton
-                          size="md"
-                          variant="secondary"
-                          @click="showBotConfigModal = true"
-                        >
-                          ⚙️ Configurer
-                        </RunicButton>
-                      </div>
-                    </div>
                   </div>
                 </RunicBox>
                 <template #fallback>
@@ -1258,23 +1322,42 @@ const triggerManualTrigger = async (triggerType: string) => {
             </div>
           </div>
 
-          <!-- Actions Avancées -->
-          <div v-show="activeTab === 'advanced'" class="flex flex-col gap-8">
-            <!-- Section: Actions Bot -->
+          <!-- Onglet: Bot & Actions -->
+          <div v-show="activeTab === 'bot'" class="flex flex-col gap-8">
+            <!-- Section: Configuration Bot -->
             <div class="flex flex-col w-full">
               <RunicHeader
-                title="ACTIONS BOT"
+                title="CONFIGURATION BOT"
                 attached
               />
               <ClientOnly>
                 <RunicBox attached padding="lg">
                   <div class="flex flex-col gap-5">
-                    <!-- Daily Limits Reset -->
+                    <!-- Bot Triggers Configuration -->
                     <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Triggers Automatiques</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Gerer les parametres des triggers automatiques du bot Twitch
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="primary"
+                          @click="showBotConfigModal = true"
+                        >
+                          ⚙️ Configurer
+                        </RunicButton>
+                      </div>
+                    </div>
+
+                    <!-- Daily Limits Reset -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
                       <div class="flex-1 flex flex-col gap-1.5 min-w-0">
                         <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Reset Limites Quotidiennes</label>
                         <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Réinitialise les !booster et !vaals pour tous les utilisateurs et envoie une annonce dans le chat
+                          Reinitialise les !booster et !vaals pour tous les utilisateurs
                         </p>
                         <p
                           v-if="dailyLimitsResetMessage"
@@ -1296,6 +1379,36 @@ const triggerManualTrigger = async (triggerType: string) => {
                         </RunicButton>
                       </div>
                     </div>
+
+                    <!-- Credit Vaal Orbs -->
+                    <div v-if="isSupabaseData" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Crediter 5 Vaal Orbs</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Ajouter 5 Vaal Orbs pour l'utilisateur actuel
+                        </p>
+                      </div>
+                      <div class="flex flex-col gap-3 flex-shrink-0">
+                        <RunicButton
+                          size="md"
+                          variant="primary"
+                          :disabled="!user?.id || isCreditingVaalOrbs"
+                          @click="creditVaalOrbs"
+                        >
+                          <span v-if="!isCreditingVaalOrbs">✨ Crediter</span>
+                          <span v-else>Credit en cours...</span>
+                        </RunicButton>
+                        <div v-if="creditVaalOrbsMessage"
+                          class="w-full p-2 rounded text-center font-display text-sm"
+                          :class="{
+                            'bg-green-900/20 border border-green-700/40 text-green-200': creditVaalOrbsMessage.type === 'success',
+                            'bg-red-900/20 border border-red-700/40 text-red-200': creditVaalOrbsMessage.type === 'error'
+                          }"
+                        >
+                          {{ creditVaalOrbsMessage.text }}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </RunicBox>
                 <template #fallback>
@@ -1308,157 +1421,17 @@ const triggerManualTrigger = async (triggerType: string) => {
               </ClientOnly>
             </div>
 
-            <!-- Section: Logs et Diagnostic -->
+            <!-- Section: Actions Bot -->
             <div class="flex flex-col w-full">
               <RunicHeader
-                title="LOGS ET DIAGNOSTIC"
+                title="ACTIONS BOT"
                 attached
               />
               <ClientOnly>
                 <RunicBox attached padding="lg">
                   <div class="flex flex-col gap-5">
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Logs d'Erreurs</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Visualiser et gérer les erreurs de l'application pour le débogage
-                        </p>
-                      </div>
-                    </div>
-                    <RunicButton
-                      to="/admin/errors"
-                      icon="external"
-                      variant="primary"
-                      size="md"
-                      class="w-full mt-2"
-                    >
-                      VOIR LES LOGS
-                    </RunicButton>
-                  </div>
-                </RunicBox>
-                <template #fallback>
-                  <RunicBox attached padding="lg">
-                    <div class="admin-section__content">
-                      <p>Chargement...</p>
-                    </div>
-                  </RunicBox>
-                </template>
-              </ClientOnly>
-            </div>
-
-            <!-- Section: Outils de Test -->
-            <div class="flex flex-col w-full">
-              <RunicHeader
-                title="OUTILS DE TEST"
-                attached
-              />
-              <ClientOnly>
-                <RunicBox attached padding="lg">
-                  <div class="flex flex-col gap-5">
-                    <!-- Data Source -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Source des Données</label>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <RunicSelect
-                          v-model="dataSourceModel"
-                          :options="dataSourceOptions"
-                          size="md"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Force Outcome -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Forcer l'Issue de Corruption</label>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <RunicSelect
-                          v-model="forcedOutcome"
-                          :options="forcedOutcomeOptions"
-                          size="md"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Credit Vaal Orbs (Production) -->
-                    <div v-if="isSupabaseData" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Créditer 5 Vaal Orbs</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Ajouter 5 Vaal Orbs directement dans Supabase pour l'utilisateur actuel
-                        </p>
-                      </div>
-                      <div class="flex flex-col gap-3 flex-shrink-0">
-                        <RunicButton
-                          size="md"
-                          variant="primary"
-                          :disabled="!user?.id || isCreditingVaalOrbs"
-                          @click="creditVaalOrbs"
-                        >
-                          <span v-if="!isCreditingVaalOrbs">✨ Créditer 5 Vaal Orbs</span>
-                          <span v-else>Crédit en cours...</span>
-                        </RunicButton>
-                        <div v-if="creditVaalOrbsMessage" 
-                          class="w-full p-2 rounded text-center font-display text-sm"
-                          :class="{
-                            'bg-green-900/20 border border-green-700/40 text-green-200': creditVaalOrbsMessage.type === 'success',
-                            'bg-red-900/20 border border-red-700/40 text-red-200': creditVaalOrbsMessage.type === 'error'
-                          }"
-                        >
-                          {{ creditVaalOrbsMessage.text }}
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Vaal Orbs -->
-                    <div v-if="isMockData" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Vaal Orbs</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Nombre de Vaal Orbs disponibles pour les tests
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <div class="flex items-center justify-center gap-4 p-2 px-3 bg-black/30 border border-poe-border/40 rounded-md">
-                          <button
-                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
-                            @click="updateDebugVaalOrbs(-1)"
-                          >
-                            −
-                          </button>
-                          <span class="font-display text-[1.375rem] font-bold text-poe-text min-w-[2.5ch] text-center">{{ debugVaalOrbs }}</span>
-                          <button
-                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
-                            @click="updateDebugVaalOrbs(1)"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div v-else class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <p class="font-body text-lg text-poe-text-dim/60 text-center italic m-0 py-2">
-                        Les contrôles de debug Vaal Orbs sont disponibles uniquement en mode mock.
-                      </p>
-                    </div>
-
-                    <!-- Bot Actions -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Actions du Bot</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Déclencher des actions du bot pour tester
-                        </p>
-                      </div>
-                    </div>
-
-                    <!-- Username input for bot actions -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                    <!-- Username input -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
                       <div class="flex-1 flex flex-col gap-1.5 min-w-0">
                         <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Nom d'utilisateur</label>
                       </div>
@@ -1466,7 +1439,7 @@ const triggerManualTrigger = async (triggerType: string) => {
                         <input
                           v-model="botActionUsername"
                           type="text"
-                          class="w-full px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-lg transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-poe-text/40"
+                          class="w-full px-3 py-2 bg-[rgba(20,15,10,0.6)] border border-accent/30 rounded text-poe-text font-display text-lg transition-all focus:outline-none focus:border-accent/60 focus:bg-[rgba(20,15,10,0.8)] placeholder:text-poe-text/40"
                           placeholder="Nom d'utilisateur Twitch"
                           :disabled="isTriggeringBooster || isTriggeringVaalOrbs"
                         />
@@ -1503,8 +1476,8 @@ const triggerManualTrigger = async (triggerType: string) => {
                     </div>
 
                     <!-- Bot action message -->
-                    <div v-if="botActionMessage" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div 
+                    <div v-if="botActionMessage" class="flex items-start justify-between gap-6">
+                      <div
                         class="w-full p-3 rounded text-center font-display text-lg"
                         :class="{
                           'bg-green-900/20 border border-green-700/40 text-green-200': botActionMessage.type === 'success',
@@ -1525,11 +1498,80 @@ const triggerManualTrigger = async (triggerType: string) => {
                 </template>
               </ClientOnly>
             </div>
+          </div>
 
-            <!-- Section: Gestion des Données -->
+          <!-- Onglet: Donnees & Backups -->
+          <div v-show="activeTab === 'data'" class="flex flex-col gap-8">
+            <!-- Section: Source des Donnees -->
             <div class="flex flex-col w-full">
               <RunicHeader
-                title="GESTION DES DONNÉES"
+                title="SOURCE DES DONNEES"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
+                    <!-- Data Source -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Source des Donnees</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Basculer entre les donnees de production et les donnees de test
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicSelect
+                          v-model="dataSourceModel"
+                          :options="dataSourceOptions"
+                          size="md"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Vaal Orbs Debug (Mock mode only) -->
+                    <div v-if="isMockData" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Vaal Orbs (Debug)</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Nombre de Vaal Orbs pour les tests
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <div class="flex items-center justify-center gap-4 p-2 px-3 bg-black/30 border border-poe-border/40 rounded-md">
+                          <button
+                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
+                            @click="updateDebugVaalOrbs(-1)"
+                          >
+                            −
+                          </button>
+                          <span class="font-display text-[1.375rem] font-bold text-poe-text min-w-[2.5ch] text-center">{{ debugVaalOrbs }}</span>
+                          <button
+                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
+                            :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
+                            @click="updateDebugVaalOrbs(1)"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="flex flex-col gap-5">
+                      <p class="font-body text-lg">Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
+
+            <!-- Section: Backups -->
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="GESTION DES BACKUPS"
                 attached
               />
               <ClientOnly>
@@ -1538,9 +1580,9 @@ const triggerManualTrigger = async (triggerType: string) => {
                     <!-- Create Backup -->
                     <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
                       <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Créer un Backup</label>
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Creer un Backup</label>
                         <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Créer une sauvegarde complète de toutes les données (utilisateurs, collections, boosters, cartes, configuration)
+                          Sauvegarde complete de toutes les donnees
                         </p>
                       </div>
                       <div class="flex-shrink-0">
@@ -1567,12 +1609,11 @@ const triggerManualTrigger = async (triggerType: string) => {
                         <div class="flex-1 flex flex-col gap-1.5 min-w-0">
                           <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Restaurer un Backup</label>
                           <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                            Restaurer les données depuis un backup précédent. ⚠️ Cette opération remplace toutes les données actuelles.
+                            ⚠️ Remplace toutes les donnees actuelles
                           </p>
                         </div>
                       </div>
-                      
-                      <!-- Backup Select -->
+
                       <div class="flex flex-col gap-3">
                         <div v-if="isLoadingBackups" class="flex items-center gap-2 text-poe-text-dim">
                           <span class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
@@ -1586,11 +1627,10 @@ const triggerManualTrigger = async (triggerType: string) => {
                           v-model="selectedBackupId"
                           :options="backupsList.map(b => ({ value: b.id, label: formatBackupName(b) }))"
                           size="md"
-                          placeholder="Sélectionner un backup"
+                          placeholder="Selectionner un backup"
                           :disabled="isRestoringBackup"
                         />
-                        
-                        <!-- Restore Mode Select -->
+
                         <div v-if="selectedBackupId" class="flex flex-col gap-2">
                           <label class="font-display text-sm font-semibold text-poe-text">
                             {{ t("admin.dataSource.restoreMode.label") }}
@@ -1613,8 +1653,7 @@ const triggerManualTrigger = async (triggerType: string) => {
                             </span>
                           </p>
                         </div>
-                        
-                        <!-- Restore Button -->
+
                         <RunicButton
                           size="md"
                           variant="danger"
@@ -1622,15 +1661,14 @@ const triggerManualTrigger = async (triggerType: string) => {
                           @click="restoreBackup"
                           class="w-full"
                         >
-                          <span v-if="!isRestoringBackup">🔄 Restaurer le backup sélectionné</span>
+                          <span v-if="!isRestoringBackup">🔄 Restaurer</span>
                           <span v-else class="flex items-center gap-2.5">
                             <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                            Restauration en cours...
+                            Restauration...
                           </span>
                         </RunicButton>
-                        
-                        <!-- Restore Message -->
-                        <div v-if="restoreBackupMessage" 
+
+                        <div v-if="restoreBackupMessage"
                           class="w-full p-3 rounded text-center font-display text-sm"
                           :class="{
                             'bg-green-900/20 border border-green-700/40 text-green-200': restoreBackupMessage.type === 'success',
@@ -1645,9 +1683,9 @@ const triggerManualTrigger = async (triggerType: string) => {
                     <!-- Sync Test Data -->
                     <div v-if="isMockData" class="flex items-start justify-between gap-6">
                       <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Synchroniser les Données de Test</label>
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Sync Donnees de Test</label>
                         <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Synchroniser les données de test depuis la base de données de production
+                          Synchroniser depuis la production
                         </p>
                       </div>
                       <div class="flex-shrink-0">
@@ -1679,8 +1717,150 @@ const triggerManualTrigger = async (triggerType: string) => {
               </ClientOnly>
             </div>
           </div>
+
+          <!-- Onglet: Registre -->
+          <div v-show="activeTab === 'registry'" class="flex flex-col gap-8">
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="REGISTRE DES CARTES"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
+                    <!-- Header with button -->
+                    <div class="flex items-center justify-between">
+                      <span class="font-body text-lg text-poe-text-dim">
+                        {{ filteredRegistryCards.length }} / {{ registryCatalogue.length }} carte(s)
+                      </span>
+                      <RunicButton
+                        size="md"
+                        variant="primary"
+                        @click="openNewCard"
+                      >
+                        ✨ Nouvelle Carte
+                      </RunicButton>
+                    </div>
+
+                    <!-- Search and Filters -->
+                    <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                      <!-- Search -->
+                      <RunicInput
+                        v-model="registrySearch"
+                        placeholder="Rechercher une carte..."
+                        class="flex-1 w-full sm:w-auto"
+                      />
+
+                      <!-- Tier Radio -->
+                      <RunicRadio
+                        v-model="registryTierFilter"
+                        :options="tierFilterOptions"
+                        size="sm"
+                      />
+                    </div>
+
+                    <!-- Loading -->
+                    <div v-if="registryLoading" class="flex items-center justify-center gap-3 py-12">
+                      <span class="w-6 h-6 border-2 border-accent/30 border-t-accent/80 rounded-full animate-spin"></span>
+                      <span class="font-body text-lg text-poe-text-dim">Chargement du catalogue...</span>
+                    </div>
+
+                    <!-- Card Grid -->
+                    <div v-else-if="filteredRegistryCards.length > 0" class="registry-grid">
+                      <GameCard
+                        v-for="card in filteredRegistryCards"
+                        :key="card.uid"
+                        :card="card"
+                        :owned="true"
+                        :preview-only="true"
+                        @click="openCardEdit"
+                      />
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-else class="flex flex-col items-center justify-center gap-4 py-12 text-poe-text-dim">
+                      <span class="text-4xl">📭</span>
+                      <p class="font-body text-lg">Aucune carte trouvée</p>
+                    </div>
+                  </div>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="flex flex-col gap-5">
+                      <p class="font-body text-lg">Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
+          </div>
+
+          <!-- Onglet: Diagnostics -->
+          <div v-show="activeTab === 'diagnostics'" class="flex flex-col gap-8">
+            <div class="flex flex-col w-full">
+              <RunicHeader
+                title="DIAGNOSTICS"
+                attached
+              />
+              <ClientOnly>
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
+                    <!-- Error Logs -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Logs d'Erreurs</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Visualiser et gerer les erreurs de l'application
+                        </p>
+                      </div>
+                    </div>
+                    <RunicButton
+                      to="/admin/errors"
+                      icon="external"
+                      variant="primary"
+                      size="md"
+                      class="w-full"
+                    >
+                      VOIR LES LOGS
+                    </RunicButton>
+
+                    <!-- Force Outcome (debug) -->
+                    <div class="flex items-start justify-between gap-6 pt-5 border-t border-poe-border/20">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Forcer Issue (Debug)</label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Forcer un resultat specifique pour l'autel
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicSelect
+                          v-model="forcedOutcome"
+                          :options="forcedOutcomeOptions"
+                          size="md"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </RunicBox>
+                <template #fallback>
+                  <RunicBox attached padding="lg">
+                    <div class="flex flex-col gap-5">
+                      <p class="font-body text-lg">Chargement...</p>
+                    </div>
+                  </RunicBox>
+                </template>
+              </ClientOnly>
+            </div>
+          </div>
         </div>
       </RunicBox>
+
+      <!-- Card Edit Panel -->
+      <AdminCardEditPanel
+        v-model="showCardEditPanel"
+        :card="editingCard"
+        @save="handleCardSave"
+      />
 
       <!-- Bot Config Modal - Runic Interface -->
       <ClientOnly>
@@ -2584,6 +2764,30 @@ const triggerManualTrigger = async (triggerType: string) => {
 
   .trigger-row__controls {
     padding-left: 0;
+  }
+}
+
+/* ==========================================
+   REGISTRY GRID
+   ========================================== */
+
+.registry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .registry-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .registry-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.75rem;
   }
 }
 </style>
