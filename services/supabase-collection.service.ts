@@ -631,3 +631,122 @@ export async function upsertUniqueCard(cardData: CardFormData): Promise<Card | n
     return null
   }
 }
+
+// ============================================================================
+// Altar Outcome - Atomic sync function
+// ============================================================================
+
+/**
+ * Payload for atomic altar outcome operation
+ */
+export interface AltarOutcomePayload {
+  username: string
+  cardUpdates: Array<{
+    cardUid: number
+    normalCount: number
+    foilCount: number
+  }>
+  vaalOrbsDelta: number
+  consumeAtlasInfluence?: boolean
+}
+
+/**
+ * Result from atomic altar outcome operation
+ */
+export interface AltarOutcomeResult {
+  success: boolean
+  userId?: string
+  vaalOrbs?: number
+  vaalOrbsBefore?: number
+  atlasInfluenceConsumed?: boolean
+  cardsUpdated?: number
+  error?: string
+  errorCode?: string
+}
+
+/**
+ * Apply altar outcome atomically in a single transaction
+ * Replaces the sequential: get_or_create_user + set_vaal_orbs + set_card_collection_counts loop + consume_buff
+ * This dramatically reduces latency from ~5-7 calls to exactly 1 call
+ *
+ * @param payload - All data for the altar outcome
+ * @returns Result with success status and new vaal orbs count
+ */
+export async function applyAltarOutcome(payload: AltarOutcomePayload): Promise<AltarOutcomeResult> {
+  if (await isMockMode()) {
+    // In mock mode, simulate success
+    console.log('[SupabaseCollection] applyAltarOutcome: Mock mode, simulating success')
+    return {
+      success: true,
+      vaalOrbs: 0,
+      atlasInfluenceConsumed: payload.consumeAtlasInfluence || false,
+      cardsUpdated: payload.cardUpdates.length,
+    }
+  }
+
+  try {
+    console.log(`[SupabaseCollection] applyAltarOutcome: Starting atomic update for ${payload.username}`)
+    console.log(`[SupabaseCollection] applyAltarOutcome: ${payload.cardUpdates.length} card updates, vaal delta: ${payload.vaalOrbsDelta}`)
+
+    const supabase = await getSupabaseWrite()
+
+    // Transform card updates to PostgreSQL JSONB format
+    const cardUpdatesJsonb = payload.cardUpdates.map(update => ({
+      card_uid: update.cardUid,
+      normal_count: update.normalCount,
+      foil_count: update.foilCount,
+    }))
+
+    const { data, error } = await supabase.rpc('apply_altar_outcome', {
+      p_twitch_username: payload.username.toLowerCase(),
+      p_card_updates: cardUpdatesJsonb,
+      p_vaal_orbs_delta: payload.vaalOrbsDelta,
+      p_consume_atlas_influence: payload.consumeAtlasInfluence || false,
+    })
+
+    if (error) {
+      console.error('[SupabaseCollection] applyAltarOutcome: RPC error:', error)
+      logError('Failed to apply altar outcome', error, {
+        service: 'SupabaseCollection',
+        username: payload.username,
+        errorCode: error.code,
+        errorMessage: error.message,
+      })
+      return {
+        success: false,
+        error: error.message,
+        errorCode: error.code,
+      }
+    }
+
+    // Check if the RPC returned an error in the response
+    if (data && !data.success) {
+      console.error('[SupabaseCollection] applyAltarOutcome: RPC returned error:', data)
+      return {
+        success: false,
+        error: data.error || 'Unknown error',
+        errorCode: data.error_code,
+      }
+    }
+
+    console.log('[SupabaseCollection] applyAltarOutcome: Success:', data)
+
+    return {
+      success: data?.success || false,
+      userId: data?.user_id,
+      vaalOrbs: data?.vaal_orbs,
+      vaalOrbsBefore: data?.vaal_orbs_before,
+      atlasInfluenceConsumed: data?.atlas_influence_consumed,
+      cardsUpdated: data?.cards_updated,
+    }
+  } catch (error) {
+    logError('Error applying altar outcome', error, {
+      service: 'SupabaseCollection',
+      username: payload.username,
+    })
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}

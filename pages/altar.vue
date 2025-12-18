@@ -898,96 +898,49 @@ const handleSyncRequired = async (
       id: operationId,
       username: authUser.value.displayName,
       cardUpdates: updatesWithCurrentCounts,
-      vaalOrbsNewValue: newVaalOrbsValue,
+      vaalOrbsDelta,  // Pass delta, not absolute value - allows concurrent operations
       outcomeType,
+      consumeAtlasInfluence: wasAtlasInfluenceActive,  // Consume buff atomically in the same transaction
       rollbackData: {
         vaalOrbsBefore,
         localCollectionBefore,
       },
       onSuccess: async () => {
-        const syncStartTime = Date.now();
-        console.log(`[Altar] handleSyncRequired: Sync operation ${operationId} succeeded, starting reload`);
+        const syncEndTime = Date.now();
+        console.log(`[Altar] handleSyncRequired: Sync operation ${operationId} succeeded (atomic, no reload needed)`);
 
-        // Log collection state AFTER sync (before reload)
+        // Log collection state AFTER sync
+        // Note: No reload - we trust the optimistic update since the atomic operation succeeded
         logCollectionState(`Sync: After (${outcomeType || 'unknown'})`, localCollection.value, vaalOrbs.value, {
           syncCompleted: true,
+          atomicSync: true,
         });
-        
-        // Mark that reload is starting (for test runner to wait)
-        isReloadingCollection.value = true;
-        if (typeof window !== 'undefined') {
-          (window as any).__isReloadingCollection = true
-        }
-        
-        try {
-          // Small delay to ensure Supabase has processed the update
-          // Reduced from 2000ms to 500ms - Supabase has strong consistency
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Reload collection to ensure UI is up to date with server state
-          console.log(`[Altar] handleSyncRequired: Reloading collection after sync`);
-          await loadCollection();
-          console.log(`[Altar] handleSyncRequired: Collection reloaded - ${localCollection.value.length} cards, ${vaalOrbs.value} vaalOrbs`);
 
-          // Consume Atlas Influence buff on server if it was active during this altar use
-          if (wasAtlasInfluenceActive) {
-            try {
-              console.log('[Altar] Consuming Atlas Influence buff on server after altar use');
-              const consumed = await consumeUserBuff(authUser.value!.displayName, 'atlas_influence');
-              if (consumed) {
-                console.log('[Altar] Atlas Influence buff consumed successfully on server');
-              }
-            } catch (consumeError) {
-              console.warn('[Altar] Failed to consume Atlas Influence buff:', consumeError);
-              // Buff is already cleared locally, server will clean it up on next sync
-            }
-          }
+        // Atlas Influence buff was already consumed atomically in the server transaction
+        // No separate call needed
 
-          // Capture state AFTER sync and reload for diagnostic logging
+        // Log diagnostic if we have state before
+        if (diagnosticStateBefore.value && outcomeType && diagnosticCardInfo.value) {
           const stateAfterSync = createAltarState(localCollection.value, vaalOrbs.value);
-          const apiResponseTime = Date.now() - syncStartTime;
-          console.log(`[Altar] handleSyncRequired: Sync completed in ${apiResponseTime}ms`);
-          
-          // Log diagnostic if we have state before
-          if (diagnosticStateBefore.value && outcomeType && diagnosticCardInfo.value) {
-            await logAltarAction(
-              'vaal_outcome',
-              diagnosticStateBefore.value,
-              stateAfterSync,
-              {
-                card_id: diagnosticCardInfo.value.id,
-                card_tier: diagnosticCardInfo.value.tier,
-                card_foil: diagnosticCardInfo.value.foil,
-                outcome_type: outcomeType as VaalOutcomeType,
-                api_response_time_ms: apiResponseTime,
-              }
-            );
-            
-            // Clear diagnostic state after logging
-            diagnosticStateBefore.value = null;
-            diagnosticCardInfo.value = null;
-          }
+          await logAltarAction(
+            'vaal_outcome',
+            diagnosticStateBefore.value,
+            stateAfterSync,
+            {
+              card_id: diagnosticCardInfo.value.id,
+              card_tier: diagnosticCardInfo.value.tier,
+              card_foil: diagnosticCardInfo.value.foil,
+              outcome_type: outcomeType as VaalOutcomeType,
+              api_response_time_ms: 0,  // No separate API call timing since it's atomic
+            }
+          );
 
-          // Verify vaalOrbs match expected value
-          const expectedVaalOrbs = newVaalOrbsValue;
-          if (vaalOrbs.value !== expectedVaalOrbs) {
-
-
-          } else {
-
-          }
-          
-          // Verify collection is not empty
-          if (localCollection.value.length === 0) {
-
-          }
-        } finally {
-          // Mark that reload is complete
-          isReloadingCollection.value = false;
-          if (typeof window !== 'undefined') {
-            (window as any).__isReloadingCollection = false
-          }
+          // Clear diagnostic state after logging
+          diagnosticStateBefore.value = null;
+          diagnosticCardInfo.value = null;
         }
+
+        console.log(`[Altar] handleSyncRequired: Sync completed successfully`);
       },
       onError: (error) => {
         console.error(`[Altar] handleSyncRequired: Sync operation ${operationId} failed:`, error);
@@ -1192,55 +1145,40 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
           id: operationId,
           username: authUser.value.displayName,
           cardUpdates: updatesWithCurrentCounts,
-          vaalOrbsNewValue: newVaalOrbsValue,
+          vaalOrbsDelta: -1,  // Vaal Orb consumed on destruction
           outcomeType: 'destroyed',
+          consumeAtlasInfluence: false,  // No buff consumption on destruction
           rollbackData: {
             vaalOrbsBefore,
             localCollectionBefore,
           },
           onSuccess: async () => {
-            const syncStartTime = Date.now();
-            console.log(`[Altar] cleanupAfterDestruction: Sync operation ${operationId} succeeded, starting reload`);
+            console.log(`[Altar] cleanupAfterDestruction: Sync operation ${operationId} succeeded (atomic, no reload needed)`);
 
-            isReloadingCollection.value = true;
-            if (typeof window !== 'undefined') {
-              (window as any).__isReloadingCollection = true;
-            }
-            try {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              console.log(`[Altar] cleanupAfterDestruction: Reloading collection after sync`);
-              await loadCollection();
-              console.log(`[Altar] cleanupAfterDestruction: Collection reloaded - ${localCollection.value.length} cards, ${vaalOrbs.value} vaalOrbs`);
+            // No reload needed - we trust the optimistic update since the atomic operation succeeded
 
-              // Capture state AFTER sync and reload for diagnostic logging
+            // Log diagnostic if we have state before
+            if (diagnosticStateBefore.value && diagnosticCardInfo.value) {
               const stateAfterSync = createAltarState(localCollection.value, vaalOrbs.value);
-              const apiResponseTime = Date.now() - syncStartTime;
+              await logAltarAction(
+                'vaal_outcome',
+                diagnosticStateBefore.value,
+                stateAfterSync,
+                {
+                  card_id: diagnosticCardInfo.value.id,
+                  card_tier: diagnosticCardInfo.value.tier,
+                  card_foil: diagnosticCardInfo.value.foil,
+                  outcome_type: 'destroyed' as VaalOutcomeType,
+                  api_response_time_ms: 0,  // No separate API call timing since it's atomic
+                }
+              );
 
-              // Log diagnostic if we have state before
-              if (diagnosticStateBefore.value && diagnosticCardInfo.value) {
-                await logAltarAction(
-                  'vaal_outcome',
-                  diagnosticStateBefore.value,
-                  stateAfterSync,
-                  {
-                    card_id: diagnosticCardInfo.value.id,
-                    card_tier: diagnosticCardInfo.value.tier,
-                    card_foil: diagnosticCardInfo.value.foil,
-                    outcome_type: 'destroyed' as VaalOutcomeType,
-                    api_response_time_ms: apiResponseTime,
-                  }
-                );
-
-                // Clear diagnostic state after logging
-                diagnosticStateBefore.value = null;
-                diagnosticCardInfo.value = null;
-              }
-            } finally {
-              isReloadingCollection.value = false;
-              if (typeof window !== 'undefined') {
-                (window as any).__isReloadingCollection = false;
-              }
+              // Clear diagnostic state after logging
+              diagnosticStateBefore.value = null;
+              diagnosticCardInfo.value = null;
             }
+
+            console.log(`[Altar] cleanupAfterDestruction: Sync completed successfully`);
           },
           onError: (error) => {
             rollback();

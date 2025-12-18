@@ -23,8 +23,9 @@ export interface SyncOperation {
     currentFoil?: number
     cardData?: Partial<Card>
   }>
-  vaalOrbsNewValue?: number
+  vaalOrbsDelta: number  // Delta (change), not absolute value - allows concurrent operations
   outcomeType?: string
+  consumeAtlasInfluence?: boolean  // Whether to consume Atlas Influence buff in this operation
   // Rollback data
   rollbackData: {
     vaalOrbsBefore: number
@@ -127,10 +128,12 @@ export const useSyncStore = defineStore('sync', () => {
 
         try {
           const config = apiStore.getApiConfig()
+          // Use atomic updateCardCounts with delta and consumeAtlasInfluence
           const success = await CollectionService.updateCardCounts(
             operation.username,
             operation.cardUpdates,
-            operation.vaalOrbsNewValue,
+            operation.vaalOrbsDelta,
+            operation.consumeAtlasInfluence || false,
             config
           )
 

@@ -54,7 +54,8 @@ export function useCollectionSync() {
   async function updateCardCounts(
     username: string,
     cardUpdates: Map<number, CardUpdate>,
-    vaalOrbsNewValue?: number
+    vaalOrbsDelta: number = 0,
+    consumeAtlasInfluence: boolean = false
   ): Promise<boolean> {
     if (!dataSourceStore.isSupabaseData) {
       return true
@@ -62,13 +63,14 @@ export function useCollectionSync() {
 
     // Use sync store queue
     const operationId = `update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    
+
     return new Promise((resolve, reject) => {
       syncStore.enqueue({
         id: operationId,
         username,
         cardUpdates,
-        vaalOrbsNewValue,
+        vaalOrbsDelta,
+        consumeAtlasInfluence,
         rollbackData: {
           vaalOrbsBefore: 0,
           localCollectionBefore: [],

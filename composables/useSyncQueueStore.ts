@@ -17,8 +17,9 @@ export interface SyncOperation {
     currentFoil?: number
     cardData?: Partial<Card>
   }>
-  vaalOrbsNewValue?: number
+  vaalOrbsDelta: number  // Delta (change), not absolute value - allows concurrent operations
   outcomeType?: string
+  consumeAtlasInfluence?: boolean  // Whether to consume Atlas Influence buff in this operation
   rollbackData: {
     vaalOrbsBefore: number
     localCollectionBefore: Card[]
