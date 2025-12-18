@@ -1082,11 +1082,25 @@ async function executeBatchEvent(presetId: string, delayMs: number = 2500, maxUs
     return
   }
 
-  console.log(`[BATCH] Starting batch event: ${preset.displayName}`)
+  // For patch_notes, get and increment the version number
+  let patchVersion: string | null = null
+  if (presetId === 'patch_notes') {
+    const { data: versionData, error: versionError } = await supabase.rpc('increment_patch_version')
+    if (versionError) {
+      console.error('[BATCH] Failed to increment patch version:', versionError)
+      patchVersion = '?.??' // Fallback
+    } else {
+      patchVersion = versionData as string
+    }
+    console.log(`[BATCH] Starting batch event: ${preset.displayName} (v${patchVersion})`)
+  } else {
+    console.log(`[BATCH] Starting batch event: ${preset.displayName}`)
+  }
 
-  // Send announcement
+  // Send announcement (with version if applicable)
+  const announcementMsg = formatBatchMessage(preset.announcement, { version: patchVersion || undefined })
   if (isConnected) {
-    await client.say(`#${TWITCH_CHANNEL_NAME}`, preset.announcement)
+    await client.say(`#${TWITCH_CHANNEL_NAME}`, announcementMsg)
   }
   await sleep(2000) // Pause after announcement
 
@@ -1117,8 +1131,11 @@ async function executeBatchEvent(presetId: string, delayMs: number = 2500, maxUs
     }
   }
 
-  // Send completion message
-  const completionMsg = formatBatchMessage(preset.completionMessage, { count: selectedUsers.length })
+  // Send completion message (with version if applicable)
+  const completionMsg = formatBatchMessage(preset.completionMessage, {
+    count: selectedUsers.length,
+    version: patchVersion || undefined
+  })
   if (isConnected) {
     await client.say(`#${TWITCH_CHANNEL_NAME}`, completionMsg)
   }

@@ -6,6 +6,7 @@
  * - {username} : Nom du joueur Twitch
  * - {card} : Nom de la carte affectée
  * - {count} : Nombre de joueurs (pour les messages de fin)
+ * - {version} : Numéro de version du patch (ex: "3.27")
  *
  * Pour ajouter un nouveau message, ajoutez-le simplement dans le tableau correspondant
  */
@@ -16,7 +17,7 @@ export const BATCH_MESSAGES = {
   // ============================================================================
   announcements: {
     patch_notes:
-      "📜 Les devs se sont réveillés, ils ont trouvé que certains builds étaient trop forts... Patch Notes 3.26 incoming !",
+      "📜 Les devs se sont réveillés, ils ont trouvé que certains builds étaient trop forts... Patch Notes {version} incoming !",
     hotfix: '🔧 HOTFIX: "This is a buff" - Chris Wilson',
     league_start: "🎮 NOUVEAU LEAGUE ! Tout le monde reçoit des buffs de départ !",
     // Ajoute tes propres annonces ici...
@@ -71,7 +72,7 @@ export const BATCH_MESSAGES = {
   // FIN D'EVENT (message de conclusion)
   // ============================================================================
   completion: {
-    patch_notes: "✅ Patch Notes 3.26 appliqué à {count} joueurs ! Melee is fine.",
+    patch_notes: "✅ Patch Notes {version} appliqué à {count} joueurs ! Melee is fine.",
     hotfix: "🔧 Hotfix terminé. {count} joueurs affectés.",
     league_start: "🎮 League Start buffs distribués à {count} joueurs !",
     // Ajoute tes messages de fin ici...
@@ -94,7 +95,7 @@ export function getRandomMessage(messages: string[]): string {
  */
 export function formatMessage(
   template: string,
-  variables: { username?: string; card?: string; count?: number }
+  variables: { username?: string; card?: string; count?: number; version?: string }
 ): string {
   let result = template
   if (variables.username) {
@@ -105,6 +106,9 @@ export function formatMessage(
   }
   if (variables.count !== undefined) {
     result = result.replace(/{count}/g, variables.count.toString())
+  }
+  if (variables.version) {
+    result = result.replace(/{version}/g, variables.version)
   }
   return result
 }
