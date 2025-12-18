@@ -16,7 +16,7 @@ export const BATCH_MESSAGES = {
   // ============================================================================
   announcements: {
     patch_notes:
-      "📜 Les devs se sont réveillés, ils ont trouvé que les builds étaient trop forts... Patch Notes 3.26 incoming !",
+      "📜 Les devs se sont réveillés, ils ont trouvé que certains builds étaient trop forts... Patch Notes 3.26 incoming !",
     hotfix: '🔧 HOTFIX: "This is a buff" - Chris Wilson',
     league_start: "🎮 NOUVEAU LEAGUE ! Tout le monde reçoit des buffs de départ !",
     // Ajoute tes propres annonces ici...
