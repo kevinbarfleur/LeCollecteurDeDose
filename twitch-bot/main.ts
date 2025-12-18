@@ -592,16 +592,15 @@ async function handleCommand(
 
   // !booster - Open booster(s) (with daily limit)
   // Supports: !booster (1), !booster 4 (specific count), !booster all (all remaining)
-  if (command === '!booster') {
+  if (parts[0] === '!booster') {
     if (!supabase) {
       sendResponse('❌ Service non disponible')
       return
     }
 
     try {
-      // Parse batch argument
-      const args = message.trim().split(/\s+/)
-      const batchArg = args[1]?.toLowerCase()
+      // Parse batch argument (parts already contains lowercased split message)
+      const batchArg = parts[1]
 
       let requestedCount = 1
       if (batchArg === 'all') {
@@ -751,16 +750,15 @@ async function handleCommand(
 
   // !vaals - Get Vaal Orbs (with daily limit)
   // Supports: !vaals (1x5), !vaals 4 (4x5), !vaals all (all remaining x5)
-  if (command === '!vaals') {
+  if (parts[0] === '!vaals') {
     if (!supabase) {
       sendResponse('❌ Service non disponible')
       return
     }
 
     try {
-      // Parse batch argument
-      const args = message.trim().split(/\s+/)
-      const batchArg = args[1]?.toLowerCase()
+      // Parse batch argument (parts already contains lowercased split message)
+      const batchArg = parts[1]
 
       let requestedCount = 1
       if (batchArg === 'all') {
