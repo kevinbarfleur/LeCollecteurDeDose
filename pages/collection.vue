@@ -6,14 +6,53 @@ import {
 } from "~/composables/useCardGrouping";
 import { useCardSorting, type SortOption } from "~/composables/useCardSorting";
 import { mergeUserDataToCards } from "~/utils/dataTransform";
+import { allCards } from "~/data/mockCards";
 
 const { t } = useI18n();
+const route = useRoute();
 
 useHead({ title: t("meta.collection.title") });
 
 const { loggedIn, user: authUser } = useUserSession();
 const { isSupabaseData, isInitializing } = useDataSource();
 const { fetchUserCollection, fetchUserCards } = useApi();
+
+// Booster history modal state
+const isHistoryModalOpen = ref(false);
+const boosterHistory = ref<Array<{
+  booster: boolean;
+  timestamp: string;
+  content: Card[];
+}>>([]);
+
+// Transform raw booster data to include full card details
+const transformBoosterHistory = (
+  rawHistory: Array<{ booster: boolean; timestamp: string; content: any[] }>
+): Array<{ booster: boolean; timestamp: string; content: Card[] }> => {
+  return rawHistory.map(entry => ({
+    ...entry,
+    content: entry.content.map(cardData => {
+      const baseCard = allCards.find(c => c.uid === cardData.uid);
+      return {
+        ...baseCard,
+        ...cardData,
+        uid: cardData.uid || baseCard?.uid,
+        foil: cardData.foil === true,
+      } as Card;
+    }),
+  }));
+};
+
+// Watch for URL query to auto-open history modal
+watch(
+  () => route.query.modal,
+  (modal) => {
+    if (modal === "history" && loggedIn.value) {
+      isHistoryModalOpen.value = true;
+    }
+  },
+  { immediate: true }
+);
 
 const user = computed(() => ({
   name: authUser.value?.displayName || "Test User",
@@ -31,6 +70,7 @@ watch([isSupabaseData, isInitializing, () => authUser.value?.displayName, logged
   // Don't do anything while initializing
   if (initializing) {
     apiCollection.value = [];
+    boosterHistory.value = [];
     return;
   }
 
@@ -42,23 +82,33 @@ watch([isSupabaseData, isInitializing, () => authUser.value?.displayName, logged
         fetchUserCollection(displayName),
         fetchUserCards(displayName),
       ]);
-      
+
       if (userCollectionData || userCardsData) {
         apiCollection.value = mergeUserDataToCards(
           userCollectionData || {},
           userCardsData || null,
           displayName
         );
+
+        // Store booster history for the modal
+        if (Array.isArray(userCardsData)) {
+          boosterHistory.value = transformBoosterHistory(userCardsData);
+        } else {
+          boosterHistory.value = [];
+        }
       } else {
         apiCollection.value = [];
+        boosterHistory.value = [];
       }
     } catch (error) {
       apiCollection.value = [];
+      boosterHistory.value = [];
     } finally {
       isLoadingCollection.value = false;
     }
   } else {
     apiCollection.value = [];
+    boosterHistory.value = [];
   }
 }, { immediate: true });
 
@@ -330,21 +380,33 @@ const filteredIndividualCards = computed(() => {
               <span class="runic-separator__rune">◆</span>
             </div>
 
-            <!-- Duplicates toggle and Tier filter -->
+            <!-- Duplicates toggle, History button and Tier filter -->
             <div
               class="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between"
             >
-              <div class="flex items-center gap-3">
-                <RunicRadio
-                  v-model="showDuplicates"
-                  :toggle="true"
-                  toggle-color="default"
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                  <RunicRadio
+                    v-model="showDuplicates"
+                    :toggle="true"
+                    toggle-color="default"
+                    size="sm"
+                  />
+                  <span
+                    class="font-body text-sm text-poe-text-dim transition-colors duration-base"
+                    >{{ t("collection.filters.showDuplicates") }}</span
+                  >
+                </div>
+
+                <RunicButton
+                  variant="ghost"
                   size="sm"
-                />
-                <span
-                  class="font-body text-sm text-poe-text-dim transition-colors duration-base"
-                  >{{ t("collection.filters.showDuplicates") }}</span
+                  :title="t('collection.history.title')"
+                  @click="isHistoryModalOpen = true"
                 >
+                  <span class="mr-2">📦</span>
+                  <span class="hidden sm:inline">{{ t('collection.history.button') }}</span>
+                </RunicButton>
               </div>
 
               <RunicRadio
@@ -370,6 +432,13 @@ const filteredIndividualCards = computed(() => {
           :empty-message="t('collection.empty')"
           :is-loading="isInitializing || isLoadingCollection"
           :loading-message="t('collection.loading')"
+        />
+
+        <!-- Booster History Modal -->
+        <BoosterHistoryModal
+          v-model="isHistoryModalOpen"
+          :boosters="boosterHistory"
+          :is-loading="isLoadingCollection"
         />
       </div>
     </div>
@@ -494,4 +563,5 @@ const filteredIndividualCards = computed(() => {
     transparent
   );
 }
+
 </style>

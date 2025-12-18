@@ -157,6 +157,10 @@
       "t1": "T1",
       "t2": "T2",
       "t3": "T3"
+    },
+    "history": {
+      "title": "Historique des Boosters",
+      "button": "Historique"
     }
   },
   "ladder": {

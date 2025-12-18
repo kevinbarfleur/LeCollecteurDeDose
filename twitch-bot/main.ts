@@ -22,6 +22,15 @@ import {
   type BatchEventAction,
   type BatchActionResult,
 } from "./batchEvents/index.ts"
+import {
+  getRandomT0Message,
+  getRandomBatchResponse,
+  formatBoosterWhisperRecap,
+  formatBoosterChatFallback,
+  formatVaalsChatFallback,
+  type BatchBoosterResult,
+  type BatchLimitResult,
+} from "./batchCommands/index.ts"
 
 /**
  * Calcule le temps restant jusqu'à 21h heure de Paris (reset des limites quotidiennes)
@@ -581,7 +590,8 @@ async function handleCommand(
     return
   }
 
-  // !booster - Open a booster (with daily limit)
+  // !booster - Open booster(s) (with daily limit)
+  // Supports: !booster (1), !booster 4 (specific count), !booster all (all remaining)
   if (command === '!booster') {
     if (!supabase) {
       sendResponse('❌ Service non disponible')
@@ -589,6 +599,17 @@ async function handleCommand(
     }
 
     try {
+      // Parse batch argument
+      const args = message.trim().split(/\s+/)
+      const batchArg = args[1]?.toLowerCase()
+
+      let requestedCount = 1
+      if (batchArg === 'all') {
+        requestedCount = -1 // Signal for "all remaining"
+      } else if (batchArg && !isNaN(parseInt(batchArg))) {
+        requestedCount = Math.min(Math.max(1, parseInt(batchArg)), 50) // Cap at 50 for safety
+      }
+
       // Get or create user
       const { data: userId, error: userError } = await supabase.rpc('get_or_create_user', {
         p_twitch_username: username,
@@ -603,43 +624,124 @@ async function handleCommand(
         return
       }
 
-      // Check daily limit
-      const { data: limitResult, error: limitError } = await supabase.rpc('check_and_increment_daily_limit', {
-        p_user_id: userId,
-        p_command_type: 'booster',
-        p_max_limit: triggerConfig.dailyLimits.booster
-      })
+      // Single booster mode (original behavior)
+      if (requestedCount === 1) {
+        const { data: limitResult, error: limitError } = await supabase.rpc('check_and_increment_daily_limit', {
+          p_user_id: userId,
+          p_command_type: 'booster',
+          p_max_limit: triggerConfig.dailyLimits.booster
+        })
 
-      if (limitError) {
-        console.error('Error checking daily limit:', limitError)
-        sendResponse('❌ Erreur lors de la vérification des limites')
-        return
+        if (limitError) {
+          console.error('Error checking daily limit:', limitError)
+          sendResponse('❌ Erreur lors de la vérification des limites')
+          return
+        }
+
+        if (!limitResult?.success) {
+          sendResponse(`⚠️ @${username}, Zana refuse de t'ouvrir plus de maps aujourd'hui. Reviens dans ${getTimeUntilDailyReset()}, Exile !`)
+          return
+        }
+
+        const { data: result, error: boosterError } = await supabase.rpc('create_booster_for_user', {
+          p_user_id: userId
+        })
+
+        if (boosterError) {
+          console.error('Error creating booster:', boosterError)
+          sendResponse('❌ Erreur lors de la création du booster')
+          return
+        }
+
+        if (!result || !result.success) {
+          sendResponse(result?.message || '❌ Erreur lors de la création du booster')
+          return
+        }
+
+        const used = limitResult.used || 0
+        const limit = limitResult.limit || triggerConfig.dailyLimits.booster
+        sendResponse(`📦 @${username} ouvre un booster : ${result.message} (${used}/${limit})`)
+      } else {
+        // Batch booster mode
+        const maxLimit = triggerConfig.dailyLimits.booster
+
+        // Batch check and increment daily limit
+        const { data: limitResult, error: limitError } = await supabase.rpc('batch_check_and_increment_daily_limit', {
+          p_user_id: userId,
+          p_command_type: 'booster',
+          p_max_limit: maxLimit,
+          p_requested_count: requestedCount === -1 ? maxLimit : requestedCount
+        }) as { data: BatchLimitResult | null, error: unknown }
+
+        if (limitError) {
+          console.error('Error checking batch daily limit:', limitError)
+          sendResponse('❌ Erreur lors de la vérification des limites')
+          return
+        }
+
+        if (!limitResult || limitResult.granted === 0) {
+          sendResponse(getRandomBatchResponse('booster', 'limitReached', {
+            username,
+            timeUntilReset: getTimeUntilDailyReset()
+          }))
+          return
+        }
+
+        // Create batch boosters
+        const { data: batchResult, error: batchError } = await supabase.rpc('create_batch_boosters_for_user', {
+          p_user_id: userId,
+          p_count: limitResult.granted
+        }) as { data: BatchBoosterResult | null, error: unknown }
+
+        if (batchError || !batchResult?.success) {
+          console.error('Error creating batch boosters:', batchError)
+          sendResponse('❌ Erreur lors de la création des boosters')
+          return
+        }
+
+        // Announce T0 cards publicly (with delay to avoid spam)
+        for (const t0Card of batchResult.t0_cards) {
+          const t0Message = getRandomT0Message(t0Card.is_foil, username, t0Card.name)
+          client.say(`#${TWITCH_CHANNEL_NAME}`, t0Message)
+          await sleep(500) // Small delay between T0 announcements
+        }
+
+        // Send brief public response
+        const actualRequested = requestedCount === -1 ? maxLimit : requestedCount
+        const status = limitResult.granted < actualRequested ? 'partial' : 'success'
+        sendResponse(getRandomBatchResponse('booster', status, {
+          username,
+          count: limitResult.granted,
+          requested: actualRequested
+        }))
+
+        // Send whisper recap, fallback to chat if whisper fails
+        // Flatten all cards from all boosters
+        const allCards: Array<{ name: string; tier: string; is_foil: boolean }> = []
+        for (const booster of batchResult.boosters) {
+          for (const card of booster.cards) {
+            allCards.push({ name: card.name, tier: card.tier, is_foil: card.is_foil })
+          }
+        }
+
+        try {
+          const whisperChunks = formatBoosterWhisperRecap(allCards, batchResult.summary, limitResult.granted)
+          for (const chunk of whisperChunks) {
+            await client.whisper(username, chunk)
+            if (whisperChunks.length > 1) {
+              await sleep(400) // Rate limit protection between chunks
+            }
+          }
+        } catch (whisperError) {
+          // Whisper failed - send chat fallback with rare cards and link
+          console.log(`[BATCH] Whisper to ${username} failed, using chat fallback`)
+
+          // Get rare cards (T0 and T1) for the fallback message
+          const rareCards = allCards.filter(c => c.tier === 'T0' || c.tier === 'T1')
+          const fallbackMessage = formatBoosterChatFallback(username, limitResult.granted, rareCards)
+          client.say(`#${TWITCH_CHANNEL_NAME}`, fallbackMessage)
+        }
       }
-
-      if (!limitResult?.success) {
-        sendResponse(`⚠️ @${username}, Zana refuse de t'ouvrir plus de maps aujourd'hui. Reviens dans ${getTimeUntilDailyReset()}, Exile !`)
-        return
-      }
-
-      // Use Supabase function to create booster (bypasses RLS)
-      const { data: result, error: boosterError } = await supabase.rpc('create_booster_for_user', {
-        p_user_id: userId
-      })
-
-      if (boosterError) {
-        console.error('Error creating booster:', boosterError)
-        sendResponse('❌ Erreur lors de la création du booster')
-        return
-      }
-
-      if (!result || !result.success) {
-        sendResponse(result?.message || '❌ Erreur lors de la création du booster')
-        return
-      }
-
-      const used = limitResult.used || 0
-      const limit = limitResult.limit || triggerConfig.dailyLimits.booster
-      sendResponse(`📦 @${username} ouvre un booster : ${result.message} (${used}/${limit})`)
     } catch (error) {
       console.error('Error in !booster command:', error)
       sendResponse('❌ Erreur lors de l\'ouverture du booster')
@@ -647,7 +749,8 @@ async function handleCommand(
     return
   }
 
-  // !vaals - Get 5 Vaal Orbs (with daily limit)
+  // !vaals - Get Vaal Orbs (with daily limit)
+  // Supports: !vaals (1x5), !vaals 4 (4x5), !vaals all (all remaining x5)
   if (command === '!vaals') {
     if (!supabase) {
       sendResponse('❌ Service non disponible')
@@ -655,6 +758,17 @@ async function handleCommand(
     }
 
     try {
+      // Parse batch argument
+      const args = message.trim().split(/\s+/)
+      const batchArg = args[1]?.toLowerCase()
+
+      let requestedCount = 1
+      if (batchArg === 'all') {
+        requestedCount = -1 // Signal for "all remaining"
+      } else if (batchArg && !isNaN(parseInt(batchArg))) {
+        requestedCount = Math.min(Math.max(1, parseInt(batchArg)), 50) // Cap at 50 for safety
+      }
+
       // Get or create user
       const { data: userId, error: userError } = await supabase.rpc('get_or_create_user', {
         p_twitch_username: username,
@@ -669,40 +783,89 @@ async function handleCommand(
         return
       }
 
-      // Check daily limit
-      const { data: limitResult, error: limitError } = await supabase.rpc('check_and_increment_daily_limit', {
-        p_user_id: userId,
-        p_command_type: 'vaals',
-        p_max_limit: triggerConfig.dailyLimits.vaals
-      })
+      // Single vaals mode (original behavior)
+      if (requestedCount === 1) {
+        const { data: limitResult, error: limitError } = await supabase.rpc('check_and_increment_daily_limit', {
+          p_user_id: userId,
+          p_command_type: 'vaals',
+          p_max_limit: triggerConfig.dailyLimits.vaals
+        })
 
-      if (limitError) {
-        console.error('Error checking daily limit:', limitError)
-        sendResponse('❌ Erreur lors de la vérification des limites')
-        return
+        if (limitError) {
+          console.error('Error checking daily limit:', limitError)
+          sendResponse('❌ Erreur lors de la vérification des limites')
+          return
+        }
+
+        if (!limitResult?.success) {
+          sendResponse(`⚠️ @${username}, le temple d'Atziri est épuisé pour aujourd'hui. Reviens dans ${getTimeUntilDailyReset()}, Exile !`)
+          return
+        }
+
+        const { data: newVaalCount, error: vaalError } = await supabase.rpc('update_vaal_orbs', {
+          p_user_id: userId,
+          p_amount: 5
+        })
+
+        if (vaalError) {
+          console.error('Error updating vaal orbs:', vaalError)
+          sendResponse('❌ Erreur lors de l\'ajout des Vaal Orbs')
+          return
+        }
+
+        const vaalOrbs = newVaalCount ?? 0
+        const used = limitResult.used || 0
+        const limit = limitResult.limit || triggerConfig.dailyLimits.vaals
+        sendResponse(`💎 @${username} reçoit 5 Vaal Orbs ! Total: ${vaalOrbs} (${used}/${limit})`)
+      } else {
+        // Batch vaals mode
+        const maxLimit = triggerConfig.dailyLimits.vaals
+
+        // Batch check and increment daily limit
+        const { data: limitResult, error: limitError } = await supabase.rpc('batch_check_and_increment_daily_limit', {
+          p_user_id: userId,
+          p_command_type: 'vaals',
+          p_max_limit: maxLimit,
+          p_requested_count: requestedCount === -1 ? maxLimit : requestedCount
+        }) as { data: BatchLimitResult | null, error: unknown }
+
+        if (limitError) {
+          console.error('Error checking batch daily limit:', limitError)
+          sendResponse('❌ Erreur lors de la vérification des limites')
+          return
+        }
+
+        if (!limitResult || limitResult.granted === 0) {
+          sendResponse(getRandomBatchResponse('vaals', 'limitReached', {
+            username,
+            timeUntilReset: getTimeUntilDailyReset()
+          }))
+          return
+        }
+
+        // Add batch Vaal Orbs
+        const { data: vaalResult, error: vaalError } = await supabase.rpc('batch_add_vaal_orbs', {
+          p_user_id: userId,
+          p_count: limitResult.granted
+        }) as { data: { success: boolean; added: number; new_total: number } | null, error: unknown }
+
+        if (vaalError || !vaalResult?.success) {
+          console.error('Error adding batch vaal orbs:', vaalError)
+          sendResponse('❌ Erreur lors de l\'ajout des Vaal Orbs')
+          return
+        }
+
+        // Send public response
+        const actualRequested = requestedCount === -1 ? maxLimit : requestedCount
+        const status = limitResult.granted < actualRequested ? 'partial' : 'success'
+        sendResponse(getRandomBatchResponse('vaals', status, {
+          username,
+          count: limitResult.granted,
+          requested: actualRequested,
+          total: vaalResult.added,
+          newTotal: vaalResult.new_total
+        }))
       }
-
-      if (!limitResult?.success) {
-        sendResponse(`⚠️ @${username}, le temple d'Atziri est épuisé pour aujourd'hui. Reviens dans ${getTimeUntilDailyReset()}, Exile !`)
-        return
-      }
-
-      // Add 5 Vaal Orbs (function now returns new count directly)
-      const { data: newVaalCount, error: vaalError } = await supabase.rpc('update_vaal_orbs', {
-        p_user_id: userId,
-        p_amount: 5
-      })
-
-      if (vaalError) {
-        console.error('Error updating vaal orbs:', vaalError)
-        sendResponse('❌ Erreur lors de l\'ajout des Vaal Orbs')
-        return
-      }
-
-      const vaalOrbs = newVaalCount ?? 0
-      const used = limitResult.used || 0
-      const limit = limitResult.limit || triggerConfig.dailyLimits.vaals
-      sendResponse(`💎 @${username} reçoit 5 Vaal Orbs ! Total: ${vaalOrbs} (${used}/${limit})`)
     } catch (error) {
       console.error('Error in !vaals command:', error)
       sendResponse('❌ Erreur lors de l\'ajout des Vaal Orbs')
