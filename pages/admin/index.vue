@@ -1538,16 +1538,16 @@ const triggerBatchEvent = async (presetId: string) => {
                           Temps d'attente entre chaque action (en ms)
                         </p>
                       </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <RunicSlider
-                          :model-value="batchEventDelayMs"
-                          @update:model-value="batchEventDelayMs = $event"
-                          :min="1000"
-                          :max="10000"
-                          :step="500"
-                          value-suffix="ms"
-                          size="sm"
+                      <div class="flex items-center gap-2 flex-shrink-0">
+                        <input
+                          v-model.number="batchEventDelayMs"
+                          type="number"
+                          min="1000"
+                          max="10000"
+                          step="500"
+                          class="w-24 px-3 py-2 bg-black/50 border border-poe-border/60 rounded text-poe-text font-body text-center"
                         />
+                        <span class="text-poe-text-dim font-body">ms</span>
                       </div>
                     </div>
 
@@ -1561,15 +1561,16 @@ const triggerBatchEvent = async (presetId: string) => {
                           Nombre max de joueurs affectes par l'event
                         </p>
                       </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <RunicSlider
-                          :model-value="batchEventMaxUsers"
-                          @update:model-value="batchEventMaxUsers = $event"
-                          :min="1"
-                          :max="10"
-                          :step="1"
-                          size="sm"
+                      <div class="flex items-center gap-2 flex-shrink-0">
+                        <input
+                          v-model.number="batchEventMaxUsers"
+                          type="number"
+                          min="1"
+                          max="10"
+                          step="1"
+                          class="w-20 px-3 py-2 bg-black/50 border border-poe-border/60 rounded text-poe-text font-body text-center"
                         />
+                        <span class="text-poe-text-dim font-body">joueurs</span>
                       </div>
                     </div>
 
