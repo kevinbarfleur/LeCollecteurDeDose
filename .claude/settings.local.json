@@ -48,7 +48,8 @@
       "Bash(cat:*)",
       "Bash(dir:*)",
       "mcp__supabase__search_docs",
-      "WebFetch(domain:twitch.uservoice.com)"
+      "WebFetch(domain:twitch.uservoice.com)",
+      "Bash(git -C \"C:/Users/kbarf/Documents/GitHub/LeCollecteurDeDose\" status --short)"
     ]
   }
 }
