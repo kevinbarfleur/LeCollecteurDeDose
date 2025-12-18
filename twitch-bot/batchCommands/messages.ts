@@ -315,36 +315,49 @@ export function formatBoosterWhisperRecap(
 }
 
 /**
- * Formate un message de fallback chat pour les boosters
- * Utilise quand le whisper echoue
+ * Formate un message de recap chat pour les boosters
+ * Affiche les cartes rares (T0, T1, foils) avec mise en valeur
  */
 export function formatBoosterChatFallback(
   username: string,
   count: number,
-  rareCards: Array<{ name: string; tier: string; is_foil: boolean }>
+  rareCards: Array<{ name: string; tier: string; is_foil: boolean }>,
+  status: 'success' | 'partial' = 'success',
+  requested: number = count
 ): string {
   const hasRares = rareCards.length > 0
 
-  // Format rare cards list (T0 and T1 only)
+  // Format rare cards list with foil indicator and tier
   let rareCardsStr = ''
   if (hasRares) {
-    rareCardsStr = rareCards
-      .map(c => c.is_foil ? `${c.name} ✨` : c.name)
+    // Sort by tier (T0 first) then by foil
+    const sortedCards = [...rareCards].sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier.localeCompare(b.tier)
+      return (b.is_foil ? 1 : 0) - (a.is_foil ? 1 : 0)
+    })
+
+    rareCardsStr = sortedCards
+      .map(c => {
+        const foilMark = c.is_foil ? ' ✨' : ''
+        const tierMark = c.tier === 'T0' ? ' [T0]' : c.tier === 'T1' ? ' [T1]' : ''
+        return `${c.name}${foilMark}${tierMark}`
+      })
       .join(', ')
   }
 
-  const messages = hasRares
-    ? BATCH_COMMAND_MESSAGES.chatFallback.boosterWithRares
-    : BATCH_COMMAND_MESSAGES.chatFallback.boosterNoRares
+  // Build the message based on status
+  let prefix = ''
+  if (status === 'partial') {
+    prefix = `📦 @${username} ouvre ${count}/${requested} boosters (limite atteinte)`
+  } else {
+    prefix = `📦 @${username} ouvre ${count} boosters`
+  }
 
-  const template = getRandomBatchMessage(messages)
-
-  return formatBatchMessage(template, {
-    username,
-    count,
-    rareCards: rareCardsStr,
-    link: HISTORY_URL,
-  })
+  if (hasRares) {
+    return `${prefix} ! Pulls: ${rareCardsStr}. Historique: ${HISTORY_URL}`
+  } else {
+    return `${prefix} ! Pas de chance cette fois. Historique: ${HISTORY_URL}`
+  }
 }
 
 /**

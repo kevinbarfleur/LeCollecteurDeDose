@@ -25,7 +25,6 @@ import {
 import {
   getRandomT0Message,
   getRandomBatchResponse,
-  formatBoosterWhisperRecap,
   formatBoosterChatFallback,
   formatVaalsChatFallback,
   type BatchBoosterResult,
@@ -705,16 +704,6 @@ async function handleCommand(
           await sleep(500) // Small delay between T0 announcements
         }
 
-        // Send brief public response
-        const actualRequested = requestedCount === -1 ? maxLimit : requestedCount
-        const status = limitResult.granted < actualRequested ? 'partial' : 'success'
-        sendResponse(getRandomBatchResponse('booster', status, {
-          username,
-          count: limitResult.granted,
-          requested: actualRequested
-        }))
-
-        // Send whisper recap, fallback to chat if whisper fails
         // Flatten all cards from all boosters
         const allCards: Array<{ name: string; tier: string; is_foil: boolean }> = []
         for (const booster of batchResult.boosters) {
@@ -723,23 +712,14 @@ async function handleCommand(
           }
         }
 
-        try {
-          const whisperChunks = formatBoosterWhisperRecap(allCards, batchResult.summary, limitResult.granted)
-          for (const chunk of whisperChunks) {
-            await client.whisper(username, chunk)
-            if (whisperChunks.length > 1) {
-              await sleep(400) // Rate limit protection between chunks
-            }
-          }
-        } catch (whisperError) {
-          // Whisper failed - send chat fallback with rare cards and link
-          console.log(`[BATCH] Whisper to ${username} failed, using chat fallback`)
+        // Get rare cards (T0, T1, and any foils) for the recap message
+        const rareCards = allCards.filter(c => c.tier === 'T0' || c.tier === 'T1' || c.is_foil)
 
-          // Get rare cards (T0 and T1) for the fallback message
-          const rareCards = allCards.filter(c => c.tier === 'T0' || c.tier === 'T1')
-          const fallbackMessage = formatBoosterChatFallback(username, limitResult.granted, rareCards)
-          client.say(`#${TWITCH_CHANNEL_NAME}`, fallbackMessage)
-        }
+        // Send chat recap with rare cards highlighted
+        const actualRequested = requestedCount === -1 ? maxLimit : requestedCount
+        const status = limitResult.granted < actualRequested ? 'partial' : 'success'
+        const recapMessage = formatBoosterChatFallback(username, limitResult.granted, rareCards, status, actualRequested)
+        sendResponse(recapMessage)
       }
     } catch (error) {
       console.error('Error in !booster command:', error)
