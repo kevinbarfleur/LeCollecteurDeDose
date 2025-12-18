@@ -47,7 +47,8 @@
       "Bash(grep:*)",
       "Bash(cat:*)",
       "Bash(dir:*)",
-      "mcp__supabase__search_docs"
+      "mcp__supabase__search_docs",
+      "WebFetch(domain:twitch.uservoice.com)"
     ]
   }
 }

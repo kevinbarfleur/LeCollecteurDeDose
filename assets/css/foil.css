@@ -99,16 +99,95 @@
    TIER COLORS ONLY - Same intensity
    =========================================== */
 
-/* T0 - LEGENDARY: Pure Yellow Gold (subtle intensity) */
+/* T0 - LEGENDARY: Contrast effect - dark shadows + gold highlights */
 .game-card--foil.game-card--t0 .game-card__foil-overlay {
-  --foil-hue-1: 56;
-  --foil-hue-2: 55;
-  --foil-hue-3: 57;
-  --foil-hue-4: 56;
-  --foil-hue-5: 55;
-  --foil-sat: 65%;
-  --foil-light: 50%;
+  --foil-hue-1: 45;
+  --foil-hue-2: 40;
+  --foil-hue-3: 50;
+  --foil-hue-4: 42;
+  --foil-hue-5: 48;
+  --foil-sat: 80%;
+  --foil-light: 45%;
+  --foil-gradient-opacity: 0.7;
   --angle: -20deg;
+
+  /* Base rays with moderate visibility */
+  mix-blend-mode: overlay;
+  background-blend-mode: overlay;
+  opacity: 0.5;
+}
+
+/* T0 - Shadow layer: darkens certain areas with smooth transitions */
+.game-card--foil.game-card--t0 .game-card__foil-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    repeating-linear-gradient(
+      -20deg,
+      rgba(0, 0, 0, 0.05) 0%,
+      rgba(0, 0, 0, 0.4) 3%,
+      rgba(0, 0, 0, 0.7) 6%,
+      rgba(0, 0, 0, 0.7) 8%,
+      rgba(0, 0, 0, 0.4) 11%,
+      rgba(0, 0, 0, 0.05) 14%,
+      transparent 16%,
+      transparent 20%,
+      rgba(0, 0, 0, 0.05) 22%,
+      rgba(0, 0, 0, 0.35) 25%,
+      rgba(0, 0, 0, 0.6) 28%,
+      rgba(0, 0, 0, 0.6) 30%,
+      rgba(0, 0, 0, 0.35) 33%,
+      rgba(0, 0, 0, 0.05) 36%,
+      transparent 38%,
+      transparent 42%
+    );
+  background-size: 250% 350%;
+  background-position: 0% calc(var(--pointer-y, 50) * 1%);
+  mix-blend-mode: multiply;
+  opacity: 0.8;
+  filter: blur(1px);
+}
+
+/* T0 - Gold highlight layer: gold accents with smooth transitions */
+.game-card--foil.game-card--t0 .game-card__foil-overlay::after {
+  background-image:
+    repeating-linear-gradient(
+      -20deg,
+      transparent 0%,
+      hsla(42, 100%, 62%, 0.15) 3%,
+      hsla(43, 100%, 68%, 0.5) 6%,
+      hsla(44, 100%, 75%, 0.85) 9%,
+      hsla(45, 100%, 78%, 0.95) 11%,
+      hsla(44, 100%, 75%, 0.85) 13%,
+      hsla(43, 100%, 68%, 0.5) 16%,
+      hsla(42, 100%, 62%, 0.15) 19%,
+      transparent 22%,
+      transparent 28%,
+      hsla(40, 100%, 60%, 0.12) 30%,
+      hsla(42, 100%, 66%, 0.4) 33%,
+      hsla(44, 100%, 72%, 0.7) 36%,
+      hsla(45, 100%, 75%, 0.8) 38%,
+      hsla(44, 100%, 72%, 0.7) 40%,
+      hsla(42, 100%, 66%, 0.4) 43%,
+      hsla(40, 100%, 60%, 0.12) 46%,
+      transparent 49%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 75% 95% at calc(var(--pointer-x, 50) * 1%) calc(var(--pointer-y, 50) * 1%),
+      hsla(45, 100%, 85%, 0.7) 0%,
+      hsla(44, 100%, 78%, 0.5) 15%,
+      hsla(43, 100%, 70%, 0.3) 30%,
+      hsla(42, 100%, 65%, 0.12) 45%,
+      transparent 65%
+    );
+  background-size: 250% 350%, 100% 100%;
+  background-position: 0% calc(var(--pointer-y, 50) * 1%), center;
+  mix-blend-mode: color-dodge;
+  filter: blur(0.5px) brightness(1.1) contrast(1.7);
+  opacity: 0.65;
 }
 
 /* T1 - EPIC: Purple */
@@ -234,14 +313,23 @@
    TIER COSMOS COLORS ONLY
    =========================================== */
 
-/* T0 - Pure Yellow Gold cosmos (subtle intensity) */
+/* T0 - Bright gold cosmos rays on dark base */
 .game-card--t0 .detail__artwork--foil {
-  --cosmos-hue: 56;
-  --cosmos-sat: 70%;
-  --cosmos-light: 52%;
+  --cosmos-hue: 50;
+  --cosmos-sat: 100%;
+  --cosmos-light: 60%;
+  --cosmos-opacity: 0.5;
+  --cosmos-opacity-hover: 0.6;
+  --cosmos-gradient-opacity: 0.5;
   --cosmos-star-r: 255;
-  --cosmos-star-g: 235;
-  --cosmos-star-b: 40;
+  --cosmos-star-g: 215;
+  --cosmos-star-b: 50;
+}
+
+/* T0 - Override blend mode for cosmos base layer */
+.game-card--t0 .detail__artwork--foil::before {
+  mix-blend-mode: overlay;
+  background-blend-mode: screen, screen, screen, screen, screen, screen, overlay;
 }
 
 /* T0 - Extra glare layers for chromatic effect */
@@ -256,28 +344,28 @@
 
 .game-card--t0 .detail__artwork--foil .cosmos-glare::before {
   /* Secondary glare - offset movement */
-  background-image: 
-    radial-gradient( 
-      ellipse 80% 60% at calc(100% - (var(--pointer-x, 50) * 0.8%)) calc(var(--pointer-y, 50) * 0.6%), 
-      hsla(38, 80%, 70%, 0.35) 0%, 
-      hsla(42, 70%, 55%, 0.15) 30%,
-      transparent 60% 
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at calc(100% - (var(--pointer-x, 50) * 0.8%)) calc(var(--pointer-y, 50) * 0.6%),
+      hsla(50, 100%, 75%, 0.5) 0%,
+      hsla(45, 95%, 60%, 0.25) 30%,
+      transparent 60%
     );
-  mix-blend-mode: screen;
-  opacity: 0.6;
+  mix-blend-mode: overlay;
+  opacity: 0.7;
 }
 
 .game-card--t0 .detail__artwork--foil .cosmos-glare::after {
   /* Tertiary glare - diagonal offset */
-  background-image: 
-    radial-gradient( 
-      ellipse 60% 80% at calc(20% + (var(--pointer-x, 50) * 0.5%)) calc(80% - (var(--pointer-y, 50) * 0.4%)), 
-      hsla(52, 85%, 65%, 0.3) 0%, 
-      hsla(48, 75%, 50%, 0.12) 35%,
-      transparent 55% 
+  background-image:
+    radial-gradient(
+      ellipse 60% 80% at calc(20% + (var(--pointer-x, 50) * 0.5%)) calc(80% - (var(--pointer-y, 50) * 0.4%)),
+      hsla(52, 100%, 70%, 0.45) 0%,
+      hsla(48, 95%, 55%, 0.2) 35%,
+      transparent 55%
     );
   mix-blend-mode: overlay;
-  opacity: 0.5;
+  opacity: 0.65;
 }
 
 /* T1 - Purple cosmos */
