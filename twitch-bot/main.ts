@@ -11,6 +11,17 @@ import tmi from "npm:tmi.js@^1.8.5"
 import { createClient } from "npm:@supabase/supabase-js@2.87.2"
 import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
 import { getRandomMessage, formatCardName } from "./triggerMessages.ts"
+import {
+  getPresetById,
+  VALID_PRESET_IDS,
+  getRandomMessage as getBatchRandomMessage,
+  formatMessage as formatBatchMessage,
+  BOW_CLASSES,
+  MELEE_CLASSES,
+  type BatchEventUser,
+  type BatchEventAction,
+  type BatchActionResult,
+} from "./batchEvents/index.ts"
 
 /**
  * Calcule le temps restant jusqu'à 21h heure de Paris (reset des limites quotidiennes)
@@ -1037,6 +1048,175 @@ async function logTriggerDiagnostic(
   }
 }
 
+// ============================================================================
+// BATCH EVENTS FUNCTIONS
+// ============================================================================
+
+/**
+ * Helper function: Sleep for a specified number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Execute a batch event (Patch Notes style)
+ * Affects ALL active users with themed events
+ */
+async function executeBatchEvent(presetId: string, delayMs: number = 2500): Promise<void> {
+  const preset = getPresetById(presetId)
+  if (!preset) {
+    console.error(`[BATCH] Unknown preset: ${presetId}`)
+    return
+  }
+
+  console.log(`[BATCH] Starting batch event: ${preset.displayName}`)
+
+  // Send announcement
+  if (isConnected) {
+    await client.say(`#${TWITCH_CHANNEL_NAME}`, preset.announcement)
+  }
+  await sleep(2000) // Pause after announcement
+
+  // Get all active users with their item class info
+  const { data: users, error } = await supabase.rpc('get_all_users_with_item_classes', {
+    p_bow_classes: BOW_CLASSES,
+    p_melee_classes: MELEE_CLASSES
+  })
+
+  if (error || !users || users.length === 0) {
+    console.error('[BATCH] Failed to get active users:', error)
+    if (isConnected) {
+      await client.say(`#${TWITCH_CHANNEL_NAME}`, '❌ Aucun utilisateur actif trouvé pour ce patch notes...')
+    }
+    return
+  }
+
+  console.log(`[BATCH] Processing ${users.length} users`)
+
+  let processedCount = 0
+
+  // Process each user for each action
+  for (const user of users as BatchEventUser[]) {
+    for (const action of preset.actions) {
+      await processUserBatchAction(user, action, preset.delayBetweenEventsMs || delayMs)
+      processedCount++
+    }
+  }
+
+  // Send completion message
+  const completionMsg = formatBatchMessage(preset.completionMessage, { count: users.length })
+  if (isConnected) {
+    await client.say(`#${TWITCH_CHANNEL_NAME}`, completionMsg)
+  }
+
+  console.log(`[BATCH] Batch event completed: ${preset.displayName} - ${users.length} users processed`)
+}
+
+/**
+ * Process a single action for a single user in a batch event
+ */
+async function processUserBatchAction(
+  user: BatchEventUser,
+  action: BatchEventAction,
+  delayMs: number
+): Promise<void> {
+  await sleep(delayMs)
+
+  let result: BatchActionResult | null = null
+  let messageToSend: string = ''
+
+  switch (action.type) {
+    case 'buff_bow': {
+      // Check if user has normal bow cards (can be converted to foil)
+      if (!user.has_normal_bow_cards) {
+        // No bow cards - send "saved" message
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(action.messages.noCards),
+          { username: user.twitch_username }
+        )
+      } else {
+        // Has bow cards - convert to foil
+        const { data, error } = await supabase.rpc('convert_item_class_to_foil', {
+          p_user_id: user.user_id,
+          p_item_classes: action.itemClasses
+        })
+
+        if (error) {
+          console.error(`[BATCH] Error buffing bow for ${user.twitch_username}:`, error)
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage(action.messages.noCards),
+            { username: user.twitch_username }
+          )
+        } else {
+          result = data as BatchActionResult
+          if (result?.success) {
+            messageToSend = formatBatchMessage(
+              getBatchRandomMessage(action.messages.success),
+              { username: user.twitch_username, card: result.card_name || 'une carte' }
+            )
+          } else {
+            messageToSend = formatBatchMessage(
+              getBatchRandomMessage(action.messages.noCards),
+              { username: user.twitch_username }
+            )
+          }
+        }
+      }
+      break
+    }
+
+    case 'nerf_melee': {
+      // Check if user has melee cards
+      if (!user.has_melee_cards) {
+        // No melee cards - send "escaped" message
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(action.messages.noCards),
+          { username: user.twitch_username }
+        )
+      } else {
+        // Has melee cards - destroy one
+        const { data, error } = await supabase.rpc('destroy_item_class_card', {
+          p_user_id: user.user_id,
+          p_item_classes: action.itemClasses,
+          p_target_tiers: action.targetTiers || ['T2', 'T3']
+        })
+
+        if (error) {
+          console.error(`[BATCH] Error nerfing melee for ${user.twitch_username}:`, error)
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage(action.messages.noCards),
+            { username: user.twitch_username }
+          )
+        } else {
+          result = data as BatchActionResult
+          if (result?.success) {
+            messageToSend = formatBatchMessage(
+              getBatchRandomMessage(action.messages.success),
+              { username: user.twitch_username, card: result.card_name || 'une carte' }
+            )
+          } else {
+            messageToSend = formatBatchMessage(
+              getBatchRandomMessage(action.messages.noCards),
+              { username: user.twitch_username }
+            )
+          }
+        }
+      }
+      break
+    }
+
+    default:
+      console.warn(`[BATCH] Unknown action type: ${action.type}`)
+      return
+  }
+
+  // Send message to chat
+  if (messageToSend && isConnected) {
+    await client.say(`#${TWITCH_CHANNEL_NAME}`, messageToSend)
+  }
+}
+
 // Execute trigger
 async function executeTrigger(triggerType: string, username: string, isManual: boolean = false): Promise<{ success: boolean, message: string }> {
   if (!supabase) {
@@ -1422,6 +1602,67 @@ async function handleRequest(req: Request): Promise<Response> {
         JSON.stringify({
           success: false,
           error: 'Failed to send announcement',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+  }
+
+  // Webhook endpoint for batch event execution (Patch Notes style)
+  if (req.method === 'POST' && url.pathname === '/webhook/batch-event') {
+    try {
+      const body = await req.json()
+      const { presetId, delayMs } = body
+
+      if (!presetId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing presetId' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      if (!VALID_PRESET_IDS.includes(presetId)) {
+        return new Response(
+          JSON.stringify({
+            error: `Invalid presetId. Must be one of: ${VALID_PRESET_IDS.join(', ')}`
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      console.log(`[ADMIN] Batch event requested: ${presetId}`)
+
+      // Execute batch event asynchronously (don't wait for it to complete)
+      executeBatchEvent(presetId, delayMs || 2500)
+        .catch(err => console.error('[BATCH] Batch event error:', err))
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Batch event "${presetId}" started`,
+          presetId
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    } catch (error) {
+      console.error('Error starting batch event:', error)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to start batch event',
           message: error instanceof Error ? error.message : 'Unknown error'
         }),
         {

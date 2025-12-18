@@ -1202,6 +1202,76 @@ const triggerManualTrigger = async (triggerType: string) => {
     manualTriggerLoading.value[triggerType] = false;
   }
 };
+
+// ============================================================================
+// BATCH EVENTS (Patch Notes style)
+// ============================================================================
+
+interface BatchEventPreset {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+}
+
+const batchEventPresets: BatchEventPreset[] = [
+  {
+    id: 'patch_notes',
+    label: 'Patch Notes 3.26',
+    emoji: '📜',
+    description: 'Buff bows, nerf melee - The classic GGG experience'
+  },
+  {
+    id: 'hotfix',
+    label: "Hotfix d'urgence",
+    emoji: '🔧',
+    description: 'Nerf melee uniquement (T3 seulement)'
+  },
+  {
+    id: 'league_start',
+    label: 'League Start Event',
+    emoji: '🎮',
+    description: 'Buff de départ pour tous les joueurs'
+  }
+];
+
+const batchEventDelayMs = ref(2500);
+const isTriggeringBatchEvent = ref<Record<string, boolean>>({});
+const batchEventMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
+const triggerBatchEvent = async (presetId: string) => {
+  isTriggeringBatchEvent.value[presetId] = true;
+  batchEventMessage.value = null;
+
+  try {
+    const response = await $fetch<any>('/api/admin/trigger-batch-event', {
+      method: 'POST',
+      body: {
+        presetId,
+        delayMs: batchEventDelayMs.value
+      }
+    });
+
+    if (response.ok) {
+      batchEventMessage.value = {
+        type: 'success',
+        text: `✅ Batch event "${presetId}" lancé avec succès !`
+      };
+    } else {
+      throw new Error(response.message || 'Failed');
+    }
+  } catch (error: any) {
+    batchEventMessage.value = {
+      type: 'error',
+      text: `❌ Erreur: ${error.data?.message || error.message}`
+    };
+  } finally {
+    isTriggeringBatchEvent.value[presetId] = false;
+    setTimeout(() => {
+      batchEventMessage.value = null;
+    }, 5000);
+  }
+};
 </script>
 
 <template>
@@ -1445,6 +1515,89 @@ const triggerManualTrigger = async (triggerType: string) => {
                           {{ creditVaalOrbsMessage.text }}
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </RunicBox>
+
+                <!-- Section: Batch Events (Patch Notes) -->
+                <RunicHeader
+                  title="BATCH EVENTS / PATCH NOTES"
+                  attached
+                />
+                <RunicBox attached padding="lg">
+                  <div class="flex flex-col gap-5">
+                    <!-- Delay Configuration -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">
+                          Delai entre evenements
+                        </label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Temps d'attente entre chaque action (en ms)
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicSlider
+                          :model-value="batchEventDelayMs"
+                          @update:model-value="batchEventDelayMs = $event"
+                          :min="1000"
+                          :max="10000"
+                          :step="500"
+                          value-suffix="ms"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Batch Event Presets -->
+                    <div class="flex flex-col gap-4">
+                      <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">
+                        Presets disponibles
+                      </label>
+
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div
+                          v-for="preset in batchEventPresets"
+                          :key="preset.id"
+                          class="flex flex-col gap-3 p-4 bg-black/30 border border-poe-border/40 rounded-lg"
+                        >
+                          <div class="flex items-center gap-2">
+                            <span class="text-2xl">{{ preset.emoji }}</span>
+                            <span class="font-display text-lg font-bold text-poe-text">
+                              {{ preset.label }}
+                            </span>
+                          </div>
+                          <p class="font-body text-sm text-poe-text-dim">
+                            {{ preset.description }}
+                          </p>
+                          <RunicButton
+                            size="md"
+                            variant="danger"
+                            :disabled="isTriggeringBatchEvent[preset.id]"
+                            @click="triggerBatchEvent(preset.id)"
+                            class="w-full mt-auto"
+                          >
+                            <span v-if="!isTriggeringBatchEvent[preset.id]">
+                              🚀 Lancer
+                            </span>
+                            <span v-else>
+                              En cours...
+                            </span>
+                          </RunicButton>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Message feedback -->
+                    <div
+                      v-if="batchEventMessage"
+                      class="w-full p-3 rounded text-center font-display text-lg"
+                      :class="{
+                        'bg-green-900/20 border border-green-700/40 text-green-200': batchEventMessage.type === 'success',
+                        'bg-red-900/20 border border-red-700/40 text-red-200': batchEventMessage.type === 'error'
+                      }"
+                    >
+                      {{ batchEventMessage.text }}
                     </div>
                   </div>
                 </RunicBox>
