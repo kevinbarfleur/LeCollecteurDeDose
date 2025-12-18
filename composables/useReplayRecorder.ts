@@ -231,12 +231,16 @@ export function useReplayRecorder() {
     try {
       // Store the full ReplayDataV2 structure in mouse_positions
       // This is backward compatible - the field is JSON type
+      // Note: cardUid can be decimal (e.g., 199.0001) for duplicate cards, but DB column is bigint
+      // We need to use the base UID (integer part) for storage
+      const baseCardUid = Math.floor(data.cardUid);
+
       const replayInsert: ReplayInsert = {
         username: data.username,
         user_avatar: data.userAvatar,
         card_id: data.cardId,
         card_variation: data.cardVariation,
-        card_unique_id: data.cardUid,
+        card_unique_id: baseCardUid,
         card_tier: data.cardTier,
         card_foil: data.cardFoil,
         mouse_positions: data.replayData as unknown as ReplayInsert['mouse_positions'],
