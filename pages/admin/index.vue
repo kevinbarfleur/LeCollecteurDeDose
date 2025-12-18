@@ -1236,6 +1236,7 @@ const batchEventPresets: BatchEventPreset[] = [
 ];
 
 const batchEventDelayMs = ref(2500);
+const batchEventMaxUsers = ref(4);
 const isTriggeringBatchEvent = ref<Record<string, boolean>>({});
 const batchEventMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -1248,7 +1249,8 @@ const triggerBatchEvent = async (presetId: string) => {
       method: 'POST',
       body: {
         presetId,
-        delayMs: batchEventDelayMs.value
+        delayMs: batchEventDelayMs.value,
+        maxUsers: batchEventMaxUsers.value
       }
     });
 
@@ -1544,6 +1546,28 @@ const triggerBatchEvent = async (presetId: string) => {
                           :max="10000"
                           :step="500"
                           value-suffix="ms"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Max Users Configuration -->
+                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
+                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
+                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">
+                          Nombre de joueurs
+                        </label>
+                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
+                          Nombre max de joueurs affectes par l'event
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-3.5 flex-shrink-0">
+                        <RunicSlider
+                          :model-value="batchEventMaxUsers"
+                          @update:model-value="batchEventMaxUsers = $event"
+                          :min="1"
+                          :max="10"
+                          :step="1"
                           size="sm"
                         />
                       </div>

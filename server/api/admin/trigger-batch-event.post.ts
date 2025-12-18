@@ -14,7 +14,7 @@ const VALID_PRESET_IDS = ['patch_notes', 'hotfix', 'league_start']
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const body = await readBody(event)
-  const { presetId, delayMs } = body
+  const { presetId, delayMs, maxUsers } = body
 
   // Verify user session
   const { user } = await requireUserSession(event)
@@ -60,6 +60,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Validate maxUsers if provided (default 4, max 10)
+  const targetUsers = maxUsers ? Math.min(Math.max(1, Number(maxUsers)), 10) : 4
+
   const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
   const envBotUrl = process.env.BOT_WEBHOOK_URL
   const forceRailway = process.env.BOT_WEBHOOK_URL_FORCE_RAILWAY === 'true'
@@ -87,6 +90,7 @@ export default defineEventHandler(async (event) => {
       body: JSON.stringify({
         presetId,
         delayMs: delay,
+        maxUsers: targetUsers,
       }),
       signal: AbortSignal.timeout(10000), // 10 seconds timeout
     })

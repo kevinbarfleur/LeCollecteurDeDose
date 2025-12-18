@@ -1060,10 +1060,22 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Execute a batch event (Patch Notes style)
- * Affects ALL active users with themed events
+ * Shuffle an array using Fisher-Yates algorithm
  */
-async function executeBatchEvent(presetId: string, delayMs: number = 2500): Promise<void> {
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
+/**
+ * Execute a batch event (Patch Notes style)
+ * Selects a random subset of active users (default 4) for the event
+ */
+async function executeBatchEvent(presetId: string, delayMs: number = 2500, maxUsers: number = 4): Promise<void> {
   const preset = getPresetById(presetId)
   if (!preset) {
     console.error(`[BATCH] Unknown preset: ${presetId}`)
@@ -1079,12 +1091,12 @@ async function executeBatchEvent(presetId: string, delayMs: number = 2500): Prom
   await sleep(2000) // Pause after announcement
 
   // Get all active users with their item class info
-  const { data: users, error } = await supabase.rpc('get_all_users_with_item_classes', {
+  const { data: allUsers, error } = await supabase.rpc('get_all_users_with_item_classes', {
     p_bow_classes: BOW_CLASSES,
     p_melee_classes: MELEE_CLASSES
   })
 
-  if (error || !users || users.length === 0) {
+  if (error || !allUsers || allUsers.length === 0) {
     console.error('[BATCH] Failed to get active users:', error)
     if (isConnected) {
       await client.say(`#${TWITCH_CHANNEL_NAME}`, '❌ Aucun utilisateur actif trouvé pour ce patch notes...')
@@ -1092,25 +1104,26 @@ async function executeBatchEvent(presetId: string, delayMs: number = 2500): Prom
     return
   }
 
-  console.log(`[BATCH] Processing ${users.length} users`)
+  // Randomly select up to maxUsers from all active users
+  const shuffledUsers = shuffleArray(allUsers as BatchEventUser[])
+  const selectedUsers = shuffledUsers.slice(0, Math.min(maxUsers, shuffledUsers.length))
 
-  let processedCount = 0
+  console.log(`[BATCH] Selected ${selectedUsers.length} users out of ${allUsers.length} total`)
 
-  // Process each user for each action
-  for (const user of users as BatchEventUser[]) {
+  // Process each selected user for each action
+  for (const user of selectedUsers) {
     for (const action of preset.actions) {
       await processUserBatchAction(user, action, preset.delayBetweenEventsMs || delayMs)
-      processedCount++
     }
   }
 
   // Send completion message
-  const completionMsg = formatBatchMessage(preset.completionMessage, { count: users.length })
+  const completionMsg = formatBatchMessage(preset.completionMessage, { count: selectedUsers.length })
   if (isConnected) {
     await client.say(`#${TWITCH_CHANNEL_NAME}`, completionMsg)
   }
 
-  console.log(`[BATCH] Batch event completed: ${preset.displayName} - ${users.length} users processed`)
+  console.log(`[BATCH] Batch event completed: ${preset.displayName} - ${selectedUsers.length} users processed`)
 }
 
 /**
@@ -1616,7 +1629,7 @@ async function handleRequest(req: Request): Promise<Response> {
   if (req.method === 'POST' && url.pathname === '/webhook/batch-event') {
     try {
       const body = await req.json()
-      const { presetId, delayMs } = body
+      const { presetId, delayMs, maxUsers } = body
 
       if (!presetId) {
         return new Response(
@@ -1640,10 +1653,11 @@ async function handleRequest(req: Request): Promise<Response> {
         )
       }
 
-      console.log(`[ADMIN] Batch event requested: ${presetId}`)
+      const targetUsers = Math.min(Math.max(1, maxUsers || 4), 10) // Clamp between 1 and 10
+      console.log(`[ADMIN] Batch event requested: ${presetId} (max ${targetUsers} users)`)
 
       // Execute batch event asynchronously (don't wait for it to complete)
-      executeBatchEvent(presetId, delayMs || 2500)
+      executeBatchEvent(presetId, delayMs || 2500, targetUsers)
         .catch(err => console.error('[BATCH] Batch event error:', err))
 
       return new Response(
