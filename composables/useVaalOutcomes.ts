@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue';
 import gsap from 'gsap';
-import type { VaalOutcome } from '~/types/vaalOutcome';
+import type { VaalOutcome, VaalOutcomeNewCard } from '~/types/vaalOutcome';
 import type { Card, CardTier } from '~/types/card';
 import { isCardFoil } from '~/types/card';
 import { allCards } from '~/data/mockCards';
@@ -27,6 +27,17 @@ export interface OutcomeResult {
   message?: string;
 }
 
+/**
+ * Options for outcome execution
+ * Used to skip sync when the server has already applied the changes
+ */
+export interface OutcomeOptions {
+  /** Skip calling onSyncRequired (when server already applied changes) */
+  skipSync?: boolean;
+  /** For transform: server-provided new card (skips random selection) */
+  serverNewCard?: VaalOutcomeNewCard;
+}
+
 // ==========================================
 // COMPOSABLE
 // ==========================================
@@ -48,8 +59,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   // ==========================================
   // NOTHING - Brief flash effect
   // ==========================================
-  
-  const executeNothing = async (): Promise<OutcomeResult> => {
+
+  const executeNothing = async (options?: OutcomeOptions): Promise<OutcomeResult> => {
     if (!cardRef.value) {
       console.error('[VaalOutcomes] executeNothing: cardRef is null');
       return { success: false };
@@ -86,8 +97,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   // FOIL - Transform to prismatic
   // Uses tier-based colors for the glow effect
   // ==========================================
-  
-  const executeFoil = async (): Promise<OutcomeResult> => {
+
+  const executeFoil = async (options?: OutcomeOptions): Promise<OutcomeResult> => {
     if (!cardRef.value || !displayCard.value) {
       console.error('[VaalOutcomes] executeFoil: cardRef or displayCard is null');
       return { success: false };
@@ -173,13 +184,16 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     isAnimating.value = false;
 
     // Sync with API: normal: -1, foil: +1
-    if (onSyncRequired) {
+    // Skip sync if server already applied the changes (server-side outcome mode)
+    if (onSyncRequired && !options?.skipSync) {
       console.log('[VaalOutcomes] executeFoil: Calling onSyncRequired to sync foil transformation');
       const baseUid = Math.floor(currentCard.uid)
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
       updates.set(baseUid, { normalDelta: -1, foilDelta: 1, cardData: { ...currentCard, foil: true } })
       await onSyncRequired(updates, -1, 'foil') // Consume 1 vaalOrb
       console.log('[VaalOutcomes] executeFoil: Sync completed');
+    } else if (options?.skipSync) {
+      console.log('[VaalOutcomes] executeFoil: Skipping sync (server already applied changes)');
     } else {
       console.warn('[VaalOutcomes] executeFoil: onSyncRequired callback not available');
     }
@@ -208,7 +222,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     return Array.from(element.querySelectorAll('img.game-card__image, img.detail__image'));
   };
   
-  const executeTransform = async (): Promise<OutcomeResult> => {
+  const executeTransform = async (options?: OutcomeOptions): Promise<OutcomeResult> => {
     if (!cardRef.value || !displayCard.value) {
       console.error('[VaalOutcomes] executeTransform: cardRef or displayCard is null');
       return { success: false };
@@ -227,27 +241,43 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     });
 
     isAnimating.value = true;
-    
+
     const currentTier = currentCard.tier as CardTier;
     const tierColors = getTierColors(currentTier);
-    
-    // Get all cards of the same tier (excluding current card)
-    const sameTierCards = allCards.filter(
-      (c) => c.tier === currentTier && c.id !== currentCard.id
-    );
-    
-    console.log(`[VaalOutcomes] executeTransform: Found ${sameTierCards.length} cards in tier ${currentTier}`);
-    
-    if (sameTierCards.length === 0) {
-      console.error('[VaalOutcomes] executeTransform: No other cards in this tier');
-      isAnimating.value = false;
-      return { success: false, message: 'No other cards in this tier' };
+
+    // Determine the new card - either from server or random selection
+    let newCardTemplate: Card;
+
+    if (options?.serverNewCard) {
+      // Server-side outcome mode: use the card provided by the server
+      console.log(`[VaalOutcomes] executeTransform: Using server-provided card: ${options.serverNewCard.name} (UID: ${options.serverNewCard.uid})`);
+      newCardTemplate = {
+        uid: options.serverNewCard.uid,
+        id: options.serverNewCard.id,
+        name: options.serverNewCard.name,
+        tier: options.serverNewCard.tier as CardTier,
+        gameData: options.serverNewCard.game_data,
+        foil: false, // Will be set based on original card
+      } as Card;
+    } else {
+      // Client-side mode: Get all cards of the same tier (excluding current card)
+      const sameTierCards = allCards.filter(
+        (c) => c.tier === currentTier && c.id !== currentCard.id
+      );
+
+      console.log(`[VaalOutcomes] executeTransform: Found ${sameTierCards.length} cards in tier ${currentTier}`);
+
+      if (sameTierCards.length === 0) {
+        console.error('[VaalOutcomes] executeTransform: No other cards in this tier');
+        isAnimating.value = false;
+        return { success: false, message: 'No other cards in this tier' };
+      }
+
+      // Pick a random card from the same tier
+      const randomIndex = Math.floor(Math.random() * sameTierCards.length);
+      newCardTemplate = sameTierCards[randomIndex];
+      console.log(`[VaalOutcomes] executeTransform: Selected new card: ${newCardTemplate.name} (UID: ${newCardTemplate.uid})`);
     }
-    
-    // Pick a random card from the same tier
-    const randomIndex = Math.floor(Math.random() * sameTierCards.length);
-    const newCardTemplate = sameTierCards[randomIndex];
-    console.log(`[VaalOutcomes] executeTransform: Selected new card: ${newCardTemplate.name} (UID: ${newCardTemplate.uid})`);
     
     const cardElement = cardRef.value;
     
@@ -400,7 +430,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     isAnimating.value = false;
 
     // Sync with API: old card normal: -1, new card normal: +1
-    if (onSyncRequired) {
+    // Skip sync if server already applied the changes (server-side outcome mode)
+    if (onSyncRequired && !options?.skipSync) {
       console.log('[VaalOutcomes] executeTransform: Calling onSyncRequired to sync transformation');
       const transformSyncInfo = {
         oldCard: currentCard.name,
@@ -412,19 +443,21 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       const oldBaseUid = Math.floor(currentCard.uid)
       const newBaseUid = Math.floor(newCard.uid)
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
-      
+
       // Remove old card - include cardData for logging
       updates.set(oldBaseUid, { normalDelta: -1, foilDelta: 0, cardData: currentCard })
       console.log(`[VaalOutcomes] executeTransform: Removing old card (UID: ${oldBaseUid})`);
-      
+
       // Add new card (preserve foil status) - include cardData
       const foilDelta = isCardFoil(newCard) ? 1 : 0
       const normalDelta = isCardFoil(newCard) ? 0 : 1
       updates.set(newBaseUid, { normalDelta, foilDelta, cardData: newCard })
       console.log(`[VaalOutcomes] executeTransform: Adding new card (UID: ${newBaseUid}, normalDelta: ${normalDelta}, foilDelta: ${foilDelta})`);
-      
+
       await onSyncRequired(updates, -1, 'transform') // Consume 1 vaalOrb
       console.log('[VaalOutcomes] executeTransform: Sync completed');
+    } else if (options?.skipSync) {
+      console.log('[VaalOutcomes] executeTransform: Skipping sync (server already applied changes)');
     } else {
       console.warn('[VaalOutcomes] executeTransform: onSyncRequired callback not available');
     }
@@ -439,7 +472,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   // Clone appears on top, then both translate apart side by side
   // ==========================================
   
-  const executeDuplicate = async (): Promise<OutcomeResult> => {
+  const executeDuplicate = async (options?: OutcomeOptions): Promise<OutcomeResult> => {
     if (!cardRef.value || !displayCard.value) {
       console.error('[VaalOutcomes] executeDuplicate: cardRef or displayCard is null');
       return { success: false };
@@ -680,7 +713,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     }
 
     // Sync with API: same card, increase count (normal or foil depending on original)
-    if (onSyncRequired) {
+    // Skip sync if server already applied the changes (server-side outcome mode)
+    if (onSyncRequired && !options?.skipSync) {
       console.log('[VaalOutcomes] executeDuplicate: Calling onSyncRequired to sync duplication');
       const duplicateSyncInfo = {
         card: originalCard.name,
@@ -690,7 +724,7 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
       console.log(`[VaalOutcomes] executeDuplicate: Sync info:`, duplicateSyncInfo);
       // baseUid already declared at line 407
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>()
-      
+
       // Duplicate preserves foil status, so increment the appropriate counter
       // Include cardData so the server knows which card to update
       if (isCardFoil(originalCard)) {
@@ -700,9 +734,11 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
         updates.set(baseUid, { normalDelta: 1, foilDelta: 0, cardData: originalCard })
         console.log(`[VaalOutcomes] executeDuplicate: Incrementing normal count for UID ${baseUid}`);
       }
-      
+
       await onSyncRequired(updates, -1, 'duplicate') // Consume 1 vaalOrb
       console.log('[VaalOutcomes] executeDuplicate: Sync completed');
+    } else if (options?.skipSync) {
+      console.log('[VaalOutcomes] executeDuplicate: Skipping sync (server already applied changes)');
     } else {
       console.warn('[VaalOutcomes] executeDuplicate: onSyncRequired callback not available');
     }

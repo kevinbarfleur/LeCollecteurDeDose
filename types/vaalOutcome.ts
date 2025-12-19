@@ -202,7 +202,7 @@ export function getShareModalContent(outcome: VaalOutcome | null, t: Translation
       buttonClass: 'share-btn--default',
     };
   }
-  
+
   const config = VAAL_OUTCOMES[outcome].shareModal;
   return {
     icon: config.icon,
@@ -212,5 +212,59 @@ export function getShareModalContent(outcome: VaalOutcome | null, t: Translation
     theme: config.theme,
     buttonClass: config.buttonClass,
   };
+}
+
+// ==========================================
+// EDGE FUNCTION TYPES
+// ==========================================
+
+export type CardTier = 'T0' | 'T1' | 'T2' | 'T3';
+
+/**
+ * Request payload for the vaal-outcome Edge Function
+ */
+export interface VaalOutcomeRequest {
+  username: string;
+  cardUid: number;
+  cardTier: CardTier;
+  isFoil: boolean;
+}
+
+/**
+ * Card data returned by the Edge Function for transform outcomes
+ */
+export interface VaalOutcomeNewCard {
+  uid: number;
+  id: string;
+  name: string;
+  tier: string;
+  game_data: {
+    img?: string;
+    foilImg?: string;
+    weight?: number;
+  };
+}
+
+/**
+ * Error codes from the Edge Function
+ */
+export type VaalOutcomeErrorCode =
+  | 'INSUFFICIENT_ORBS'
+  | 'CARD_NOT_FOUND'
+  | 'FOIL_CARD'
+  | 'INVALID_USER'
+  | 'INTERNAL_ERROR';
+
+/**
+ * Response from the vaal-outcome Edge Function
+ */
+export interface VaalOutcomeResponse {
+  success: boolean;
+  outcome?: VaalOutcome;
+  newCard?: VaalOutcomeNewCard;
+  vaalOrbs?: number;
+  atlasInfluenceConsumed?: boolean;
+  error?: string;
+  errorCode?: VaalOutcomeErrorCode;
 }
 
