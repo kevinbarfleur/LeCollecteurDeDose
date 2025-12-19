@@ -65,6 +65,7 @@ const tierOptions = [
   { value: 'T3', label: 'T3 - Commun' }
 ]
 
+
 // Initialize form when card changes
 watch(() => props.card, (card) => {
   if (card) {
@@ -338,6 +339,16 @@ const removeImage = () => {
                   size="sm"
                 />
               </div>
+            </div>
+
+            <!-- Item Class -->
+            <div class="card-edit-panel__field">
+              <label class="card-edit-panel__label">Type d'objet</label>
+              <RunicInput
+                v-model="formData.itemClass"
+                placeholder="ex: Belt, Amulet, Body Armour..."
+                size="sm"
+              />
             </div>
           </div>
 
