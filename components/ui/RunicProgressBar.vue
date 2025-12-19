@@ -33,7 +33,7 @@ withDefaults(defineProps<Props>(), {
 
       <!-- Centered label -->
       <span v-if="showLabel" class="runic-progress__label">
-        {{ Math.round(value) }}%
+        {{ Number.isInteger(value) ? value : value.toFixed(1) }}%
       </span>
     </div>
   </div>

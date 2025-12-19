@@ -101,7 +101,7 @@ export function useLadder() {
           t1Count: Number(row.t1_count) || 0,
           t2Count: Number(row.t2_count) || 0,
           t3Count: Number(row.t3_count) || 0,
-          completionPercent: Math.round((Number(row.unique_cards) / totalCards) * 100),
+          completionPercent: Math.round((Number(row.unique_cards) / totalCards) * 1000) / 10,
           rank: index + 1,
         }))
       }
