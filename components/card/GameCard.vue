@@ -739,6 +739,12 @@ const tierClass = computed(() => `game-card--${props.card.tier.toLowerCase()}`);
 const imageStatus = ref<"loading" | "loaded" | "error">("loading");
 const hasImageUrl = computed(() => !!props.card.gameData?.img);
 
+// Check if image is a GIF (for soft edge effect)
+const isGif = computed(() => {
+  const imgUrl = props.card.gameData?.img?.toLowerCase() || '';
+  return imgUrl.endsWith('.gif');
+});
+
 onMounted(() => {
   if (!hasImageUrl.value) {
     imageStatus.value = "error";
@@ -862,6 +868,7 @@ defineExpose({
                   :src="card.gameData.img"
                   :alt="card.name"
                   class="game-card__image"
+                  :class="{ 'game-card__image--gif': isGif }"
                 />
                 <div
                   v-if="showPlaceholder"
@@ -940,6 +947,7 @@ defineExpose({
                   :src="card.gameData.img"
                   :alt="card.name"
                   class="detail__image"
+                  :class="{ 'detail__image--gif': isGif }"
                 />
                 <div v-else class="detail__image-placeholder">
                   <svg
@@ -1125,6 +1133,7 @@ defineExpose({
             :src="card.gameData.img"
             :alt="card.name"
             class="game-card__image"
+            :class="{ 'game-card__image--gif': isGif }"
           />
           <div v-if="showPlaceholder" class="game-card__image-placeholder">
             <svg
@@ -1583,6 +1592,50 @@ defineExpose({
   max-height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* ==========================================
+   GIF IRREGULAR EDGE EFFECT (Detail view)
+   Cloudy/organic edges using overlapping gradients
+   ========================================== */
+.detail__image--gif {
+  /* Multiple offset radial gradients - aggressive irregular edges */
+  mask-image:
+    /* Core ellipses */
+    radial-gradient(ellipse 65% 80% at 35% 35%, black 25%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 65% 70%, black 20%, transparent 50%),
+    radial-gradient(ellipse 55% 70% at 30% 65%, black 25%, transparent 52%),
+    radial-gradient(ellipse 60% 85% at 50% 50%, black 30%, transparent 58%),
+    /* Extra bumps sides & bottom */
+    radial-gradient(ellipse 40% 50% at 15% 50%, black 15%, transparent 45%),
+    radial-gradient(ellipse 45% 40% at 85% 60%, black 15%, transparent 42%),
+    radial-gradient(ellipse 45% 40% at 45% 90%, black 15%, transparent 45%),
+    /* TOP edge - more irregular */
+    radial-gradient(ellipse 35% 30% at 30% 10%, black 10%, transparent 40%),
+    radial-gradient(ellipse 40% 35% at 55% 8%, black 12%, transparent 42%),
+    radial-gradient(ellipse 30% 28% at 45% 5%, black 8%, transparent 38%),
+    /* TOP-RIGHT corner - break the angle */
+    radial-gradient(ellipse 45% 50% at 80% 20%, black 12%, transparent 45%),
+    radial-gradient(ellipse 35% 40% at 90% 15%, black 10%, transparent 40%),
+    radial-gradient(ellipse 40% 35% at 75% 10%, black 10%, transparent 38%),
+    radial-gradient(ellipse 30% 45% at 85% 30%, black 12%, transparent 42%);
+  -webkit-mask-image:
+    radial-gradient(ellipse 65% 80% at 35% 35%, black 25%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 65% 70%, black 20%, transparent 50%),
+    radial-gradient(ellipse 55% 70% at 30% 65%, black 25%, transparent 52%),
+    radial-gradient(ellipse 60% 85% at 50% 50%, black 30%, transparent 58%),
+    radial-gradient(ellipse 40% 50% at 15% 50%, black 15%, transparent 45%),
+    radial-gradient(ellipse 45% 40% at 85% 60%, black 15%, transparent 42%),
+    radial-gradient(ellipse 45% 40% at 45% 90%, black 15%, transparent 45%),
+    radial-gradient(ellipse 35% 30% at 30% 10%, black 10%, transparent 40%),
+    radial-gradient(ellipse 40% 35% at 55% 8%, black 12%, transparent 42%),
+    radial-gradient(ellipse 30% 28% at 45% 5%, black 8%, transparent 38%),
+    radial-gradient(ellipse 45% 50% at 80% 20%, black 12%, transparent 45%),
+    radial-gradient(ellipse 35% 40% at 90% 15%, black 10%, transparent 40%),
+    radial-gradient(ellipse 40% 35% at 75% 10%, black 10%, transparent 38%),
+    radial-gradient(ellipse 30% 45% at 85% 30%, black 12%, transparent 42%);
+  mask-composite: add;
+  -webkit-mask-composite: source-over;
 }
 
 .detail__image-placeholder {
