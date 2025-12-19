@@ -376,15 +376,12 @@ const removeImage = () => {
 
             <!-- Relevance Score -->
             <div class="card-edit-panel__field">
-              <label class="card-edit-panel__label">
-                Score de pertinence: {{ formData.relevanceScore }}
-              </label>
-              <RunicSlider
-                v-model="formData.relevanceScore"
+              <label class="card-edit-panel__label">Score de pertinence</label>
+              <RunicInput
+                v-model.number="formData.relevanceScore"
+                type="number"
                 :min="0"
-                :max="2000"
-                :step="10"
-                :show-value="false"
+                placeholder="0"
                 size="sm"
               />
             </div>
@@ -399,15 +396,12 @@ const removeImage = () => {
 
             <!-- Weight -->
             <div class="card-edit-panel__field">
-              <label class="card-edit-panel__label">
-                Poids (drop weight): {{ formData.gameData.weight.toLocaleString() }}
-              </label>
-              <RunicSlider
-                v-model="formData.gameData.weight"
+              <label class="card-edit-panel__label">Poids (drop weight)</label>
+              <RunicInput
+                v-model.number="formData.gameData.weight"
+                type="number"
                 :min="0"
-                :max="100000"
-                :step="100"
-                :show-value="false"
+                placeholder="1000"
                 size="sm"
               />
               <p class="card-edit-panel__hint">

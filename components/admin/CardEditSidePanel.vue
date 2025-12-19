@@ -358,30 +358,24 @@ const removeImage = () => {
 
             <!-- Weight -->
             <div class="card-edit-panel__field">
-              <label class="card-edit-panel__label">
-                Poids: {{ formData.gameData.weight.toLocaleString() }}
-              </label>
-              <RunicSlider
-                v-model="formData.gameData.weight"
+              <label class="card-edit-panel__label">Poids</label>
+              <RunicInput
+                v-model.number="formData.gameData.weight"
+                type="number"
                 :min="0"
-                :max="100000"
-                :step="100"
-                :show-value="false"
+                placeholder="1000"
                 size="sm"
               />
             </div>
 
             <!-- Relevance Score -->
             <div class="card-edit-panel__field">
-              <label class="card-edit-panel__label">
-                Pertinence: {{ formData.relevanceScore }}
-              </label>
-              <RunicSlider
-                v-model="formData.relevanceScore"
+              <label class="card-edit-panel__label">Pertinence</label>
+              <RunicInput
+                v-model.number="formData.relevanceScore"
+                type="number"
                 :min="0"
-                :max="2000"
-                :step="10"
-                :show-value="false"
+                placeholder="0"
                 size="sm"
               />
             </div>
