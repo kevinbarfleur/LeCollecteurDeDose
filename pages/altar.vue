@@ -2686,7 +2686,7 @@ const endDragOrb = async () => {
           </Transition>
         </Teleport>
 
-        <!-- Share Replay Panel - Slides up from bottom -->
+        <!-- Share Replay Panel - Slides in from left -->
         <Teleport to="body">
           <Transition name="share-slide">
             <div
@@ -4187,22 +4187,20 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   SHARE PANEL - Notification banner style
+   SHARE PANEL - Bottom-left notification style
    ========================================== */
 .share-panel-container {
   position: fixed;
   bottom: 1.5rem;
-  left: 0;
-  right: 0;
+  left: 1.5rem;
   z-index: 10000;
-  padding: 0 1rem;
   pointer-events: none;
 }
 
 .share-panel {
   pointer-events: auto;
-  max-width: 400px;
-  margin: 0 auto;
+  max-width: 320px;
+  min-width: 280px;
   position: relative;
 
   /* Dark runic background */
@@ -4246,7 +4244,7 @@ const endDragOrb = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 1rem;
+  padding: 0.625rem 0.875rem;
   border-bottom: 1px solid rgba(60, 55, 50, 0.25);
 }
 
@@ -4257,14 +4255,14 @@ const endDragOrb = async () => {
 }
 
 .share-panel__icon {
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .share-panel__title {
   font-family: "Cinzel", serif;
-  font-size: 1.0625rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text);
   margin: 0;
@@ -4295,28 +4293,29 @@ const endDragOrb = async () => {
 
 .share-panel__text {
   color: rgba(180, 170, 160, 0.85);
-  font-size: 1rem;
+  font-size: 0.8125rem;
   line-height: 1.4;
   margin: 0;
-  padding: 0.75rem 1rem 0;
+  padding: 0.5rem 0.875rem 0;
 }
 
 .share-panel__url {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.375rem;
   align-items: stretch;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.875rem;
 }
 
 .share-panel__input {
   flex: 1;
+  min-width: 0;
   background: rgba(10, 10, 12, 0.6);
   border: 1px solid rgba(50, 48, 45, 0.5);
   border-radius: 2px;
-  padding: 0.5rem 0.625rem;
+  padding: 0.375rem 0.5rem;
   color: var(--color-text);
   font-family: monospace;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -4352,7 +4351,7 @@ const endDragOrb = async () => {
 }
 
 .share-panel__actions {
-  padding: 0.75rem 1rem 1rem;
+  padding: 0.5rem 0.875rem 0.75rem;
   display: flex;
   justify-content: center;
 }
@@ -4363,12 +4362,12 @@ const endDragOrb = async () => {
 .share-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
   font-family: "Cinzel", serif;
-  font-size: 0.875rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: none;
   border-radius: 2px;
@@ -4571,21 +4570,21 @@ const endDragOrb = async () => {
   font-size: 1rem;
 }
 
-/* Share Panel Slide Animation */
+/* Share Panel Slide Animation - slides in from left */
 .share-slide-enter-active,
 .share-slide-leave-active {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
 }
 
 .share-slide-enter-from,
 .share-slide-leave-to {
-  transform: translateY(100%);
+  transform: translateX(-120%);
   opacity: 0;
 }
 
 .share-slide-enter-to,
 .share-slide-leave-from {
-  transform: translateY(0);
+  transform: translateX(0);
   opacity: 1;
 }
 
