@@ -275,68 +275,63 @@ const cardOptionsByTier = computed(() => {
 const selectedCardId = ref<string>("");
 const selectedVariation = ref<CardVariation>("standard");
 
-// Track which tier the selection came from (for per-tier selects)
-const selectedTierSelects = reactive<Record<CardTier, string>>({
-  T0: "",
-  T1: "",
-  T2: "",
-  T3: "",
+// Tier tabs UI state
+const selectedTier = ref<CardTier>('T0');
+const selectedCardInTier = ref<string>('');
+
+// Tier tab options for RunicRadio (with counts in label)
+const tierTabOptions = computed(() => {
+  const tiers: CardTier[] = ['T0', 'T1', 'T2', 'T3'];
+  return tiers.map(tier => {
+    const count = cardOptionsByTier.value[tier].length;
+    return {
+      value: tier,
+      label: count > 0 ? `${tier} (${count})` : tier,
+      color: tier.toLowerCase(), // t0, t1, t2, t3 for RunicRadio styling
+    };
+  });
 });
 
-// Handle selection from a specific tier
-const selectFromTier = (tier: CardTier, cardId: string) => {
-  // Clear all other tier selections
-  (Object.keys(selectedTierSelects) as CardTier[]).forEach((t) => {
-    if (t !== tier) {
-      selectedTierSelects[t] = "";
-    }
-  });
+// Card options for the currently selected tier
+const currentTierCardOptions = computed(() => {
+  return cardOptionsByTier.value[selectedTier.value];
+});
 
-  // Update the main selected card
-  selectedCardId.value = cardId;
-  selectedTierSelects[tier] = cardId;
+// Does the current tier have any cards?
+const currentTierHasCards = computed(() => {
+  return currentTierCardOptions.value.length > 0;
+});
+
+// Handle tier tab selection
+const selectTier = (tier: CardTier) => {
+  if (isBlockingInteractions.value) return;
+  if (selectedTier.value !== tier) {
+    selectedCardInTier.value = '';
+    selectedCardId.value = '';
+  }
+  selectedTier.value = tier;
 };
 
-// Watch for changes in tier selects
-watch(
-  () => selectedTierSelects.T0,
-  (val) => { if (val) selectFromTier('T0', val); }
-);
-watch(
-  () => selectedTierSelects.T1,
-  (val) => { if (val) selectFromTier('T1', val); }
-);
-watch(
-  () => selectedTierSelects.T2,
-  (val) => { if (val) selectFromTier('T2', val); }
-);
-watch(
-  () => selectedTierSelects.T3,
-  (val) => { if (val) selectFromTier('T3', val); }
-);
+// Sync selectedCardInTier → selectedCardId
+watch(selectedCardInTier, (cardId) => {
+  if (cardId) {
+    selectedCardId.value = cardId;
+  }
+});
 
 // Watch for collection changes and clear invalid selections
-// This handles cases where:
-// - A card is destroyed by Vaal Orb
-// - A card's tier changes due to transformation
-// - A card is no longer available (consumed all standard copies)
 watch(
   cardOptionsByTier,
   (newOptions) => {
-    // Check each tier select and clear if the card is no longer available
-    (['T0', 'T1', 'T2', 'T3'] as CardTier[]).forEach((tier) => {
-      const currentSelection = selectedTierSelects[tier];
-      if (currentSelection) {
-        const stillAvailable = newOptions[tier].some(opt => opt.value === currentSelection);
-        if (!stillAvailable) {
-          selectedTierSelects[tier] = "";
-          // If this was the active selection, also clear selectedCardId
-          if (selectedCardId.value === currentSelection) {
-            selectedCardId.value = "";
-          }
-        }
+    if (selectedCardInTier.value) {
+      const stillAvailable = newOptions[selectedTier.value].some(
+        opt => opt.value === selectedCardInTier.value
+      );
+      if (!stillAvailable) {
+        selectedCardInTier.value = '';
+        selectedCardId.value = '';
       }
-    });
+    }
   },
   { deep: true }
 );
@@ -363,6 +358,16 @@ const variationOptions = computed(() => {
         : t("altar.variations.standard"),
     count: v.count,
   }));
+});
+
+// Is variant select enabled? (card has multiple variations and not blocking)
+const isVariantSelectEnabled = computed(() => {
+  return selectedCardGroup.value?.hasMultipleVariations && !isBlockingInteractions.value;
+});
+
+// Is remove button enabled?
+const isRemoveButtonEnabled = computed(() => {
+  return isCardOnAltar.value && !isAnimating.value && !isBlockingInteractions.value;
 });
 
 // Get the actual card to display
@@ -1075,12 +1080,13 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
       }
       selectedCardId.value = newCard.id;
 
-      // Update tier selects to reflect the new card's tier
-      // Reset all tier selects first, then set the new tier
-      resetAllTierSelects();
+      // Update tier tabs to reflect the new card's tier
       // Only set if not foil (foil cards can't be vaaled again)
       if (!newCard.foil) {
-        selectedTierSelects[newCard.tier as CardTier] = newCard.id;
+        selectedTier.value = newCard.tier as CardTier;
+        selectedCardInTier.value = newCard.id;
+      } else {
+        resetAllTierSelects();
       }
 
       // Re-capture snapshot for new card appearance
@@ -1588,12 +1594,9 @@ const ejectCard = async () => {
   isCardFlipped.value = false;
 };
 
-// Reset all tier selects
+// Reset card selection
 const resetAllTierSelects = () => {
-  selectedTierSelects.T0 = "";
-  selectedTierSelects.T1 = "";
-  selectedTierSelects.T2 = "";
-  selectedTierSelects.T3 = "";
+  selectedCardInTier.value = '';
 };
 
 // Remove card from altar
@@ -2211,93 +2214,54 @@ const endDragOrb = async () => {
             attached
           />
           <RunicBox padding="md" attached>
-            <div class="selector-grid">
-              <!-- Tier selects -->
-              <div class="selector-tiers">
-                <!-- T0 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t0">T0</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T0"
-                    :options="cardOptionsByTier.T0"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T0.length === 0"
-                  />
-                </div>
-
-                <!-- T1 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t1">T1</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T1"
-                    :options="cardOptionsByTier.T1"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T1.length === 0"
-                  />
-                </div>
-
-                <!-- T2 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t2">T2</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T2"
-                    :options="cardOptionsByTier.T2"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T2.length === 0"
-                  />
-                </div>
-
-                <!-- T3 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t3">T3</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T3"
-                    :options="cardOptionsByTier.T3"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T3.length === 0"
-                  />
-                </div>
-              </div>
-
-              <!-- Variation selection (if multiple) -->
-              <div
-                v-if="selectedCardGroup?.hasMultipleVariations"
-                class="selector-field selector-field--variant"
-              >
-                <label class="selector-label">{{
-                  t("altar.selector.variant")
-                }}</label>
-                <RunicSelect
-                  v-model="selectedVariation"
-                  :options="variationOptions"
-                  :placeholder="t('altar.selector.chooseVariant')"
+            <div class="selector-container">
+              <!-- Tier Tabs using RunicRadio -->
+              <div class="tier-selector">
+                <RunicRadio
+                  v-model="selectedTier"
+                  :options="tierTabOptions"
                   size="sm"
                   :disabled="isBlockingInteractions"
                 />
               </div>
 
-              <!-- Remove card button -->
-              <div
-                v-if="isCardOnAltar && !isAnimating"
-                class="selector-field selector-field--action"
-              >
-                <RunicButton
-                  size="sm"
-                  rune-left="✕"
-                  rune-right="✕"
-                  :disabled="isBlockingInteractions"
-                  @click="removeCardFromAltar"
-                >
-                  {{ t("altar.selector.remove") }}
-                </RunicButton>
+              <!-- Controls Row -->
+              <div class="selector-controls">
+                <!-- Card Selection Dropdown -->
+                <div class="selector-field selector-field--card">
+                  <RunicSelect
+                    v-model="selectedCardInTier"
+                    :options="currentTierCardOptions"
+                    :placeholder="t('altar.selector.selectCard')"
+                    size="sm"
+                    :searchable="true"
+                    :disabled="isBlockingInteractions || !currentTierHasCards"
+                  />
+                </div>
+
+                <!-- Variant Selection (always visible, disabled when not applicable) -->
+                <div class="selector-field selector-field--variant">
+                  <RunicSelect
+                    v-model="selectedVariation"
+                    :options="variationOptions"
+                    :placeholder="t('altar.variations.standard')"
+                    size="sm"
+                    :disabled="!isVariantSelectEnabled"
+                  />
+                </div>
+
+                <!-- Remove Button (always visible, disabled when not applicable) -->
+                <div class="selector-field selector-field--action">
+                  <RunicButton
+                    size="sm"
+                    rune-left="✕"
+                    rune-right="✕"
+                    :disabled="!isRemoveButtonEnabled"
+                    @click="removeCardFromAltar"
+                  >
+                    {{ t("altar.selector.remove") }}
+                  </RunicButton>
+                </div>
               </div>
             </div>
           </RunicBox>
@@ -2851,121 +2815,98 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   CARD SELECTOR SECTION
+   CARD SELECTOR SECTION - Tier Tabs + Controls
    ========================================== */
 .altar-selector-section {
   margin-bottom: 0.5rem;
 }
 
-.selector-grid {
+.selector-container {
+  width: 100%;
+}
+
+/* Tier Selector using RunicRadio */
+.tier-selector {
+  margin-bottom: 0.75rem;
+}
+
+.tier-selector :deep(.runic-radio) {
+  width: 100%;
+}
+
+.tier-selector :deep(.runic-radio__groove) {
+  width: 100%;
+}
+
+.tier-selector :deep(.runic-radio__option) {
+  flex: 1;
+}
+
+/* Controls Row */
+.selector-controls {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
   width: 100%;
 }
 
-/* Container for tier selects - takes all available space */
-.selector-tiers {
-  display: flex;
-  gap: 0.5rem;
+.selector-field--card {
   flex: 1 1 0%;
   min-width: 0;
-}
-
-/* Individual tier select - equal width distribution */
-.selector-tier {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1 1 0%;
-  min-width: 0;
-}
-
-/* Variant field when present */
-.selector-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 0 0 auto;
 }
 
 .selector-field--variant {
-  flex: 0 0 100px;
-  min-width: 80px;
+  flex: 0 0 220px;
 }
 
-/* Action button - fixed width */
 .selector-field--action {
   flex: 0 0 auto;
-  align-self: flex-end;
 }
 
-/* Responsive: stack on small screens */
+/* Mobile */
 @media (max-width: 640px) {
-  .selector-grid {
+  .tier-tabs {
+    gap: 0.125rem;
+  }
+
+  .tier-tab {
+    padding: 0.375rem 0.25rem;
+    font-size: 0.75rem;
+    min-height: 34px;
+  }
+
+  .tier-tab__badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.5625rem;
+  }
+
+  .selector-controls {
     flex-wrap: wrap;
   }
 
-  .selector-tiers {
+  .selector-field--card {
     flex: 1 1 100%;
-    flex-wrap: wrap;
-  }
-
-  .selector-tier {
-    flex: 1 1 calc(50% - 0.25rem);
-    min-width: calc(50% - 0.25rem);
+    order: 1;
+    margin-bottom: 0.375rem;
   }
 
   .selector-field--variant {
     flex: 1 1 calc(50% - 0.25rem);
+    order: 2;
   }
 
   .selector-field--action {
     flex: 0 0 auto;
+    order: 3;
   }
 }
 
 @media (max-width: 400px) {
-  .selector-tier {
-    flex: 1 1 100%;
-  }
-
-  .selector-field--variant {
-    flex: 1 1 100%;
-  }
-
+  .selector-field--variant,
   .selector-field--action {
-    width: 100%;
+    flex: 1 1 100%;
   }
-}
-
-.selector-label {
-  font-family: "Cinzel", serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(140, 130, 120, 0.8);
-}
-
-/* Tier-specific label colors */
-.selector-label--t0 {
-  color: var(--color-tier-t0, #e6b422);
-  text-shadow: 0 0 6px rgba(230, 180, 34, 0.3);
-}
-
-.selector-label--t1 {
-  color: var(--color-tier-t1, #a855f7);
-  text-shadow: 0 0 6px rgba(168, 85, 247, 0.3);
-}
-
-.selector-label--t2 {
-  color: var(--color-tier-t2, #3b82f6);
-  text-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
-}
-
-.selector-label--t3 {
-  color: var(--color-tier-t3, rgba(180, 170, 160, 0.9));
 }
 
 /* ==========================================
