@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
-import type { VaalOutcome } from "~/types/vaalOutcome";
+import type { VaalOutcome, VaalOutcomeRequest, VaalOutcomeResponse } from "~/types/vaalOutcome";
 import {
   rollVaalOutcome,
   getShareModalContent,
   getForcedOutcomeOptions,
 } from "~/types/vaalOutcome";
+import { useVaalProcessingAnimation } from "~/composables/useVaalProcessingAnimation";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
@@ -491,6 +492,14 @@ const cardBackLogoUrl = "/images/vaal-risitas.png";
 const isCardAnimatingIn = ref(false);
 const isCardAnimatingOut = ref(false);
 
+// Processing animation composable (for server-side outcome wait)
+const {
+  isProcessing: isVaalProcessing,
+  startProcessing: startVaalProcessing,
+  endProcessing: endVaalProcessing,
+  cancelProcessing: cancelVaalProcessing,
+} = useVaalProcessingAnimation({ cardRef: altarCardRef });
+
 // Get random entry direction (from outside viewport)
 const getRandomEntryPoint = () => {
   const side = Math.floor(Math.random() * 4);
@@ -743,8 +752,8 @@ const shareModalContent = computed(() =>
 // Use centralized outcome options
 const forcedOutcomeOptions = computed(() => getForcedOutcomeOptions(t));
 
-// Simulate Vaal outcome (will be server-side later)
-const simulateVaalOutcome = (): VaalOutcome => {
+// Simulate Vaal outcome (client-side, used in mock/debug mode)
+const simulateVaalOutcomeLocal = (): VaalOutcome => {
   // If a forced outcome is set, use it
   if (forcedOutcome.value !== "random") {
     return forcedOutcome.value as VaalOutcome;
@@ -757,6 +766,58 @@ const simulateVaalOutcome = (): VaalOutcome => {
   }
   return rollVaalOutcome(foilBoost);
 };
+
+// Call the Edge Function for server-side outcome calculation (production mode)
+const callVaalOutcomeEdgeFunction = async (): Promise<VaalOutcomeResponse> => {
+  const card = displayCard.value;
+  if (!card) {
+    return { success: false, error: 'No card selected', errorCode: 'CARD_NOT_FOUND' };
+  }
+
+  if (!authUser.value?.displayName) {
+    return { success: false, error: 'User not logged in', errorCode: 'INVALID_USER' };
+  }
+
+  try {
+    const config = useRuntimeConfig();
+    const supabaseUrl = config.public.supabase.url;
+
+    const request: VaalOutcomeRequest = {
+      username: authUser.value.displayName,
+      cardUid: Math.floor(card.uid),
+      cardTier: card.tier as 'T0' | 'T1' | 'T2' | 'T3',
+      isFoil: isCardFoil(card),
+    };
+
+    console.log('[Altar] Calling vaal-outcome Edge Function:', request);
+
+    const response = await $fetch<VaalOutcomeResponse>(`${supabaseUrl}/functions/v1/vaal-outcome`, {
+      method: 'POST',
+      body: request,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('[Altar] Edge Function response:', response);
+    return response;
+  } catch (error) {
+    console.error('[Altar] Edge Function error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+      errorCode: 'INTERNAL_ERROR',
+    };
+  }
+};
+
+// Determine if we should use server-side or client-side outcome calculation
+const shouldUseServerOutcome = computed(() => {
+  // Use client-side in mock mode or when forced outcome is set (debug)
+  if (!isSupabaseData.value) return false;
+  if (forcedOutcome.value !== "random") return false;
+  return true;
+});
 
 // Use shared disintegration effect composable
 const {
@@ -1055,7 +1116,7 @@ onMounted(() => {
 
 })
 
-const cleanupAfterDestruction = async (destroyedCardUid: number) => {
+const cleanupAfterDestruction = async (destroyedCardUid: number, skipSync: boolean = false) => {
   console.log(`[Altar] cleanupAfterDestruction: Starting cleanup for card UID ${destroyedCardUid}`);
   const cardIndex = localCollection.value.findIndex(
     (c) => c.uid === destroyedCardUid
@@ -1098,7 +1159,8 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
     });
     
     // Sync with API: remove card (normal: -1 or foil: -1)
-    if (loggedIn.value && authUser.value?.displayName) {
+    // Skip sync if server already applied the changes (Edge Function mode)
+    if (loggedIn.value && authUser.value?.displayName && !skipSync) {
       const baseUid = Math.floor(destroyedCard.uid);
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
       
@@ -1229,7 +1291,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
   }
 };
 
-const destroyCard = async () => {
+const destroyCard = async (skipSync: boolean = false) => {
   if (!altarCardRef.value || !displayCard.value) {
     console.error('[Altar] destroyCard: altarCardRef or displayCard is null');
     return;
@@ -1265,7 +1327,7 @@ const destroyCard = async () => {
 
   const cardSlot = altarCardRef.value.parentElement;
   if (!cardSlot) {
-    cleanupAfterDestruction(destroyedCardUid);
+    cleanupAfterDestruction(destroyedCardUid, skipSync);
     return;
   }
 
@@ -1372,12 +1434,18 @@ const destroyCard = async () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  cleanupAfterDestruction(destroyedCardUid);
+  cleanupAfterDestruction(destroyedCardUid, skipSync);
 };
 
 // Flip card to back (first part of Vaal ritual)
 // Handle Vaal outcome - instant result
-const handleVaalOutcome = async (outcome: VaalOutcome) => {
+// serverNewCard is provided when using server-side outcome calculation (for transforms)
+const handleVaalOutcome = async (
+  outcome: VaalOutcome,
+  serverNewCard?: import('~/types/vaalOutcome').VaalOutcomeNewCard
+) => {
+  // Determine if we should skip sync (server already applied changes)
+  const skipSync = shouldUseServerOutcome.value;
   // IMPORTANT: Capture card data BEFORE animation starts
   // After animation, displayCard may have changed (foil, transform, etc.)
   const cardBeforeAnimation = displayCard.value;
@@ -1405,51 +1473,64 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   let resultCardId: string | undefined;
 
   // Execute the outcome animation first (for outcomes that produce a result)
+  // Outcome options for server-side mode
+  const outcomeOptions = {
+    skipSync,
+    serverNewCard,
+  };
+
   switch (outcome) {
     case "nothing":
       console.log('[Altar] handleVaalOutcome: Executing nothing outcome');
-      await executeNothing();
-      // Sync: consume vaalOrb only
-      if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
+      await executeNothing(outcomeOptions);
+      // Sync: consume vaalOrb only (skip if server already did it)
+      if (!skipSync && loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
         console.log('[Altar] handleVaalOutcome: Calling handleSyncRequired for nothing outcome');
         const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
         await handleSyncRequired(updates, -1, 'nothing'); // Consume 1 vaalOrb
         console.log('[Altar] handleVaalOutcome: Nothing outcome sync completed');
+      } else if (skipSync) {
+        console.log('[Altar] handleVaalOutcome: Skipping sync for nothing (server already applied)');
       }
       break;
 
     case "foil":
       console.log('[Altar] handleVaalOutcome: Executing foil outcome');
-      await executeFoil();
+      await executeFoil(outcomeOptions);
       console.log('[Altar] handleVaalOutcome: Foil outcome completed');
-      // Sync handled by executeFoil via onSyncRequired callback
+      // Sync handled by executeFoil via onSyncRequired callback (or skipped if server mode)
       break;
 
     case "destroyed":
       console.log('[Altar] handleVaalOutcome: Executing destroyed outcome');
-      await destroyCard();
+      await destroyCard(skipSync);
       console.log('[Altar] handleVaalOutcome: Destroyed outcome completed');
-      // Sync handled by cleanupAfterDestruction
+      // Sync handled by cleanupAfterDestruction (or skipped if server mode)
       break;
 
     case "transform":
       console.log('[Altar] handleVaalOutcome: Executing transform outcome');
       // Transform returns the new card - capture it for the replay
-      const transformResult = await executeTransform();
+      // Pass serverNewCard if provided by the Edge Function
+      const transformResult = await executeTransform(outcomeOptions);
       if (transformResult.newCard) {
         console.log(`[Altar] handleVaalOutcome: Transform completed, new card: ${transformResult.newCard.name}`);
         resultCardId = transformResult.newCard.id;
+      } else if (serverNewCard) {
+        // If server provided the card, use it for resultCardId
+        resultCardId = serverNewCard.id;
+        console.log(`[Altar] handleVaalOutcome: Transform completed (server), new card: ${serverNewCard.name}`);
       } else {
         console.error('[Altar] handleVaalOutcome: Transform failed - no new card returned');
       }
-      // Sync handled by executeTransform via onSyncRequired callback
+      // Sync handled by executeTransform via onSyncRequired callback (or skipped if server mode)
       break;
 
     case "duplicate":
       console.log('[Altar] handleVaalOutcome: Executing duplicate outcome');
-      await executeDuplicate();
+      await executeDuplicate(outcomeOptions);
       console.log('[Altar] handleVaalOutcome: Duplicate outcome completed');
-      // Sync handled by executeDuplicate via onSyncRequired callback
+      // Sync handled by executeDuplicate via onSyncRequired callback (or skipped if server mode)
       break;
   }
 
@@ -1900,6 +1981,9 @@ const endDragOrb = async () => {
 
   // If orb was dropped on card, consume it and apply Vaal outcome
   if (isOrbOverCard.value && vaalOrbs.value > 0) {
+    const card = displayCard.value;
+    const cardTier = card?.tier || 'T0';
+
     // Consume animation - orb shrinks and disappears with dramatic effect
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
@@ -1913,22 +1997,66 @@ const endDragOrb = async () => {
       });
     }
 
-    // NOTE: Don't decrement vaalOrbs here - it's handled by handleSyncRequired
-    // via vaalOrbsDelta in each outcome (duplicate, destroyed, transform, etc.)
-
     // Remove the dragged orb from physics world
-    // This will spawn a new orb from reserve if available (via removeOrb logic)
     if (currentDragIndex !== null) {
       physicsRemoveOrb(currentDragIndex);
     }
 
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
-    resetHeartbeatEffects(); // Reset heartbeat and isOrbOverCard
+    resetHeartbeatEffects();
 
-    // Apply Vaal outcome instantly
-    const outcome = simulateVaalOutcome();
-    await handleVaalOutcome(outcome);
+    // ========================================================================
+    // NEW FLOW: Server-side vs Client-side outcome calculation
+    // ========================================================================
+    if (shouldUseServerOutcome.value) {
+      // PRODUCTION MODE: Use Edge Function for server-side outcome
+      console.log('[Altar] Using server-side outcome calculation');
+
+      // Start processing animation while waiting for server
+      await startVaalProcessing(cardTier);
+
+      // Call the Edge Function
+      const result = await callVaalOutcomeEdgeFunction();
+
+      if (result.success && result.outcome) {
+        // Update local state with server-validated values
+        if (typeof result.vaalOrbs === 'number') {
+          vaalOrbs.value = result.vaalOrbs;
+        }
+        if (result.atlasInfluenceConsumed) {
+          atlasInfluenceBuff.value = null;
+        }
+
+        // End processing animation
+        await endVaalProcessing(cardTier);
+
+        // Play the outcome animation with server-provided data
+        await handleVaalOutcome(result.outcome, result.newCard);
+      } else {
+        // Handle error - respawn orb and cancel processing
+        console.error('[Altar] Edge Function failed:', result.error);
+        await cancelVaalProcessing();
+
+        // Cancel recording if active
+        if (isRecording.value) {
+          cancelRecording();
+        }
+
+        // Respawn the orb
+        if (currentDragIndex !== null) {
+          physicsRespawnFromTop(currentDragIndex);
+        }
+
+        // Show error toast (you may want to add a toast notification here)
+        console.error(`[Altar] Vaal outcome failed: ${result.error}`);
+      }
+    } else {
+      // MOCK/DEBUG MODE: Use client-side outcome calculation
+      console.log('[Altar] Using client-side outcome calculation (mock/debug mode)');
+      const outcome = simulateVaalOutcomeLocal();
+      await handleVaalOutcome(outcome);
+    }
   } else {
     // Cancel recording if orb not dropped on card
     if (isRecording.value) {
