@@ -6,7 +6,28 @@
  */
 
 /** Types d'actions disponibles dans un batch event */
-export type BatchActionType = 'buff_bow' | 'nerf_melee' | 'give_card' | 'destroy_card' | 'convert_to_foil'
+export type BatchActionType =
+  // Buffs par classe
+  | 'buff_bow'
+  | 'buff_caster'
+  | 'buff_all'
+  // Nerfs par classe
+  | 'nerf_melee'
+  | 'nerf_caster'
+  | 'nerf_jewelry'
+  // Actions génériques
+  | 'give_random_card'
+  | 'destroy_random'
+  | 'remove_foil'
+  | 'convert_to_foil'
+  // Mécaniques spéciales
+  | 'vaal_roulette'    // 50% brick, 50% foil
+  | 'steal_card'       // Vol entre joueurs
+  | 'duplicate_card'   // Mirror effect
+  | 'random_chaos'     // 33% buff, 33% nerf, 33% rien
+  // Legacy (pour compatibilité)
+  | 'give_card'
+  | 'destroy_card'
 
 /** Messages pour une action (success et échec) */
 export interface BatchActionMessages {

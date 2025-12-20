@@ -9,7 +9,28 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '~/types/database'
 
 // Valid preset IDs - must match bot's VALID_PRESET_IDS
-const VALID_PRESET_IDS = ['patch_notes', 'hotfix', 'league_start']
+const VALID_PRESET_IDS = [
+  // Buffs
+  'bow_meta',
+  'caster_supremacy',
+  'divine_blessing',
+  // Nerfs
+  'melee_funeral',
+  'harvest_nerf',
+  'aura_stacker_rip',
+  // Events spéciaux
+  'vaal_roulette',
+  'mirror_event',
+  'heist_gone_wrong',
+  'steelmage_rip',
+  // League events
+  'league_start',
+  'league_end_fire_sale',
+  'flashback_event',
+  // Memes
+  'path_of_math_drama',
+  'patch_notes',
+]
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()

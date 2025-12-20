@@ -1214,25 +1214,64 @@ interface BatchEventPreset {
   description: string;
 }
 
-const batchEventPresets: BatchEventPreset[] = [
+interface PresetCategory {
+  id: string;
+  label: string;
+  emoji: string;
+  presets: BatchEventPreset[];
+}
+
+const presetCategories: PresetCategory[] = [
   {
-    id: 'patch_notes',
-    label: 'Patch Notes 3.26',
-    emoji: '📜',
-    description: 'Buff bows, nerf melee - The classic GGG experience'
+    id: 'buffs',
+    label: 'Buffs GGG',
+    emoji: '✨',
+    presets: [
+      { id: 'bow_meta', label: 'Bow Meta', emoji: '🏹', description: 'Cadeau habituel pour les bowcucks - arc meta encore cette league' },
+      { id: 'caster_supremacy', label: 'Caster Supremacy', emoji: '🔮', description: 'Les casters dominent le meta - wands et sceptres buffés' },
+      { id: 'divine_blessing', label: 'Divine Blessing', emoji: '✨', description: 'Les dieux de Wraeclast bénissent tous les exilés' },
+    ],
   },
   {
-    id: 'hotfix',
-    label: "Hotfix d'urgence",
-    emoji: '🔧',
-    description: 'Nerf melee uniquement (T3 seulement)'
+    id: 'nerfs',
+    label: 'Nerfs Classiques',
+    emoji: '💀',
+    presets: [
+      { id: 'melee_funeral', label: 'Melee Funeral', emoji: '⚔️', description: 'Le nerf melee traditionnel - RIP Strike skills' },
+      { id: 'harvest_nerf', label: 'Harvest Nerf', emoji: '🌿', description: '"Too deterministic" - remove foils des bijoux et armures' },
+      { id: 'aura_stacker_rip', label: 'Aura Stacker RIP', emoji: '🔊', description: 'Extermination des aura stackers - nerf bijoux' },
+    ],
   },
   {
-    id: 'league_start',
-    label: 'League Start Event',
+    id: 'special',
+    label: 'Events Spéciaux',
+    emoji: '🎲',
+    presets: [
+      { id: 'vaal_roulette', label: 'Vaal Roulette', emoji: '🎰', description: 'Corruption Vaal - 50% brick, 50% foil' },
+      { id: 'mirror_event', label: 'Mirror of Kalandra', emoji: '💎', description: 'Event ultra rare - duplication de cartes' },
+      { id: 'heist_gone_wrong', label: 'Heist Gone Wrong', emoji: '💰', description: 'Le Heist a mal tourné - vol de cartes entre joueurs' },
+      { id: 'steelmage_rip', label: 'Steelmage RIP', emoji: '☠️', description: 'Destruction HC style - priorité aux hauts tiers' },
+    ],
+  },
+  {
+    id: 'league',
+    label: 'League Events',
     emoji: '🎮',
-    description: 'Buff de départ pour tous les joueurs'
-  }
+    presets: [
+      { id: 'league_start', label: 'League Start', emoji: '🎮', description: 'Début de league - cartes gratuites pour tous' },
+      { id: 'league_end_fire_sale', label: 'Fire Sale', emoji: '🔥', description: 'Fin de league - chaos total, effets aléatoires' },
+      { id: 'flashback_event', label: 'Flashback Event', emoji: '⚡', description: 'Tous les mods actifs - buff + carte gratuite' },
+    ],
+  },
+  {
+    id: 'memes',
+    label: 'Memes POE',
+    emoji: '🎭',
+    presets: [
+      { id: 'path_of_math_drama', label: 'Path of Math Drama', emoji: '🎭', description: 'Drama communautaire - vol + nerf foil' },
+      { id: 'patch_notes', label: 'Patch Notes', emoji: '📜', description: 'Le classique GGG - Buff bows, nerf melee' },
+    ],
+  },
 ];
 
 const batchEventDelayMs = ref(2500);
@@ -1574,41 +1613,52 @@ const triggerBatchEvent = async (presetId: string) => {
                       </div>
                     </div>
 
-                    <!-- Batch Event Presets -->
-                    <div class="flex flex-col gap-4">
-                      <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">
-                        Presets disponibles
-                      </label>
+                    <!-- Batch Event Presets by Category -->
+                    <div class="flex flex-col gap-6">
+                      <div
+                        v-for="category in presetCategories"
+                        :key="category.id"
+                        class="flex flex-col gap-3"
+                      >
+                        <!-- Category Header -->
+                        <div class="flex items-center gap-2 pb-2 border-b border-poe-border/30">
+                          <span class="text-xl">{{ category.emoji }}</span>
+                          <span class="font-display text-lg font-bold text-poe-gold">
+                            {{ category.label }}
+                          </span>
+                        </div>
 
-                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div
-                          v-for="preset in batchEventPresets"
-                          :key="preset.id"
-                          class="flex flex-col gap-3 p-4 bg-black/30 border border-poe-border/40 rounded-lg"
-                        >
-                          <div class="flex items-center gap-2">
-                            <span class="text-2xl">{{ preset.emoji }}</span>
-                            <span class="font-display text-lg font-bold text-poe-text">
-                              {{ preset.label }}
-                            </span>
-                          </div>
-                          <p class="font-body text-sm text-poe-text-dim">
-                            {{ preset.description }}
-                          </p>
-                          <RunicButton
-                            size="md"
-                            variant="danger"
-                            :disabled="isTriggeringBatchEvent[preset.id]"
-                            @click="triggerBatchEvent(preset.id)"
-                            class="w-full mt-auto"
+                        <!-- Presets Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <div
+                            v-for="preset in category.presets"
+                            :key="preset.id"
+                            class="flex flex-col gap-2 p-3 bg-black/30 border border-poe-border/40 rounded-lg hover:border-poe-border/60 transition-colors"
                           >
-                            <span v-if="!isTriggeringBatchEvent[preset.id]">
-                              🚀 Lancer
-                            </span>
-                            <span v-else>
-                              En cours...
-                            </span>
-                          </RunicButton>
+                            <div class="flex items-center gap-2">
+                              <span class="text-xl">{{ preset.emoji }}</span>
+                              <span class="font-display text-base font-bold text-poe-text">
+                                {{ preset.label }}
+                              </span>
+                            </div>
+                            <p class="font-body text-xs text-poe-text-dim leading-relaxed flex-1">
+                              {{ preset.description }}
+                            </p>
+                            <RunicButton
+                              size="sm"
+                              variant="danger"
+                              :disabled="isTriggeringBatchEvent[preset.id]"
+                              @click="triggerBatchEvent(preset.id)"
+                              class="w-full mt-auto"
+                            >
+                              <span v-if="!isTriggeringBatchEvent[preset.id]">
+                                🚀 Lancer
+                              </span>
+                              <span v-else class="flex items-center justify-center gap-2">
+                                <span class="animate-spin">⏳</span> En cours...
+                              </span>
+                            </RunicButton>
+                          </div>
                         </div>
                       </div>
                     </div>

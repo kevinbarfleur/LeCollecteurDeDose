@@ -1268,7 +1268,7 @@ async function executeBatchEvent(presetId: string, delayMs: number = 2500, maxUs
   // Process each selected user for each action
   for (const user of selectedUsers) {
     for (const action of preset.actions) {
-      await processUserBatchAction(user, action, preset.delayBetweenEventsMs || delayMs)
+      await processUserBatchAction(user, action, preset.delayBetweenEventsMs || delayMs, selectedUsers)
     }
   }
 
@@ -1286,11 +1286,13 @@ async function executeBatchEvent(presetId: string, delayMs: number = 2500, maxUs
 
 /**
  * Process a single action for a single user in a batch event
+ * @param allUsers - All selected users (needed for steal_card to pick a target)
  */
 async function processUserBatchAction(
   user: BatchEventUser,
   action: BatchEventAction,
-  delayMs: number
+  delayMs: number,
+  allUsers: BatchEventUser[] = []
 ): Promise<void> {
   await sleep(delayMs)
 
@@ -1298,81 +1300,273 @@ async function processUserBatchAction(
   let messageToSend: string = ''
 
   switch (action.type) {
+    // ========================================================================
+    // BUFF ACTIONS
+    // ========================================================================
     case 'buff_bow': {
-      // Check if user has normal bow cards (can be converted to foil)
       if (!user.has_normal_bow_cards) {
-        // No bow cards - send "saved" message
         messageToSend = formatBatchMessage(
           getBatchRandomMessage(action.messages.noCards),
           { username: user.twitch_username }
         )
       } else {
-        // Has bow cards - convert to foil
         const { data, error } = await supabase.rpc('convert_item_class_to_foil', {
           p_user_id: user.user_id,
           p_item_classes: action.itemClasses
         })
-
         if (error) {
           console.error(`[BATCH] Error buffing bow for ${user.twitch_username}:`, error)
-          messageToSend = formatBatchMessage(
-            getBatchRandomMessage(action.messages.noCards),
-            { username: user.twitch_username }
-          )
+          messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
         } else {
           result = data as BatchActionResult
-          if (result?.success) {
-            messageToSend = formatBatchMessage(
-              getBatchRandomMessage(action.messages.success),
-              { username: user.twitch_username, card: result.card_name || 'une carte' }
-            )
-          } else {
-            messageToSend = formatBatchMessage(
-              getBatchRandomMessage(action.messages.noCards),
-              { username: user.twitch_username }
-            )
-          }
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+            { username: user.twitch_username, card: result?.card_name || 'une carte' }
+          )
         }
       }
       break
     }
 
+    case 'buff_caster': {
+      const { data, error } = await supabase.rpc('convert_item_class_to_foil', {
+        p_user_id: user.user_id,
+        p_item_classes: action.itemClasses
+      })
+      if (error) {
+        console.error(`[BATCH] Error buffing caster for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+          { username: user.twitch_username, card: result?.card_name || 'une carte' }
+        )
+      }
+      break
+    }
+
+    case 'buff_all': {
+      const { data, error } = await supabase.rpc('convert_any_card_to_foil', {
+        p_user_id: user.user_id
+      })
+      if (error) {
+        console.error(`[BATCH] Error buffing all for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+          { username: user.twitch_username, card: result?.card_name || 'une carte' }
+        )
+      }
+      break
+    }
+
+    // ========================================================================
+    // NERF ACTIONS
+    // ========================================================================
     case 'nerf_melee': {
-      // Check if user has melee cards
       if (!user.has_melee_cards) {
-        // No melee cards - send "escaped" message
         messageToSend = formatBatchMessage(
           getBatchRandomMessage(action.messages.noCards),
           { username: user.twitch_username }
         )
       } else {
-        // Has melee cards - destroy one
         const { data, error } = await supabase.rpc('destroy_item_class_card', {
           p_user_id: user.user_id,
           p_item_classes: action.itemClasses,
           p_target_tiers: action.targetTiers || ['T2', 'T3']
         })
-
         if (error) {
           console.error(`[BATCH] Error nerfing melee for ${user.twitch_username}:`, error)
-          messageToSend = formatBatchMessage(
-            getBatchRandomMessage(action.messages.noCards),
-            { username: user.twitch_username }
-          )
+          messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
         } else {
           result = data as BatchActionResult
-          if (result?.success) {
-            messageToSend = formatBatchMessage(
-              getBatchRandomMessage(action.messages.success),
-              { username: user.twitch_username, card: result.card_name || 'une carte' }
-            )
-          } else {
-            messageToSend = formatBatchMessage(
-              getBatchRandomMessage(action.messages.noCards),
-              { username: user.twitch_username }
-            )
-          }
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+            { username: user.twitch_username, card: result?.card_name || 'une carte' }
+          )
         }
+      }
+      break
+    }
+
+    case 'nerf_caster':
+    case 'nerf_jewelry': {
+      const { data, error } = await supabase.rpc('destroy_item_class_card', {
+        p_user_id: user.user_id,
+        p_item_classes: action.itemClasses,
+        p_target_tiers: action.targetTiers || ['T2', 'T3']
+      })
+      if (error) {
+        console.error(`[BATCH] Error nerfing for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+          { username: user.twitch_username, card: result?.card_name || 'une carte' }
+        )
+      }
+      break
+    }
+
+    case 'remove_foil': {
+      const { data, error } = await supabase.rpc('remove_item_class_foil', {
+        p_user_id: user.user_id,
+        p_item_classes: action.itemClasses
+      })
+      if (error) {
+        console.error(`[BATCH] Error removing foil for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+          { username: user.twitch_username, card: result?.card_name || 'une carte' }
+        )
+      }
+      break
+    }
+
+    case 'destroy_random': {
+      const { data, error } = await supabase.rpc('destroy_random_card_by_tier', {
+        p_user_id: user.user_id,
+        p_target_tiers: action.targetTiers || ['T0', 'T1', 'T2']
+      })
+      if (error) {
+        console.error(`[BATCH] Error destroying random for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        const tier = (result as any)?.tier || ''
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+          { username: user.twitch_username, card: result?.card_name || 'une carte', tier }
+        )
+      }
+      break
+    }
+
+    // ========================================================================
+    // SPECIAL MECHANICS
+    // ========================================================================
+    case 'vaal_roulette': {
+      const { data, error } = await supabase.rpc('vaal_corruption_roulette', {
+        p_user_id: user.user_id
+      })
+      if (error) {
+        console.error(`[BATCH] Error vaal roulette for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        const outcome = (result as any)?.outcome
+        if (outcome === 'brick') {
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage((action.messages as any).brick || action.messages.success),
+            { username: user.twitch_username, card: result?.card_name || 'une carte' }
+          )
+        } else if (outcome === 'upgrade') {
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage((action.messages as any).upgrade || action.messages.success),
+            { username: user.twitch_username, card: result?.card_name || 'une carte' }
+          )
+        } else {
+          messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+        }
+      }
+      break
+    }
+
+    case 'random_chaos': {
+      const { data, error } = await supabase.rpc('random_chaos_effect', {
+        p_user_id: user.user_id
+      })
+      if (error) {
+        console.error(`[BATCH] Error random chaos for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage((action.messages as any).nothing || ['Le chaos passe...']), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        const outcome = (result as any)?.outcome
+        if (outcome === 'buff') {
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage((action.messages as any).buff || action.messages.success),
+            { username: user.twitch_username, card: result?.card_name || 'une carte' }
+          )
+        } else if (outcome === 'nerf') {
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage((action.messages as any).nerf || action.messages.success),
+            { username: user.twitch_username, card: result?.card_name || 'une carte' }
+          )
+        } else {
+          messageToSend = formatBatchMessage(
+            getBatchRandomMessage((action.messages as any).nothing || ['Le chaos passe...']),
+            { username: user.twitch_username }
+          )
+        }
+      }
+      break
+    }
+
+    case 'duplicate_card': {
+      const { data, error } = await supabase.rpc('duplicate_random_card', {
+        p_user_id: user.user_id
+      })
+      if (error) {
+        console.error(`[BATCH] Error duplicating for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(result?.success ? action.messages.success : action.messages.noCards),
+          { username: user.twitch_username, card: result?.card_name || 'une carte' }
+        )
+      }
+      break
+    }
+
+    case 'steal_card': {
+      // Pick a random target (not the same user)
+      const otherUsers = allUsers.filter(u => u.user_id !== user.user_id)
+      if (otherUsers.length === 0) {
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+        break
+      }
+      const target = otherUsers[Math.floor(Math.random() * otherUsers.length)]
+
+      const { data, error } = await supabase.rpc('steal_random_card', {
+        p_from_user_id: user.user_id,
+        p_to_user_id: target.user_id
+      })
+      if (error) {
+        console.error(`[BATCH] Error stealing for ${user.twitch_username}:`, error)
+        messageToSend = formatBatchMessage(getBatchRandomMessage(action.messages.noCards), { username: user.twitch_username })
+      } else {
+        result = data as BatchActionResult
+        const stealMessages = (action.messages as any).steal || (action.messages as any).success || action.messages.success
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(result?.success ? stealMessages : action.messages.noCards),
+          { username: user.twitch_username, targetUsername: target.twitch_username, card: result?.card_name || 'une carte' }
+        )
+      }
+      break
+    }
+
+    case 'give_random_card': {
+      const { data, error } = await supabase.rpc('give_random_card_to_user', {
+        p_user_id: user.user_id
+      })
+      if (error) {
+        console.error(`[BATCH] Error giving card to ${user.twitch_username}:`, error)
+        messageToSend = `🎮 @${user.twitch_username} n'a pas pu recevoir de carte...`
+      } else {
+        result = data as BatchActionResult
+        const tier = (result as any)?.tier || ''
+        messageToSend = formatBatchMessage(
+          getBatchRandomMessage(action.messages.success),
+          { username: user.twitch_username, card: result?.card_name || 'une carte', tier }
+        )
       }
       break
     }
