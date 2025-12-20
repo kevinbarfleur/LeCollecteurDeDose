@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
-import type { VaalOutcome } from "~/types/vaalOutcome";
+import type { VaalOutcome, VaalOutcomeRequest, VaalOutcomeResponse } from "~/types/vaalOutcome";
 import {
   rollVaalOutcome,
   getShareModalContent,
   getForcedOutcomeOptions,
 } from "~/types/vaalOutcome";
+import { useVaalProcessingAnimation } from "~/composables/useVaalProcessingAnimation";
 import gsap from "gsap";
 import html2canvas from "html2canvas";
 import { useReplayRecorder } from "~/composables/useReplayRecorder";
@@ -274,68 +275,63 @@ const cardOptionsByTier = computed(() => {
 const selectedCardId = ref<string>("");
 const selectedVariation = ref<CardVariation>("standard");
 
-// Track which tier the selection came from (for per-tier selects)
-const selectedTierSelects = reactive<Record<CardTier, string>>({
-  T0: "",
-  T1: "",
-  T2: "",
-  T3: "",
+// Tier tabs UI state
+const selectedTier = ref<CardTier>('T0');
+const selectedCardInTier = ref<string>('');
+
+// Tier tab options for RunicRadio (with counts in label)
+const tierTabOptions = computed(() => {
+  const tiers: CardTier[] = ['T0', 'T1', 'T2', 'T3'];
+  return tiers.map(tier => {
+    const count = cardOptionsByTier.value[tier].length;
+    return {
+      value: tier,
+      label: count > 0 ? `${tier} (${count})` : tier,
+      color: tier.toLowerCase(), // t0, t1, t2, t3 for RunicRadio styling
+    };
+  });
 });
 
-// Handle selection from a specific tier
-const selectFromTier = (tier: CardTier, cardId: string) => {
-  // Clear all other tier selections
-  (Object.keys(selectedTierSelects) as CardTier[]).forEach((t) => {
-    if (t !== tier) {
-      selectedTierSelects[t] = "";
-    }
-  });
+// Card options for the currently selected tier
+const currentTierCardOptions = computed(() => {
+  return cardOptionsByTier.value[selectedTier.value];
+});
 
-  // Update the main selected card
-  selectedCardId.value = cardId;
-  selectedTierSelects[tier] = cardId;
+// Does the current tier have any cards?
+const currentTierHasCards = computed(() => {
+  return currentTierCardOptions.value.length > 0;
+});
+
+// Handle tier tab selection
+const selectTier = (tier: CardTier) => {
+  if (isBlockingInteractions.value) return;
+  if (selectedTier.value !== tier) {
+    selectedCardInTier.value = '';
+    selectedCardId.value = '';
+  }
+  selectedTier.value = tier;
 };
 
-// Watch for changes in tier selects
-watch(
-  () => selectedTierSelects.T0,
-  (val) => { if (val) selectFromTier('T0', val); }
-);
-watch(
-  () => selectedTierSelects.T1,
-  (val) => { if (val) selectFromTier('T1', val); }
-);
-watch(
-  () => selectedTierSelects.T2,
-  (val) => { if (val) selectFromTier('T2', val); }
-);
-watch(
-  () => selectedTierSelects.T3,
-  (val) => { if (val) selectFromTier('T3', val); }
-);
+// Sync selectedCardInTier → selectedCardId
+watch(selectedCardInTier, (cardId) => {
+  if (cardId) {
+    selectedCardId.value = cardId;
+  }
+});
 
 // Watch for collection changes and clear invalid selections
-// This handles cases where:
-// - A card is destroyed by Vaal Orb
-// - A card's tier changes due to transformation
-// - A card is no longer available (consumed all standard copies)
 watch(
   cardOptionsByTier,
   (newOptions) => {
-    // Check each tier select and clear if the card is no longer available
-    (['T0', 'T1', 'T2', 'T3'] as CardTier[]).forEach((tier) => {
-      const currentSelection = selectedTierSelects[tier];
-      if (currentSelection) {
-        const stillAvailable = newOptions[tier].some(opt => opt.value === currentSelection);
-        if (!stillAvailable) {
-          selectedTierSelects[tier] = "";
-          // If this was the active selection, also clear selectedCardId
-          if (selectedCardId.value === currentSelection) {
-            selectedCardId.value = "";
-          }
-        }
+    if (selectedCardInTier.value) {
+      const stillAvailable = newOptions[selectedTier.value].some(
+        opt => opt.value === selectedCardInTier.value
+      );
+      if (!stillAvailable) {
+        selectedCardInTier.value = '';
+        selectedCardId.value = '';
       }
-    });
+    }
   },
   { deep: true }
 );
@@ -362,6 +358,16 @@ const variationOptions = computed(() => {
         : t("altar.variations.standard"),
     count: v.count,
   }));
+});
+
+// Is variant select enabled? (card has multiple variations and not blocking)
+const isVariantSelectEnabled = computed(() => {
+  return selectedCardGroup.value?.hasMultipleVariations && !isBlockingInteractions.value;
+});
+
+// Is remove button enabled?
+const isRemoveButtonEnabled = computed(() => {
+  return isCardOnAltar.value && !isAnimating.value && !isBlockingInteractions.value;
 });
 
 // Get the actual card to display
@@ -490,6 +496,14 @@ const cardFrontRef = ref<HTMLElement | null>(null);
 const cardBackLogoUrl = "/images/vaal-risitas.png";
 const isCardAnimatingIn = ref(false);
 const isCardAnimatingOut = ref(false);
+
+// Processing animation composable (for server-side outcome wait)
+const {
+  isProcessing: isVaalProcessing,
+  startProcessing: startVaalProcessing,
+  endProcessing: endVaalProcessing,
+  cancelProcessing: cancelVaalProcessing,
+} = useVaalProcessingAnimation({ cardRef: altarCardRef });
 
 // Get random entry direction (from outside viewport)
 const getRandomEntryPoint = () => {
@@ -743,8 +757,8 @@ const shareModalContent = computed(() =>
 // Use centralized outcome options
 const forcedOutcomeOptions = computed(() => getForcedOutcomeOptions(t));
 
-// Simulate Vaal outcome (will be server-side later)
-const simulateVaalOutcome = (): VaalOutcome => {
+// Simulate Vaal outcome (client-side, used in mock/debug mode)
+const simulateVaalOutcomeLocal = (): VaalOutcome => {
   // If a forced outcome is set, use it
   if (forcedOutcome.value !== "random") {
     return forcedOutcome.value as VaalOutcome;
@@ -757,6 +771,58 @@ const simulateVaalOutcome = (): VaalOutcome => {
   }
   return rollVaalOutcome(foilBoost);
 };
+
+// Call the Edge Function for server-side outcome calculation (production mode)
+const callVaalOutcomeEdgeFunction = async (): Promise<VaalOutcomeResponse> => {
+  const card = displayCard.value;
+  if (!card) {
+    return { success: false, error: 'No card selected', errorCode: 'CARD_NOT_FOUND' };
+  }
+
+  if (!authUser.value?.displayName) {
+    return { success: false, error: 'User not logged in', errorCode: 'INVALID_USER' };
+  }
+
+  try {
+    const config = useRuntimeConfig();
+    const supabaseUrl = config.public.supabase.url;
+
+    const request: VaalOutcomeRequest = {
+      username: authUser.value.displayName,
+      cardUid: Math.floor(card.uid),
+      cardTier: card.tier as 'T0' | 'T1' | 'T2' | 'T3',
+      isFoil: isCardFoil(card),
+    };
+
+    console.log('[Altar] Calling vaal-outcome Edge Function:', request);
+
+    const response = await $fetch<VaalOutcomeResponse>(`${supabaseUrl}/functions/v1/vaal-outcome`, {
+      method: 'POST',
+      body: request,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('[Altar] Edge Function response:', response);
+    return response;
+  } catch (error) {
+    console.error('[Altar] Edge Function error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+      errorCode: 'INTERNAL_ERROR',
+    };
+  }
+};
+
+// Determine if we should use server-side or client-side outcome calculation
+const shouldUseServerOutcome = computed(() => {
+  // Use client-side in mock mode or when forced outcome is set (debug)
+  if (!isSupabaseData.value) return false;
+  if (forcedOutcome.value !== "random") return false;
+  return true;
+});
 
 // Use shared disintegration effect composable
 const {
@@ -1014,12 +1080,13 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
       }
       selectedCardId.value = newCard.id;
 
-      // Update tier selects to reflect the new card's tier
-      // Reset all tier selects first, then set the new tier
-      resetAllTierSelects();
+      // Update tier tabs to reflect the new card's tier
       // Only set if not foil (foil cards can't be vaaled again)
       if (!newCard.foil) {
-        selectedTierSelects[newCard.tier as CardTier] = newCard.id;
+        selectedTier.value = newCard.tier as CardTier;
+        selectedCardInTier.value = newCard.id;
+      } else {
+        resetAllTierSelects();
       }
 
       // Re-capture snapshot for new card appearance
@@ -1055,7 +1122,7 @@ onMounted(() => {
 
 })
 
-const cleanupAfterDestruction = async (destroyedCardUid: number) => {
+const cleanupAfterDestruction = async (destroyedCardUid: number, skipSync: boolean = false) => {
   console.log(`[Altar] cleanupAfterDestruction: Starting cleanup for card UID ${destroyedCardUid}`);
   const cardIndex = localCollection.value.findIndex(
     (c) => c.uid === destroyedCardUid
@@ -1098,7 +1165,8 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
     });
     
     // Sync with API: remove card (normal: -1 or foil: -1)
-    if (loggedIn.value && authUser.value?.displayName) {
+    // Skip sync if server already applied the changes (Edge Function mode)
+    if (loggedIn.value && authUser.value?.displayName && !skipSync) {
       const baseUid = Math.floor(destroyedCard.uid);
       const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
       
@@ -1229,7 +1297,7 @@ const cleanupAfterDestruction = async (destroyedCardUid: number) => {
   }
 };
 
-const destroyCard = async () => {
+const destroyCard = async (skipSync: boolean = false) => {
   if (!altarCardRef.value || !displayCard.value) {
     console.error('[Altar] destroyCard: altarCardRef or displayCard is null');
     return;
@@ -1265,7 +1333,7 @@ const destroyCard = async () => {
 
   const cardSlot = altarCardRef.value.parentElement;
   if (!cardSlot) {
-    cleanupAfterDestruction(destroyedCardUid);
+    cleanupAfterDestruction(destroyedCardUid, skipSync);
     return;
   }
 
@@ -1372,12 +1440,18 @@ const destroyCard = async () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  cleanupAfterDestruction(destroyedCardUid);
+  cleanupAfterDestruction(destroyedCardUid, skipSync);
 };
 
 // Flip card to back (first part of Vaal ritual)
 // Handle Vaal outcome - instant result
-const handleVaalOutcome = async (outcome: VaalOutcome) => {
+// serverNewCard is provided when using server-side outcome calculation (for transforms)
+const handleVaalOutcome = async (
+  outcome: VaalOutcome,
+  serverNewCard?: import('~/types/vaalOutcome').VaalOutcomeNewCard
+) => {
+  // Determine if we should skip sync (server already applied changes)
+  const skipSync = shouldUseServerOutcome.value;
   // IMPORTANT: Capture card data BEFORE animation starts
   // After animation, displayCard may have changed (foil, transform, etc.)
   const cardBeforeAnimation = displayCard.value;
@@ -1405,51 +1479,64 @@ const handleVaalOutcome = async (outcome: VaalOutcome) => {
   let resultCardId: string | undefined;
 
   // Execute the outcome animation first (for outcomes that produce a result)
+  // Outcome options for server-side mode
+  const outcomeOptions = {
+    skipSync,
+    serverNewCard,
+  };
+
   switch (outcome) {
     case "nothing":
       console.log('[Altar] handleVaalOutcome: Executing nothing outcome');
-      await executeNothing();
-      // Sync: consume vaalOrb only
-      if (loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
+      await executeNothing(outcomeOptions);
+      // Sync: consume vaalOrb only (skip if server already did it)
+      if (!skipSync && loggedIn.value && authUser.value?.displayName && handleSyncRequired) {
         console.log('[Altar] handleVaalOutcome: Calling handleSyncRequired for nothing outcome');
         const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
         await handleSyncRequired(updates, -1, 'nothing'); // Consume 1 vaalOrb
         console.log('[Altar] handleVaalOutcome: Nothing outcome sync completed');
+      } else if (skipSync) {
+        console.log('[Altar] handleVaalOutcome: Skipping sync for nothing (server already applied)');
       }
       break;
 
     case "foil":
       console.log('[Altar] handleVaalOutcome: Executing foil outcome');
-      await executeFoil();
+      await executeFoil(outcomeOptions);
       console.log('[Altar] handleVaalOutcome: Foil outcome completed');
-      // Sync handled by executeFoil via onSyncRequired callback
+      // Sync handled by executeFoil via onSyncRequired callback (or skipped if server mode)
       break;
 
     case "destroyed":
       console.log('[Altar] handleVaalOutcome: Executing destroyed outcome');
-      await destroyCard();
+      await destroyCard(skipSync);
       console.log('[Altar] handleVaalOutcome: Destroyed outcome completed');
-      // Sync handled by cleanupAfterDestruction
+      // Sync handled by cleanupAfterDestruction (or skipped if server mode)
       break;
 
     case "transform":
       console.log('[Altar] handleVaalOutcome: Executing transform outcome');
       // Transform returns the new card - capture it for the replay
-      const transformResult = await executeTransform();
+      // Pass serverNewCard if provided by the Edge Function
+      const transformResult = await executeTransform(outcomeOptions);
       if (transformResult.newCard) {
         console.log(`[Altar] handleVaalOutcome: Transform completed, new card: ${transformResult.newCard.name}`);
         resultCardId = transformResult.newCard.id;
+      } else if (serverNewCard) {
+        // If server provided the card, use it for resultCardId
+        resultCardId = serverNewCard.id;
+        console.log(`[Altar] handleVaalOutcome: Transform completed (server), new card: ${serverNewCard.name}`);
       } else {
         console.error('[Altar] handleVaalOutcome: Transform failed - no new card returned');
       }
-      // Sync handled by executeTransform via onSyncRequired callback
+      // Sync handled by executeTransform via onSyncRequired callback (or skipped if server mode)
       break;
 
     case "duplicate":
       console.log('[Altar] handleVaalOutcome: Executing duplicate outcome');
-      await executeDuplicate();
+      await executeDuplicate(outcomeOptions);
       console.log('[Altar] handleVaalOutcome: Duplicate outcome completed');
-      // Sync handled by executeDuplicate via onSyncRequired callback
+      // Sync handled by executeDuplicate via onSyncRequired callback (or skipped if server mode)
       break;
   }
 
@@ -1507,12 +1594,9 @@ const ejectCard = async () => {
   isCardFlipped.value = false;
 };
 
-// Reset all tier selects
+// Reset card selection
 const resetAllTierSelects = () => {
-  selectedTierSelects.T0 = "";
-  selectedTierSelects.T1 = "";
-  selectedTierSelects.T2 = "";
-  selectedTierSelects.T3 = "";
+  selectedCardInTier.value = '';
 };
 
 // Remove card from altar
@@ -1900,6 +1984,9 @@ const endDragOrb = async () => {
 
   // If orb was dropped on card, consume it and apply Vaal outcome
   if (isOrbOverCard.value && vaalOrbs.value > 0) {
+    const card = displayCard.value;
+    const cardTier = card?.tier || 'T0';
+
     // Consume animation - orb shrinks and disappears with dramatic effect
     if (floatingOrbRef.value) {
       await new Promise<void>((resolve) => {
@@ -1913,22 +2000,66 @@ const endDragOrb = async () => {
       });
     }
 
-    // NOTE: Don't decrement vaalOrbs here - it's handled by handleSyncRequired
-    // via vaalOrbsDelta in each outcome (duplicate, destroyed, transform, etc.)
-
     // Remove the dragged orb from physics world
-    // This will spawn a new orb from reserve if available (via removeOrb logic)
     if (currentDragIndex !== null) {
       physicsRemoveOrb(currentDragIndex);
     }
 
     isDraggingOrb.value = false;
     draggedOrbIndex.value = null;
-    resetHeartbeatEffects(); // Reset heartbeat and isOrbOverCard
+    resetHeartbeatEffects();
 
-    // Apply Vaal outcome instantly
-    const outcome = simulateVaalOutcome();
-    await handleVaalOutcome(outcome);
+    // ========================================================================
+    // NEW FLOW: Server-side vs Client-side outcome calculation
+    // ========================================================================
+    if (shouldUseServerOutcome.value) {
+      // PRODUCTION MODE: Use Edge Function for server-side outcome
+      console.log('[Altar] Using server-side outcome calculation');
+
+      // Start processing animation while waiting for server
+      await startVaalProcessing(cardTier);
+
+      // Call the Edge Function
+      const result = await callVaalOutcomeEdgeFunction();
+
+      if (result.success && result.outcome) {
+        // Update local state with server-validated values
+        if (typeof result.vaalOrbs === 'number') {
+          vaalOrbs.value = result.vaalOrbs;
+        }
+        if (result.atlasInfluenceConsumed) {
+          atlasInfluenceBuff.value = null;
+        }
+
+        // End processing animation
+        await endVaalProcessing(cardTier);
+
+        // Play the outcome animation with server-provided data
+        await handleVaalOutcome(result.outcome, result.newCard);
+      } else {
+        // Handle error - respawn orb and cancel processing
+        console.error('[Altar] Edge Function failed:', result.error);
+        await cancelVaalProcessing();
+
+        // Cancel recording if active
+        if (isRecording.value) {
+          cancelRecording();
+        }
+
+        // Respawn the orb
+        if (currentDragIndex !== null) {
+          physicsRespawnFromTop(currentDragIndex);
+        }
+
+        // Show error toast (you may want to add a toast notification here)
+        console.error(`[Altar] Vaal outcome failed: ${result.error}`);
+      }
+    } else {
+      // MOCK/DEBUG MODE: Use client-side outcome calculation
+      console.log('[Altar] Using client-side outcome calculation (mock/debug mode)');
+      const outcome = simulateVaalOutcomeLocal();
+      await handleVaalOutcome(outcome);
+    }
   } else {
     // Cancel recording if orb not dropped on card
     if (isRecording.value) {
@@ -2083,93 +2214,54 @@ const endDragOrb = async () => {
             attached
           />
           <RunicBox padding="md" attached>
-            <div class="selector-grid">
-              <!-- Tier selects -->
-              <div class="selector-tiers">
-                <!-- T0 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t0">T0</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T0"
-                    :options="cardOptionsByTier.T0"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T0.length === 0"
-                  />
-                </div>
-
-                <!-- T1 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t1">T1</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T1"
-                    :options="cardOptionsByTier.T1"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T1.length === 0"
-                  />
-                </div>
-
-                <!-- T2 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t2">T2</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T2"
-                    :options="cardOptionsByTier.T2"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T2.length === 0"
-                  />
-                </div>
-
-                <!-- T3 Select -->
-                <div class="selector-tier">
-                  <label class="selector-label selector-label--t3">T3</label>
-                  <RunicSelect
-                    v-model="selectedTierSelects.T3"
-                    :options="cardOptionsByTier.T3"
-                    placeholder="—"
-                    size="sm"
-                    :searchable="true"
-                    :disabled="isBlockingInteractions || cardOptionsByTier.T3.length === 0"
-                  />
-                </div>
-              </div>
-
-              <!-- Variation selection (if multiple) -->
-              <div
-                v-if="selectedCardGroup?.hasMultipleVariations"
-                class="selector-field selector-field--variant"
-              >
-                <label class="selector-label">{{
-                  t("altar.selector.variant")
-                }}</label>
-                <RunicSelect
-                  v-model="selectedVariation"
-                  :options="variationOptions"
-                  :placeholder="t('altar.selector.chooseVariant')"
+            <div class="selector-container">
+              <!-- Tier Tabs using RunicRadio -->
+              <div class="tier-selector">
+                <RunicRadio
+                  v-model="selectedTier"
+                  :options="tierTabOptions"
                   size="sm"
                   :disabled="isBlockingInteractions"
                 />
               </div>
 
-              <!-- Remove card button -->
-              <div
-                v-if="isCardOnAltar && !isAnimating"
-                class="selector-field selector-field--action"
-              >
-                <RunicButton
-                  size="sm"
-                  rune-left="✕"
-                  rune-right="✕"
-                  :disabled="isBlockingInteractions"
-                  @click="removeCardFromAltar"
-                >
-                  {{ t("altar.selector.remove") }}
-                </RunicButton>
+              <!-- Controls Row -->
+              <div class="selector-controls">
+                <!-- Card Selection Dropdown -->
+                <div class="selector-field selector-field--card">
+                  <RunicSelect
+                    v-model="selectedCardInTier"
+                    :options="currentTierCardOptions"
+                    :placeholder="t('altar.selector.selectCard')"
+                    size="sm"
+                    :searchable="true"
+                    :disabled="isBlockingInteractions || !currentTierHasCards"
+                  />
+                </div>
+
+                <!-- Variant Selection (always visible, disabled when not applicable) -->
+                <div class="selector-field selector-field--variant">
+                  <RunicSelect
+                    v-model="selectedVariation"
+                    :options="variationOptions"
+                    :placeholder="t('altar.variations.standard')"
+                    size="sm"
+                    :disabled="!isVariantSelectEnabled"
+                  />
+                </div>
+
+                <!-- Remove Button (always visible, disabled when not applicable) -->
+                <div class="selector-field selector-field--action">
+                  <RunicButton
+                    size="sm"
+                    rune-left="✕"
+                    rune-right="✕"
+                    :disabled="!isRemoveButtonEnabled"
+                    @click="removeCardFromAltar"
+                  >
+                    {{ t("altar.selector.remove") }}
+                  </RunicButton>
+                </div>
               </div>
             </div>
           </RunicBox>
@@ -2558,7 +2650,7 @@ const endDragOrb = async () => {
           </Transition>
         </Teleport>
 
-        <!-- Share Replay Panel - Slides up from bottom -->
+        <!-- Share Replay Panel - Slides in from left -->
         <Teleport to="body">
           <Transition name="share-slide">
             <div
@@ -2723,121 +2815,98 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   CARD SELECTOR SECTION
+   CARD SELECTOR SECTION - Tier Tabs + Controls
    ========================================== */
 .altar-selector-section {
   margin-bottom: 0.5rem;
 }
 
-.selector-grid {
+.selector-container {
+  width: 100%;
+}
+
+/* Tier Selector using RunicRadio */
+.tier-selector {
+  margin-bottom: 0.75rem;
+}
+
+.tier-selector :deep(.runic-radio) {
+  width: 100%;
+}
+
+.tier-selector :deep(.runic-radio__groove) {
+  width: 100%;
+}
+
+.tier-selector :deep(.runic-radio__option) {
+  flex: 1;
+}
+
+/* Controls Row */
+.selector-controls {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
   width: 100%;
 }
 
-/* Container for tier selects - takes all available space */
-.selector-tiers {
-  display: flex;
-  gap: 0.5rem;
+.selector-field--card {
   flex: 1 1 0%;
   min-width: 0;
-}
-
-/* Individual tier select - equal width distribution */
-.selector-tier {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1 1 0%;
-  min-width: 0;
-}
-
-/* Variant field when present */
-.selector-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 0 0 auto;
 }
 
 .selector-field--variant {
-  flex: 0 0 100px;
-  min-width: 80px;
+  flex: 0 0 220px;
 }
 
-/* Action button - fixed width */
 .selector-field--action {
   flex: 0 0 auto;
-  align-self: flex-end;
 }
 
-/* Responsive: stack on small screens */
+/* Mobile */
 @media (max-width: 640px) {
-  .selector-grid {
+  .tier-tabs {
+    gap: 0.125rem;
+  }
+
+  .tier-tab {
+    padding: 0.375rem 0.25rem;
+    font-size: 0.75rem;
+    min-height: 34px;
+  }
+
+  .tier-tab__badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.5625rem;
+  }
+
+  .selector-controls {
     flex-wrap: wrap;
   }
 
-  .selector-tiers {
+  .selector-field--card {
     flex: 1 1 100%;
-    flex-wrap: wrap;
-  }
-
-  .selector-tier {
-    flex: 1 1 calc(50% - 0.25rem);
-    min-width: calc(50% - 0.25rem);
+    order: 1;
+    margin-bottom: 0.375rem;
   }
 
   .selector-field--variant {
     flex: 1 1 calc(50% - 0.25rem);
+    order: 2;
   }
 
   .selector-field--action {
     flex: 0 0 auto;
+    order: 3;
   }
 }
 
 @media (max-width: 400px) {
-  .selector-tier {
-    flex: 1 1 100%;
-  }
-
-  .selector-field--variant {
-    flex: 1 1 100%;
-  }
-
+  .selector-field--variant,
   .selector-field--action {
-    width: 100%;
+    flex: 1 1 100%;
   }
-}
-
-.selector-label {
-  font-family: "Cinzel", serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(140, 130, 120, 0.8);
-}
-
-/* Tier-specific label colors */
-.selector-label--t0 {
-  color: var(--color-tier-t0, #e6b422);
-  text-shadow: 0 0 6px rgba(230, 180, 34, 0.3);
-}
-
-.selector-label--t1 {
-  color: var(--color-tier-t1, #a855f7);
-  text-shadow: 0 0 6px rgba(168, 85, 247, 0.3);
-}
-
-.selector-label--t2 {
-  color: var(--color-tier-t2, #3b82f6);
-  text-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
-}
-
-.selector-label--t3 {
-  color: var(--color-tier-t3, rgba(180, 170, 160, 0.9));
 }
 
 /* ==========================================
@@ -4059,22 +4128,20 @@ const endDragOrb = async () => {
 }
 
 /* ==========================================
-   SHARE PANEL - Notification banner style
+   SHARE PANEL - Bottom-left notification style
    ========================================== */
 .share-panel-container {
   position: fixed;
   bottom: 1.5rem;
-  left: 0;
-  right: 0;
+  left: 1.5rem;
   z-index: 10000;
-  padding: 0 1rem;
   pointer-events: none;
 }
 
 .share-panel {
   pointer-events: auto;
-  max-width: 400px;
-  margin: 0 auto;
+  max-width: 320px;
+  min-width: 280px;
   position: relative;
 
   /* Dark runic background */
@@ -4118,7 +4185,7 @@ const endDragOrb = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 1rem;
+  padding: 0.625rem 0.875rem;
   border-bottom: 1px solid rgba(60, 55, 50, 0.25);
 }
 
@@ -4129,14 +4196,14 @@ const endDragOrb = async () => {
 }
 
 .share-panel__icon {
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .share-panel__title {
   font-family: "Cinzel", serif;
-  font-size: 1.0625rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text);
   margin: 0;
@@ -4167,28 +4234,29 @@ const endDragOrb = async () => {
 
 .share-panel__text {
   color: rgba(180, 170, 160, 0.85);
-  font-size: 1rem;
+  font-size: 0.8125rem;
   line-height: 1.4;
   margin: 0;
-  padding: 0.75rem 1rem 0;
+  padding: 0.5rem 0.875rem 0;
 }
 
 .share-panel__url {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.375rem;
   align-items: stretch;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.875rem;
 }
 
 .share-panel__input {
   flex: 1;
+  min-width: 0;
   background: rgba(10, 10, 12, 0.6);
   border: 1px solid rgba(50, 48, 45, 0.5);
   border-radius: 2px;
-  padding: 0.5rem 0.625rem;
+  padding: 0.375rem 0.5rem;
   color: var(--color-text);
   font-family: monospace;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -4224,7 +4292,7 @@ const endDragOrb = async () => {
 }
 
 .share-panel__actions {
-  padding: 0.75rem 1rem 1rem;
+  padding: 0.5rem 0.875rem 0.75rem;
   display: flex;
   justify-content: center;
 }
@@ -4235,12 +4303,12 @@ const endDragOrb = async () => {
 .share-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
   font-family: "Cinzel", serif;
-  font-size: 0.875rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: none;
   border-radius: 2px;
@@ -4443,21 +4511,21 @@ const endDragOrb = async () => {
   font-size: 1rem;
 }
 
-/* Share Panel Slide Animation */
+/* Share Panel Slide Animation - slides in from left */
 .share-slide-enter-active,
 .share-slide-leave-active {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
 }
 
 .share-slide-enter-from,
 .share-slide-leave-to {
-  transform: translateY(100%);
+  transform: translateX(-120%);
   opacity: 0;
 }
 
 .share-slide-enter-to,
 .share-slide-leave-from {
-  transform: translateY(0);
+  transform: translateX(0);
   opacity: 1;
 }
 

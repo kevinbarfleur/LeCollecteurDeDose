@@ -1494,9 +1494,259 @@ body.no-scroll-during-drag {
     transparent 100%
   );
   border-radius: 50%;
-  box-shadow: 
+  box-shadow:
     0 0 6px rgba(255, 100, 80, 0.8),
     0 0 12px rgba(200, 50, 50, 0.4);
   pointer-events: none;
 }
 
+/* ==========================================
+   VAAL PROCESSING ANIMATION (CARD)
+   Used during Edge Function call to mask latency
+   Applied to CARD, not altar - completely separate
+   ========================================== */
+
+.vaal-processing {
+  position: absolute;
+  inset: -60px;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.vaal-processing--active {
+  opacity: 1;
+}
+
+.vaal-processing__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(200, 50, 50, 0.5) 0%,
+    rgba(150, 30, 30, 0.3) 30%,
+    transparent 60%
+  );
+  filter: blur(20px);
+  animation: vaalProcessingGlowPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes vaalProcessingGlowPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+.vaal-processing__rim {
+  position: absolute;
+  inset: 50px;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow:
+    0 0 20px rgba(200, 50, 50, 0.6),
+    0 0 40px rgba(180, 40, 40, 0.4),
+    0 0 60px rgba(150, 30, 30, 0.2),
+    inset 0 0 20px rgba(0, 0, 0, 0.3);
+  animation: vaalProcessingRimPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes vaalProcessingRimPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(200, 50, 50, 0.6),
+      0 0 40px rgba(180, 40, 40, 0.4),
+      0 0 60px rgba(150, 30, 30, 0.2),
+      inset 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(220, 60, 60, 0.8),
+      0 0 50px rgba(200, 50, 50, 0.5),
+      0 0 80px rgba(180, 40, 40, 0.3),
+      inset 0 0 25px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.vaal-processing__rays {
+  position: absolute;
+  inset: -40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.vaal-processing__ray {
+  position: absolute;
+  width: 2px;
+  height: 100px;
+  transform-origin: center bottom;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-100px);
+  opacity: 0.8;
+  animation:
+    vaalProcessingRayFlicker 0.15s ease-in-out infinite,
+    vaalProcessingRayPulse 0.6s ease-in-out infinite;
+  animation-delay: var(--ray-delay, 0s);
+}
+
+.vaal-processing__ray::before,
+.vaal-processing__ray::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0;
+}
+
+.vaal-processing__ray::before {
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(
+    to top,
+    rgba(255, 80, 80, 1) 0%,
+    rgba(255, 150, 150, 0.9) 15%,
+    rgba(200, 50, 50, 0.4) 50%,
+    transparent 85%
+  );
+  filter: blur(1px);
+}
+
+.vaal-processing__ray::after {
+  width: 20px;
+  height: 90%;
+  background: linear-gradient(
+    to top,
+    rgba(255, 60, 60, 0.8) 0%,
+    rgba(200, 40, 40, 0.5) 30%,
+    rgba(150, 20, 20, 0.2) 60%,
+    transparent 85%
+  );
+  filter: blur(8px);
+  opacity: 0.9;
+}
+
+.vaal-processing__ray--large {
+  height: 110px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-105px);
+}
+.vaal-processing__ray--large::before { width: 4px; }
+.vaal-processing__ray--large::after { width: 24px; }
+
+.vaal-processing__ray--medium {
+  height: 85px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-95px);
+}
+
+.vaal-processing__ray--small {
+  height: 60px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-90px);
+}
+.vaal-processing__ray--small::before { width: 2px; }
+.vaal-processing__ray--small::after { width: 12px; opacity: 0.6; }
+
+.vaal-processing__ray--tiny {
+  height: 40px;
+  transform: rotate(var(--ray-angle, 0deg)) translateY(-85px);
+}
+.vaal-processing__ray--tiny::before { width: 1px; filter: blur(0.5px); }
+.vaal-processing__ray--tiny::after { width: 8px; opacity: 0.4; filter: blur(4px); }
+
+@keyframes vaalProcessingRayFlicker {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  25% {
+    filter: brightness(1.15);
+  }
+  75% {
+    filter: brightness(0.9);
+  }
+}
+
+@keyframes vaalProcessingRayPulse {
+  0%, 100% {
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-100px) scaleY(0.9) scaleX(1);
+  }
+  30% {
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-108px) scaleY(1.2) scaleX(1.3);
+  }
+  60% {
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-102px) scaleY(1.05) scaleX(0.9);
+  }
+}
+
+.vaal-processing__particles {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.vaal-processing__particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 100, 80, 1) 0%,
+    rgba(200, 50, 50, 0.8) 40%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  box-shadow:
+    0 0 6px rgba(255, 100, 80, 0.8),
+    0 0 12px rgba(200, 50, 50, 0.4);
+  pointer-events: none;
+}
+
+.vaal-processing--flash .vaal-processing__glow {
+  animation: vaalProcessingFlash 0.3s ease-out forwards;
+}
+
+.vaal-processing--flash .vaal-processing__rim {
+  animation: vaalProcessingFlash 0.3s ease-out forwards;
+}
+
+.vaal-processing--flash .vaal-processing__ray {
+  animation: vaalProcessingRayFlash 0.3s ease-out forwards;
+}
+
+@keyframes vaalProcessingFlash {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.2);
+    filter: brightness(1.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes vaalProcessingRayFlash {
+  0% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+    filter: brightness(2);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--ray-angle, 0deg)) translateY(-130px) scaleY(1.5);
+  }
+}
