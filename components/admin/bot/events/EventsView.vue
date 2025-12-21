@@ -59,21 +59,16 @@ const savingMessage = ref(false)
 
 // Fetch event action messages
 const fetchEventMessages = async () => {
-  console.log('[EventsView] Starting fetchEventMessages...')
   loadingMessages.value = true
   try {
     const response = await $fetch<{ ok: boolean; messages: EventMessage[] }>('/api/admin/bot-messages', {
       query: { category: 'event' },
     })
-    console.log('[EventsView] API Response:', response)
-    console.log('[EventsView] Messages count:', response.messages?.length || 0)
     eventMessages.value = response.messages || []
-    console.log('[EventsView] eventMessages.value set to:', eventMessages.value.length, 'items')
   } catch (err) {
-    console.error('[EventsView] Failed to fetch event messages:', err)
+    console.error('Failed to fetch event messages:', err)
   } finally {
     loadingMessages.value = false
-    console.log('[EventsView] loadingMessages set to false')
   }
 }
 
@@ -86,7 +81,6 @@ const messagesByEvent = computed(() => {
     }
     grouped[msg.item_key].push(msg)
   }
-  console.log('[EventsView] messagesByEvent computed:', Object.keys(grouped).length, 'events')
   return grouped
 })
 
@@ -177,7 +171,6 @@ const removeMessageVariant = (index: number) => {
 
 // Load messages on mount
 onMounted(() => {
-  console.log('[EventsView] Component mounted, calling fetchEventMessages...')
   fetchEventMessages()
 })
 
