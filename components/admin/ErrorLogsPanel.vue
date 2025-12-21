@@ -243,14 +243,15 @@ const formatContext = (context: Record<string, unknown>): string => {
             </div>
             <div class="error-log-entry__header-right">
               <span class="error-log-entry__time">{{ formatRelativeTime(log.created_at) }}</span>
-              <button
+              <RunicButton
                 v-if="!log.resolved"
-                @click="handleMarkResolved(log.id)"
-                class="error-log-entry__resolve-btn"
+                size="xs"
+                variant="ghost"
                 title="Marquer comme résolu"
+                @click="handleMarkResolved(log.id)"
               >
                 ✓
-              </button>
+              </RunicButton>
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 /**
- * Admin API: Update Bot Configuration
- * 
- * Updates bot configuration settings in bot_config table
+ * Admin API: Update Bot Message
+ *
+ * Updates a bot message in bot_messages table
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -10,7 +10,7 @@ import type { Database } from '~/types/database'
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const body = await readBody(event)
-  const { key, value, description } = body
+  const { id, messages, description } = body
 
   // Verify user session
   const { user } = await requireUserSession(event)
@@ -35,20 +35,30 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Forbidden: Admin access required' })
   }
 
-  if (!key || typeof key !== 'string') {
-    throw createError({ statusCode: 400, message: 'Key is required' })
+  if (!id || typeof id !== 'string') {
+    throw createError({ statusCode: 400, message: 'Message ID is required' })
   }
 
-  if (value === undefined || value === null) {
-    throw createError({ statusCode: 400, message: 'Value is required' })
+  if (!messages || !Array.isArray(messages)) {
+    throw createError({ statusCode: 400, message: 'Messages array is required' })
+  }
+
+  // Validate messages are non-empty strings
+  if (messages.length === 0) {
+    throw createError({ statusCode: 400, message: 'At least one message is required' })
+  }
+
+  for (const msg of messages) {
+    if (typeof msg !== 'string' || msg.trim() === '') {
+      throw createError({ statusCode: 400, message: 'All messages must be non-empty strings' })
+    }
   }
 
   try {
-    // Update or insert config value
-    const updateData: { key: string; value: string; description?: string | null; updated_at: string } = {
-      key,
-      value: String(value),
-      updated_at: new Date().toISOString()
+    // Update the message
+    const updateData: any = {
+      messages,
+      updated_at: new Date().toISOString(),
     }
 
     if (description !== undefined) {
@@ -56,31 +66,37 @@ export default defineEventHandler(async (event) => {
     }
 
     const { data, error } = await supabase
-      .from('bot_config')
-      .upsert(updateData, { onConflict: 'key' })
+      .from('bot_messages')
+      .update(updateData)
+      .eq('id', id)
       .select()
       .single()
 
     if (error) {
       throw createError({
         statusCode: 500,
-        message: `Failed to update config: ${error.message}`
+        message: `Failed to update message: ${error.message}`,
+      })
+    }
+
+    if (!data) {
+      throw createError({
+        statusCode: 404,
+        message: `Message not found: ${id}`,
       })
     }
 
     return {
       ok: true,
-      key,
-      value: String(value),
-      message: `Configuration ${key} mise à jour avec succès`
+      message: data,
     }
   } catch (error: any) {
     if (error.statusCode) {
       throw error
     }
-    throw createError({ 
-      statusCode: 500, 
-      message: error.message || 'Internal server error' 
+    throw createError({
+      statusCode: 500,
+      message: error.message || 'Internal server error',
     })
   }
 })

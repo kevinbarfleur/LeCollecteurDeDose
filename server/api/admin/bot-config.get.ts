@@ -34,33 +34,28 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Get all config using the function
-    const { data: configData, error: configError } = await supabase.rpc('get_all_bot_config')
-
-    if (configError) {
-      throw createError({ 
-        statusCode: 500, 
-        message: `Failed to fetch config: ${configError.message}` 
-      })
-    }
-
-    // Also get full records with descriptions
-    const { data: fullConfig, error: fullError } = await supabase
+    // Get all config from bot_config table
+    const { data: fullConfig, error: configError } = await supabase
       .from('bot_config')
       .select('key, value, description, updated_at')
       .order('key')
 
-    if (fullError) {
-      // Fallback to just the values if we can't get full records
-      return {
-        ok: true,
-        config: configData || {}
-      }
+    if (configError) {
+      throw createError({
+        statusCode: 500,
+        message: `Failed to fetch config: ${configError.message}`
+      })
+    }
+
+    // Convert to key-value object for easy consumption
+    const config: Record<string, string> = {}
+    for (const item of fullConfig || []) {
+      config[item.key] = item.value
     }
 
     return {
       ok: true,
-      config: configData || {},
+      config,
       fullConfig: fullConfig || []
     }
   } catch (error: any) {

@@ -504,6 +504,135 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_config: {
+        Row: {
+          key: string
+          value: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          value: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          key?: string
+          value?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bot_messages: {
+        Row: {
+          id: string
+          category: string
+          item_key: string
+          message_type: string
+          messages: string[]
+          description: string | null
+          variables: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          category: string
+          item_key: string
+          message_type: string
+          messages?: string[]
+          description?: string | null
+          variables?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          item_key?: string
+          message_type?: string
+          messages?: string[]
+          description?: string | null
+          variables?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      batch_event_presets: {
+        Row: {
+          id: string
+          category: string
+          display_name: string
+          emoji: string
+          description: string | null
+          announcement: string
+          completion_message: string
+          delay_between_events_ms: number
+          actions: Json
+          is_enabled: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          category: string
+          display_name: string
+          emoji?: string
+          description?: string | null
+          announcement: string
+          completion_message: string
+          delay_between_events_ms?: number
+          actions?: Json
+          is_enabled?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          display_name?: string
+          emoji?: string
+          description?: string | null
+          announcement?: string
+          completion_message?: string
+          delay_between_events_ms?: number
+          actions?: Json
+          is_enabled?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      batch_event_categories: {
+        Row: {
+          id: string
+          label: string
+          emoji: string
+          sort_order: number
+        }
+        Insert: {
+          id: string
+          label: string
+          emoji?: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          label?: string
+          emoji?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -665,4 +794,17 @@ export interface DevTestModeSetting {
 // Ladder and stats types
 export type LadderPlayerRow = Database['public']['Functions']['get_ladder_stats']['Returns'][number]
 export type LadderGlobalStatsRow = Database['public']['Functions']['get_ladder_global_stats']['Returns'][number]
+
+// Bot configuration types
+export type BotConfig = Database['public']['Tables']['bot_config']['Row']
+export type BotConfigInsert = Database['public']['Tables']['bot_config']['Insert']
+
+export type BotMessage = Database['public']['Tables']['bot_messages']['Row']
+export type BotMessageInsert = Database['public']['Tables']['bot_messages']['Insert']
+
+export type BatchEventPreset = Database['public']['Tables']['batch_event_presets']['Row']
+export type BatchEventPresetInsert = Database['public']['Tables']['batch_event_presets']['Insert']
+
+export type BatchEventCategory = Database['public']['Tables']['batch_event_categories']['Row']
+export type BatchEventCategoryInsert = Database['public']['Tables']['batch_event_categories']['Insert']
 

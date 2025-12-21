@@ -98,6 +98,35 @@ export default defineNuxtConfig({
         path: '~/components/ui',
         pathPrefix: false,
       },
+      // Admin Bot components - each subfolder registered for simple names
+      {
+        path: '~/components/admin/bot',
+        pathPrefix: false,
+      },
+      {
+        path: '~/components/admin/bot/overview',
+        pathPrefix: false,
+      },
+      {
+        path: '~/components/admin/bot/commands',
+        pathPrefix: false,
+      },
+      {
+        path: '~/components/admin/bot/triggers',
+        pathPrefix: false,
+      },
+      {
+        path: '~/components/admin/bot/events',
+        pathPrefix: false,
+      },
+      {
+        path: '~/components/admin/bot/settings',
+        pathPrefix: false,
+      },
+      {
+        path: '~/components/admin/form',
+        pathPrefix: false,
+      },
       '~/components'
     ]
   }

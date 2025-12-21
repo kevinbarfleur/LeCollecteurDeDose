@@ -4,7 +4,7 @@ interface Props {
   href?: string;
   external?: boolean;
   variant?: "primary" | "secondary" | "ghost" | "twitch" | "youtube" | "danger";
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   icon?:
     | "twitch"
     | "youtube"
@@ -17,7 +17,9 @@ interface Props {
     | "settings"
     | "close"
     | "record"
-    | "play";
+    | "play"
+    | "edit";
+  iconOnly?: boolean;
   runeLeft?: string;
   runeRight?: string;
   disabled?: boolean;
@@ -27,6 +29,7 @@ const props = withDefaults(defineProps<Props>(), {
   variant: "primary",
   size: "md",
   external: true,
+  iconOnly: false,
   runeLeft: "◆",
   runeRight: "◆",
   disabled: false,
@@ -71,6 +74,7 @@ const handleClick = (event: MouseEvent) => {
       `runic-button--${size}`,
       { 'runic-button--disabled': disabled },
       { 'runic-button--has-icon': icon },
+      { 'runic-button--icon-only': iconOnly },
     ]"
     @click="handleClick"
   >
@@ -228,6 +232,20 @@ const handleClick = (event: MouseEvent) => {
     >
       <polygon points="6 4 20 12 6 20 6 4" />
     </svg>
+    <svg
+      v-else-if="icon === 'edit'"
+      class="runic-button__icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+      />
+    </svg>
 
     <!-- Left Rune (only if no icon) -->
     <span
@@ -237,8 +255,8 @@ const handleClick = (event: MouseEvent) => {
       {{ runeLeft }}
     </span>
 
-    <!-- Text -->
-    <span class="runic-button__text">
+    <!-- Text (hidden when iconOnly) -->
+    <span v-if="!iconOnly" class="runic-button__text">
       <slot />
     </span>
 
@@ -279,6 +297,21 @@ const handleClick = (event: MouseEvent) => {
 /* ==========================================
    SIZES
    ========================================== */
+.runic-button--xs {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  gap: 0.375rem;
+}
+
+.runic-button--xs::before {
+  inset: 2px;
+}
+
+/* Hide runes for xs size - too small */
+.runic-button--xs .runic-button__rune {
+  display: none;
+}
+
 .runic-button--sm {
   padding: 0.625rem 1.25rem;
   font-size: 0.875rem;
@@ -518,6 +551,11 @@ const handleClick = (event: MouseEvent) => {
   transition: transform 0.3s ease;
 }
 
+.runic-button--xs .runic-button__icon {
+  width: 12px;
+  height: 12px;
+}
+
 .runic-button--sm .runic-button__icon {
   width: 14px;
   height: 14px;
@@ -532,8 +570,38 @@ const handleClick = (event: MouseEvent) => {
   gap: 0.5rem;
 }
 
+.runic-button--has-icon.runic-button--xs {
+  gap: 0.25rem;
+}
+
+.runic-button--has-icon.runic-button--sm {
+  gap: 0.375rem;
+}
+
 .runic-button--has-icon.runic-button--lg {
   gap: 0.75rem;
+}
+
+/* Icon-only button: square aspect ratio with centered icon */
+.runic-button--icon-only {
+  gap: 0;
+  aspect-ratio: 1;
+}
+
+.runic-button--icon-only.runic-button--xs {
+  padding: 0.375rem;
+}
+
+.runic-button--icon-only.runic-button--sm {
+  padding: 0.5rem;
+}
+
+.runic-button--icon-only.runic-button--md {
+  padding: 0.625rem;
+}
+
+.runic-button--icon-only.runic-button--lg {
+  padding: 0.75rem;
 }
 
 .runic-button:hover .runic-button__icon {
@@ -582,6 +650,12 @@ const handleClick = (event: MouseEvent) => {
    RESPONSIVE - Mobile optimizations
    ========================================== */
 @media (max-width: 640px) {
+  .runic-button--xs {
+    padding: 0.3125rem 0.625rem;
+    font-size: 0.6875rem;
+    gap: 0.25rem;
+  }
+
   .runic-button--sm {
     padding: 0.5rem 0.875rem;
     font-size: 0.8125rem;
@@ -598,6 +672,11 @@ const handleClick = (event: MouseEvent) => {
     padding: 0.75rem 1.5rem;
     font-size: 0.9375rem;
     gap: 0.875rem;
+  }
+
+  .runic-button--xs .runic-button__icon {
+    width: 10px;
+    height: 10px;
   }
 
   .runic-button--sm .runic-button__icon {

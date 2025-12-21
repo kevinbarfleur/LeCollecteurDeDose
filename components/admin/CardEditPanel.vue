@@ -287,14 +287,14 @@ const removeImage = () => {
             <div class="card-edit-panel__field">
               <label class="card-edit-panel__label">
                 ID (identifiant unique) *
-                <button
+                <RunicButton
                   v-if="formData.name && !formData.id"
-                  type="button"
-                  class="card-edit-panel__generate-btn"
+                  size="xs"
+                  variant="ghost"
                   @click="generateIdFromName"
                 >
-                  Generer depuis le nom
-                </button>
+                  Générer depuis le nom
+                </RunicButton>
               </label>
               <RunicInput
                 v-model="formData.id"
@@ -429,13 +429,14 @@ const removeImage = () => {
                 <!-- Image Preview -->
                 <div v-if="formData.gameData.img && !isUploading" class="card-edit-panel__upload-preview">
                   <img :src="formData.gameData.img" alt="Preview" />
-                  <button
-                    type="button"
+                  <RunicButton
+                    size="xs"
+                    variant="danger"
                     class="card-edit-panel__upload-remove"
                     @click.stop="removeImage"
                   >
-                    ✕
-                  </button>
+                    ×
+                  </RunicButton>
                 </div>
 
                 <!-- Upload Progress -->

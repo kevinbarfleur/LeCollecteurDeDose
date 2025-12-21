@@ -10,7 +10,7 @@ import tmi from "npm:tmi.js@^1.8.5"
 // Pin to 2.87.2 - version 2.87.3 has ESM compatibility issues with Deno
 import { createClient } from "npm:@supabase/supabase-js@2.87.2"
 import { load } from "https://deno.land/std@0.208.0/dotenv/mod.ts"
-import { getRandomMessage, formatCardName } from "./triggerMessages.ts"
+import { getRandomMessage, formatCardName, initMessageLoader, refreshMessageCache, isCommandEnabled } from "./dbMessages.ts"
 import {
   getPresetById,
   VALID_PRESET_IDS,
@@ -136,6 +136,9 @@ let supabase: ReturnType<typeof createClient> | null = null
 
 if (SUPABASE_URL && SUPABASE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+  // Initialize message loader with Supabase client for DB-backed messages
+  initMessageLoader(supabase)
+  console.log('📝 Message loader initialized with Supabase')
 } else {
   console.error('⚠️  Supabase credentials not found - chat commands requiring Supabase will be disabled')
 }
@@ -1789,11 +1792,39 @@ async function handleRequest(req: Request): Promise<Response> {
     }
   }
 
+  // Webhook endpoint to reload bot messages (called by admin panel)
+  if (req.method === 'POST' && url.pathname === '/webhook/reload-messages') {
+    try {
+      await refreshMessageCache()
+      console.log('📝 Messages reloaded via webhook')
+
+      return new Response(
+        JSON.stringify({ ok: true, message: 'Messages reloaded' }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    } catch (error) {
+      console.error('Error reloading messages:', error)
+      return new Response(
+        JSON.stringify({ error: 'Failed to reload messages' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+  }
+
   // Webhook endpoint to reload bot config (called by admin panel)
   if (req.method === 'POST' && url.pathname === '/webhook/reload-config') {
     try {
       const previousEnabled = triggerConfig.enabled
       triggerConfig = await loadTriggerConfig()
+
+      // Also refresh message cache when config is reloaded
+      await refreshMessageCache()
 
       console.log('🔄 Config reloaded via webhook')
       console.log(`   Triggers: ${triggerConfig.enabled ? '✅ Enabled' : '⏸️ Disabled'}`)
@@ -2072,14 +2103,18 @@ client.connect().catch(console.error)
 client.on('connected', async () => {
   isConnected = true
   console.log(`✅ Bot connected to Twitch chat: ${TWITCH_CHANNEL_NAME}`)
-  
-  // Load trigger config from Supabase (reload after Supabase is ready)
+
+  // Load trigger config and messages from Supabase
   if (supabase) {
     try {
       triggerConfig = await loadTriggerConfig()
       console.log('📋 Trigger configuration loaded from Supabase')
+
+      // Preload messages from database
+      await refreshMessageCache()
+      console.log('📝 Bot messages preloaded from database')
     } catch (error) {
-      console.error('Error loading trigger config:', error)
+      console.error('Error loading trigger config or messages:', error)
     }
   }
 

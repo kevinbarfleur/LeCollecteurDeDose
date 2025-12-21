@@ -265,15 +265,15 @@ const removeImage = () => {
             <span class="card-edit-panel__title-rune">✧</span>
           </h3>
 
-          <button
+          <RunicButton
             class="card-edit-panel__close"
-            @click="closePanel"
+            size="sm"
+            variant="ghost"
             aria-label="Fermer"
+            @click="closePanel"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            ×
+          </RunicButton>
 
           <div class="card-edit-panel__header-edge"></div>
         </div>
@@ -294,14 +294,14 @@ const removeImage = () => {
             <div class="card-edit-panel__field">
               <label class="card-edit-panel__label">
                 ID *
-                <button
+                <RunicButton
                   v-if="formData.name && !formData.id"
-                  type="button"
-                  class="card-edit-panel__generate-btn"
+                  size="xs"
+                  variant="ghost"
                   @click="generateIdFromName"
                 >
                   Auto
-                </button>
+                </RunicButton>
               </label>
               <RunicInput
                 v-model="formData.id"
@@ -412,13 +412,14 @@ const removeImage = () => {
               <!-- Image Preview -->
               <div v-if="formData.gameData.img && !isUploading" class="card-edit-panel__upload-preview">
                 <img :src="formData.gameData.img" alt="Preview" />
-                <button
-                  type="button"
+                <RunicButton
+                  size="xs"
+                  variant="danger"
                   class="card-edit-panel__upload-remove"
                   @click.stop="removeImage"
                 >
-                  ✕
-                </button>
+                  ×
+                </RunicButton>
               </div>
 
               <!-- Upload Progress -->
