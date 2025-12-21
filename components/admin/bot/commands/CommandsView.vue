@@ -20,24 +20,6 @@ const emit = defineEmits<{
 // Command definitions
 const commands = ref([
   {
-    command: 'ping',
-    displayName: 'Ping',
-    description: 'Simple health check - répond "Pong!" pour vérifier que le bot est en ligne.',
-    hasLimit: false,
-  },
-  {
-    command: 'ladder',
-    displayName: 'Ladder / Classement',
-    description: 'Affiche le lien vers le classement. Alias: !classement',
-    hasLimit: false,
-  },
-  {
-    command: 'vaalorb',
-    displayName: 'Vaal Orb',
-    description: 'Utilise un Vaal Orb pour corrompre une carte aléatoire de la collection.',
-    hasLimit: false,
-  },
-  {
     command: 'booster',
     displayName: 'Booster',
     description: 'Ouvre un ou plusieurs boosters. Supporte !booster [count] et !booster all.',
