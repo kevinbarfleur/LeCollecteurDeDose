@@ -6,6 +6,17 @@
  * Uses the FormContainer system for consistent layout.
  */
 
+// Props for URL-based navigation
+interface Props {
+  activeTab?: 'commands' | 'triggers' | 'events' | 'settings'
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  'update:activeTab': [value: 'commands' | 'triggers' | 'events' | 'settings']
+}>()
+
 // Tab configuration
 const tabs = [
   { key: 'commands', label: 'Commandes', icon: '⚡' },
@@ -14,8 +25,13 @@ const tabs = [
   { key: 'settings', label: 'Paramètres', icon: '⚙️' },
 ]
 
-// Current active tab
-const activeTab = ref('commands')
+// Current active tab - use prop if provided
+const currentTab = computed(() => props.activeTab || 'commands')
+
+// Handle tab change - emit to parent for URL navigation
+const handleTabChange = (tab: string) => {
+  emit('update:activeTab', tab as 'commands' | 'triggers' | 'events' | 'settings')
+}
 
 // Data fetching states
 const isLoading = ref(true)
@@ -98,12 +114,13 @@ onMounted(() => {
     <!-- Form container with tabs -->
     <FormContainer
       v-else
-      v-model="activeTab"
+      :model-value="currentTab"
       :tabs="tabs"
+      @update:model-value="handleTabChange"
     >
       <!-- Commands -->
       <CommandsView
-        v-if="activeTab === 'commands'"
+        v-if="currentTab === 'commands'"
         :config="botConfig"
         :messages="botMessages"
         @refresh="refreshData"
@@ -111,7 +128,7 @@ onMounted(() => {
 
       <!-- Triggers -->
       <TriggersView
-        v-if="activeTab === 'triggers'"
+        v-if="currentTab === 'triggers'"
         :config="botConfig"
         :messages="botMessages"
         @refresh="refreshData"
@@ -119,7 +136,7 @@ onMounted(() => {
 
       <!-- Events -->
       <EventsView
-        v-if="activeTab === 'events'"
+        v-if="currentTab === 'events'"
         :presets="batchEventPresets"
         :categories="batchEventCategories"
         @refresh="refreshData"
@@ -127,7 +144,7 @@ onMounted(() => {
 
       <!-- Settings -->
       <SettingsView
-        v-if="activeTab === 'settings'"
+        v-if="currentTab === 'settings'"
         :config="botConfig"
         @refresh="refreshData"
       />

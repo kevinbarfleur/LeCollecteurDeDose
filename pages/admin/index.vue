@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import SystemTabContainer from '~/components/admin/system/SystemTabContainer.vue'
+
 definePageMeta({
   middleware: ["admin"],
 });
@@ -624,15 +626,61 @@ const updateDebugVaalOrbs = (delta: number) => {
   }
 };
 
-// Navigation tabs
-type AdminTab = 'system' | 'bot' | 'data' | 'registry' | 'diagnostics';
-const activeTab = ref<AdminTab>('system');
+// Navigation tabs with URL routing using query params
+// URLs: /admin?tab=system&sub=data, /admin?tab=bot&sub=commands, etc.
+type AdminTab = 'system' | 'bot' | 'registry';
+type SystemSubTab = 'system' | 'data' | 'diagnostics';
+type BotSubTab = 'commands' | 'triggers' | 'events' | 'settings';
+
+const route = useRoute();
+const router = useRouter();
+
+// Active main tab from query params
+const activeTab = computed<AdminTab>(() => {
+  const tab = route.query.tab as string;
+  if (['system', 'bot', 'registry'].includes(tab)) {
+    return tab as AdminTab;
+  }
+  return 'system'; // default
+});
+
+// Active sub-tab for system
+const activeSystemSubTab = computed<SystemSubTab>(() => {
+  if (activeTab.value !== 'system') return 'system';
+  const sub = route.query.sub as string;
+  if (['system', 'data', 'diagnostics'].includes(sub)) {
+    return sub as SystemSubTab;
+  }
+  return 'system'; // default
+});
+
+// Active sub-tab for bot
+const activeBotSubTab = computed<BotSubTab>(() => {
+  if (activeTab.value !== 'bot') return 'commands';
+  const sub = route.query.sub as string;
+  if (['commands', 'triggers', 'events', 'settings'].includes(sub)) {
+    return sub as BotSubTab;
+  }
+  return 'commands'; // default
+});
+
+// Navigation functions - use query params
+const navigateToTab = (tab: AdminTab) => {
+  router.push({ path: '/admin', query: { tab } });
+};
+
+const navigateToSystemSubTab = (subTab: SystemSubTab) => {
+  router.push({ path: '/admin', query: { tab: 'system', sub: subTab } });
+};
+
+const navigateToBotSubTab = (subTab: BotSubTab) => {
+  router.push({ path: '/admin', query: { tab: 'bot', sub: subTab } });
+};
+
 const tabOptions = computed(() => [
   { value: 'system', label: 'Systeme' },
   { value: 'bot', label: 'Bot' },
-  { value: 'data', label: 'Donnees' },
   { value: 'registry', label: 'Registre' },
-  { value: 'diagnostics', label: 'Diagnostics' },
 ]);
 
 // ==========================================
@@ -1330,19 +1378,27 @@ const triggerBatchEvent = async (presetId: string) => {
         <div class="flex flex-col gap-6">
           <!-- Status Bar -->
           <div class="flex items-center gap-4 p-3.5 px-4 bg-black/20 border border-poe-border/30 rounded-md">
-            <div class="flex items-center gap-2.5">
-              <span
-                class="w-2.5 h-2.5 rounded-full animate-pulse"
-                :class="
-                  isConnected
-                    ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]'
-                    : 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]'
-                "
-              />
-              <span class="font-body text-lg text-poe-text-dim font-medium">
-                {{ isConnected ? t("admin.connected") : t("admin.disconnected") }}
-              </span>
-            </div>
+            <ClientOnly>
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="w-2.5 h-2.5 rounded-full animate-pulse"
+                  :class="
+                    isConnected
+                      ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]'
+                      : 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]'
+                  "
+                />
+                <span class="font-body text-lg text-poe-text-dim font-medium">
+                  {{ isConnected ? t("admin.connected") : t("admin.disconnected") }}
+                </span>
+              </div>
+              <template #fallback>
+                <div class="flex items-center gap-2.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-gray-400" />
+                  <span class="font-body text-lg text-poe-text-dim font-medium">...</span>
+                </div>
+              </template>
+            </ClientOnly>
             <div class="w-px h-6 bg-poe-border/30"></div>
             <div class="flex items-center gap-3 ml-auto">
               <img
@@ -1361,119 +1417,72 @@ const triggerBatchEvent = async (presetId: string) => {
           <!-- Navigation Tabs -->
           <div class="flex justify-center my-6">
             <RunicRadio
-              v-model="activeTab"
+              :model-value="activeTab"
               :options="tabOptions"
               size="md"
+              @update:model-value="navigateToTab($event as AdminTab)"
             />
           </div>
 
-          <!-- Onglet: Controles Systeme -->
+          <!-- Onglet: Systeme (with side tabs) -->
           <div v-show="activeTab === 'system'" class="flex flex-col gap-8">
-            <!-- Section: Contrôles Principaux -->
-            <div class="flex flex-col w-full">
-              <RunicHeader
-                title="CONTROLES SYSTEME"
-                attached
+            <ClientOnly>
+              <SystemTabContainer
+                :active-tab="activeSystemSubTab"
+                :altar-open="altarOpen"
+                :activity-logs-enabled="activityLogsEnabled"
+                :is-maintenance-mode="isMaintenanceMode"
+                :is-loading="isLoading"
+                :is-toggling-altar="isTogglingAltar"
+                :is-toggling-activity-logs="isTogglingActivityLogs"
+                :is-toggling-maintenance="isTogglingMaintenance"
+                :is-maintenance-loading="isMaintenanceLoading"
+                :data-source-model="dataSourceModel"
+                :data-source-options="dataSourceOptions"
+                :is-mock-data="isMockData"
+                :debug-vaal-orbs="debugVaalOrbs"
+                :is-updating-vaal-orbs="isUpdatingVaalOrbs"
+                :is-creating-backup="isCreatingBackup"
+                :is-loading-backups="isLoadingBackups"
+                :backups-list="backupsList"
+                :selected-backup-id="selectedBackupId"
+                :restore-mode="restoreMode"
+                :is-restoring-backup="isRestoringBackup"
+                :restore-backup-message="restoreBackupMessage"
+                :is-syncing-test-data="isSyncingTestData"
+                :forced-outcome="forcedOutcome"
+                :forced-outcome-options="forcedOutcomeOptions"
+                @update:active-tab="navigateToSystemSubTab($event)"
+                @update:altar-open="altarOpenModel = $event"
+                @update:activity-logs-enabled="activityLogsEnabledModel = $event"
+                @toggle-maintenance="handleMaintenanceToggle"
+                @update:data-source-model="dataSourceModel = $event"
+                @update:debug-vaal-orbs="updateDebugVaalOrbs($event)"
+                @create-backup="createBackup"
+                @update:selected-backup-id="selectedBackupId = $event"
+                @update:restore-mode="restoreMode = $event"
+                @restore-backup="restoreBackup"
+                @sync-test-data="syncTestData"
+                @update:forced-outcome="forcedOutcome = $event"
               />
-              <ClientOnly>
-                <RunicBox attached padding="lg">
-                  <div class="flex flex-col gap-5">
-                    <!-- Altar Control -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Contrôle de l'Autel</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          {{ t("admin.altar.description") }}
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <span 
-                          class="font-display text-[0.9375rem] font-bold tracking-wider uppercase whitespace-nowrap px-2.5 py-1.5 rounded"
-                          :class="altarOpen ? 'text-green-400 bg-green-400/15 border border-green-400/30' : 'text-red-400 bg-red-400/15 border border-red-400/30'"
-                        >
-                          {{ altarOpen ? t("admin.altar.open") : t("admin.altar.closed") }}
-                        </span>
-                        <RunicRadio
-                          v-model="altarOpenModel"
-                          :toggle="true"
-                          size="md"
-                          toggle-color="default"
-                          :disabled="isLoading || isTogglingAltar"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Activity Logs Control -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Panneau de Logs d'Activité</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          {{ t("admin.activityLogs.description") }}
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <span
-                          class="font-display text-[0.9375rem] font-bold tracking-wider uppercase whitespace-nowrap px-2.5 py-1.5 rounded"
-                          :class="activityLogsEnabled ? 'text-green-400 bg-green-400/15 border border-green-400/30' : 'text-red-400 bg-red-400/15 border border-red-400/30'"
-                        >
-                          {{ activityLogsEnabled ? t("admin.activityLogs.enabled") : t("admin.activityLogs.disabled") }}
-                        </span>
-                        <RunicRadio
-                          v-model="activityLogsEnabledModel"
-                          :toggle="true"
-                          size="md"
-                          toggle-color="default"
-                          :disabled="isLoading || isTogglingActivityLogs"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Maintenance Mode Control -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Mode Maintenance</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Active le mode maintenance pour afficher le message "Le royaume est en service" sur toutes les pages interactives (catalogue, collection, autel).
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <span
-                          class="font-display text-[0.9375rem] font-bold tracking-wider uppercase whitespace-nowrap px-2.5 py-1.5 rounded"
-                          :class="isMaintenanceMode ? 'text-yellow-400 bg-yellow-400/15 border border-yellow-400/30' : 'text-gray-400 bg-gray-400/15 border border-gray-400/30'"
-                        >
-                          {{ isMaintenanceMode ? 'Activé' : 'Désactivé' }}
-                        </span>
-                        <RunicButton
-                          size="md"
-                          variant="primary"
-                          :disabled="isMaintenanceLoading || isTogglingMaintenance"
-                          @click="handleMaintenanceToggle"
-                        >
-                          <span v-if="!isTogglingMaintenance">
-                            {{ isMaintenanceMode ? 'Désactiver' : 'Activer' }}
-                          </span>
-                          <span v-else>En cours...</span>
-                        </RunicButton>
-                      </div>
-                    </div>
-
+              <template #fallback>
+                <RunicBox padding="lg">
+                  <div class="flex flex-col items-center justify-center gap-4 py-8">
+                    <div class="w-8 h-8 border-3 border-accent/20 border-t-accent rounded-full animate-spin"></div>
+                    <p class="font-body text-lg text-poe-text-dim">Chargement...</p>
                   </div>
                 </RunicBox>
-                <template #fallback>
-                  <RunicBox attached padding="lg">
-                    <div class="flex flex-col gap-5">
-                      <p class="font-body text-lg">Chargement...</p>
-                    </div>
-                  </RunicBox>
-                </template>
-              </ClientOnly>
-            </div>
+              </template>
+            </ClientOnly>
           </div>
 
           <!-- Onglet: Bot & Actions -->
           <div v-show="activeTab === 'bot'" class="flex flex-col gap-8">
             <ClientOnly>
-              <BotTabContainer />
+              <BotTabContainer
+                :active-tab="activeBotSubTab"
+                @update:active-tab="navigateToBotSubTab($event)"
+              />
               <template #fallback>
                 <RunicBox padding="lg">
                   <div class="flex flex-col items-center justify-center gap-4 py-8">
@@ -1483,224 +1492,6 @@ const triggerBatchEvent = async (presetId: string) => {
                 </RunicBox>
               </template>
             </ClientOnly>
-          </div>
-
-          <!-- Onglet: Donnees & Backups -->
-          <div v-show="activeTab === 'data'" class="flex flex-col gap-8">
-            <!-- Section: Source des Donnees -->
-            <div class="flex flex-col w-full">
-              <RunicHeader
-                title="SOURCE DES DONNEES"
-                attached
-              />
-              <ClientOnly>
-                <RunicBox attached padding="lg">
-                  <div class="flex flex-col gap-5">
-                    <!-- Data Source -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Source des Donnees</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Basculer entre les donnees de production et les donnees de test
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <RunicSelect
-                          v-model="dataSourceModel"
-                          :options="dataSourceOptions"
-                          size="md"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Vaal Orbs Debug (Mock mode only) -->
-                    <div v-if="isMockData" class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Vaal Orbs (Debug)</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Nombre de Vaal Orbs pour les tests
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <div class="flex items-center justify-center gap-4 p-2 px-3 bg-black/30 border border-poe-border/40 rounded-md">
-                          <button
-                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="debugVaalOrbs <= 0 || isUpdatingVaalOrbs"
-                            @click="updateDebugVaalOrbs(-1)"
-                          >
-                            −
-                          </button>
-                          <span class="font-display text-[1.375rem] font-bold text-poe-text min-w-[2.5ch] text-center">{{ debugVaalOrbs }}</span>
-                          <button
-                            class="w-8 h-8 flex items-center justify-center bg-accent/10 border border-accent/30 rounded text-poe-text font-display text-lg font-semibold cursor-pointer transition-all hover:bg-accent/20 hover:border-accent/50 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed"
-                            :disabled="debugVaalOrbs >= 99 || isUpdatingVaalOrbs"
-                            @click="updateDebugVaalOrbs(1)"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </RunicBox>
-                <template #fallback>
-                  <RunicBox attached padding="lg">
-                    <div class="flex flex-col gap-5">
-                      <p class="font-body text-lg">Chargement...</p>
-                    </div>
-                  </RunicBox>
-                </template>
-              </ClientOnly>
-            </div>
-
-            <!-- Section: Backups -->
-            <div class="flex flex-col w-full">
-              <RunicHeader
-                title="GESTION DES BACKUPS"
-                attached
-              />
-              <ClientOnly>
-                <RunicBox attached padding="lg">
-                  <div class="flex flex-col gap-5">
-                    <!-- Create Backup -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Creer un Backup</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Sauvegarde complete de toutes les donnees
-                        </p>
-                      </div>
-                      <div class="flex-shrink-0">
-                        <RunicButton
-                          size="md"
-                          variant="primary"
-                          :disabled="isCreatingBackup"
-                          @click="createBackup"
-                        >
-                          <span v-if="isCreatingBackup" class="flex items-center gap-2.5">
-                            <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                            {{ t("admin.dataSource.backingUp") }}
-                          </span>
-                          <span v-else>
-                            {{ t("admin.dataSource.backupButton") }}
-                          </span>
-                        </RunicButton>
-                      </div>
-                    </div>
-
-                    <!-- Restore Backup -->
-                    <div class="flex flex-col gap-4 pb-5 border-b border-poe-border/20">
-                      <div class="flex items-start justify-between gap-6">
-                        <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                          <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Restaurer un Backup</label>
-                          <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                            ⚠️ Remplace toutes les donnees actuelles
-                          </p>
-                        </div>
-                      </div>
-
-                      <div class="flex flex-col gap-3">
-                        <div v-if="isLoadingBackups" class="flex items-center gap-2 text-poe-text-dim">
-                          <span class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                          <span>Chargement des backups...</span>
-                        </div>
-                        <div v-else-if="backupsList.length === 0" class="text-poe-text-dim italic">
-                          Aucun backup disponible
-                        </div>
-                        <RunicSelect
-                          v-else
-                          v-model="selectedBackupId"
-                          :options="backupsList.map(b => ({ value: b.id, label: formatBackupName(b) }))"
-                          size="md"
-                          placeholder="Selectionner un backup"
-                          :disabled="isRestoringBackup"
-                        />
-
-                        <div v-if="selectedBackupId" class="flex flex-col gap-2">
-                          <label class="font-display text-sm font-semibold text-poe-text">
-                            {{ t("admin.dataSource.restoreMode.label") }}
-                          </label>
-                          <RunicSelect
-                            v-model="restoreMode"
-                            :options="[
-                              { value: 'permissive', label: t('admin.dataSource.restoreMode.permissive.label') },
-                              { value: 'strict', label: t('admin.dataSource.restoreMode.strict.label') }
-                            ]"
-                            size="md"
-                            :disabled="isRestoringBackup"
-                          />
-                          <p class="font-body text-xs text-poe-text-dim leading-relaxed">
-                            <span v-if="restoreMode === 'strict'">
-                              {{ t("admin.dataSource.restoreMode.strict.description") }}
-                            </span>
-                            <span v-else>
-                              {{ t("admin.dataSource.restoreMode.permissive.description") }}
-                            </span>
-                          </p>
-                        </div>
-
-                        <RunicButton
-                          size="md"
-                          variant="danger"
-                          :disabled="!selectedBackupId || isRestoringBackup"
-                          @click="restoreBackup"
-                          class="w-full"
-                        >
-                          <span v-if="!isRestoringBackup">🔄 Restaurer</span>
-                          <span v-else class="flex items-center gap-2.5">
-                            <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                            Restauration...
-                          </span>
-                        </RunicButton>
-
-                        <div v-if="restoreBackupMessage"
-                          class="w-full p-3 rounded text-center font-display text-sm"
-                          :class="{
-                            'bg-green-900/20 border border-green-700/40 text-green-200': restoreBackupMessage.type === 'success',
-                            'bg-red-900/20 border border-red-700/40 text-red-200': restoreBackupMessage.type === 'error'
-                          }"
-                        >
-                          {{ restoreBackupMessage.text }}
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Sync Test Data -->
-                    <div v-if="isMockData" class="flex items-start justify-between gap-6">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Sync Donnees de Test</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Synchroniser depuis la production
-                        </p>
-                      </div>
-                      <div class="flex-shrink-0">
-                        <RunicButton
-                          size="md"
-                          variant="primary"
-                          :disabled="isSyncingTestData"
-                          @click="syncTestData"
-                        >
-                          <span v-if="isSyncingTestData" class="flex items-center gap-2.5">
-                            <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                            {{ t("admin.dataSource.syncing") }}
-                          </span>
-                          <span v-else>
-                            {{ t("admin.dataSource.syncButton") }}
-                          </span>
-                        </RunicButton>
-                      </div>
-                    </div>
-                  </div>
-                </RunicBox>
-                <template #fallback>
-                  <RunicBox attached padding="lg">
-                    <div class="flex flex-col gap-5">
-                      <p class="font-body text-lg">Chargement...</p>
-                    </div>
-                  </RunicBox>
-                </template>
-              </ClientOnly>
-            </div>
           </div>
 
           <!-- Onglet: Registre -->
@@ -1783,63 +1574,6 @@ const triggerBatchEvent = async (presetId: string) => {
             </div>
           </div>
 
-          <!-- Onglet: Diagnostics -->
-          <div v-show="activeTab === 'diagnostics'" class="flex flex-col gap-8">
-            <div class="flex flex-col w-full">
-              <RunicHeader
-                title="DIAGNOSTICS"
-                attached
-              />
-              <ClientOnly>
-                <RunicBox attached padding="lg">
-                  <div class="flex flex-col gap-5">
-                    <!-- Error Logs -->
-                    <div class="flex items-start justify-between gap-6 pb-5 border-b border-poe-border/20 last:border-0 last:pb-0">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Logs d'Erreurs</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Visualiser et gerer les erreurs de l'application
-                        </p>
-                      </div>
-                    </div>
-                    <RunicButton
-                      to="/admin/errors"
-                      icon="external"
-                      variant="primary"
-                      size="md"
-                      class="w-full"
-                    >
-                      VOIR LES LOGS
-                    </RunicButton>
-
-                    <!-- Force Outcome (debug) -->
-                    <div class="flex items-start justify-between gap-6 pt-5 border-t border-poe-border/20">
-                      <div class="flex-1 flex flex-col gap-1.5 min-w-0">
-                        <label class="font-display text-lg font-bold text-poe-text m-0 leading-tight">Forcer Issue (Debug)</label>
-                        <p class="font-body text-lg text-poe-text-dim leading-relaxed m-0">
-                          Forcer un resultat specifique pour l'autel
-                        </p>
-                      </div>
-                      <div class="flex items-center gap-3.5 flex-shrink-0">
-                        <RunicSelect
-                          v-model="forcedOutcome"
-                          :options="forcedOutcomeOptions"
-                          size="md"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </RunicBox>
-                <template #fallback>
-                  <RunicBox attached padding="lg">
-                    <div class="flex flex-col gap-5">
-                      <p class="font-body text-lg">Chargement...</p>
-                    </div>
-                  </RunicBox>
-                </template>
-              </ClientOnly>
-            </div>
-          </div>
         </div>
       </RunicBox>
 
