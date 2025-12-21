@@ -43,7 +43,10 @@
       "WebFetch(domain:twitch.uservoice.com)",
       "Bash(findstr:*)",
       "Bash(timeout 30 npx nuxi dev:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "mcp__vercel__list_teams",
+      "mcp__vercel__list_projects",
+      "mcp__vercel__list_deployments"
     ]
   }
 }
