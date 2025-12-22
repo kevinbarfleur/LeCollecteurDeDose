@@ -900,6 +900,7 @@ const callVaalOutcomeEdgeFunction = async (): Promise<VaalOutcomeResponse> => {
   try {
     const config = useRuntimeConfig();
     const supabaseUrl = config.public.supabase.url;
+    const supabaseKey = config.public.supabase.key;
 
     const request: VaalOutcomeRequest = {
       username: authUser.value.displayName,
@@ -915,6 +916,7 @@ const callVaalOutcomeEdgeFunction = async (): Promise<VaalOutcomeResponse> => {
       body: request,
       headers: {
         'Content-Type': 'application/json',
+        'apikey': supabaseKey,
       },
     });
 
