@@ -323,6 +323,10 @@ watch(selectedCardInTier, (cardId) => {
 watch(
   cardOptionsByTier,
   (newOptions) => {
+    // Don't clear selection during animation (e.g., foil transformation makes card disappear from standard options)
+    if (isAnimating.value || isCardOnAltar.value) {
+      return;
+    }
     if (selectedCardInTier.value) {
       const stillAvailable = newOptions[selectedTier.value].some(
         opt => opt.value === selectedCardInTier.value
