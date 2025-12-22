@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { Card, CardTier } from "~/types/card";
+import type { Card, CardTier, CardVariation } from "~/types/card";
+import { getCardVariation } from "~/types/card";
 import {
   useCardGrouping,
   type CardGroupWithVariations,
@@ -144,6 +145,10 @@ const selectedTier = usePersistedFilter<CardTier | "all">(
   "collection_tier",
   "all"
 );
+const selectedVariation = usePersistedFilter<CardVariation | "all">(
+  "collection_variation",
+  "all"
+);
 const selectedSort = usePersistedFilter("collection_sort", "rarity-asc");
 
 // Use shared sorting composable
@@ -183,6 +188,13 @@ const tierOptions = computed(() => [
   { value: "T3", label: t("collection.tiers.t3"), color: "t3" },
 ]);
 
+const variationOptions = computed(() => [
+  { value: "all", label: t("collection.filters.variations.all") },
+  { value: "synthesised", label: `⚡ ${t("collection.filters.variations.synthesised")}` },
+  { value: "foil", label: `✨ ${t("collection.filters.variations.foil")}` },
+  { value: "standard", label: `📦 ${t("collection.filters.variations.standard")}` },
+]);
+
 const filteredGroupedCards = computed(() => {
   let groups = groupedCards.value;
 
@@ -206,6 +218,14 @@ const filteredGroupedCards = computed(() => {
   // Filter by tier
   if (selectedTier.value !== "all") {
     groups = groups.filter((g) => g.tier === selectedTier.value);
+  }
+
+  // Filter by variation - keep groups that have at least one card of the selected variation
+  if (selectedVariation.value !== "all") {
+    groups = groups.filter((g) => {
+      // Check if any card in the group matches the selected variation
+      return g.cards.some((card) => getCardVariation(card) === selectedVariation.value);
+    });
   }
 
   // Apply sorting
@@ -235,6 +255,11 @@ const filteredIndividualCards = computed(() => {
   // Filter by tier
   if (selectedTier.value !== "all") {
     cards = cards.filter((card) => card.tier === selectedTier.value);
+  }
+
+  // Filter by variation
+  if (selectedVariation.value !== "all") {
+    cards = cards.filter((card) => getCardVariation(card) === selectedVariation.value);
   }
 
   // Apply sorting
@@ -358,6 +383,15 @@ const filteredIndividualCards = computed(() => {
                   :searchable="true"
                   :multiple="true"
                   :max-visible-items="10"
+                />
+              </div>
+
+              <div class="w-full sm:w-auto sm:min-w-[160px]">
+                <RunicSelect
+                  v-model="selectedVariation"
+                  :options="variationOptions"
+                  :placeholder="t('collection.filters.variation')"
+                  size="md"
                 />
               </div>
 

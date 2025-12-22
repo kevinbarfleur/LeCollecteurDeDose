@@ -148,7 +148,14 @@
     "filters": {
       "showDuplicates": "Révéler les duplicatas",
       "categories": "Catégories possédées…",
-      "sort": "Trier par…"
+      "sort": "Trier par…",
+      "variation": "Variante…",
+      "variations": {
+        "all": "Toutes variantes",
+        "standard": "Standard",
+        "foil": "Foil",
+        "synthesised": "Synthétisée"
+      }
     },
     "empty": "Ton inventaire est aussi vide que tes résistances. Retourne farmer, exile.",
     "loading": "Chargement de ta collection maudite…",
