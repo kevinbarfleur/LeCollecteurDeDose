@@ -18,6 +18,7 @@ interface CapturedRecordingData {
   cardUid: number;
   cardTier: string;
   cardFoil: boolean;
+  cardSynthesised: boolean;
   replayData: ReplayDataV2;
   outcome: AnyVaalOutcome;
   resultCardId: string | null;
@@ -43,7 +44,7 @@ export function useReplayRecorder() {
   const recordedPositions = ref<DecodedMousePosition[]>([]);
   const recordedEvents = ref<ReplayEvent[]>([]);
   const recordStartTime = ref(0);
-  const cardData = ref<{ cardId: string; variation: string; uid: number; tier: string; foil: boolean } | null>(null);
+  const cardData = ref<{ cardId: string; variation: string; uid: number; tier: string; foil: boolean; synthesised: boolean } | null>(null);
   const generatedUrl = ref<string | null>(null);
   const replayId = ref<string | null>(null);
   
@@ -63,11 +64,11 @@ export function useReplayRecorder() {
     userAvatar.value = avatar;
   };
 
-  const armRecording = (card: { cardId: string; variation: string; uid: number; tier: string; foil: boolean }) => {
+  const armRecording = (card: { cardId: string; variation: string; uid: number; tier: string; foil: boolean; synthesised?: boolean }) => {
     if (!username.value.trim()) return false;
-    
+
     isRecordingArmed.value = true;
-    cardData.value = card;
+    cardData.value = { ...card, synthesised: card.synthesised ?? false };
     recordedPositions.value = [];
     recordedEvents.value = [];
     generatedUrl.value = null;
@@ -182,6 +183,7 @@ export function useReplayRecorder() {
       cardUid: cardData.value.uid,
       cardTier: cardData.value.tier,
       cardFoil: cardData.value.foil,
+      cardSynthesised: cardData.value.synthesised,
       replayData,
       outcome,
       resultCardId: newCardId || null,
@@ -243,6 +245,7 @@ export function useReplayRecorder() {
         card_unique_id: baseCardUid,
         card_tier: data.cardTier,
         card_foil: data.cardFoil,
+        card_synthesised: data.cardSynthesised,
         mouse_positions: data.replayData as unknown as ReplayInsert['mouse_positions'],
         outcome: data.outcome,
         result_card_id: data.resultCardId,

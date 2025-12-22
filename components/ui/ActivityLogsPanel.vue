@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useActivityLogs } from "~/composables/useActivityLogs";
-import { VAAL_OUTCOMES, type VaalOutcome } from "~/types/vaalOutcome";
+import { VAAL_OUTCOMES, FOIL_VAAL_OUTCOMES, type VaalOutcome, type FoilVaalOutcome } from "~/types/vaalOutcome";
 import poeUniques from "~/data/poe_uniques.json";
 import type { Database } from "~/types/database";
 
@@ -138,6 +138,19 @@ const outcomeOptions = computed(() => [
     value: "nothing",
     label: `${VAAL_OUTCOMES.nothing.emoji} ${t(VAAL_OUTCOMES.nothing.label)}`,
   },
+  // Foil card outcomes
+  {
+    value: "synthesised",
+    label: `${FOIL_VAAL_OUTCOMES.synthesised.emoji} ${t(
+      FOIL_VAAL_OUTCOMES.synthesised.label
+    )}`,
+  },
+  {
+    value: "lose_foil",
+    label: `${FOIL_VAAL_OUTCOMES.lose_foil.emoji} ${t(
+      FOIL_VAAL_OUTCOMES.lose_foil.label
+    )}`,
+  },
 ]);
 
 // Get card name from ID
@@ -171,14 +184,31 @@ const filteredLogs = computed(() => {
   return result;
 });
 
-// Get outcome config
+// Get outcome config (supports both normal and foil outcomes)
 const getOutcomeEmoji = (outcome: string): string => {
-  return VAAL_OUTCOMES[outcome as VaalOutcome]?.emoji || "❓";
+  // Check normal outcomes first
+  if (VAAL_OUTCOMES[outcome as VaalOutcome]?.emoji) {
+    return VAAL_OUTCOMES[outcome as VaalOutcome].emoji;
+  }
+  // Check foil-specific outcomes
+  if (FOIL_VAAL_OUTCOMES[outcome as FoilVaalOutcome]?.emoji) {
+    return FOIL_VAAL_OUTCOMES[outcome as FoilVaalOutcome].emoji;
+  }
+  return "❓";
 };
 
 const getOutcomeLabel = (outcome: string): string => {
-  const config = VAAL_OUTCOMES[outcome as VaalOutcome];
-  return config ? t(config.label) : outcome;
+  // Check normal outcomes first
+  const normalConfig = VAAL_OUTCOMES[outcome as VaalOutcome];
+  if (normalConfig) {
+    return t(normalConfig.label);
+  }
+  // Check foil-specific outcomes
+  const foilConfig = FOIL_VAAL_OUTCOMES[outcome as FoilVaalOutcome];
+  if (foilConfig) {
+    return t(foilConfig.label);
+  }
+  return outcome;
 };
 
 // Format relative time
@@ -217,6 +247,9 @@ const getOutcomeClass = (outcome: string): string => {
     transform: "outcome-transform",
     duplicate: "outcome-duplicate",
     nothing: "outcome-nothing",
+    // Foil card outcomes
+    synthesised: "outcome-synthesised",
+    lose_foil: "outcome-lose-foil",
   };
   return outcomeMap[outcome] || "";
 };
@@ -1341,6 +1374,71 @@ const getOutcomeClass = (outcome: string): string => {
 
 .log-entry__header.outcome-nothing .log-entry__header-rune {
   color: rgba(100, 95, 90, 0.4);
+}
+
+/* Synthesised - Cyan/Electric blue with glitch effect */
+.log-entry__header.outcome-synthesised {
+  background: linear-gradient(
+    180deg,
+    rgba(30, 50, 60, 0.6) 0%,
+    rgba(20, 35, 45, 0.4) 100%
+  );
+  border-bottom-color: rgba(100, 200, 255, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.log-entry__header.outcome-synthesised::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(100, 200, 255, 0.08) 0%,
+    rgba(150, 220, 255, 0.12) 50%,
+    rgba(100, 200, 255, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: logSynthesisedPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.log-entry__header.outcome-synthesised .log-entry__header-title {
+  color: rgba(100, 200, 255, 0.95);
+  text-shadow: 0 0 8px rgba(100, 200, 255, 0.4);
+}
+
+.log-entry__header.outcome-synthesised .log-entry__header-rune {
+  color: rgba(100, 200, 255, 0.6);
+}
+
+@keyframes logSynthesisedPulse {
+  0%, 100% {
+    background-position: 0% 50%;
+    opacity: 0.8;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 1;
+  }
+}
+
+/* Lose Foil - Faded/desaturated effect */
+.log-entry__header.outcome-lose-foil {
+  background: linear-gradient(
+    180deg,
+    rgba(45, 40, 50, 0.4) 0%,
+    rgba(35, 30, 40, 0.2) 100%
+  );
+  border-bottom-color: rgba(120, 110, 130, 0.3);
+}
+
+.log-entry__header.outcome-lose-foil .log-entry__header-title {
+  color: rgba(160, 150, 170, 0.85);
+}
+
+.log-entry__header.outcome-lose-foil .log-entry__header-rune {
+  color: rgba(120, 110, 130, 0.5);
 }
 
 /* Backdrop */

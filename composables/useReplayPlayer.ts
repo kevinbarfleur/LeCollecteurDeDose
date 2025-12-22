@@ -53,10 +53,11 @@ export function useReplayPlayer() {
       var: replayData.value.card_variation,
       uid: replayData.value.card_unique_id,
       tier: replayData.value.card_tier,
-      foil: replayData.value.card_foil || false
+      foil: replayData.value.card_foil || false,
+      synthesised: replayData.value.card_synthesised || false
     };
   });
-  const outcome = computed(() => replayData.value?.outcome as 'nothing' | 'foil' | 'destroyed' | 'transform' | 'duplicate' | null);
+  const outcome = computed(() => replayData.value?.outcome as 'nothing' | 'foil' | 'destroyed' | 'transform' | 'duplicate' | 'synthesised' | 'lose_foil' | null);
   const resultCardId = computed(() => replayData.value?.result_card_id || null);
   const totalDuration = computed(() => {
     if (positions.value.length === 0) return 0;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Card, CardTier, CardVariation } from "~/types/card";
-import { TIER_CONFIG, isCardFoil } from "~/types/card";
+import { TIER_CONFIG, isCardFoil, isCardSynthesised } from "~/types/card";
 import type { VaalOutcome, FoilVaalOutcome, AnyVaalOutcome, VaalOutcomeRequest, VaalOutcomeResponse } from "~/types/vaalOutcome";
 import {
   rollVaalOutcome,
@@ -828,6 +828,7 @@ const startAutoRecording = () => {
     uid: card.uid,
     tier: card.tier,
     foil: isCardFoil(card),
+    synthesised: isCardSynthesised(card),
   });
 
   startRecording();

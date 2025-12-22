@@ -10,27 +10,29 @@ import { allCards } from '~/data/mockCards'
 
 /**
  * Calculate card counts from Card[] array
- * Groups cards by base UID and counts normal/foil instances
+ * Groups cards by base UID and counts normal/foil/synthesised instances
  */
-export function calculateCardCounts(cards: Card[]): Map<number, { normal: number; foil: number }> {
-  const counts = new Map<number, { normal: number; foil: number }>()
-  
+export function calculateCardCounts(cards: Card[]): Map<number, { normal: number; foil: number; synthesised: number }> {
+  const counts = new Map<number, { normal: number; foil: number; synthesised: number }>()
+
   for (const card of cards) {
     // Get base UID (remove decimal part added for uniqueness)
     const baseUid = Math.floor(card.uid)
-    
+
     if (!counts.has(baseUid)) {
-      counts.set(baseUid, { normal: 0, foil: 0 })
+      counts.set(baseUid, { normal: 0, foil: 0, synthesised: 0 })
     }
-    
+
     const count = counts.get(baseUid)!
-    if (card.foil) {
+    if (card.synthesised) {
+      count.synthesised++
+    } else if (card.foil) {
       count.foil++
     } else {
       count.normal++
     }
   }
-  
+
   return counts
 }
 
@@ -76,9 +78,10 @@ export function cardsToApiFormat(
       wikiUrl: baseCard.wikiUrl,
       gameData: baseCard.gameData,
       relevanceScore: baseCard.relevanceScore || card.relevanceScore,
-      quantity: count.normal + count.foil,
+      quantity: count.normal + count.foil + count.synthesised,
       normal: count.normal,
       foil: count.foil,
+      synthesised: count.synthesised,
     }
     
     // Use UID as string key (as per API format)
@@ -113,28 +116,40 @@ export function apiFormatToCards(apiData: Record<string, any>): Card[] {
     const mergedCard = baseCard ? { ...baseCard, ...cardData } : cardData
     
     // Remove metadata fields
-    const { quantity, normal, foil, ...cardProps } = mergedCard
-    
+    const { quantity, normal, foil, synthesised, ...cardProps } = mergedCard
+
     // Get counts
     const normalCount = typeof normal === 'number' ? normal : parseInt(String(normal || '0'), 10)
     const foilCount = typeof foil === 'number' ? foil : parseInt(String(foil || '0'), 10)
-    
+    const synthesisedCount = typeof synthesised === 'number' ? synthesised : parseInt(String(synthesised || '0'), 10)
+
     // Generate instances with unique UIDs
     let instanceCounter = 0
-    
+
     for (let i = 0; i < normalCount; i++) {
       cards.push({
         ...cardProps,
         uid: cardUid + (instanceCounter++ * 0.0001),
         foil: false,
+        synthesised: false,
       } as Card)
     }
-    
+
     for (let i = 0; i < foilCount; i++) {
       cards.push({
         ...cardProps,
         uid: cardUid + (instanceCounter++ * 0.0001),
         foil: true,
+        synthesised: false,
+      } as Card)
+    }
+
+    for (let i = 0; i < synthesisedCount; i++) {
+      cards.push({
+        ...cardProps,
+        uid: cardUid + (instanceCounter++ * 0.0001),
+        foil: true,  // Synthesised cards are also foil (they come from foil cards)
+        synthesised: true,
       } as Card)
     }
   }
@@ -152,18 +167,21 @@ export function extractVaalOrbs(apiData: Record<string, any>): number {
 /**
  * Create a partial update object for a specific card
  * Used for incremental updates (e.g., after a vaal outcome)
- * 
+ *
  * IMPORTANT: The server does a simple merge, so we need to send absolute values, not deltas.
- * 
- * NOTE: currentNormal and currentFoil are already the NEW values (after local modification),
- * so we use them directly as absolute values. The deltas are only for logging/debugging.
- * 
+ *
+ * NOTE: currentNormal, currentFoil, and currentSynthesised are already the NEW values
+ * (after local modification), so we use them directly as absolute values.
+ * The deltas are only for logging/debugging.
+ *
  * @param uid - Card UID
  * @param normalDelta - Change in normal count (for logging only, not used in calculation)
  * @param foilDelta - Change in foil count (for logging only, not used in calculation)
  * @param currentNormal - NEW normal count (already includes the delta, use as absolute value)
  * @param currentFoil - NEW foil count (already includes the delta, use as absolute value)
  * @param cardData - Optional card data to include in update
+ * @param synthesisedDelta - Change in synthesised count (for logging only)
+ * @param currentSynthesised - NEW synthesised count (already includes the delta)
  */
 export function createCardUpdate(
   uid: number,
@@ -171,19 +189,22 @@ export function createCardUpdate(
   foilDelta: number,
   currentNormal: number = 0,
   currentFoil: number = 0,
-  cardData?: Partial<Card>
+  cardData?: Partial<Card>,
+  synthesisedDelta: number = 0,
+  currentSynthesised: number = 0
 ): Record<string, any> {
   const update: Record<string, any> = {}
-  
-  // currentNormal and currentFoil are already the NEW values (after local modification)
+
+  // currentNormal, currentFoil, and currentSynthesised are already the NEW values
   // So we use them directly as absolute values (no need to add deltas)
   const newNormal = Math.max(0, currentNormal)
   const newFoil = Math.max(0, currentFoil)
-  
+  const newSynthesised = Math.max(0, currentSynthesised)
+
   // If we have card data, include it
   if (cardData) {
     const baseCard = allCards.find(c => c.uid === uid) || cardData as Card
-    
+
     update[String(uid)] = {
       uid: uid,
       id: baseCard.id,
@@ -197,7 +218,8 @@ export function createCardUpdate(
       relevanceScore: baseCard.relevanceScore,
       normal: newNormal,
       foil: newFoil,
-      quantity: newNormal + newFoil,
+      synthesised: newSynthesised,
+      quantity: newNormal + newFoil + newSynthesised,
     }
   } else {
     // Just update counts (server will merge with existing card data)
@@ -205,9 +227,10 @@ export function createCardUpdate(
       uid: uid,
       normal: newNormal,
       foil: newFoil,
+      synthesised: newSynthesised,
     }
   }
-  
+
   return update
 }
 

@@ -99,6 +99,7 @@ export type Database = {
       replays: {
         Row: {
           card_foil: boolean | null
+          card_synthesised: boolean | null
           card_id: string
           card_tier: string
           card_unique_id: number
@@ -114,6 +115,7 @@ export type Database = {
         }
         Insert: {
           card_foil?: boolean | null
+          card_synthesised?: boolean | null
           card_id: string
           card_tier: string
           card_unique_id: number
@@ -129,6 +131,7 @@ export type Database = {
         }
         Update: {
           card_foil?: boolean | null
+          card_synthesised?: boolean | null
           card_id?: string
           card_tier?: string
           card_unique_id?: number
@@ -359,6 +362,7 @@ export type Database = {
           quantity: number
           normal_count: number
           foil_count: number
+          synthesised_count: number
           created_at: string
           updated_at: string
         }
@@ -369,6 +373,7 @@ export type Database = {
           quantity?: number
           normal_count?: number
           foil_count?: number
+          synthesised_count?: number
           created_at?: string
           updated_at?: string
         }
@@ -379,6 +384,7 @@ export type Database = {
           quantity?: number
           normal_count?: number
           foil_count?: number
+          synthesised_count?: number
           created_at?: string
           updated_at?: string
         }
