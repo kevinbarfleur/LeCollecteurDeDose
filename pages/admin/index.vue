@@ -9,7 +9,7 @@ const { t } = useI18n();
 const { user } = useUserSession();
 const { altarOpen, isLoading, isConnected, toggleAltar, activityLogsEnabled, toggleActivityLogs } = useAppSettings();
 const { isMaintenanceMode, toggleMaintenanceMode, isLoading: isMaintenanceLoading } = useMaintenanceMode();
-const { dataSource, setDataSource, isSupabaseData, isMockData } = useDataSource();
+const { dataSource, setDataSource, isSupabaseData, isMockData, isLoadingMockData } = useDataSource();
 const { forcedOutcome } = useAltarDebug();
 const { getForcedOutcomeOptions } = await import('~/types/vaalOutcome');
 const { fetchUserCollections, fetchUniques, fetchUserCards } = useApi();
@@ -400,23 +400,26 @@ const dataSourceModel = computed({
   set: async (value: "supabase" | "mock") => {
     // Ask for confirmation for any change
     if (value !== dataSource.value) {
+      // Different message for switching to mock vs supabase
+      const isSwitchingToMock = value === "mock";
+      const message = isSwitchingToMock
+        ? "Passer en mode Mock va copier ta collection Supabase en mémoire pour tester sans risque.\n\nLes modifications ne seront PAS sauvegardées.\nLes données seront perdues au reload de la page."
+        : "Retourner en mode Supabase va supprimer les données mock et utiliser tes vraies données.";
+
       const confirmed = await confirm({
-        title: t("admin.dataSource.confirmTitle"),
-        message: t("admin.dataSource.confirmMessage", {
-          from: getDataSourceLabel((dataSource.value as any) === "mock" ? "mock" : "supabase"),
-          to: getDataSourceLabel(value),
-        }),
-        confirmText: t("admin.dataSource.confirmButton"),
+        title: isSwitchingToMock ? "Activer le mode Test?" : "Retour aux données réelles?",
+        message,
+        confirmText: isSwitchingToMock ? "Copier et tester" : "Confirmer",
         cancelText: t("common.cancel"),
         variant: "default",
       });
-      
+
       if (!confirmed) {
         // User cancelled, don't change the value
         return;
       }
     }
-    
+
     // User confirmed, proceed with change
     await setDataSource(value);
   },
@@ -690,7 +693,20 @@ const registryCatalogue = ref<any[]>([]);
 const registryLoading = ref(false);
 const registrySearch = ref('');
 const registryTierFilter = ref('');
+const registryVariantPreview = ref<'none' | 'foil' | 'synthesised'>('none');
 const showCardEditPanel = ref(false);
+
+// Variant preview options
+const variantPreviewOptions = [
+  { value: 'none', label: 'Normal' },
+  { value: 'foil', label: 'Foil ✨' },
+  { value: 'synthesised', label: 'Synthesised ⚡' },
+];
+
+// Reset variant preview on unmount
+onUnmounted(() => {
+  registryVariantPreview.value = 'none';
+});
 const editingCard = ref<any | null>(null);
 const openedGameCardRef = ref<{ close: () => void } | null>(null);
 
@@ -718,7 +734,7 @@ const loadRegistryCatalogue = async () => {
   }
 };
 
-// Filter cards for registry
+// Filter cards for registry and apply variant preview
 const filteredRegistryCards = computed(() => {
   let cards = registryCatalogue.value;
 
@@ -732,6 +748,15 @@ const filteredRegistryCards = computed(() => {
 
   if (registryTierFilter.value) {
     cards = cards.filter((card: any) => card.tier === registryTierFilter.value);
+  }
+
+  // Apply variant preview (creates new objects to avoid mutating original data)
+  if (registryVariantPreview.value !== 'none') {
+    cards = cards.map((card: any) => ({
+      ...card,
+      foil: registryVariantPreview.value === 'foil',
+      synthesised: registryVariantPreview.value === 'synthesised',
+    }));
   }
 
   return cards;
@@ -1463,7 +1488,7 @@ const triggerBatchEvent = async (presetId: string) => {
                 @update:restore-mode="restoreMode = $event"
                 @restore-backup="restoreBackup"
                 @sync-test-data="syncTestData"
-                @update:forced-outcome="forcedOutcome = $event"
+                @update:forced-outcome="forcedOutcome = $event as any"
               />
               <template #fallback>
                 <RunicBox padding="lg">
@@ -1524,7 +1549,15 @@ const triggerBatchEvent = async (presetId: string) => {
                       <RunicInput
                         v-model="registrySearch"
                         placeholder="Rechercher une carte..."
-                        class="flex-1 w-full sm:w-auto"
+                        class="flex-1 min-w-0 w-full sm:w-auto"
+                      />
+
+                      <!-- Variant Preview -->
+                      <RunicSelect
+                        v-model="registryVariantPreview"
+                        :options="variantPreviewOptions"
+                        size="sm"
+                        class="w-auto min-w-[140px] max-w-[160px] shrink-0"
                       />
 
                       <!-- Tier Radio -->
@@ -1532,6 +1565,7 @@ const triggerBatchEvent = async (presetId: string) => {
                         v-model="registryTierFilter"
                         :options="tierFilterOptions"
                         size="sm"
+                        class="shrink-0"
                       />
                     </div>
 

@@ -996,25 +996,294 @@ body.no-scroll-during-drag {
 
 /* Global earthquake - applied to #app-wrapper to avoid breaking position:fixed */
 #app-wrapper.earthquake-global {
-  animation: earthquakeGlobal 0.18s ease-in-out infinite;
+  animation: earthquakeGlobal 0.08s ease-in-out infinite;
 }
 
 @keyframes earthquakeGlobal {
   0%, 100% {
-    transform: translate(0, 0);
+    transform: translate(0, 0) skewX(0deg);
   }
-  20% {
-    transform: translate(1.5px, -1px);
+  15% {
+    transform: translate(4px, -2px) skewX(0.3deg);
   }
-  40% {
-    transform: translate(-1px, 1.5px);
+  30% {
+    transform: translate(-3px, 3px) skewX(-0.2deg);
+  }
+  45% {
+    transform: translate(2px, -1px) skewX(0.15deg);
   }
   60% {
-    transform: translate(1px, 0.5px);
+    transform: translate(-4px, 2px) skewX(-0.25deg);
   }
-  80% {
-    transform: translate(-1.5px, -0.5px);
+  75% {
+    transform: translate(3px, -3px) skewX(0.2deg);
   }
+  90% {
+    transform: translate(-2px, 1px) skewX(-0.1deg);
+  }
+}
+
+/* ==========================================
+   VAAL DARKNESS OVERLAY
+   Dark screen effect when orb is over card
+   ========================================== */
+.vaal-darkness-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 20%,
+    rgba(0, 0, 0, 0.4) 60%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+}
+
+.vaal-darkness-overlay--active {
+  opacity: 1;
+}
+
+/* ==========================================
+   VAAL GLITCH OVERLAY
+   Chaotic chromatic aberration like synthesised cards
+   ========================================== */
+
+/* Tier-specific glitch colors */
+.vaal-glitch-overlay {
+  /* Default (T3) colors */
+  --vaal-glitch-primary: 140, 80, 50;
+  --vaal-glitch-chromatic-a: 255, 80, 60;
+  --vaal-glitch-chromatic-b: 60, 200, 180;
+}
+
+.vaal-glitch-overlay--t0 {
+  --vaal-glitch-primary: 200, 160, 60;
+  --vaal-glitch-chromatic-a: 255, 200, 80;
+  --vaal-glitch-chromatic-b: 80, 180, 160;
+}
+
+.vaal-glitch-overlay--t1 {
+  --vaal-glitch-primary: 100, 80, 180;
+  --vaal-glitch-chromatic-a: 200, 60, 255;
+  --vaal-glitch-chromatic-b: 60, 160, 255;
+}
+
+.vaal-glitch-overlay--t2 {
+  --vaal-glitch-primary: 60, 130, 200;
+  --vaal-glitch-chromatic-a: 255, 80, 140;
+  --vaal-glitch-chromatic-b: 40, 200, 255;
+}
+
+.vaal-glitch-overlay--t3 {
+  --vaal-glitch-primary: 100, 130, 160;
+  --vaal-glitch-chromatic-a: 180, 100, 140;
+  --vaal-glitch-chromatic-b: 80, 160, 180;
+}
+
+.vaal-glitch-overlay--foil {
+  --vaal-glitch-primary: 220, 180, 100;
+  --vaal-glitch-chromatic-a: 255, 150, 200;
+  --vaal-glitch-chromatic-b: 100, 255, 220;
+}
+
+/* Red chromatic layer */
+.vaal-glitch-overlay__red {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  border: 4px solid rgba(var(--vaal-glitch-chromatic-a), 0.8);
+  box-shadow: inset 0 0 100px rgba(var(--vaal-glitch-chromatic-a), 0.15);
+}
+
+.vaal-glitch-overlay--active .vaal-glitch-overlay__red {
+  animation: vaalGlitchRed 0.8s ease-in-out infinite;
+}
+
+/* Cyan chromatic layer */
+.vaal-glitch-overlay__cyan {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  border: 4px solid rgba(var(--vaal-glitch-chromatic-b), 0.8);
+  box-shadow: inset 0 0 100px rgba(var(--vaal-glitch-chromatic-b), 0.15);
+}
+
+.vaal-glitch-overlay--active .vaal-glitch-overlay__cyan {
+  animation: vaalGlitchCyan 0.8s ease-in-out infinite;
+}
+
+/* Scanlines layer */
+.vaal-glitch-overlay__scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+.vaal-glitch-overlay--active .vaal-glitch-overlay__scanlines {
+  opacity: 1;
+  animation: vaalScanlines 4s linear infinite;
+}
+
+/* Slice bars layer */
+.vaal-glitch-overlay__slices {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9997;
+  opacity: 0;
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    transparent 12%,
+    rgba(var(--vaal-glitch-chromatic-b), 0.12) 12%,
+    rgba(var(--vaal-glitch-chromatic-b), 0.12) 13%,
+    transparent 13%,
+    transparent 28%,
+    rgba(var(--vaal-glitch-chromatic-a), 0.12) 28%,
+    rgba(var(--vaal-glitch-chromatic-a), 0.12) 29%,
+    transparent 29%,
+    transparent 48%,
+    rgba(var(--vaal-glitch-primary), 0.1) 48%,
+    rgba(var(--vaal-glitch-primary), 0.1) 49%,
+    transparent 49%,
+    transparent 67%,
+    rgba(var(--vaal-glitch-chromatic-a), 0.1) 67%,
+    rgba(var(--vaal-glitch-chromatic-a), 0.1) 68%,
+    transparent 68%,
+    transparent 85%,
+    rgba(var(--vaal-glitch-chromatic-b), 0.1) 85%,
+    rgba(var(--vaal-glitch-chromatic-b), 0.1) 86%,
+    transparent 86%,
+    transparent 100%
+  );
+}
+
+.vaal-glitch-overlay--active .vaal-glitch-overlay__slices {
+  animation: vaalSliceGlitch 0.8s ease-in-out infinite;
+}
+
+/* Noise layer */
+.vaal-glitch-overlay__noise {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9996;
+  opacity: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+.vaal-glitch-overlay--active .vaal-glitch-overlay__noise {
+  opacity: 0.06;
+  animation: vaalNoise 0.15s steps(6) infinite;
+}
+
+/* Keyframes - Chaotic burst pattern like synthesised cards */
+@keyframes vaalGlitchRed {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  /* First burst */
+  15% { opacity: 0; }
+  16% { opacity: 1; transform: translate(-12px, 4px); }
+  18% { opacity: 0.9; transform: translate(-9px, -3px); }
+  20% { opacity: 0.7; transform: translate(-6px, 2px); }
+  22% { opacity: 0.4; transform: translate(-3px, -1px); }
+  24% { opacity: 0; transform: translate(0, 0); }
+  /* Second burst */
+  50% { opacity: 0; }
+  51% { opacity: 0.8; transform: translate(-8px, 3px); }
+  53% { opacity: 0.5; transform: translate(-4px, -2px); }
+  55% { opacity: 0; }
+  /* Third quick burst */
+  78% { opacity: 0; }
+  79% { opacity: 0.6; transform: translate(-6px, 1px); }
+  80% { opacity: 0.3; transform: translate(-3px, 0); }
+  81% { opacity: 0; }
+}
+
+@keyframes vaalGlitchCyan {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  /* First burst */
+  15% { opacity: 0; }
+  16% { opacity: 1; transform: translate(12px, -4px); }
+  18% { opacity: 0.9; transform: translate(9px, 3px); }
+  20% { opacity: 0.7; transform: translate(6px, -2px); }
+  22% { opacity: 0.4; transform: translate(3px, 1px); }
+  24% { opacity: 0; transform: translate(0, 0); }
+  /* Second burst */
+  50% { opacity: 0; }
+  51% { opacity: 0.8; transform: translate(8px, -3px); }
+  53% { opacity: 0.5; transform: translate(4px, 2px); }
+  55% { opacity: 0; }
+  /* Third quick burst */
+  78% { opacity: 0; }
+  79% { opacity: 0.6; transform: translate(6px, -1px); }
+  80% { opacity: 0.3; transform: translate(3px, 0); }
+  81% { opacity: 0; }
+}
+
+@keyframes vaalSliceGlitch {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  15% { opacity: 0; }
+  16% { opacity: 1; transform: translateY(-15px); }
+  18% { opacity: 0.9; transform: translateY(10px); }
+  20% { opacity: 0.7; transform: translateY(-6px); }
+  22% { opacity: 0.4; transform: translateY(3px); }
+  24% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 0; }
+  51% { opacity: 0.7; transform: translateY(-8px); }
+  53% { opacity: 0.3; transform: translateY(4px); }
+  55% { opacity: 0; }
+  78% { opacity: 0; }
+  79% { opacity: 0.5; transform: translateY(-5px); }
+  81% { opacity: 0; }
+}
+
+@keyframes vaalScanlines {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+@keyframes vaalNoise {
+  0%, 100% { transform: translate(0, 0); }
+  16% { transform: translate(-5px, 5px); }
+  33% { transform: translate(5px, -5px); }
+  50% { transform: translate(-3px, -3px); }
+  66% { transform: translate(3px, 3px); }
+  83% { transform: translate(-4px, 2px); }
 }
 
 /* ==========================================

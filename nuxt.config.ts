@@ -81,6 +81,7 @@ export default defineNuxtConfig({
     '~/assets/css/cards.css',
     '~/assets/css/foil.css',
     '~/assets/css/foil-effects.css',
+    '~/assets/css/synthesised.css',
     '~/assets/css/altar.css'
   ],
 

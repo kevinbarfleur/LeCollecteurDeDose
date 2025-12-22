@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import type { DecodedMousePosition, ReplayEvent, ReplayDataV2 } from '~/types/replay';
-import type { VaalOutcome } from '~/types/vaalOutcome';
+import type { AnyVaalOutcome } from '~/types/vaalOutcome';
 import type { Database, ReplayInsert, ActivityLogInsert } from '~/types/database';
 import { 
   shouldSample, 
@@ -19,7 +19,7 @@ interface CapturedRecordingData {
   cardTier: string;
   cardFoil: boolean;
   replayData: ReplayDataV2;
-  outcome: VaalOutcome;
+  outcome: AnyVaalOutcome;
   resultCardId: string | null;
 }
 
@@ -131,7 +131,7 @@ export function useReplayRecorder() {
     lastPosition = position;
   };
 
-  const stopRecording = async (outcome: VaalOutcome, newCardId?: string) => {
+  const stopRecording = async (outcome: AnyVaalOutcome, newCardId?: string) => {
     if (!isRecording.value || !cardData.value) return null;
     
     const endTime = performance.now() - recordStartTime.value;
@@ -327,7 +327,7 @@ export function useReplayRecorder() {
   // This is a standalone function that doesn't depend on recording state
   const logActivityOnly = async (
     card: { cardId: string; tier: string },
-    outcome: VaalOutcome,
+    outcome: AnyVaalOutcome,
     newCardId?: string
   ) => {
     if (!supabase) return;

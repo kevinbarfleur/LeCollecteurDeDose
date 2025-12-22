@@ -97,7 +97,8 @@
     "vaalOrbs": {
       "title": "Vaal Orbs",
       "subtitle": "Glisse une Vaal Orb et laisse la corruption te rire au nez.",
-      "foilMessage": "✦ Cette carte brille déjà plus que ton DPS.",
+      "foilMessage": "✦ Oseras-tu ?",
+      "synthesisedMessage": "◈ Transcendée. Au-delà de la corruption.",
       "empty": "Tu n'as plus de Vaal Orbs. Skill issue.",
       "recording": "Sacrifice consigné…",
       "rec": "REC",
@@ -287,6 +288,20 @@
       "shareTitle": "Duplication impossible !",
       "shareText": "RNGesus a décidé de t'offrir une copie. Ne t'habitue pas.",
       "shareLinkText": "Revivre le miracle"
+    },
+    "synthesised": {
+      "label": "Synthesised",
+      "emoji": "⚡",
+      "shareTitle": "SYNTHESISED !",
+      "shareText": "Ta carte foil a été corrompue en quelque chose... d'autre.",
+      "shareLinkText": "Admirer la synthèse"
+    },
+    "lose_foil": {
+      "label": "Perte du Foil",
+      "emoji": "💫",
+      "shareTitle": "Foil perdu...",
+      "shareText": "La corruption a aspiré l'éclat de ta carte. Elle redevient banale. La RNG reprend ce qu'elle donne.",
+      "shareLinkText": "Pleurer la perte"
     }
   },
   "replay": {
@@ -303,7 +318,9 @@
       "foil": "Transformation en Foil !",
       "destroyed": "La carte a été annihilée.",
       "transform": "Métamorphose réussie !",
-      "duplicate": "Duplication improbable !"
+      "duplicate": "Duplication improbable !",
+      "synthesised": "SYNTHESISED ! La matrice glitch.",
+      "lose_foil": "Le foil a été absorbé par les ténèbres..."
     }
   },
   "settings": {

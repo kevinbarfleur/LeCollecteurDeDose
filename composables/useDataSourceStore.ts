@@ -19,6 +19,7 @@ export function useDataSource() {
     isMockData: computed(() => dataSourceStore.isMockData),
     isSupabaseData: computed(() => dataSourceStore.isSupabaseData),
     isInitializing: computed(() => !dataSourceStore.isInitialized),
+    isLoadingMockData: computed(() => dataSourceStore.isLoadingMockData),
     setDataSource: dataSourceStore.setDataSource,
     toggleDataSource: dataSourceStore.toggleDataSource,
     checkIsAdmin: authStore.checkAdmin,

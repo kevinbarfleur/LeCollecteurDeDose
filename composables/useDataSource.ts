@@ -12,6 +12,7 @@ export function useDataSource() {
   return {
     dataSource: computed(() => store.source),
     isInitializing: computed(() => !store.isInitialized),
+    isLoadingMockData: computed(() => store.isLoadingMockData),
     isMockData: computed(() => store.isMockData),
     isSupabaseData: computed(() => store.isSupabaseData),
     apiUrl: computed(() => store.apiUrl),

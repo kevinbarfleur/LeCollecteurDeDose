@@ -1,0 +1,894 @@
+/* ===========================================
+   SYNTHESISED CARD EFFECT
+   100% CSS glitch aesthetic with randomization
+   Variables --glitch-delay and --glitch-duration
+   are set per-card via JavaScript for unique timing
+   =========================================== */
+
+.game-card--synthesised {
+  position: relative;
+  /* Fallback values - overridden by JS per card */
+  --glitch-delay: 0s;
+  --glitch-duration: 2.5s;
+
+  /* Default synth colors (can be overridden per tier) */
+  --synth-primary: 0, 180, 255;
+  --synth-secondary: 0, 120, 200;
+  --synth-accent: 0, 200, 255;
+  --synth-glow: 0, 150, 220;
+  --synth-text: 180, 240, 255;
+  --synth-chromatic-a: 255, 0, 100;
+  --synth-chromatic-b: 0, 255, 200;
+}
+
+/* ===========================================
+   TIER-SPECIFIC SYNTH COLORS
+   Blend tier theme with synthesised blue
+   =========================================== */
+
+/* T0 - Gold dominant with subtle blue influence */
+.game-card--synthesised.game-card--t0 {
+  --synth-primary: 210, 170, 60;
+  --synth-secondary: 180, 140, 50;
+  --synth-accent: 230, 190, 80;
+  --synth-glow: 200, 160, 55;
+  --synth-text: 255, 240, 180;
+  --synth-chromatic-a: 255, 200, 80;
+  --synth-chromatic-b: 100, 200, 180;
+}
+
+/* T1 - Purple + Blue = Indigo/Violet-Blue */
+.game-card--synthesised.game-card--t1 {
+  --synth-primary: 120, 100, 220;
+  --synth-secondary: 100, 80, 180;
+  --synth-accent: 140, 120, 240;
+  --synth-glow: 110, 90, 200;
+  --synth-text: 210, 200, 255;
+  --synth-chromatic-a: 200, 80, 255;
+  --synth-chromatic-b: 80, 180, 255;
+}
+
+/* T2 - Steel Blue + Blue = Vibrant Blue */
+.game-card--synthesised.game-card--t2 {
+  --synth-primary: 60, 150, 220;
+  --synth-secondary: 50, 120, 180;
+  --synth-accent: 80, 180, 240;
+  --synth-glow: 60, 140, 200;
+  --synth-text: 180, 220, 255;
+  --synth-chromatic-a: 255, 100, 150;
+  --synth-chromatic-b: 50, 220, 255;
+}
+
+/* T3 - Gray + Blue = Steel Gray-Blue */
+.game-card--synthesised.game-card--t3 {
+  --synth-primary: 100, 140, 170;
+  --synth-secondary: 80, 110, 140;
+  --synth-accent: 120, 160, 190;
+  --synth-glow: 90, 130, 160;
+  --synth-text: 190, 210, 225;
+  --synth-chromatic-a: 180, 120, 160;
+  --synth-chromatic-b: 100, 180, 200;
+}
+
+/* ===========================================
+   STRONG GLOW - Tier-aware border & shadow
+   =========================================== */
+.game-card--synthesised {
+  box-shadow:
+    0 0 20px rgba(var(--synth-primary), 0.6),
+    0 0 40px rgba(var(--synth-secondary), 0.4),
+    0 0 60px rgba(var(--synth-secondary), 0.2),
+    inset 0 0 25px rgba(var(--synth-glow), 0.15);
+  border: 2px solid rgba(var(--synth-accent), 0.7) !important;
+}
+
+.game-card--synthesised:hover {
+  box-shadow:
+    0 0 30px rgba(var(--synth-accent), 0.7),
+    0 0 50px rgba(var(--synth-glow), 0.5),
+    0 0 80px rgba(var(--synth-secondary), 0.3),
+    inset 0 0 30px rgba(var(--synth-primary), 0.2);
+  border-color: rgba(var(--synth-accent), 0.9) !important;
+}
+
+/* ===========================================
+   BORDER GLITCH - Strong chromatic aberration
+   =========================================== */
+.game-card--synthesised::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 3px solid rgba(var(--synth-chromatic-a), 0.7);
+  pointer-events: none;
+  z-index: 15;
+  opacity: 0;
+  animation: synth-border-red var(--glitch-duration) ease-in-out infinite;
+  animation-delay: var(--glitch-delay);
+}
+
+.game-card--synthesised::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 3px solid rgba(var(--synth-chromatic-b), 0.7);
+  pointer-events: none;
+  z-index: 15;
+  opacity: 0;
+  animation: synth-border-cyan var(--glitch-duration) ease-in-out infinite;
+  animation-delay: var(--glitch-delay);
+}
+
+@keyframes synth-border-red {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  35% { opacity: 0; transform: translate(0, 0); }
+  36% { opacity: 1; transform: translate(-5px, 2px); }
+  38% { opacity: 0.9; transform: translate(-4px, -1px); }
+  40% { opacity: 0.7; transform: translate(-3px, 1px); }
+  42% { opacity: 0.5; transform: translate(-2px, 0); }
+  44% { opacity: 0; transform: translate(0, 0); }
+  /* Second burst */
+  65% { opacity: 0; }
+  66% { opacity: 0.8; transform: translate(-4px, 1px); }
+  68% { opacity: 0.4; transform: translate(-2px, -1px); }
+  70% { opacity: 0; }
+  /* Third quick burst */
+  85% { opacity: 0; }
+  86% { opacity: 0.6; transform: translate(-3px, 0); }
+  87% { opacity: 0; }
+}
+
+@keyframes synth-border-cyan {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  35% { opacity: 0; transform: translate(0, 0); }
+  36% { opacity: 1; transform: translate(5px, -2px); }
+  38% { opacity: 0.9; transform: translate(4px, 1px); }
+  40% { opacity: 0.7; transform: translate(3px, -1px); }
+  42% { opacity: 0.5; transform: translate(2px, 0); }
+  44% { opacity: 0; transform: translate(0, 0); }
+  /* Second burst */
+  65% { opacity: 0; }
+  66% { opacity: 0.8; transform: translate(4px, -1px); }
+  68% { opacity: 0.4; transform: translate(2px, 1px); }
+  70% { opacity: 0; }
+  /* Third quick burst */
+  85% { opacity: 0; }
+  86% { opacity: 0.6; transform: translate(3px, 0); }
+  87% { opacity: 0; }
+}
+
+/* ===========================================
+   OVERLAY - Scanlines + color shift + VHS
+   =========================================== */
+.game-card__synthesised-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Scanlines effect */
+.game-card__synthesised-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(var(--synth-glow), 0.06) 2px,
+    rgba(var(--synth-glow), 0.06) 4px
+  );
+  animation: synth-scanlines 6s linear infinite;
+}
+
+/* VHS color distortion overlay */
+.game-card__synthesised-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--synth-secondary), 0.15) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(var(--synth-glow), 0.15) 100%
+  );
+  mix-blend-mode: overlay;
+  animation: synth-vhs-shift var(--glitch-duration) ease-in-out infinite;
+  animation-delay: var(--glitch-delay);
+}
+
+@keyframes synth-scanlines {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+@keyframes synth-vhs-shift {
+  0%, 100% { opacity: 1; }
+  36% { opacity: 0.3; }
+  38% { opacity: 1.2; }
+  40% { opacity: 0.5; }
+  42% { opacity: 1; }
+  66% { opacity: 0.4; }
+  68% { opacity: 1; }
+}
+
+/* ===========================================
+   TEXT - Strong chromatic aberration glitch
+   =========================================== */
+.game-card--synthesised .game-card__name-text {
+  position: relative;
+  color: rgba(var(--synth-text), 0.95);
+  text-shadow:
+    0 0 8px rgba(var(--synth-accent), 0.9),
+    0 0 16px rgba(var(--synth-glow), 0.6),
+    0 0 24px rgba(var(--synth-secondary), 0.4);
+  animation: synth-text-glitch var(--glitch-duration) ease-in-out infinite;
+  animation-delay: var(--glitch-delay);
+}
+
+@keyframes synth-text-glitch {
+  0%, 100% {
+    text-shadow:
+      0 0 8px rgba(var(--synth-accent), 0.9),
+      0 0 16px rgba(var(--synth-glow), 0.6),
+      0 0 24px rgba(var(--synth-secondary), 0.4);
+    transform: translateX(0) skewX(0);
+  }
+  35% {
+    text-shadow:
+      0 0 8px rgba(var(--synth-accent), 0.9),
+      0 0 16px rgba(var(--synth-glow), 0.6);
+    transform: translateX(0) skewX(0);
+  }
+  36% {
+    text-shadow:
+      -5px 0 rgba(var(--synth-chromatic-a), 0.9),
+      5px 0 rgba(var(--synth-chromatic-b), 0.9),
+      0 0 15px rgba(var(--synth-accent), 1);
+    transform: translateX(-4px) skewX(-5deg);
+  }
+  37% {
+    text-shadow:
+      4px 0 rgba(var(--synth-chromatic-a), 0.8),
+      -4px 0 rgba(var(--synth-chromatic-b), 0.8),
+      0 0 12px rgba(var(--synth-accent), 0.9);
+    transform: translateX(3px) skewX(3deg);
+  }
+  38% {
+    text-shadow:
+      -3px 0 rgba(var(--synth-chromatic-b), 0.9),
+      3px 0 rgba(var(--synth-chromatic-a), 0.9),
+      0 0 14px rgba(var(--synth-accent), 0.95);
+    transform: translateX(-2px) skewX(-2deg);
+  }
+  39% {
+    text-shadow:
+      2px 0 rgba(var(--synth-chromatic-a), 0.6),
+      -2px 0 rgba(var(--synth-chromatic-b), 0.6);
+    transform: translateX(2px) skewX(1deg);
+  }
+  40% {
+    text-shadow:
+      -1px 0 rgba(var(--synth-chromatic-a), 0.4),
+      1px 0 rgba(var(--synth-chromatic-b), 0.4);
+    transform: translateX(-1px);
+  }
+  42% {
+    text-shadow:
+      0 0 8px rgba(var(--synth-accent), 0.9),
+      0 0 16px rgba(var(--synth-glow), 0.6);
+    transform: translateX(0) skewX(0);
+  }
+  /* Second mini glitch */
+  66% {
+    text-shadow:
+      -3px 0 rgba(var(--synth-chromatic-a), 0.7),
+      3px 0 rgba(var(--synth-chromatic-b), 0.7);
+    transform: translateX(-2px);
+  }
+  68% {
+    text-shadow:
+      2px 0 rgba(var(--synth-chromatic-a), 0.5),
+      -2px 0 rgba(var(--synth-chromatic-b), 0.5);
+    transform: translateX(1px);
+  }
+  70% {
+    transform: translateX(0);
+  }
+  /* Third quick glitch */
+  86% {
+    text-shadow:
+      -2px 0 rgba(var(--synth-chromatic-a), 0.6),
+      2px 0 rgba(var(--synth-chromatic-b), 0.6);
+    transform: translateX(-1px);
+  }
+  87% {
+    transform: translateX(0);
+  }
+}
+
+.game-card--synthesised .game-card__class {
+  color: rgba(var(--synth-primary), 0.9);
+  text-shadow: 0 0 6px rgba(var(--synth-glow), 0.5);
+  animation: synth-class-flicker var(--glitch-duration) ease-in-out infinite;
+  animation-delay: var(--glitch-delay);
+}
+
+@keyframes synth-class-flicker {
+  0%, 100% { opacity: 0.9; }
+  36% { opacity: 0.3; }
+  37% { opacity: 1; }
+  38% { opacity: 0.4; }
+  39% { opacity: 0.9; }
+  40% { opacity: 0.5; }
+  42% { opacity: 0.9; }
+  66% { opacity: 0.4; }
+  68% { opacity: 0.9; }
+}
+
+/* ===========================================
+   IMAGE GLITCH - Color shift + displacement
+   =========================================== */
+.game-card--synthesised .game-card__image {
+  filter: saturate(0.85) hue-rotate(-8deg);
+  animation: synth-image-glitch var(--glitch-duration) ease-in-out infinite;
+  animation-delay: var(--glitch-delay);
+}
+
+@keyframes synth-image-glitch {
+  0%, 100% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  35% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  36% {
+    filter: saturate(1.4) hue-rotate(20deg) brightness(1.2) contrast(1.1);
+    transform: translate(-3px, 1px);
+  }
+  37% {
+    filter: saturate(0.5) hue-rotate(-35deg) brightness(0.9) contrast(0.95);
+    transform: translate(2px, -1px);
+  }
+  38% {
+    filter: saturate(1.3) hue-rotate(15deg) brightness(1.15);
+    transform: translate(-2px, 0);
+  }
+  39% {
+    filter: saturate(0.7) hue-rotate(-20deg) brightness(0.95);
+    transform: translate(1px, 1px);
+  }
+  40% {
+    filter: saturate(1.1) hue-rotate(8deg);
+    transform: translate(-1px, 0);
+  }
+  42% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  /* Second glitch */
+  66% {
+    filter: saturate(1.2) hue-rotate(12deg) brightness(1.1);
+    transform: translate(-2px, 0);
+  }
+  67% {
+    filter: saturate(0.6) hue-rotate(-25deg) brightness(0.92);
+    transform: translate(1px, -1px);
+  }
+  68% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  /* Third quick burst */
+  86% {
+    filter: saturate(1.15) hue-rotate(10deg) brightness(1.08);
+    transform: translate(-1px, 0);
+  }
+  87% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+}
+
+.game-card--synthesised:hover .game-card__image {
+  filter: saturate(0.75) hue-rotate(-12deg) brightness(1.08);
+}
+
+/* ===========================================
+   GLITCH SLICE EFFECT - RGB horizontal bars
+   =========================================== */
+.game-card--synthesised .game-card__image-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    transparent 0%,
+    transparent 15%,
+    rgba(var(--synth-chromatic-b), 0.15) 15%,
+    rgba(var(--synth-chromatic-b), 0.15) 16%,
+    transparent 16%,
+    transparent 35%,
+    rgba(var(--synth-chromatic-a), 0.15) 35%,
+    rgba(var(--synth-chromatic-a), 0.15) 36%,
+    transparent 36%,
+    transparent 55%,
+    rgba(var(--synth-accent), 0.15) 55%,
+    rgba(var(--synth-accent), 0.15) 56%,
+    transparent 56%,
+    transparent 75%,
+    rgba(var(--synth-chromatic-a), 0.12) 75%,
+    rgba(var(--synth-chromatic-a), 0.12) 76%,
+    transparent 76%,
+    transparent 90%,
+    rgba(var(--synth-chromatic-b), 0.12) 90%,
+    rgba(var(--synth-chromatic-b), 0.12) 91%,
+    transparent 91%,
+    transparent 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  animation: synth-slice-glitch var(--glitch-duration) ease-in-out infinite;
+  animation-delay: var(--glitch-delay);
+}
+
+@keyframes synth-slice-glitch {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  35% { opacity: 0; transform: translateY(0); }
+  36% { opacity: 1; transform: translateY(-8px); }
+  37% { opacity: 0.9; transform: translateY(5px); }
+  38% { opacity: 0.8; transform: translateY(-4px); }
+  39% { opacity: 0.5; transform: translateY(2px); }
+  40% { opacity: 0.3; transform: translateY(-1px); }
+  42% { opacity: 0; transform: translateY(0); }
+  /* Second burst */
+  66% { opacity: 0.7; transform: translateY(-3px); }
+  68% { opacity: 0; transform: translateY(0); }
+}
+
+/* ===========================================
+   DETAIL VIEW - EXTRA STRONG GLITCH
+   =========================================== */
+.game-card--floating.game-card--synthesised {
+  --glitch-duration: 2s;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 50px rgba(var(--synth-primary), 0.45),
+    0 0 100px rgba(var(--synth-secondary), 0.3),
+    0 0 150px rgba(var(--synth-secondary), 0.15);
+  border-color: rgba(var(--synth-accent), 0.7) !important;
+  border-width: 2px !important;
+}
+
+/* Stronger border glitch in detail */
+.game-card--floating.game-card--synthesised::before {
+  border-width: 4px;
+  inset: -4px;
+  animation: synth-detail-border-red 2s ease-in-out infinite;
+}
+
+.game-card--floating.game-card--synthesised::after {
+  border-width: 4px;
+  inset: -4px;
+  animation: synth-detail-border-cyan 2s ease-in-out infinite;
+}
+
+@keyframes synth-detail-border-red {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  25% { opacity: 0; }
+  26% { opacity: 1; transform: translate(-8px, 3px); }
+  28% { opacity: 0.95; transform: translate(-6px, -2px); }
+  30% { opacity: 0.85; transform: translate(-5px, 2px); }
+  32% { opacity: 0.7; transform: translate(-4px, -1px); }
+  34% { opacity: 0.5; transform: translate(-2px, 1px); }
+  36% { opacity: 0; transform: translate(0, 0); }
+  /* Second burst */
+  55% { opacity: 0; }
+  56% { opacity: 0.9; transform: translate(-6px, 2px); }
+  58% { opacity: 0.6; transform: translate(-3px, -1px); }
+  60% { opacity: 0; }
+  /* Third burst */
+  80% { opacity: 0; }
+  81% { opacity: 0.7; transform: translate(-5px, 1px); }
+  82% { opacity: 0.3; transform: translate(-2px, 0); }
+  83% { opacity: 0; }
+}
+
+@keyframes synth-detail-border-cyan {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  25% { opacity: 0; }
+  26% { opacity: 1; transform: translate(8px, -3px); }
+  28% { opacity: 0.95; transform: translate(6px, 2px); }
+  30% { opacity: 0.85; transform: translate(5px, -2px); }
+  32% { opacity: 0.7; transform: translate(4px, 1px); }
+  34% { opacity: 0.5; transform: translate(2px, -1px); }
+  36% { opacity: 0; transform: translate(0, 0); }
+  /* Second burst */
+  55% { opacity: 0; }
+  56% { opacity: 0.9; transform: translate(6px, -2px); }
+  58% { opacity: 0.6; transform: translate(3px, 1px); }
+  60% { opacity: 0; }
+  /* Third burst */
+  80% { opacity: 0; }
+  81% { opacity: 0.7; transform: translate(5px, -1px); }
+  82% { opacity: 0.3; transform: translate(2px, 0); }
+  83% { opacity: 0; }
+}
+
+/* Detail title with intense glitch */
+.game-card--floating.game-card--synthesised .detail__name {
+  color: rgba(var(--synth-text), 0.95);
+  text-shadow:
+    0 0 10px rgba(var(--synth-accent), 0.8),
+    0 0 20px rgba(var(--synth-glow), 0.5);
+  animation: synth-detail-name-glitch 2s ease-in-out infinite;
+}
+
+@keyframes synth-detail-name-glitch {
+  0%, 100% {
+    text-shadow:
+      0 0 10px rgba(var(--synth-accent), 0.8),
+      0 0 20px rgba(var(--synth-glow), 0.5);
+    transform: translateX(0) skewX(0);
+  }
+  25% { transform: translateX(0) skewX(0); }
+  26% {
+    text-shadow:
+      -6px 0 rgba(var(--synth-chromatic-a), 0.9),
+      6px 0 rgba(var(--synth-chromatic-b), 0.9),
+      0 0 15px rgba(var(--synth-accent), 1);
+    transform: translateX(-5px) skewX(-8deg);
+  }
+  28% {
+    text-shadow:
+      5px 0 rgba(var(--synth-chromatic-a), 0.8),
+      -5px 0 rgba(var(--synth-chromatic-b), 0.8);
+    transform: translateX(4px) skewX(5deg);
+  }
+  30% {
+    text-shadow:
+      -4px 0 rgba(var(--synth-chromatic-b), 0.9),
+      4px 0 rgba(var(--synth-chromatic-a), 0.9);
+    transform: translateX(-3px) skewX(-3deg);
+  }
+  32% {
+    text-shadow:
+      2px 0 rgba(var(--synth-chromatic-a), 0.6),
+      -2px 0 rgba(var(--synth-chromatic-b), 0.6);
+    transform: translateX(2px) skewX(1deg);
+  }
+  34% {
+    text-shadow:
+      0 0 10px rgba(var(--synth-accent), 0.8),
+      0 0 20px rgba(var(--synth-glow), 0.5);
+    transform: translateX(0) skewX(0);
+  }
+  /* Second glitch */
+  56% {
+    text-shadow:
+      -4px 0 rgba(var(--synth-chromatic-a), 0.8),
+      4px 0 rgba(var(--synth-chromatic-b), 0.8);
+    transform: translateX(-3px) skewX(-4deg);
+  }
+  58% {
+    text-shadow:
+      3px 0 rgba(var(--synth-chromatic-a), 0.5),
+      -3px 0 rgba(var(--synth-chromatic-b), 0.5);
+    transform: translateX(2px) skewX(2deg);
+  }
+  60% { transform: translateX(0) skewX(0); }
+  /* Third quick burst */
+  81% {
+    text-shadow:
+      -3px 0 rgba(var(--synth-chromatic-a), 0.7),
+      3px 0 rgba(var(--synth-chromatic-b), 0.7);
+    transform: translateX(-2px);
+  }
+  82% { transform: translateX(1px); }
+  83% { transform: translateX(0); }
+}
+
+/* Tier badge flicker */
+.game-card--floating.game-card--synthesised .detail__tier-badge {
+  background: linear-gradient(
+    180deg,
+    rgba(var(--synth-secondary), 0.25) 0%,
+    rgba(var(--synth-secondary), 0.35) 100%
+  );
+  color: rgba(var(--synth-accent), 0.95);
+  border-color: rgba(var(--synth-glow), 0.6);
+  box-shadow: 0 0 15px rgba(var(--synth-glow), 0.4);
+  animation: synth-badge-intense 2s ease-in-out infinite;
+}
+
+@keyframes synth-badge-intense {
+  0%, 100% { opacity: 1; transform: translateX(0); }
+  26% { opacity: 0.4; transform: translateX(-2px); }
+  28% { opacity: 1.1; transform: translateX(1px); }
+  30% { opacity: 0.5; transform: translateX(-1px); }
+  32% { opacity: 0.9; transform: translateX(0); }
+  34% { opacity: 1; }
+  56% { opacity: 0.5; }
+  58% { opacity: 1; }
+}
+
+/* Detail artwork - strong glitch */
+.game-card--floating.game-card--synthesised .detail__artwork {
+  position: relative;
+}
+
+.game-card--floating.game-card--synthesised .detail__artwork::before {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(var(--synth-glow), 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 70%, rgba(var(--synth-secondary), 0.06) 0%, transparent 50%);
+}
+
+.game-card--floating.game-card--synthesised .detail__image {
+  animation: synth-detail-image-glitch 2s ease-in-out infinite;
+}
+
+@keyframes synth-detail-image-glitch {
+  0%, 100% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  25% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  26% {
+    filter: saturate(1.5) hue-rotate(25deg) brightness(1.25) contrast(1.1);
+    transform: translate(-4px, 2px);
+  }
+  27% {
+    filter: saturate(0.4) hue-rotate(-45deg) brightness(0.85) contrast(0.9);
+    transform: translate(3px, -1px);
+  }
+  28% {
+    filter: saturate(1.4) hue-rotate(18deg) brightness(1.15);
+    transform: translate(-3px, 1px);
+  }
+  29% {
+    filter: saturate(0.5) hue-rotate(-30deg) brightness(0.9);
+    transform: translate(2px, -1px);
+  }
+  30% {
+    filter: saturate(1.2) hue-rotate(10deg) brightness(1.1);
+    transform: translate(-2px, 0);
+  }
+  31% {
+    filter: saturate(0.7) hue-rotate(-15deg);
+    transform: translate(1px, 1px);
+  }
+  32% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  /* Second burst */
+  56% {
+    filter: saturate(1.3) hue-rotate(15deg) brightness(1.12);
+    transform: translate(-3px, 1px);
+  }
+  57% {
+    filter: saturate(0.5) hue-rotate(-28deg) brightness(0.9);
+    transform: translate(2px, -1px);
+  }
+  58% {
+    filter: saturate(1.1) hue-rotate(8deg);
+    transform: translate(-1px, 0);
+  }
+  60% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+  /* Third quick burst */
+  81% {
+    filter: saturate(1.2) hue-rotate(12deg) brightness(1.08);
+    transform: translate(-2px, 0);
+  }
+  82% {
+    filter: saturate(0.6) hue-rotate(-18deg);
+    transform: translate(1px, 0);
+  }
+  83% {
+    filter: saturate(0.85) hue-rotate(-8deg);
+    transform: translate(0, 0);
+  }
+}
+
+/* Type line glitch */
+.game-card--floating.game-card--synthesised .detail__type {
+  color: rgba(var(--synth-text), 0.95);
+  animation: synth-type-glitch 2s ease-in-out infinite;
+}
+
+@keyframes synth-type-glitch {
+  0%, 100% { transform: translateX(0); opacity: 1; }
+  26% { transform: translateX(-4px); opacity: 0.5; }
+  28% { transform: translateX(2px); opacity: 0.8; }
+  30% { transform: translateX(-1px); opacity: 1; }
+  56% { transform: translateX(-2px); opacity: 0.6; }
+  58% { transform: translateX(1px); opacity: 0.9; }
+  60% { transform: translateX(0); opacity: 1; }
+}
+
+.game-card--floating.game-card--synthesised .detail__rarity {
+  color: rgba(var(--synth-accent), 0.9);
+  text-shadow: 0 0 6px rgba(var(--synth-glow), 0.4);
+}
+
+/* Separator intense glitch */
+.game-card--floating.game-card--synthesised .detail__separator-rune {
+  color: rgba(var(--synth-accent), 0.7);
+  animation: synth-rune-intense 2s ease-in-out infinite;
+}
+
+@keyframes synth-rune-intense {
+  0%, 100% {
+    opacity: 0.7;
+    text-shadow: 0 0 6px rgba(var(--synth-glow), 0.5);
+    transform: scale(1);
+  }
+  26% {
+    opacity: 1;
+    text-shadow:
+      -4px 0 rgba(var(--synth-chromatic-a), 0.8),
+      4px 0 rgba(var(--synth-chromatic-b), 0.8),
+      0 0 12px rgba(var(--synth-accent), 1);
+    transform: scale(1.3);
+  }
+  28% {
+    opacity: 0.4;
+    text-shadow: 0 0 3px rgba(var(--synth-glow), 0.3);
+    transform: scale(0.9);
+  }
+  30% {
+    opacity: 0.9;
+    text-shadow:
+      -2px 0 rgba(var(--synth-chromatic-a), 0.5),
+      2px 0 rgba(var(--synth-chromatic-b), 0.5);
+    transform: scale(1.1);
+  }
+  32% {
+    opacity: 0.7;
+    text-shadow: 0 0 6px rgba(var(--synth-glow), 0.5);
+    transform: scale(1);
+  }
+  56% {
+    opacity: 1;
+    text-shadow:
+      -3px 0 rgba(var(--synth-chromatic-a), 0.6),
+      3px 0 rgba(var(--synth-chromatic-b), 0.6);
+    transform: scale(1.2);
+  }
+  58% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  60% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+}
+
+.game-card--floating.game-card--synthesised .detail__separator-line {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--synth-glow), 0.25) 30%,
+    rgba(var(--synth-accent), 0.5) 50%,
+    rgba(var(--synth-glow), 0.25) 70%,
+    transparent 100%
+  );
+  animation: synth-line-pulse 2s ease-in-out infinite;
+}
+
+@keyframes synth-line-pulse {
+  0%, 100% { opacity: 1; }
+  26% { opacity: 0.3; }
+  28% { opacity: 1.2; }
+  30% { opacity: 0.5; }
+  32% { opacity: 1; }
+}
+
+/* Flavour text */
+.game-card--floating.game-card--synthesised .detail__flavour p {
+  color: rgba(var(--synth-text), 0.85);
+  text-shadow: 0 0 6px rgba(var(--synth-glow), 0.3);
+  animation: synth-flavour-flicker 2s ease-in-out infinite;
+}
+
+@keyframes synth-flavour-flicker {
+  0%, 100% { opacity: 0.9; }
+  26% { opacity: 0.4; }
+  28% { opacity: 1; }
+  30% { opacity: 0.6; }
+  32% { opacity: 0.9; }
+  56% { opacity: 0.5; }
+  58% { opacity: 0.9; }
+}
+
+/* Footer info */
+.game-card--floating.game-card--synthesised .detail__collector-number {
+  color: rgba(var(--synth-glow), 0.8);
+}
+
+.game-card--floating.game-card--synthesised .detail__weight {
+  color: rgba(var(--synth-accent), 0.8);
+}
+
+.game-card--floating.game-card--synthesised .detail__wiki-link {
+  color: rgba(var(--synth-glow), 0.85);
+  border-color: rgba(var(--synth-glow), 0.4);
+}
+
+.game-card--floating.game-card--synthesised .detail__wiki-link:hover {
+  background: linear-gradient(180deg, rgba(var(--synth-glow), 0.2) 0%, rgba(var(--synth-secondary), 0.15) 100%);
+  border-color: rgba(var(--synth-accent), 0.5);
+  color: rgba(var(--synth-accent), 1);
+}
+
+/* ===========================================
+   NOISE OVERLAY - Intense static
+   =========================================== */
+.game-card--synthesised .game-card__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 5;
+  animation: synth-noise 0.3s steps(8) infinite;
+}
+
+@keyframes synth-noise {
+  0%, 100% { transform: translate(0, 0); }
+  12.5% { transform: translate(-3px, 3px); }
+  25% { transform: translate(3px, -3px); }
+  37.5% { transform: translate(-2px, -2px); }
+  50% { transform: translate(2px, 2px); }
+  62.5% { transform: translate(-1px, 3px); }
+  75% { transform: translate(3px, -1px); }
+  87.5% { transform: translate(-3px, -3px); }
+}
+
+/* ===========================================
+   REDUCED MOTION
+   =========================================== */
+@media (prefers-reduced-motion: reduce) {
+  .game-card--synthesised,
+  .game-card--synthesised .game-card__name-text,
+  .game-card--synthesised .game-card__class,
+  .game-card--synthesised .game-card__image,
+  .game-card--synthesised::before,
+  .game-card--synthesised::after,
+  .game-card__synthesised-overlay::before,
+  .game-card__synthesised-overlay::after,
+  .game-card--synthesised .game-card__image-wrapper::before,
+  .game-card--synthesised .game-card__frame::after,
+  .game-card--floating.game-card--synthesised .detail__name,
+  .game-card--floating.game-card--synthesised .detail__tier-badge,
+  .game-card--floating.game-card--synthesised .detail__image,
+  .game-card--floating.game-card--synthesised .detail__type,
+  .game-card--floating.game-card--synthesised .detail__separator-rune,
+  .game-card--floating.game-card--synthesised .detail__separator-line,
+  .game-card--floating.game-card--synthesised .detail__flavour p {
+    animation: none !important;
+  }
+
+  .game-card--synthesised .game-card__name-text {
+    text-shadow:
+      0 0 8px rgba(var(--synth-accent), 0.9),
+      0 0 16px rgba(var(--synth-glow), 0.6);
+  }
+}

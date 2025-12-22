@@ -385,6 +385,80 @@ export async function updateUserCollection(
   }
 }
 
+/**
+ * Reset all mock data to empty state
+ */
+export function resetMockData(): void {
+  mockUsers.clear()
+  mockCollections.clear()
+  mockBoosters.clear()
+  console.log('[MockService] All mock data cleared')
+}
+
+/**
+ * Initialize mock data from a Supabase collection snapshot
+ * This copies the user's real data into the mock service for safe testing
+ */
+export function initializeMockFromSupabase(
+  username: string,
+  collectionData: Record<string, any>,
+  vaalOrbs: number = 0
+): void {
+  // Reset existing mock data first
+  resetMockData()
+
+  // Create mock user
+  const userId = `mock-${username.toLowerCase()}`
+  mockUsers.set(userId, {
+    id: userId,
+    twitch_username: username,
+    vaal_orbs: vaalOrbs
+  })
+
+  // Convert collection data to mock format
+  const collections: MockCollection[] = []
+
+  for (const [key, cardData] of Object.entries(collectionData)) {
+    // Skip non-card entries like 'vaalOrbs'
+    if (key === 'vaalOrbs' || typeof cardData !== 'object' || !cardData) continue
+
+    const cardUid = parseInt(key)
+    if (isNaN(cardUid)) continue
+
+    const normalCount = cardData.normal || 0
+    const foilCount = cardData.foil || 0
+    const synthesisedCount = cardData.synthesised || 0
+
+    // Only add if there's at least one copy
+    if (normalCount > 0 || foilCount > 0 || synthesisedCount > 0) {
+      collections.push({
+        user_id: userId,
+        card_uid: cardUid,
+        quantity: normalCount + foilCount + synthesisedCount,
+        normal_count: normalCount,
+        foil_count: foilCount
+      })
+    }
+  }
+
+  mockCollections.set(userId, collections)
+  mockBoosters.set(userId, [])
+
+  console.log(`[MockService] Initialized mock data for ${username}:`, {
+    vaalOrbs,
+    cardCount: collections.length,
+    totalCards: collections.reduce((sum, c) => sum + c.quantity, 0)
+  })
+}
+
+/**
+ * Check if mock data is initialized for a user
+ */
+export function isMockInitialized(username: string): boolean {
+  const userId = `mock-${username.toLowerCase()}`
+  return mockUsers.has(userId)
+}
+
 // Export mock RPC functions for internal use
 export const mockRpc = {
   getOrCreateUser,

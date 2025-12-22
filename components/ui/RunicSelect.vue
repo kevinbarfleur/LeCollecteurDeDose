@@ -6,6 +6,8 @@ interface Option {
   label: string;
   description?: string;
   count?: number;
+  standardCount?: number;
+  foilCount?: number;
 }
 
 interface Props {
@@ -443,6 +445,16 @@ onUnmounted(() => {
                   class="runic-select__option-desc"
                 >
                   {{ option.description }}
+                </span>
+              </span>
+
+              <!-- Variation tags (standard/foil counts) -->
+              <span v-if="option.standardCount || option.foilCount" class="runic-select__option-tags">
+                <span v-if="option.standardCount" class="runic-select__tag runic-select__tag--standard">
+                  {{ option.standardCount }}
+                </span>
+                <span v-if="option.foilCount" class="runic-select__tag runic-select__tag--foil">
+                  {{ option.foilCount }}
                 </span>
               </span>
 
@@ -992,6 +1004,63 @@ onUnmounted(() => {
   height: 16px;
   color: #c97a3a;
   margin-left: auto;
+}
+
+/* ==========================================
+   VARIATION TAGS
+   ========================================== */
+.runic-select__option-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.runic-select__tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-family: "Cinzel", serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.runic-select__tag--standard {
+  color: rgba(180, 175, 165, 0.9);
+  background: linear-gradient(
+    180deg,
+    rgba(80, 75, 70, 0.35) 0%,
+    rgba(60, 55, 50, 0.45) 100%
+  );
+  border: 1px solid rgba(100, 95, 85, 0.4);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.runic-select__tag--foil {
+  color: #e8d080;
+  background: linear-gradient(
+    180deg,
+    rgba(175, 135, 50, 0.3) 0%,
+    rgba(140, 100, 30, 0.4) 100%
+  );
+  border: 1px solid rgba(195, 155, 70, 0.5);
+  text-shadow: 0 0 4px rgba(255, 215, 100, 0.3), 0 1px 1px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 6px rgba(255, 215, 100, 0.15);
+}
+
+.runic-select__option--selected .runic-select__tag--standard {
+  color: rgba(200, 195, 185, 1);
+  border-color: rgba(120, 115, 105, 0.5);
+}
+
+.runic-select__option--selected .runic-select__tag--foil {
+  color: #f0dc90;
+  border-color: rgba(215, 175, 90, 0.6);
+  box-shadow: 0 0 8px rgba(255, 215, 100, 0.2);
 }
 
 /* ==========================================

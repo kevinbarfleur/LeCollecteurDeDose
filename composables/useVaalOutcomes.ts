@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue';
 import gsap from 'gsap';
-import type { VaalOutcome, VaalOutcomeNewCard } from '~/types/vaalOutcome';
+import type { VaalOutcome, FoilVaalOutcome, VaalOutcomeNewCard } from '~/types/vaalOutcome';
 import type { Card, CardTier } from '~/types/card';
 import { isCardFoil } from '~/types/card';
 import { allCards } from '~/data/mockCards';
@@ -18,7 +18,9 @@ export interface VaalOutcomeContext {
   onCardDestroyed?: (cardUid: string) => void;
   onCardDuplicated?: (originalCard: Card, newCard: Card) => void;
   onCardTransformed?: (oldCard: Card, newCard: Card) => void;
-  onSyncRequired?: (updates: Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>, vaalOrbsDelta: number, outcomeType?: string) => Promise<void>;
+  onCardSynthesised?: (card: Card) => void;
+  onCardLostFoil?: (card: Card) => void;
+  onSyncRequired?: (updates: Map<number, { normalDelta: number; foilDelta: number; synthesisedDelta?: number; cardData?: Partial<Card> }>, vaalOrbsDelta: number, outcomeType?: string) => Promise<void>;
 }
 
 export interface OutcomeResult {
@@ -53,6 +55,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     onCardDestroyed,
     onCardDuplicated,
     onCardTransformed,
+    onCardSynthesised,
+    onCardLostFoil,
     onSyncRequired,
   } = context;
 
@@ -748,6 +752,395 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
   };
 
   // ==========================================
+  // SYNTHESISED - Epic transformation with full-screen glitch
+  // Foil card becomes Synthesised (rarest outcome)
+  // ==========================================
+
+  const executeSynthesised = async (options?: OutcomeOptions): Promise<OutcomeResult> => {
+    if (!cardRef.value || !displayCard.value) {
+      console.error('[VaalOutcomes] executeSynthesised: cardRef or displayCard is null');
+      return { success: false };
+    }
+
+    const currentCard = displayCard.value;
+    console.log(`[VaalOutcomes] executeSynthesised: Starting synthesised transformation for ${currentCard.name} (UID: ${currentCard.uid})`);
+
+    isAnimating.value = true;
+
+    const cardElement = cardRef.value;
+    const currentTier = currentCard.tier as CardTier;
+    const tierColors = getTierColors(currentTier);
+
+    // Create full-screen overlay for the epic effect
+    const overlay = document.createElement('div');
+    overlay.id = 'synthesised-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0, 20, 40, 0) 0%, rgba(0, 10, 20, 0.95) 100%);
+      opacity: 0;
+    `;
+    document.body.appendChild(overlay);
+
+    // Create glitch lines container
+    const glitchContainer = document.createElement('div');
+    glitchContainer.id = 'synthesised-glitch';
+    glitchContainer.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0;
+    `;
+
+    // Add horizontal glitch lines
+    for (let i = 0; i < 15; i++) {
+      const line = document.createElement('div');
+      const top = Math.random() * 100;
+      const height = 2 + Math.random() * 8;
+      line.style.cssText = `
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: ${top}%;
+        height: ${height}px;
+        background: linear-gradient(90deg,
+          transparent 0%,
+          rgba(0, 200, 255, 0.4) ${20 + Math.random() * 30}%,
+          rgba(120, 100, 220, 0.5) ${50 + Math.random() * 20}%,
+          rgba(0, 255, 200, 0.3) ${80 + Math.random() * 15}%,
+          transparent 100%
+        );
+        transform: translateX(${-100 + Math.random() * 50}%);
+        opacity: 0;
+      `;
+      glitchContainer.appendChild(line);
+    }
+    document.body.appendChild(glitchContainer);
+
+    // Phase 1: Screen darkens with ominous buildup
+    const darkTimeline = gsap.timeline();
+
+    darkTimeline.to(overlay, {
+      opacity: 1,
+      duration: 0.8,
+      ease: 'power2.in',
+    });
+
+    // Card starts to pulse ominously
+    darkTimeline.to(cardElement, {
+      filter: 'brightness(0.6) saturate(0.5)',
+      scale: 0.95,
+      duration: 0.4,
+      ease: 'power2.in',
+    }, 0.2);
+
+    darkTimeline.to(cardElement, {
+      filter: 'brightness(1.2) saturate(1.2)',
+      scale: 1.02,
+      duration: 0.3,
+      ease: 'power2.out',
+    }, 0.6);
+
+    await darkTimeline.then();
+
+    // Phase 2: Glitch lines sweep across the screen
+    const glitchTimeline = gsap.timeline();
+
+    glitchTimeline.to(glitchContainer, {
+      opacity: 1,
+      duration: 0.1,
+    });
+
+    // Animate each glitch line
+    const lines = glitchContainer.querySelectorAll('div');
+    lines.forEach((line, index) => {
+      const delay = index * 0.03;
+      glitchTimeline.to(line, {
+        opacity: 1,
+        x: '200%',
+        duration: 0.15 + Math.random() * 0.1,
+        ease: 'power2.in',
+      }, delay);
+      glitchTimeline.to(line, {
+        opacity: 0,
+        duration: 0.05,
+      }, delay + 0.15);
+    });
+
+    // Card glitches violently during this phase
+    glitchTimeline.to(cardElement, {
+      x: -8,
+      filter: 'brightness(1.5) hue-rotate(30deg)',
+      duration: 0.05,
+    }, 0.1);
+    glitchTimeline.to(cardElement, {
+      x: 10,
+      filter: 'brightness(0.7) hue-rotate(-20deg)',
+      duration: 0.05,
+    }, 0.15);
+    glitchTimeline.to(cardElement, {
+      x: -6,
+      filter: 'brightness(2) hue-rotate(50deg)',
+      duration: 0.05,
+    }, 0.2);
+    glitchTimeline.to(cardElement, {
+      x: 8,
+      filter: 'brightness(0.5) hue-rotate(-40deg)',
+      duration: 0.05,
+    }, 0.25);
+    glitchTimeline.to(cardElement, {
+      x: 0,
+      filter: 'brightness(1)',
+      duration: 0.05,
+    }, 0.3);
+
+    await glitchTimeline.then();
+
+    // Phase 3: Second wave of glitches - more intense
+    const glitchTimeline2 = gsap.timeline();
+
+    // Reset and do another sweep
+    lines.forEach((line) => {
+      gsap.set(line, { x: '-100%', opacity: 0 });
+    });
+
+    lines.forEach((line, index) => {
+      const delay = index * 0.02;
+      glitchTimeline2.to(line, {
+        opacity: 0.8,
+        x: '150%',
+        duration: 0.1,
+        ease: 'power3.in',
+      }, delay);
+    });
+
+    // More card glitching
+    glitchTimeline2.to(cardElement, {
+      scale: 1.1,
+      filter: 'brightness(3) blur(2px)',
+      duration: 0.08,
+    }, 0.1);
+    glitchTimeline2.to(cardElement, {
+      scale: 0.9,
+      filter: 'brightness(0.3) blur(0)',
+      duration: 0.08,
+    }, 0.18);
+
+    await glitchTimeline2.then();
+
+    // Phase 4: TRANSFORMATION - Big flash and card becomes synthesised
+    // Update collection BEFORE the reveal
+    const cardIndex = localCollection.value.findIndex(
+      (c) => c.uid === currentCard.uid
+    );
+    if (cardIndex !== -1) {
+      localCollection.value[cardIndex].synthesised = true;
+      localCollection.value[cardIndex].foil = false; // No longer just foil
+    }
+
+    // Notify callback
+    if (onCardSynthesised) {
+      onCardSynthesised({ ...currentCard, synthesised: true, foil: false });
+    }
+    if (onCardUpdate) {
+      onCardUpdate({ ...currentCard, synthesised: true, foil: false });
+    }
+
+    // Create cyan flash
+    const flash = document.createElement('div');
+    flash.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: radial-gradient(ellipse at center, rgba(0, 255, 220, 0.9) 0%, rgba(0, 150, 200, 0.7) 50%, transparent 100%);
+      opacity: 0;
+    `;
+    document.body.appendChild(flash);
+
+    const transformTimeline = gsap.timeline();
+
+    // Flash in
+    transformTimeline.to(flash, {
+      opacity: 1,
+      duration: 0.1,
+      ease: 'power2.out',
+    });
+
+    // Card scales up dramatically during flash
+    transformTimeline.to(cardElement, {
+      scale: 1.3,
+      filter: 'brightness(4) blur(4px)',
+      boxShadow: `0 0 80px rgba(0, 255, 220, 1), 0 0 120px rgba(0, 200, 255, 0.8)`,
+      duration: 0.15,
+      ease: 'power2.out',
+    }, 0);
+
+    await transformTimeline.then();
+
+    // Phase 5: Reveal the synthesised card
+    const revealTimeline = gsap.timeline();
+
+    // Flash fades
+    revealTimeline.to(flash, {
+      opacity: 0,
+      duration: 0.4,
+      ease: 'power2.out',
+    });
+
+    // Overlay fades
+    revealTimeline.to(overlay, {
+      opacity: 0,
+      duration: 0.5,
+      ease: 'power2.out',
+    }, 0.1);
+
+    // Card settles with synthesised glow
+    revealTimeline.to(cardElement, {
+      scale: 1,
+      filter: 'brightness(1.2) saturate(1.1)',
+      boxShadow: `0 0 30px rgba(0, 200, 255, 0.6), 0 0 60px rgba(0, 150, 200, 0.3)`,
+      duration: 0.5,
+      ease: 'elastic.out(1, 0.5)',
+    }, 0.1);
+
+    // Final settle
+    revealTimeline.to(cardElement, {
+      filter: 'brightness(1) saturate(1)',
+      boxShadow: 'none',
+      duration: 0.3,
+      ease: 'power2.out',
+    }, 0.6);
+
+    await revealTimeline.then();
+
+    // Cleanup
+    overlay.remove();
+    glitchContainer.remove();
+    flash.remove();
+
+    gsap.set(cardElement, { clearProps: 'all' });
+
+    isAnimating.value = false;
+
+    // Sync with API: foil: -1, synthesised: +1
+    if (onSyncRequired && !options?.skipSync) {
+      console.log('[VaalOutcomes] executeSynthesised: Calling onSyncRequired');
+      const baseUid = Math.floor(currentCard.uid);
+      const updates = new Map<number, { normalDelta: number; foilDelta: number; synthesisedDelta?: number; cardData?: Partial<Card> }>();
+      updates.set(baseUid, {
+        normalDelta: 0,
+        foilDelta: -1,
+        synthesisedDelta: 1,
+        cardData: { ...currentCard, synthesised: true, foil: false }
+      });
+      await onSyncRequired(updates, -1, 'synthesised');
+      console.log('[VaalOutcomes] executeSynthesised: Sync completed');
+    }
+
+    console.log('[VaalOutcomes] executeSynthesised: Completed successfully');
+    return { success: true };
+  };
+
+  // ==========================================
+  // LOSE FOIL - Card loses its foil status
+  // Foil card becomes normal (most common foil outcome)
+  // ==========================================
+
+  const executeLoseFoil = async (options?: OutcomeOptions): Promise<OutcomeResult> => {
+    if (!cardRef.value || !displayCard.value) {
+      console.error('[VaalOutcomes] executeLoseFoil: cardRef or displayCard is null');
+      return { success: false };
+    }
+
+    const currentCard = displayCard.value;
+    console.log(`[VaalOutcomes] executeLoseFoil: Starting lose foil for ${currentCard.name} (UID: ${currentCard.uid})`);
+
+    isAnimating.value = true;
+
+    const cardElement = cardRef.value;
+    const currentTier = currentCard.tier as CardTier;
+    const tierColors = getTierColors(currentTier);
+
+    // Update collection FIRST
+    const cardIndex = localCollection.value.findIndex(
+      (c) => c.uid === currentCard.uid
+    );
+    if (cardIndex !== -1) {
+      localCollection.value[cardIndex].foil = false;
+    }
+
+    // Notify callbacks
+    if (onCardLostFoil) {
+      onCardLostFoil({ ...currentCard, foil: false });
+    }
+    if (onCardUpdate) {
+      onCardUpdate({ ...currentCard, foil: false });
+    }
+
+    // Animation: Foil drains away effect
+    const timeline = gsap.timeline();
+
+    // Brief shimmer as if foil is activating
+    timeline.to(cardElement, {
+      filter: 'brightness(1.8) saturate(1.5) hue-rotate(20deg)',
+      boxShadow: `0 0 30px ${tierColors.glow}, 0 0 50px rgba(255, 215, 0, 0.5)`,
+      duration: 0.2,
+      ease: 'power2.out',
+    });
+
+    // Then suddenly drain - desaturation effect
+    timeline.to(cardElement, {
+      filter: 'brightness(0.9) saturate(0.3) grayscale(0.5)',
+      boxShadow: 'none',
+      scale: 0.98,
+      duration: 0.3,
+      ease: 'power2.in',
+    });
+
+    // Brief flash of disappointment
+    timeline.to(cardElement, {
+      filter: 'brightness(1.3) saturate(0.5)',
+      duration: 0.1,
+      ease: 'power2.out',
+    });
+
+    // Settle to normal (non-foil) appearance
+    timeline.to(cardElement, {
+      filter: 'brightness(1) saturate(1) grayscale(0)',
+      scale: 1,
+      duration: 0.4,
+      ease: 'power2.out',
+    });
+
+    await timeline.then();
+
+    gsap.set(cardElement, { clearProps: 'filter,boxShadow,scale' });
+
+    isAnimating.value = false;
+
+    // Sync with API: foil: -1, normal: +1
+    if (onSyncRequired && !options?.skipSync) {
+      console.log('[VaalOutcomes] executeLoseFoil: Calling onSyncRequired');
+      const baseUid = Math.floor(currentCard.uid);
+      const updates = new Map<number, { normalDelta: number; foilDelta: number; cardData?: Partial<Card> }>();
+      updates.set(baseUid, {
+        normalDelta: 1,
+        foilDelta: -1,
+        cardData: { ...currentCard, foil: false }
+      });
+      await onSyncRequired(updates, -1, 'lose_foil');
+      console.log('[VaalOutcomes] executeLoseFoil: Sync completed');
+    }
+
+    console.log('[VaalOutcomes] executeLoseFoil: Completed successfully');
+    return { success: true };
+  };
+
+  // ==========================================
   // MAIN EXECUTOR
   // ==========================================
   
@@ -780,6 +1173,8 @@ export function useVaalOutcomes(context: VaalOutcomeContext) {
     executeFoil,
     executeTransform,
     executeDuplicate,
+    executeSynthesised,
+    executeLoseFoil,
   };
 }
 

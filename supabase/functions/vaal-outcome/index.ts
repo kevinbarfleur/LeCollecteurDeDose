@@ -14,6 +14,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 // ============================================================================
 
 type VaalOutcome = 'nothing' | 'foil' | 'destroyed' | 'transform' | 'duplicate'
+type FoilVaalOutcome = 'synthesised' | 'lose_foil' | 'destroyed'
+type AnyVaalOutcome = VaalOutcome | FoilVaalOutcome
 type CardTier = 'T0' | 'T1' | 'T2' | 'T3'
 
 interface VaalOutcomeRequest {
@@ -37,12 +39,13 @@ interface CardData {
 
 interface VaalOutcomeResponse {
   success: boolean
-  outcome?: VaalOutcome
+  outcome?: AnyVaalOutcome
   newCard?: CardData
   vaalOrbs?: number
   atlasInfluenceConsumed?: boolean
+  isFoilOutcome?: boolean  // True if this was a foil card outcome
   error?: string
-  errorCode?: 'INSUFFICIENT_ORBS' | 'CARD_NOT_FOUND' | 'FOIL_CARD' | 'INVALID_USER' | 'INTERNAL_ERROR'
+  errorCode?: 'INSUFFICIENT_ORBS' | 'CARD_NOT_FOUND' | 'INVALID_USER' | 'INTERNAL_ERROR'
 }
 
 // ============================================================================
@@ -55,6 +58,13 @@ const VAAL_OUTCOMES: Record<VaalOutcome, number> = {
   destroyed: 15,
   transform: 15,
   duplicate: 10,
+}
+
+// Foil Vaal outcomes: 10% synthesised, 50% lose foil, 40% destroyed
+const FOIL_VAAL_OUTCOMES: Record<FoilVaalOutcome, number> = {
+  synthesised: 10,  // Rarest - card becomes synthesised
+  lose_foil: 50,    // Most common - card loses foil, becomes normal
+  destroyed: 40,    // Risky - card is destroyed
 }
 
 // ============================================================================
@@ -81,6 +91,24 @@ function rollVaalOutcome(foilBoost: number = 0): VaalOutcome {
   }
 
   return 'nothing' // Fallback
+}
+
+/**
+ * Roll outcome for a FOIL card
+ * 10% synthesised, 50% lose foil, 40% destroyed
+ */
+function rollFoilVaalOutcome(): FoilVaalOutcome {
+  const totalWeight = Object.values(FOIL_VAAL_OUTCOMES).reduce((sum, w) => sum + w, 0)
+  let random = Math.random() * totalWeight
+
+  for (const [outcome, weight] of Object.entries(FOIL_VAAL_OUTCOMES)) {
+    random -= weight
+    if (random <= 0) {
+      return outcome as FoilVaalOutcome
+    }
+  }
+
+  return 'lose_foil' // Fallback
 }
 
 // ============================================================================
@@ -142,14 +170,8 @@ serve(async (req) => {
       } as VaalOutcomeResponse), { status: 400, headers })
     }
 
-    // Cannot vaal a foil card
-    if (isFoil) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Cannot use Vaal Orb on a foil card',
-        errorCode: 'FOIL_CARD',
-      } as VaalOutcomeResponse), { status: 400, headers })
-    }
+    // Note: Foil cards can now be Vaal'd with different outcomes:
+    // 10% synthesised, 50% lose foil, 40% destroyed
 
     // ========================================================================
     // Step 1: Get user and verify they have orbs
@@ -198,8 +220,20 @@ serve(async (req) => {
       } as VaalOutcomeResponse), { status: 404, headers })
     }
 
-    // Verify they have at least one normal copy (can't vaal foil)
-    if ((collection.normal_count ?? 0) < 1) {
+    // Verify they have at least one copy of the appropriate type
+    const hasNormalCopy = (collection.normal_count ?? 0) >= 1
+    const hasFoilCopy = (collection.foil_count ?? 0) >= 1
+
+    // If trying to vaal a foil, check foil count; otherwise check normal count
+    if (isFoil && !hasFoilCopy) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'No foil copies available',
+        errorCode: 'CARD_NOT_FOUND',
+      } as VaalOutcomeResponse), { status: 400, headers })
+    }
+
+    if (!isFoil && !hasNormalCopy) {
       return new Response(JSON.stringify({
         success: false,
         error: 'No normal copies available',
@@ -217,11 +251,21 @@ serve(async (req) => {
     const hasAtlasInfluence = foilBoost > 0
 
     // ========================================================================
-    // Step 4: Roll the outcome
+    // Step 4: Roll the outcome (different outcomes for foil vs normal cards)
     // ========================================================================
 
-    const outcome = rollVaalOutcome(foilBoost)
-    console.log(`[VaalOutcome] Rolled outcome: ${outcome}${hasAtlasInfluence ? ' (with Atlas Influence)' : ''}`)
+    let outcome: AnyVaalOutcome
+    const isFoilOutcome = isFoil
+
+    if (isFoil) {
+      // Foil cards have special outcomes: 10% synthesised, 50% lose foil, 40% destroyed
+      outcome = rollFoilVaalOutcome()
+      console.log(`[VaalOutcome] Rolled FOIL outcome: ${outcome}`)
+    } else {
+      // Normal cards have standard outcomes
+      outcome = rollVaalOutcome(foilBoost)
+      console.log(`[VaalOutcome] Rolled outcome: ${outcome}${hasAtlasInfluence ? ' (with Atlas Influence)' : ''}`)
+    }
 
     // ========================================================================
     // Step 5: Prepare card updates based on outcome
@@ -248,12 +292,55 @@ serve(async (req) => {
         break
 
       case 'destroyed':
-        // Normal -1
+        // Remove card (normal or foil depending on isFoil flag)
+        if (isFoil) {
+          // Foil -1
+          cardUpdates.push({
+            card_uid: cardUid,
+            normal_count: currentNormal,
+            foil_count: currentFoil - 1,
+          })
+        } else {
+          // Normal -1
+          cardUpdates.push({
+            card_uid: cardUid,
+            normal_count: currentNormal - 1,
+            foil_count: currentFoil,
+          })
+        }
+        break
+
+      // ===== FOIL CARD OUTCOMES =====
+
+      case 'synthesised':
+        // Foil -1, Synthesised +1
+        // Need to get current synthesised count first
+        const { data: currentCollection } = await supabase
+          .from('user_collections')
+          .select('synthesised_count')
+          .eq('user_id', user.id)
+          .eq('card_uid', cardUid)
+          .single()
+
+        const currentSynthesised = currentCollection?.synthesised_count ?? 0
+
         cardUpdates.push({
           card_uid: cardUid,
-          normal_count: currentNormal - 1,
-          foil_count: currentFoil,
+          normal_count: currentNormal,
+          foil_count: currentFoil - 1,
+          synthesised_count: currentSynthesised + 1,
+        } as any)
+        console.log(`[VaalOutcome] Synthesised! Card ${cardUid} is now synthesised`)
+        break
+
+      case 'lose_foil':
+        // Foil -1, Normal +1
+        cardUpdates.push({
+          card_uid: cardUid,
+          normal_count: currentNormal + 1,
+          foil_count: currentFoil - 1,
         })
+        console.log(`[VaalOutcome] Lost foil! Card ${cardUid} is now normal`)
         break
 
       case 'transform':
@@ -349,6 +436,7 @@ serve(async (req) => {
       outcome,
       vaalOrbs: result.vaal_orbs,
       atlasInfluenceConsumed: result.atlas_influence_consumed ?? false,
+      isFoilOutcome,
     }
 
     if (newCard) {

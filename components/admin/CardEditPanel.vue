@@ -1,8 +1,19 @@
 <script setup lang="ts">
-import type { Card, CardTier, CardRarity } from '~/types/card'
+import type { Card, CardTier, CardRarity, CardVariation } from '~/types/card'
+import { VARIATION_CONFIG } from '~/types/card'
 import type { CardFormData } from '~/services/supabase-collection.service'
 
 const { t } = useI18n()
+
+// Preview variant selector
+const previewVariant = ref<CardVariation>('standard')
+
+// Variant options for select
+const variantOptions = computed(() => [
+  { value: 'standard', label: 'Standard' },
+  { value: 'foil', label: 'Foil ✨' },
+  { value: 'synthesised', label: 'Synthesised ⚡' },
+])
 
 const props = defineProps<{
   modelValue: boolean
@@ -122,7 +133,7 @@ const isValid = computed(() => {
   )
 })
 
-// Preview card for display
+// Preview card for display - applies selected variant
 const previewCard = computed<Card>(() => ({
   uid: formData.value.uid ?? 0,
   id: formData.value.id || 'preview',
@@ -137,7 +148,10 @@ const previewCard = computed<Card>(() => ({
     img: formData.value.gameData.img || '/images/placeholder-card.png',
     foilImg: formData.value.gameData.foilImg
   },
-  relevanceScore: formData.value.relevanceScore
+  relevanceScore: formData.value.relevanceScore,
+  // Apply variant based on selection
+  foil: previewVariant.value === 'foil',
+  synthesised: previewVariant.value === 'synthesised',
 }))
 
 // Close modal
@@ -258,7 +272,15 @@ const removeImage = () => {
       <div class="card-edit-panel__layout">
         <!-- Preview Column -->
         <div class="card-edit-panel__preview">
-          <div class="card-edit-panel__preview-label">Apercu</div>
+          <div class="card-edit-panel__preview-header">
+            <div class="card-edit-panel__preview-label">Apercu</div>
+            <RunicSelect
+              v-model="previewVariant"
+              :options="variantOptions"
+              size="sm"
+              class="card-edit-panel__variant-select"
+            />
+          </div>
           <div class="card-edit-panel__preview-card">
             <GameCard
               :card="previewCard"
@@ -533,6 +555,14 @@ const removeImage = () => {
   gap: 0.75rem;
 }
 
+.card-edit-panel__preview-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
 .card-edit-panel__preview-label {
   font-family: 'Cinzel', serif;
   font-size: 0.875rem;
@@ -540,6 +570,11 @@ const removeImage = () => {
   color: rgba(201, 162, 39, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+.card-edit-panel__variant-select {
+  width: 100%;
+  max-width: 160px;
 }
 
 .card-edit-panel__preview-card {

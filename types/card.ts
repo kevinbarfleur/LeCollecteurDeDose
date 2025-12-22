@@ -3,7 +3,7 @@ export type CardTier = 'T0' | 'T1' | 'T2' | 'T3'
 export type CardRarity = 'Unique' | 'Rare' | 'Magic' | 'Normal'
 
 // Card variations (extensible for future variations)
-export type CardVariation = 'standard' | 'foil'
+export type CardVariation = 'standard' | 'foil' | 'synthesised'
 
 // Configuration for card variations - lower priority = rarer
 export interface VariationConfig {
@@ -12,8 +12,9 @@ export interface VariationConfig {
 }
 
 export const VARIATION_CONFIG: Record<CardVariation, VariationConfig> = {
-  foil: { priority: 0, label: 'Foil' },
-  standard: { priority: 1, label: 'Standard' }
+  synthesised: { priority: 0, label: 'Synthesised' }, // Rarest - only from Vaal orb on foil
+  foil: { priority: 1, label: 'Foil' },
+  standard: { priority: 2, label: 'Standard' }
 }
 
 export interface CardGameData {
@@ -34,7 +35,8 @@ export interface Card {
   gameData: CardGameData
   weight?: number
   foil?: boolean  // true if foil variant
-  variation?: CardVariation  // DEPRECATED: use foil instead - kept for backwards compatibility
+  synthesised?: boolean  // true if synthesised variant (obtained by Vaal orb on foil)
+  variation?: CardVariation  // DEPRECATED: use foil/synthesised instead - kept for backwards compatibility
   relevanceScore?: number  // Optional score from POE wiki data
   isLimited?: boolean  // true if card has limited information (no name, img, wikiUrl) - for non-owned cards in catalogue
 }
@@ -44,9 +46,16 @@ export function isCardFoil(card: Card): boolean {
   return card.foil === true || card.variation === 'foil'
 }
 
+// Helper function to check if a card is synthesised
+export function isCardSynthesised(card: Card): boolean {
+  return card.synthesised === true || card.variation === 'synthesised'
+}
+
 // Helper function to get the variation of a card
 export function getCardVariation(card: Card): CardVariation {
-  return isCardFoil(card) ? 'foil' : 'standard'
+  if (isCardSynthesised(card)) return 'synthesised'
+  if (isCardFoil(card)) return 'foil'
+  return 'standard'
 }
 
 export interface UserCollection {

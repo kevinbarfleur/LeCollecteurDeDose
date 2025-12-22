@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Card, CardTier, CardVariation } from "~/types/card";
-import { TIER_CONFIG } from "~/types/card";
+import { TIER_CONFIG, isCardSynthesised, getCardVariation } from "~/types/card";
 import { useFoilEffect } from "~/composables/useFoilEffect";
 import gsap from "gsap";
 
@@ -533,7 +533,9 @@ onMounted(() => {
     }
   };
   window.addEventListener("keydown", handleEscape);
-  onUnmounted(() => window.removeEventListener("keydown", handleEscape));
+  onUnmounted(() => {
+    window.removeEventListener("keydown", handleEscape);
+  });
 });
 
 watch(animationState, (state) => {
@@ -552,9 +554,14 @@ const isFoil = computed(() => {
   return false;
 });
 
+// Check if card is synthesised - only from Vaal orb on foil
+const isSynthesised = computed(() => {
+  return isCardSynthesised(props.card);
+});
+
 // Get card variation for backwards compatibility
 const cardVariation = computed<CardVariation>(() =>
-  isFoil.value ? "foil" : "standard"
+  getCardVariation(props.card)
 );
 
 // Hover state for cards
@@ -644,6 +651,29 @@ const foilStyles = computed(() => {
     "--pointer-from-center": pointerFromCenter.value,
     "--pointer-from-left": pointerFromLeft.value,
     "--pointer-from-top": pointerFromTop.value,
+  };
+});
+
+// CSS variables for synthesised glitch effect - random timing per card
+const glitchStyles = computed(() => {
+  if (!isSynthesised.value) return {};
+
+  // Generate pseudo-random values based on card id for consistent but unique timing
+  const hash = props.card.id.split('').reduce((acc, char, i) => {
+    return acc + char.charCodeAt(0) * (i + 1);
+  }, 0);
+
+  // Random delay between 0 and 2 seconds
+  const delay = (hash % 200) / 100;
+  // Random duration between 2 and 3.5 seconds
+  const duration = 2 + (hash % 150) / 100;
+  // Random secondary offset for more variation
+  const offset = ((hash * 7) % 100) / 100;
+
+  return {
+    "--glitch-delay": `${delay}s`,
+    "--glitch-duration": `${duration}s`,
+    "--glitch-offset": offset,
   };
 });
 
@@ -772,12 +802,13 @@ const tierStyles = computed(() => ({
   "--tier-glow": tierConfig.value?.glowColor ?? "#3a3a3d",
 }));
 
-// Card classes including foil state
+// Card classes including foil/synthesised state
 const cardClasses = computed(() => [
   tierClass.value,
   {
     "game-card--hovering": isHovering.value,
     "game-card--foil": isFoil.value,
+    "game-card--synthesised": isSynthesised.value,
   },
 ]);
 
@@ -823,9 +854,10 @@ defineExpose({
               'game-card--hovering': isFloatingHovering,
               'game-card--zoomed': zoomLevel > 1,
               'game-card--foil': isFoil,
+              'game-card--synthesised': isSynthesised,
             },
           ]"
-          :style="{ ...tierStyles, ...floatingFoilStyles }"
+          :style="{ ...tierStyles, ...floatingFoilStyles, ...glitchStyles }"
           :data-foil-effect="isFoil ? selectedFoilEffect : undefined"
           @mousemove="onFloatingMouseMove"
           @mouseenter="onFloatingMouseEnter"
@@ -834,6 +866,9 @@ defineExpose({
         >
           <!-- Foil overlay for floating card -->
           <div v-if="isFoil" class="game-card__foil-overlay"></div>
+
+          <!-- Synthesised glitch overlay for floating card -->
+          <div v-if="isSynthesised" class="game-card__synthesised-overlay"></div>
 
           <div class="game-card__tilt-wrapper">
             <button
@@ -932,7 +967,7 @@ defineExpose({
 
               <div
                 class="detail__artwork detail__stagger"
-                :class="{ 'detail__artwork--foil': isFoil }"
+                :class="{ 'detail__artwork--foil': isFoil, 'detail__artwork--synthesised': isSynthesised }"
                 style="--stagger: 1"
               >
                 <!-- Cosmos holo layers for foil cards -->
@@ -1099,7 +1134,7 @@ defineExpose({
         :aria-label="`Carte ${card.name}${isFoil ? ' (Foil)' : ''}`"
         class="game-card game-card--preview"
         :class="cardClasses"
-        :style="{ ...tierStyles, ...foilStyles }"
+        :style="{ ...tierStyles, ...foilStyles, ...glitchStyles }"
         :data-foil-effect="isFoil ? selectedFoilEffect : undefined"
         @mouseenter="onMouseEnter"
         @mouseleave="onMouseLeave"
@@ -1120,6 +1155,9 @@ defineExpose({
 
         <!-- Foil overlay effect -->
         <div v-if="isFoil" class="game-card__foil-overlay"></div>
+
+        <!-- Synthesised glitch overlay effect -->
+        <div v-if="isSynthesised" class="game-card__synthesised-overlay"></div>
 
         <div class="game-card__image-wrapper">
           <div
@@ -1593,6 +1631,7 @@ defineExpose({
   object-fit: contain;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
+
 
 /* ==========================================
    GIF IRREGULAR EDGE EFFECT (Detail view)

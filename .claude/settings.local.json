@@ -46,7 +46,10 @@
       "Bash(sort:*)",
       "mcp__vercel__list_teams",
       "mcp__vercel__list_projects",
-      "mcp__vercel__list_deployments"
+      "mcp__vercel__list_deployments",
+      "WebFetch(domain:www.sitepoint.com)",
+      "WebFetch(domain:www.raresportan.com)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

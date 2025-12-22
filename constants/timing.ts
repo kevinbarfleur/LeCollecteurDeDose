@@ -63,28 +63,29 @@ export const HEARTBEAT = {
 /**
  * Global earthquake/chaos effect when Vaal orb is over card
  * Different UI elements pulse at different rates for chaotic feel
+ * INTENSE version for dramatic vaal corruption effect
  */
 export const EARTHQUAKE = {
   // Header section (Hôtel de Corruption + card selector)
   HEADER: {
-    SPEED: 0.15, // seconds - fast pulse
-    SCALE: 1.008,
-    TRANSLATE_X: 2, // pixels
-    TRANSLATE_Y: 1,
+    SPEED: 0.08, // seconds - very fast pulse
+    SCALE: 1.015,
+    TRANSLATE_X: 5, // pixels - more violent
+    TRANSLATE_Y: 3,
   },
   // Vaal orbs section
   VAAL_SECTION: {
-    SPEED: 0.12, // slightly different rhythm
-    SCALE: 1.006,
-    TRANSLATE_X: 1.5,
-    TRANSLATE_Y: 1.5,
+    SPEED: 0.06, // even faster, chaotic rhythm
+    SCALE: 1.012,
+    TRANSLATE_X: 4,
+    TRANSLATE_Y: 4,
   },
-  // Body/background - slower, more subtle
+  // Body/background - still intense but slightly slower
   BODY: {
-    SPEED: 0.2,
-    SCALE: 1.003,
-    TRANSLATE_X: 1,
-    TRANSLATE_Y: 0.5,
+    SPEED: 0.1,
+    SCALE: 1.008,
+    TRANSLATE_X: 3,
+    TRANSLATE_Y: 2,
   },
 } as const;
 

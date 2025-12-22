@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Card, CardTier, CardVariation } from "~/types/card";
 import { TIER_CONFIG, isCardFoil } from "~/types/card";
-import type { VaalOutcome, VaalOutcomeRequest, VaalOutcomeResponse } from "~/types/vaalOutcome";
+import type { VaalOutcome, FoilVaalOutcome, AnyVaalOutcome, VaalOutcomeRequest, VaalOutcomeResponse } from "~/types/vaalOutcome";
 import {
   rollVaalOutcome,
+  rollFoilVaalOutcome,
   getShareModalContent,
   getForcedOutcomeOptions,
 } from "~/types/vaalOutcome";
@@ -230,9 +231,9 @@ const { groupedCards } = useCardGrouping(collection, {
   sortByNameWithinTier: true,
 });
 
-// Card options grouped by tier (excluding foil-only cards since they can't be vaaled)
+// Card options grouped by tier (includes all variations: standard, foil, synthesised)
 const cardOptionsByTier = computed(() => {
-  const tiers: Record<CardTier, { value: string; label: string; count: number }[]> = {
+  const tiers: Record<CardTier, { value: string; label: string; count: number; hasFoil: boolean; hasSynthesised: boolean; standardCount: number; foilCount: number }[]> = {
     T0: [],
     T1: [],
     T2: [],
@@ -240,15 +241,26 @@ const cardOptionsByTier = computed(() => {
   };
 
   groupedCards.value.forEach((group) => {
-    // Find the standard variation - foil cards can't be vaaled
+    // Get all variations
     const standardVariation = group.variations.find(v => v.variation === 'standard');
+    const foilVariation = group.variations.find(v => v.variation === 'foil');
+    const synthesisedVariation = group.variations.find(v => v.variation === 'synthesised');
 
-    // Only include cards that have at least one standard (non-foil) copy
-    if (standardVariation && standardVariation.count > 0) {
+    const standardCount = standardVariation?.count || 0;
+    const foilCount = foilVariation?.count || 0;
+    const synthesisedCount = synthesisedVariation?.count || 0;
+    const totalCount = standardCount + foilCount; // Don't count synthesised (can't be vaaled)
+
+    // Include cards that have at least one vaalable copy (standard or foil)
+    if (totalCount > 0) {
       tiers[group.tier].push({
         value: group.cardId,
         label: group.name,
-        count: standardVariation.count, // Only count standard cards
+        count: totalCount,
+        hasFoil: foilCount > 0,
+        hasSynthesised: synthesisedCount > 0,
+        standardCount,
+        foilCount,
       });
     }
   });
@@ -345,23 +357,28 @@ const isCardOnAltar = ref(false);
 const isAltarActive = ref(false); // Visual state - fades out smoothly
 const isAnimating = ref(false);
 const isTransformingCard = ref(false); // Flag to prevent fly-in animation during transform
+const isSynthesisedGlitchActive = ref(false); // Global glitch effect during synthesised outcome
+const isCardSwitching = ref(false); // Flag to prevent variation animation during card switch
 
 // Get the selected card group
 const selectedCardGroup = computed(() =>
   groupedCards.value.find((g) => g.cardId === selectedCardId.value)
 );
 
-// Get variation options for the selected card
+// Get variation options for the selected card (only vaalable variations: standard, foil)
 const variationOptions = computed(() => {
   if (!selectedCardGroup.value) return [];
-  return selectedCardGroup.value.variations.map((v) => ({
-    value: v.variation,
-    label:
-      v.variation === "foil"
-        ? t("altar.variations.foil")
-        : t("altar.variations.standard"),
-    count: v.count,
-  }));
+  // Filter out synthesised cards - they can't be vaaled
+  return selectedCardGroup.value.variations
+    .filter((v) => v.variation !== 'synthesised')
+    .map((v) => ({
+      value: v.variation,
+      label:
+        v.variation === "foil"
+          ? t("altar.variations.foil")
+          : t("altar.variations.standard"),
+      count: v.count,
+    }));
 });
 
 // Is variant select enabled? (card has multiple variations and not blocking)
@@ -395,6 +412,12 @@ const displayCard = computed<Card | null>(() => {
 const isCurrentCardFoil = computed(() => {
   if (!displayCard.value) return false;
   return isCardFoil(displayCard.value);
+});
+
+// Check if current card is synthesised (final state - cannot be vaaled)
+const isCurrentCardSynthesised = computed(() => {
+  if (!displayCard.value) return false;
+  return displayCard.value.synthesised === true;
 });
 
 // Foil preload state - set before actual foil to "warm up" CSS
@@ -449,6 +472,9 @@ watch(selectedCardId, async (newId, oldId) => {
   }
 
   if (newId) {
+    // Mark that we're switching cards to prevent variation animation
+    isCardSwitching.value = true;
+
     const group = groupedCards.value.find((g) => g.cardId === newId);
     if (group && group.variations.length > 0) {
       selectedVariation.value = group.variations[0].variation;
@@ -457,6 +483,7 @@ watch(selectedCardId, async (newId, oldId) => {
     // If this is a transformation, the card is already on altar - just update visually
     if (isTransformingCard.value) {
       isTransformingCard.value = false;
+      isCardSwitching.value = false;
       // Card is already in place, just clear snapshots for new appearance
       cardSnapshot.value = null;
       imageSnapshot.value = null;
@@ -484,10 +511,52 @@ watch(selectedCardId, async (newId, oldId) => {
 
     // Animate new card onto altar
     placeCardOnAltar();
+
+    // Clear the card switching flag after animation starts
+    isCardSwitching.value = false;
   } else {
     isAltarActive.value = false;
     isCardOnAltar.value = false;
     isCardFlipped.value = false;
+  }
+});
+
+// Watch for variation changes (same card, different variation: standard <-> foil)
+watch(selectedVariation, async (newVariation, oldVariation) => {
+  // Skip if no card selected or if blocking
+  if (!selectedCardId.value || isBlockingInteractions.value || isAnimating.value) {
+    return;
+  }
+
+  // Skip if we're in the middle of switching cards (card ID watcher handles animation)
+  if (isCardSwitching.value) {
+    return;
+  }
+
+  // Skip if card is not on altar yet (initial selection)
+  if (!isCardOnAltar.value || !altarCardRef.value) {
+    return;
+  }
+
+  // Skip if this is a programmatic change from outcomes (foil transform, synthesised, etc.)
+  // These are handled by their own animations
+  if (isTransformingCard.value) {
+    return;
+  }
+
+  // Only animate if it's a user-initiated variation switch
+  // (the card ID didn't change, just the variation)
+  if (newVariation !== oldVariation) {
+    // Clear snapshots
+    cardSnapshot.value = null;
+    imageSnapshot.value = null;
+    capturedImageDimensions.value = null;
+    capturedCardDimensions.value = null;
+
+    // Animate out, then back in with new variation
+    isAnimating.value = true;
+    await ejectCard();
+    placeCardOnAltar();
   }
 });
 
@@ -642,7 +711,7 @@ const showShareModal = ref(false);
 const urlCopied = ref(false);
 const showPreferencesModal = ref(false);
 const showVaalInfoModal = ref(false);
-const lastRecordedOutcome = ref<VaalOutcome | null>(null);
+const lastRecordedOutcome = ref<AnyVaalOutcome | null>(null);
 
 // Close share modal and reset recording state to allow new recordings
 const closeShareModal = () => {
@@ -657,6 +726,8 @@ const recordOnFoil = ref(true);
 const recordOnDestroyed = ref(true);
 const recordOnTransform = ref(false);
 const recordOnDuplicate = ref(true);
+const recordOnSynthesised = ref(true);
+const recordOnLoseFoil = ref(false);
 
 // Load preferences from localStorage on mount
 onMounted(() => {
@@ -674,6 +745,13 @@ onMounted(() => {
     recordOnTransform.value = savedTransform === "true";
   if (savedDuplicate !== null)
     recordOnDuplicate.value = savedDuplicate === "true";
+
+  const savedSynthesised = localStorage.getItem("record_synthesised");
+  const savedLoseFoil = localStorage.getItem("record_lose_foil");
+  if (savedSynthesised !== null)
+    recordOnSynthesised.value = savedSynthesised === "true";
+  if (savedLoseFoil !== null)
+    recordOnLoseFoil.value = savedLoseFoil === "true";
 });
 
 // Watch and save preferences to localStorage
@@ -690,9 +768,15 @@ watch(recordOnTransform, (val) =>
 watch(recordOnDuplicate, (val) =>
   localStorage.setItem("record_duplicate", String(val))
 );
+watch(recordOnSynthesised, (val) =>
+  localStorage.setItem("record_synthesised", String(val))
+);
+watch(recordOnLoseFoil, (val) =>
+  localStorage.setItem("record_lose_foil", String(val))
+);
 
 // Check if recording should happen for a given outcome
-const shouldRecordOutcome = (outcome: VaalOutcome): boolean => {
+const shouldRecordOutcome = (outcome: AnyVaalOutcome): boolean => {
   switch (outcome) {
     case "nothing":
       return recordOnNothing.value;
@@ -704,6 +788,10 @@ const shouldRecordOutcome = (outcome: VaalOutcome): boolean => {
       return recordOnTransform.value;
     case "duplicate":
       return recordOnDuplicate.value;
+    case "synthesised":
+      return recordOnSynthesised.value;
+    case "lose_foil":
+      return recordOnLoseFoil.value;
     default:
       return false;
   }
@@ -725,7 +813,9 @@ const startAutoRecording = () => {
     recordOnFoil.value ||
     recordOnDestroyed.value ||
     recordOnTransform.value ||
-    recordOnDuplicate.value;
+    recordOnDuplicate.value ||
+    recordOnSynthesised.value ||
+    recordOnLoseFoil.value;
 
   if (!anyRecordingEnabled) return;
 
@@ -762,10 +852,30 @@ const shareModalContent = computed(() =>
 const forcedOutcomeOptions = computed(() => getForcedOutcomeOptions(t));
 
 // Simulate Vaal outcome (client-side, used in mock/debug mode)
-const simulateVaalOutcomeLocal = (): VaalOutcome => {
-  // If a forced outcome is set, use it
+const simulateVaalOutcomeLocal = (): AnyVaalOutcome => {
+  const card = displayCard.value;
+  const cardIsFoil = card ? isCardFoil(card) : false;
+
+  // If a forced outcome is set, use it (if applicable to card type)
   if (forcedOutcome.value !== "random") {
-    return forcedOutcome.value as VaalOutcome;
+    const forced = forcedOutcome.value;
+    // Check if forced outcome is valid for card type
+    const foilOutcomes: FoilVaalOutcome[] = ['synthesised', 'lose_foil', 'destroyed'];
+    const normalOutcomes: VaalOutcome[] = ['nothing', 'foil', 'destroyed', 'transform', 'duplicate'];
+
+    if (cardIsFoil && foilOutcomes.includes(forced as FoilVaalOutcome)) {
+      return forced as FoilVaalOutcome;
+    } else if (!cardIsFoil && normalOutcomes.includes(forced as VaalOutcome)) {
+      return forced as VaalOutcome;
+    }
+    // If forced outcome doesn't match card type, fall through to random
+    console.log(`[Altar] Forced outcome '${forced}' not valid for ${cardIsFoil ? 'foil' : 'normal'} card, using random`);
+  }
+
+  // Use appropriate roll function based on card type
+  if (cardIsFoil) {
+    console.log('[Altar] Card is FOIL - using foil vaal outcomes');
+    return rollFoilVaalOutcome();
   }
 
   // Use centralized probability-based roll with Atlas Influence buff if active
@@ -1056,7 +1166,7 @@ const handleSyncRequired = async (
 };
 
 // Vaal Outcomes composable for modular animations
-const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
+const { executeNothing, executeFoil, executeTransform, executeDuplicate, executeSynthesised, executeLoseFoil } =
   useVaalOutcomes({
     cardRef: altarCardRef,
     cardFrontRef,
@@ -1064,10 +1174,14 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
     localCollection,
     isAnimating,
     onCardUpdate: (updatedCard) => {
-      // Called when card is updated (e.g., foil transformation)
-      // Update selectedVariation to match the new foil state so displayCard stays valid
-      if (updatedCard.foil) {
+      // Called when card is updated (e.g., foil transformation, synthesised)
+      // Update selectedVariation to match the new state so displayCard stays valid
+      if (updatedCard.synthesised) {
+        selectedVariation.value = "synthesised";
+      } else if (updatedCard.foil) {
         selectedVariation.value = "foil";
+      } else {
+        selectedVariation.value = "standard";
       }
       // Re-capture snapshot with new appearance
       nextTick(() => captureCardSnapshot());
@@ -1094,6 +1208,18 @@ const { executeNothing, executeFoil, executeTransform, executeDuplicate } =
       }
 
       // Re-capture snapshot for new card appearance
+      nextTick(() => captureCardSnapshot());
+    },
+    onCardSynthesised: (card) => {
+      // Card became synthesised - update variation and clear from vaalable options
+      selectedVariation.value = "synthesised";
+      // Synthesised cards can't be vaaled, so reset selection
+      resetAllTierSelects();
+      nextTick(() => captureCardSnapshot());
+    },
+    onCardLostFoil: (card) => {
+      // Card lost foil - now it's a standard card
+      selectedVariation.value = "standard";
       nextTick(() => captureCardSnapshot());
     },
     onCardDuplicated: (originalCard, newCard) => {
@@ -1451,7 +1577,7 @@ const destroyCard = async (skipSync: boolean = false) => {
 // Handle Vaal outcome - instant result
 // serverNewCard is provided when using server-side outcome calculation (for transforms)
 const handleVaalOutcome = async (
-  outcome: VaalOutcome,
+  outcome: AnyVaalOutcome,
   serverNewCard?: import('~/types/vaalOutcome').VaalOutcomeNewCard
 ) => {
   // Determine if we should skip sync (server already applied changes)
@@ -1541,6 +1667,24 @@ const handleVaalOutcome = async (
       await executeDuplicate(outcomeOptions);
       console.log('[Altar] handleVaalOutcome: Duplicate outcome completed');
       // Sync handled by executeDuplicate via onSyncRequired callback (or skipped if server mode)
+      break;
+
+    case "synthesised":
+      console.log('[Altar] handleVaalOutcome: Executing synthesised outcome');
+      // Activate global glitch effect during the entire animation
+      isSynthesisedGlitchActive.value = true;
+      await executeSynthesised(outcomeOptions);
+      // Deactivate glitch after animation completes
+      isSynthesisedGlitchActive.value = false;
+      console.log('[Altar] handleVaalOutcome: Synthesised outcome completed');
+      // Sync handled by executeSynthesised via onSyncRequired callback (or skipped if server mode)
+      break;
+
+    case "lose_foil":
+      console.log('[Altar] handleVaalOutcome: Executing lose_foil outcome');
+      await executeLoseFoil(outcomeOptions);
+      console.log('[Altar] handleVaalOutcome: Lose foil outcome completed');
+      // Sync handled by executeLoseFoil via onSyncRequired callback (or skipped if server mode)
       break;
   }
 
@@ -1832,13 +1976,13 @@ const handleOrbsContainerMouseMove = (event: MouseEvent) => {
 };
 
 const startDragOrb = (event: MouseEvent | TouchEvent, index: number) => {
-  // Cannot use Vaal Orb during critical operations or on already foil cards
+  // Cannot use Vaal Orb during critical operations or on synthesised cards (final state)
   if (
     vaalOrbs.value <= 0 ||
     !isCardOnAltar.value ||
     isBlockingInteractions.value ||
     isReturningOrb.value ||
-    isCurrentCardFoil.value
+    isCurrentCardSynthesised.value
   )
     return;
 
@@ -2385,7 +2529,12 @@ const endDragOrb = async () => {
                     <span class="vaal-header__rune">◆</span>
                   </h3>
                   <p class="vaal-header__subtitle">
-                    <template v-if="isCurrentCardFoil">
+                    <template v-if="isCurrentCardSynthesised">
+                      <span class="vaal-header__subtitle--synthesised">{{
+                        t("altar.vaalOrbs.synthesisedMessage")
+                      }}</span>
+                    </template>
+                    <template v-else-if="isCurrentCardFoil">
                       <span class="vaal-header__subtitle--foil">{{
                         t("altar.vaalOrbs.foilMessage")
                       }}</span>
@@ -2466,7 +2615,7 @@ const endDragOrb = async () => {
                       !isCardOnAltar ||
                       isBlockingInteractions ||
                       isReturningOrb ||
-                      isCurrentCardFoil,
+                      isCurrentCardSynthesised,
                     'vaal-orb--dragging': orb.isBeingDragged,
                   }"
                   :style="{
@@ -2495,7 +2644,7 @@ const endDragOrb = async () => {
                         !isCardOnAltar ||
                         isBlockingInteractions ||
                         isReturningOrb ||
-                        isCurrentCardFoil,
+                        isCurrentCardSynthesised,
                     }"
                   >
                     <img
@@ -2534,6 +2683,34 @@ const endDragOrb = async () => {
               alt="Vaal Orb"
               class="vaal-orb__image"
             />
+          </div>
+        </Teleport>
+
+        <!-- Vaal Darkness Overlay (on hover) -->
+        <Teleport to="body">
+          <div
+            class="vaal-darkness-overlay"
+            :class="{ 'vaal-darkness-overlay--active': isOrbOverCard }"
+          />
+        </Teleport>
+
+        <!-- Synthesised Glitch Overlay (on outcome only) -->
+        <Teleport to="body">
+          <div
+            v-if="isSynthesisedGlitchActive"
+            class="vaal-glitch-overlay vaal-glitch-overlay--active"
+            :class="[
+              displayCard?.tier === 'T0' ? 'vaal-glitch-overlay--t0' : '',
+              displayCard?.tier === 'T1' ? 'vaal-glitch-overlay--t1' : '',
+              displayCard?.tier === 'T2' ? 'vaal-glitch-overlay--t2' : '',
+              displayCard?.tier === 'T3' ? 'vaal-glitch-overlay--t3' : '',
+            ]"
+          >
+            <div class="vaal-glitch-overlay__red" />
+            <div class="vaal-glitch-overlay__cyan" />
+            <div class="vaal-glitch-overlay__scanlines" />
+            <div class="vaal-glitch-overlay__slices" />
+            <div class="vaal-glitch-overlay__noise" />
           </div>
         </Teleport>
 
@@ -2637,6 +2814,30 @@ const endDragOrb = async () => {
                         >
                         <RunicRadio
                           v-model="recordOnDuplicate"
+                          :toggle="true"
+                          size="sm"
+                        />
+                      </div>
+
+                      <div class="prefs-toggle">
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--synthesised"
+                          >{{ t("vaalOutcomes.synthesised.label") }}</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnSynthesised"
+                          :toggle="true"
+                          size="sm"
+                        />
+                      </div>
+
+                      <div class="prefs-toggle">
+                        <span
+                          class="prefs-toggle__label prefs-toggle__label--lose-foil"
+                          >{{ t("vaalOutcomes.lose_foil.label") }}</span
+                        >
+                        <RunicRadio
+                          v-model="recordOnLoseFoil"
                           :toggle="true"
                           size="sm"
                         />
@@ -3457,6 +3658,12 @@ const endDragOrb = async () => {
   font-style: normal;
 }
 
+.vaal-header__subtitle--synthesised {
+  color: rgba(100, 200, 255, 0.85);
+  font-style: normal;
+  text-shadow: 0 0 8px rgba(100, 200, 255, 0.4);
+}
+
 /* Vaal Info Link - Troll link */
 .vaal-info-link {
   display: inline-flex;
@@ -3957,6 +4164,15 @@ const endDragOrb = async () => {
 
 .prefs-toggle__label--duplicate {
   color: #50e0a0;
+}
+
+.prefs-toggle__label--synthesised {
+  color: #00d4ff;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+}
+
+.prefs-toggle__label--lose-foil {
+  color: #9090a0;
 }
 
 /* Experimental Notice */
