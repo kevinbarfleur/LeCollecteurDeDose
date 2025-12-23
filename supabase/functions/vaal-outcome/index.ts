@@ -271,7 +271,7 @@ serve(async (req) => {
     // Step 5: Prepare card updates based on outcome
     // ========================================================================
 
-    let cardUpdates: Array<{ card_uid: number; normal_count: number; foil_count: number }> = []
+    let cardUpdates: Array<{ card_uid: number; normal_count: number; foil_count: number; synthesised_count?: number }> = []
     let newCard: CardData | undefined = undefined
 
     const currentNormal = collection.normal_count ?? 0
@@ -329,7 +329,7 @@ serve(async (req) => {
           normal_count: currentNormal,
           foil_count: currentFoil - 1,
           synthesised_count: currentSynthesised + 1,
-        } as any)
+        })
         console.log(`[VaalOutcome] Synthesised! Card ${cardUid} is now synthesised`)
         break
 

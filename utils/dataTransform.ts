@@ -59,42 +59,57 @@ export function transformUserCollectionToCards(
     const baseCard = allCards.find(c => c.uid === cardUid)
     
     // Merge base card data with user's card data (user data takes precedence)
-    // Remove quantity/normal/foil from merged card as they're metadata, not card properties
-    const { quantity, normal, foil, ...cardProps } = cardData
-    const mergedCard = baseCard 
-      ? { ...baseCard, ...cardProps } 
+    // Remove quantity/normal/foil/synthesised from merged card as they're metadata, not card properties
+    const { quantity, normal, foil, synthesised, ...cardProps } = cardData
+    const mergedCard = baseCard
+      ? { ...baseCard, ...cardProps }
       : cardProps
-    
+
     // Ensure uid is set correctly
     mergedCard.uid = cardUid
-    
+
     // Get counts (handle both number and string formats)
-    const normalCount = typeof normal === 'number' 
-      ? normal 
+    const normalCount = typeof normal === 'number'
+      ? normal
       : parseInt(String(normal || '0'), 10)
-    const foilCount = typeof foil === 'number' 
-      ? foil 
+    const foilCount = typeof foil === 'number'
+      ? foil
       : parseInt(String(foil || '0'), 10)
-    
+    const synthesisedCount = typeof synthesised === 'number'
+      ? synthesised
+      : parseInt(String(synthesised || '0'), 10)
+
     // Generate unique UIDs for duplicates by appending an index
     // Use a counter that increments per card instance
     let instanceCounter = 0
-    
+
     // Add normal cards
     for (let i = 0; i < normalCount; i++) {
       cards.push({
         ...mergedCard,
         uid: cardUid + (instanceCounter++ * 0.0001), // Add small decimal to make unique
         foil: false,
+        synthesised: false,
       } as Card)
     }
-    
+
     // Add foil cards
     for (let i = 0; i < foilCount; i++) {
       cards.push({
         ...mergedCard,
         uid: cardUid + (instanceCounter++ * 0.0001), // Add small decimal to make unique
         foil: true,
+        synthesised: false,
+      } as Card)
+    }
+
+    // Add synthesised cards (synthesised are also foil)
+    for (let i = 0; i < synthesisedCount; i++) {
+      cards.push({
+        ...mergedCard,
+        uid: cardUid + (instanceCounter++ * 0.0001), // Add small decimal to make unique
+        foil: true,
+        synthesised: true,
       } as Card)
     }
   }

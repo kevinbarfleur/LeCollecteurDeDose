@@ -82,6 +82,7 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
           quantity,
           normal_count,
           foil_count,
+          synthesised_count,
           unique_cards (*)
         )
       `)
@@ -127,7 +128,8 @@ export async function getAllUserCollections(): Promise<Record<string, any>> {
           relevanceScore: card.relevance_score,
           quantity: col.quantity,
           normal: col.normal_count,
-          foil: col.foil_count
+          foil: col.foil_count,
+          synthesised: col.synthesised_count
         }
       }
     }
@@ -161,6 +163,7 @@ export async function getUserCollection(username: string): Promise<Record<string
           quantity,
           normal_count,
           foil_count,
+          synthesised_count,
           unique_cards (*)
         )
       `)
@@ -208,7 +211,8 @@ export async function getUserCollection(username: string): Promise<Record<string
         relevanceScore: card.relevance_score,
         quantity: col.quantity,
         normal: col.normal_count,
-        foil: col.foil_count
+        foil: col.foil_count,
+        synthesised: col.synthesised_count
       }
     }
     

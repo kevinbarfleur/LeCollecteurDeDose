@@ -300,6 +300,10 @@ const triggerOutcome = async () => {
       await transformToFoilEffect();
       break;
 
+    case "synthesised":
+      await transformToSynthesisedEffect();
+      break;
+
     case "destroyed":
       await destroyCardEffect();
       break;
@@ -369,6 +373,49 @@ const transformToFoilEffect = async () => {
 
   gsap.to(altarCardRef.value, {
     filter: "brightness(1) saturate(1)",
+    scale: 1,
+    boxShadow: "none",
+    duration: 0.4,
+    ease: "power2.out",
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 400));
+};
+
+// Synthesised effect - cyan/purple glow transformation (foil becomes synthesised)
+const transformToSynthesisedEffect = async () => {
+  if (!altarCardRef.value) return;
+
+  // Synthesised uses cyan/purple colors (Path of Exile Synthesis theme)
+  const synthesisedGlow = "rgba(80, 200, 220, 0.8)";
+  const glowShadow = `0 0 30px ${synthesisedGlow}, 0 0 60px rgba(160, 100, 220, 0.6)`;
+
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(1.8) saturate(1.5) hue-rotate(180deg)",
+    scale: 1.05,
+    boxShadow: glowShadow,
+    duration: 0.2,
+    ease: "power2.in",
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(3) saturate(2) hue-rotate(200deg)",
+    scale: 1.1,
+    boxShadow: `0 0 50px ${synthesisedGlow}, 0 0 90px rgba(160, 100, 220, 0.8)`,
+    duration: 0.1,
+    ease: "power2.out",
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  if (cardData.value) {
+    cardData.value = { ...cardData.value, foil: true, synthesised: true };
+  }
+
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(1) saturate(1) hue-rotate(0deg)",
     scale: 1,
     boxShadow: "none",
     duration: 0.4,
@@ -997,6 +1044,8 @@ const outcomeText = computed(() => {
       return t("replay.outcomes.nothing");
     case "foil":
       return t("replay.outcomes.foil");
+    case "synthesised":
+      return t("replay.outcomes.synthesised");
     case "destroyed":
       return t("replay.outcomes.destroyed");
     case "transform":
@@ -1014,6 +1063,8 @@ const outcomeClass = computed(() => {
       return "outcome--nothing";
     case "foil":
       return "outcome--foil";
+    case "synthesised":
+      return "outcome--synthesised";
     case "destroyed":
       return "outcome--destroyed";
     case "transform":
@@ -1562,6 +1613,65 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
 .outcome--duplicate .replay-outcome__title {
   color: #50e0a0;
   text-shadow: 0 0 10px rgba(80, 224, 160, 0.3);
+}
+
+/* Synthesised - Cyan/Purple mystical (Synthesis league theme) */
+.outcome--synthesised .replay-outcome-panel {
+  overflow: hidden;
+}
+
+.outcome--synthesised .replay-outcome-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(80, 200, 220, 0.1) 0%,
+    rgba(160, 100, 220, 0.08) 50%,
+    transparent 100%
+  );
+  background-size: 200% 200%;
+  animation: outcomeSynthesisedShimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.outcome--synthesised .replay-outcome__badge-img {
+  filter: drop-shadow(0 0 8px rgba(80, 200, 220, 0.7))
+    drop-shadow(0 0 4px rgba(160, 100, 220, 0.5)) brightness(1.2);
+}
+
+.outcome--synthesised .replay-outcome__title {
+  background: linear-gradient(
+    90deg,
+    #50c8dc,
+    #a064dc,
+    #50c8dc
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: outcomeSynthesisedTextShimmer 3s linear infinite;
+}
+
+@keyframes outcomeSynthesisedShimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes outcomeSynthesisedTextShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
 }
 
 /* ===== CURSOR ===== */

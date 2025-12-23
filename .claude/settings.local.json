@@ -51,5 +51,9 @@
       "WebFetch(domain:www.raresportan.com)",
       "Bash(npm uninstall:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }
