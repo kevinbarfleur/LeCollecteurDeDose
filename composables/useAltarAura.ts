@@ -7,6 +7,7 @@ export interface AltarAuraOptions {
   isVaalMode: Ref<boolean>;
   tier: Ref<string | undefined>;
   isFoil: Ref<boolean>;
+  isSynthesised: Ref<boolean>;
 }
 
 interface Particle {
@@ -19,10 +20,10 @@ interface EnergyRay {
   angle: number;
 }
 
-import { TIER_COLORS, VAAL_COLORS, FOIL_COLORS } from '~/constants/colors';
+import { TIER_COLORS, VAAL_COLORS, FOIL_COLORS, SYNTHESISED_COLORS } from '~/constants/colors';
 
 export function useAltarAura(options: AltarAuraOptions) {
-  const { containerRef, isActive, isVaalMode, tier, isFoil } = options;
+  const { containerRef, isActive, isVaalMode, tier, isFoil, isSynthesised } = options;
   
   // State
   const particles: Particle[] = [];
@@ -42,7 +43,16 @@ export function useAltarAura(options: AltarAuraOptions) {
         intensity: 1,
       };
     }
-    
+
+    if (isSynthesised.value) {
+      return {
+        primary: SYNTHESISED_COLORS.primary,
+        secondary: SYNTHESISED_COLORS.secondary,
+        glow: SYNTHESISED_COLORS.glow,
+        intensity: 0.85,
+      };
+    }
+
     if (isFoil.value) {
       const colors = FOIL_COLORS[foilColorIndex.value % FOIL_COLORS.length];
       return {
@@ -52,10 +62,10 @@ export function useAltarAura(options: AltarAuraOptions) {
         intensity: 0.8,
       };
     }
-    
+
     const tierKey = tier.value as keyof typeof TIER_COLORS;
     const tierColors = TIER_COLORS[tierKey] || TIER_COLORS.T3;
-    
+
     return {
       primary: tierColors.primary,
       secondary: tierColors.secondary,
@@ -237,18 +247,19 @@ export function useAltarAura(options: AltarAuraOptions) {
   
   const updateAura = () => {
     if (!auraContainer.value) return;
-    
+
     const colors = currentColors.value;
-    
+
     // Update CSS variables on the aura container
     auraContainer.value.style.setProperty('--aura-primary', colors.primary);
     auraContainer.value.style.setProperty('--aura-glow', colors.glow);
     auraContainer.value.style.setProperty('--aura-intensity', String(colors.intensity));
-    
-    // Toggle Vaal class
+
+    // Toggle state classes
     auraContainer.value.classList.toggle('altar-aura--vaal', isVaalMode.value);
     auraContainer.value.classList.toggle('altar-aura--active', isActive.value);
-    auraContainer.value.classList.toggle('altar-aura--foil', isFoil.value && !isVaalMode.value);
+    auraContainer.value.classList.toggle('altar-aura--foil', isFoil.value && !isVaalMode.value && !isSynthesised.value);
+    auraContainer.value.classList.toggle('altar-aura--synthesised', isSynthesised.value && !isVaalMode.value);
   };
   
   /**
@@ -257,22 +268,22 @@ export function useAltarAura(options: AltarAuraOptions) {
    */
   const resetAura = () => {
     if (!auraContainer.value) return;
-    
+
     // Force remove all active classes
-    auraContainer.value.classList.remove('altar-aura--vaal', 'altar-aura--active', 'altar-aura--foil');
-    
+    auraContainer.value.classList.remove('altar-aura--vaal', 'altar-aura--active', 'altar-aura--foil', 'altar-aura--synthesised');
+
     // Reset CSS variables to dormant
     auraContainer.value.style.setProperty('--aura-primary', '#5a5a5d');
     auraContainer.value.style.setProperty('--aura-glow', 'rgba(90, 90, 93, 0.4)');
     auraContainer.value.style.setProperty('--aura-intensity', '0');
-    
+
     // Clear all particles immediately
     particles.forEach(p => {
       p.timeline.kill();
       p.element.remove();
     });
     particles.length = 0;
-    
+
     // Stop particle interval
     if (particleInterval) {
       clearInterval(particleInterval);
@@ -316,9 +327,9 @@ export function useAltarAura(options: AltarAuraOptions) {
   }, { immediate: true });
   
   // Watch for state changes
-  watch([isActive, isVaalMode, tier, isFoil], () => {
+  watch([isActive, isVaalMode, tier, isFoil, isSynthesised], () => {
     updateAura();
-    
+
     // Handle Vaal particle system
     if (isVaalMode.value && isActive.value) {
       if (!particleInterval) {
@@ -336,9 +347,9 @@ export function useAltarAura(options: AltarAuraOptions) {
       });
       particles.length = 0;
     }
-    
-    // Handle foil animation
-    if (isFoil.value && isActive.value && !isVaalMode.value) {
+
+    // Handle foil animation (not when synthesised - synthesised takes priority)
+    if (isFoil.value && isActive.value && !isVaalMode.value && !isSynthesised.value) {
       startFoilAnimation();
     } else {
       stopFoilAnimation();

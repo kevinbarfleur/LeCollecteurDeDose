@@ -233,7 +233,7 @@ const { groupedCards } = useCardGrouping(collection, {
 
 // Card options grouped by tier (includes all variations: standard, foil, synthesised)
 const cardOptionsByTier = computed(() => {
-  const tiers: Record<CardTier, { value: string; label: string; count: number; hasFoil: boolean; hasSynthesised: boolean; standardCount: number; foilCount: number }[]> = {
+  const tiers: Record<CardTier, { value: string; label: string; count: number; hasFoil: boolean; hasSynthesised: boolean; standardCount: number; foilCount: number; synthesisedCount: number }[]> = {
     T0: [],
     T1: [],
     T2: [],
@@ -261,6 +261,7 @@ const cardOptionsByTier = computed(() => {
         hasSynthesised: synthesisedCount > 0,
         standardCount,
         foilCount,
+        synthesisedCount,
       });
     }
   });
@@ -365,18 +366,18 @@ const selectedCardGroup = computed(() =>
   groupedCards.value.find((g) => g.cardId === selectedCardId.value)
 );
 
-// Get variation options for the selected card (only vaalable variations: standard, foil)
+// Get variation options for the selected card (all variations: standard, foil, synthesised)
 const variationOptions = computed(() => {
   if (!selectedCardGroup.value) return [];
-  // Filter out synthesised cards - they can't be vaaled
   return selectedCardGroup.value.variations
-    .filter((v) => v.variation !== 'synthesised')
     .map((v) => ({
       value: v.variation,
       label:
         v.variation === "foil"
           ? t("altar.variations.foil")
-          : t("altar.variations.standard"),
+          : v.variation === "synthesised"
+            ? t("altar.variations.synthesised")
+            : t("altar.variations.standard"),
       count: v.count,
     }));
 });
@@ -459,7 +460,8 @@ const altarClasses = computed(() => ({
   "altar-platform--t2": displayCard.value?.tier === "T2",
   "altar-platform--t3": displayCard.value?.tier === "T3",
   "altar-platform--foil-preload": isFoilPreloaded.value && !isFoilReady.value,
-  "altar-platform--foil": isFoilReady.value,
+  "altar-platform--foil": isFoilReady.value && !isCurrentCardSynthesised.value,
+  "altar-platform--synthesised": isCurrentCardSynthesised.value,
   "altar-platform--active": isAltarActive.value,
   "altar-platform--vaal": isOrbOverCard.value,
 }));
@@ -1952,6 +1954,7 @@ const { auraContainer, resetAura } = useAltarAura({
   isVaalMode: isOrbOverCard,
   tier: computed(() => displayCard.value?.tier),
   isFoil: computed(() => isFoilReady.value),
+  isSynthesised: computed(() => isCurrentCardSynthesised.value),
 });
 
 // Set orb ref

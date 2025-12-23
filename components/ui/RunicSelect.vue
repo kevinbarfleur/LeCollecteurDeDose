@@ -8,6 +8,7 @@ interface Option {
   count?: number;
   standardCount?: number;
   foilCount?: number;
+  synthesisedCount?: number;
 }
 
 interface Props {
@@ -436,6 +437,24 @@ onUnmounted(() => {
                 </svg>
               </span>
 
+              <!-- Selected indicator (single mode) - Left side -->
+              <span v-if="!multiple" class="runic-select__check-container">
+                <svg
+                  v-if="isSelected(option.value)"
+                  class="runic-select__check"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </span>
+
               <span class="runic-select__option-content">
                 <span class="runic-select__option-label">{{
                   option.label
@@ -448,13 +467,16 @@ onUnmounted(() => {
                 </span>
               </span>
 
-              <!-- Variation tags (standard/foil counts) -->
-              <span v-if="option.standardCount || option.foilCount" class="runic-select__option-tags">
+              <!-- Variation tags (standard/foil/synthesised counts) -->
+              <span v-if="option.standardCount || option.foilCount || option.synthesisedCount" class="runic-select__option-tags">
                 <span v-if="option.standardCount" class="runic-select__tag runic-select__tag--standard">
                   {{ option.standardCount }}
                 </span>
                 <span v-if="option.foilCount" class="runic-select__tag runic-select__tag--foil">
                   {{ option.foilCount }}
+                </span>
+                <span v-if="option.synthesisedCount" class="runic-select__tag runic-select__tag--synthesised">
+                  {{ option.synthesisedCount }}
                 </span>
               </span>
 
@@ -465,22 +487,6 @@ onUnmounted(() => {
               >
                 ×{{ option.count }}
               </span>
-
-              <!-- Selected indicator (single mode) -->
-              <svg
-                v-if="!multiple && isSelected(option.value)"
-                class="runic-select__check"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
             </button>
           </div>
         </div>
@@ -998,12 +1004,20 @@ onUnmounted(() => {
   border-color: rgba(195, 115, 50, 0.7);
 }
 
+.runic-select__check-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .runic-select__check {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
   color: #c97a3a;
-  margin-left: auto;
 }
 
 /* ==========================================
@@ -1052,6 +1066,18 @@ onUnmounted(() => {
   box-shadow: 0 0 6px rgba(255, 215, 100, 0.15);
 }
 
+.runic-select__tag--synthesised {
+  color: #80e8e0;
+  background: linear-gradient(
+    180deg,
+    rgba(50, 175, 165, 0.3) 0%,
+    rgba(30, 140, 130, 0.4) 100%
+  );
+  border: 1px solid rgba(70, 195, 185, 0.5);
+  text-shadow: 0 0 4px rgba(100, 255, 245, 0.3), 0 1px 1px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 6px rgba(100, 255, 245, 0.15);
+}
+
 .runic-select__option--selected .runic-select__tag--standard {
   color: rgba(200, 195, 185, 1);
   border-color: rgba(120, 115, 105, 0.5);
@@ -1061,6 +1087,12 @@ onUnmounted(() => {
   color: #f0dc90;
   border-color: rgba(215, 175, 90, 0.6);
   box-shadow: 0 0 8px rgba(255, 215, 100, 0.2);
+}
+
+.runic-select__option--selected .runic-select__tag--synthesised {
+  color: #90f0e8;
+  border-color: rgba(90, 215, 205, 0.6);
+  box-shadow: 0 0 8px rgba(100, 255, 245, 0.2);
 }
 
 /* ==========================================

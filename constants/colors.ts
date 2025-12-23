@@ -59,6 +59,14 @@ export const FOIL_COLORS: FoilColorConfig[] = [
   { primary: "#a0c0ff", glow: "rgba(160, 192, 255, 0.6)" },
 ] as const;
 
+export const SYNTHESISED_COLORS = {
+  primary: "#40e8e0",
+  secondary: "#80f0f0",
+  tertiary: "#20b0b0",
+  glow: "rgba(64, 232, 224, 0.6)",
+  glitch: "#00ffff",
+} as const;
+
 export const COLORS = {
   bg: {
     primary: "#0a0a0c",
@@ -88,6 +96,7 @@ export const COLORS = {
   tiers: TIER_COLORS,
   vaal: VAAL_COLORS,
   foil: FOIL_COLORS,
+  synthesised: SYNTHESISED_COLORS,
   status: {
     success: "#4a9f5a",
     error: "#c45050",

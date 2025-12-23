@@ -91,7 +91,8 @@
     },
     "variations": {
       "foil": "✦ Foil",
-      "standard": "Standard"
+      "standard": "Standard",
+      "synthesised": "◈ Synthétisée"
     },
     "empty": "Dépose une carte sur l'autel… ou retourne pleurer ton absence de loot.",
     "vaalOrbs": {
