@@ -315,6 +315,10 @@ const triggerOutcome = async () => {
     case "duplicate":
       await showDuplicateEffect();
       break;
+
+    case "lose_foil":
+      await loseFoilEffect();
+      break;
   }
 
   setTimeout(() => {
@@ -416,6 +420,53 @@ const transformToSynthesisedEffect = async () => {
 
   gsap.to(altarCardRef.value, {
     filter: "brightness(1) saturate(1) hue-rotate(0deg)",
+    scale: 1,
+    boxShadow: "none",
+    duration: 0.4,
+    ease: "power2.out",
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 400));
+};
+
+// Lose foil effect - foil card becomes normal (loses its shine)
+const loseFoilEffect = async () => {
+  if (!altarCardRef.value) return;
+
+  // Desaturation and darkening effect - the foil "drains away"
+  const darkGlow = "rgba(60, 50, 50, 0.6)";
+  const glowShadow = `0 0 20px ${darkGlow}, 0 0 40px rgba(0, 0, 0, 0.4)`;
+
+  // Phase 1: Brief flash as foil starts to destabilize
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(1.4) saturate(1.3)",
+    scale: 1.03,
+    boxShadow: glowShadow,
+    duration: 0.15,
+    ease: "power2.in",
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  // Phase 2: Foil drains away - desaturation and darkening
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(0.6) saturate(0.3) contrast(0.9)",
+    scale: 0.98,
+    boxShadow: `0 0 30px rgba(0, 0, 0, 0.6)`,
+    duration: 0.3,
+    ease: "power2.out",
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // Update card data to remove foil status
+  if (cardData.value) {
+    cardData.value = { ...cardData.value, foil: false };
+  }
+
+  // Phase 3: Settle back to normal (non-foil) appearance
+  gsap.to(altarCardRef.value, {
+    filter: "brightness(1) saturate(1) contrast(1)",
     scale: 1,
     boxShadow: "none",
     duration: 0.4,
@@ -1052,6 +1103,8 @@ const outcomeText = computed(() => {
       return t("replay.outcomes.transform");
     case "duplicate":
       return t("replay.outcomes.duplicate");
+    case "lose_foil":
+      return t("replay.outcomes.lose_foil");
     default:
       return "";
   }
@@ -1071,6 +1124,8 @@ const outcomeClass = computed(() => {
       return "outcome--transform";
     case "duplicate":
       return "outcome--duplicate";
+    case "lose_foil":
+      return "outcome--lose_foil";
     default:
       return "";
   }
@@ -1672,6 +1727,33 @@ const getTierColor = (): "default" | "t0" | "t1" | "t2" | "t3" => {
   100% {
     background-position: 200% 50%;
   }
+}
+
+/* Lose Foil - Muted/drained effect */
+.outcome--lose_foil .replay-outcome-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(100, 90, 80, 0.1) 0%,
+    rgba(60, 55, 50, 0.08) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.outcome--lose_foil .replay-outcome__badge-img {
+  filter: grayscale(0.6) brightness(0.7) opacity(0.7);
+}
+
+.outcome--lose_foil .replay-outcome__title {
+  color: rgba(140, 130, 120, 0.8);
+}
+
+.outcome--lose_foil .replay-outcome__card-name {
+  color: rgba(120, 115, 110, 0.7);
 }
 
 /* ===== CURSOR ===== */
