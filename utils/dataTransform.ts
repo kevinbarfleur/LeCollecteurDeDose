@@ -83,17 +83,17 @@ export function transformUserCollectionToCards(
     // Use a counter that increments per card instance
     let instanceCounter = 0
 
-    // Add normal cards
-    for (let i = 0; i < normalCount; i++) {
+    // Add synthesised cards FIRST (rarest, most valuable)
+    for (let i = 0; i < synthesisedCount; i++) {
       cards.push({
         ...mergedCard,
         uid: cardUid + (instanceCounter++ * 0.0001), // Add small decimal to make unique
-        foil: false,
-        synthesised: false,
+        foil: true,
+        synthesised: true,
       } as Card)
     }
 
-    // Add foil cards
+    // Add foil cards second
     for (let i = 0; i < foilCount; i++) {
       cards.push({
         ...mergedCard,
@@ -103,13 +103,13 @@ export function transformUserCollectionToCards(
       } as Card)
     }
 
-    // Add synthesised cards (synthesised are also foil)
-    for (let i = 0; i < synthesisedCount; i++) {
+    // Add normal cards last
+    for (let i = 0; i < normalCount; i++) {
       cards.push({
         ...mergedCard,
         uid: cardUid + (instanceCounter++ * 0.0001), // Add small decimal to make unique
-        foil: true,
-        synthesised: true,
+        foil: false,
+        synthesised: false,
       } as Card)
     }
   }

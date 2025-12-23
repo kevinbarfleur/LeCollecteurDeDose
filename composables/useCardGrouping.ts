@@ -94,7 +94,7 @@ export function useCardGrouping(
       }
     });
 
-    // Sort variations by priority (foil first) and update hasMultipleVariations flag
+    // Sort variations by priority (synthesised first, then foil, then standard) and update hasMultipleVariations flag
     groups.forEach((group) => {
       group.variations.sort(
         (a, b) =>

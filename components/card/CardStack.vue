@@ -19,7 +19,7 @@ const props = defineProps<{
 // Visual stack count (max 5)
 const visualStackCount = computed(() => Math.min(props.count, 5));
 
-// Get unique variations sorted by rarity (foil first)
+// Get unique variations sorted by rarity (synthesised first, then foil, then standard)
 const sortedVariations = computed(() => {
   if (!props.variations) {
     // Fallback: compute from cards if variations not passed
@@ -38,10 +38,13 @@ const sortedVariations = computed(() => {
       (a, b) => VARIATION_CONFIG[a.variation].priority - VARIATION_CONFIG[b.variation].priority
     );
   }
-  return props.variations;
+  // Always sort variations by priority even when passed as props
+  return [...props.variations].sort(
+    (a, b) => VARIATION_CONFIG[a.variation].priority - VARIATION_CONFIG[b.variation].priority
+  );
 });
 
-// The "top" card - prefer foil if available (rarest variation first)
+// The "top" card - prefer rarest variation (synthesised > foil > standard)
 const topCard = computed(() => {
   if (sortedVariations.value.length > 0) {
     return sortedVariations.value[0].cards[0];
@@ -49,15 +52,26 @@ const topCard = computed(() => {
   return props.cards[0];
 });
 
-// Selected variation for the detail view
-const selectedVariation = ref<CardVariation>('foil');
+// Selected variation for the detail view - initialized to rarest available
+const selectedVariation = ref<CardVariation>('synthesised');
 
-// Initialize selected variation when opening detail
+// Initialize selected variation to the rarest available on mount
 const initSelectedVariation = () => {
   if (sortedVariations.value.length > 0) {
     selectedVariation.value = sortedVariations.value[0].variation;
   }
 };
+
+// Auto-initialize on first render
+watchEffect(() => {
+  if (sortedVariations.value.length > 0 && selectedVariation.value) {
+    // Check if current selection exists in available variations
+    const exists = sortedVariations.value.some(v => v.variation === selectedVariation.value);
+    if (!exists) {
+      selectedVariation.value = sortedVariations.value[0].variation;
+    }
+  }
+});
 
 // Get the card for the currently selected variation
 const selectedCard = computed(() => {
