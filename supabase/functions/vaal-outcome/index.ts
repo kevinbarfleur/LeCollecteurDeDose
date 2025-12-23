@@ -416,16 +416,10 @@ serve(async (req) => {
     }
 
     // ========================================================================
-    // Step 7: Log activity
+    // Step 7: Log activity (handled by frontend with proper card names and avatar)
     // ========================================================================
-
-    await supabase.from('activity_logs').insert({
-      username: username.toLowerCase(),
-      card_id: String(cardUid),
-      card_tier: cardTier,
-      outcome: outcome,
-      result_card_id: newCard ? String(newCard.uid) : null,
-    })
+    // Note: Activity logging is done by the frontend (useReplayRecorder.ts)
+    // which has access to the proper card_id (name), user_avatar, and replay_id
 
     // ========================================================================
     // Return success response
