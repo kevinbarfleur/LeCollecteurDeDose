@@ -3665,9 +3665,57 @@ const endDragOrb = async () => {
 }
 
 .vaal-header__subtitle--synthesised {
-  color: rgba(100, 200, 255, 0.85);
+  color: rgba(64, 232, 224, 0.9);
   font-style: normal;
-  text-shadow: 0 0 8px rgba(100, 200, 255, 0.4);
+  text-shadow:
+    0 0 6px rgba(64, 232, 224, 0.5),
+    0 0 12px rgba(0, 255, 255, 0.3),
+    2px 0 0 rgba(255, 0, 128, 0.3),
+    -2px 0 0 rgba(0, 255, 255, 0.3);
+  animation: synthTextGlitch 0.12s steps(4) infinite;
+}
+
+@keyframes synthTextGlitch {
+  0% {
+    color: rgba(64, 232, 224, 0.9);
+    text-shadow:
+      0 0 6px rgba(64, 232, 224, 0.5),
+      0 0 12px rgba(0, 255, 255, 0.3),
+      2px 0 0 rgba(255, 0, 128, 0.3),
+      -2px 0 0 rgba(0, 255, 255, 0.3);
+  }
+  25% {
+    color: rgba(0, 255, 255, 0.85);
+    text-shadow:
+      0 0 8px rgba(0, 255, 255, 0.6),
+      0 0 16px rgba(64, 232, 224, 0.35),
+      -2px 0 0 rgba(255, 0, 128, 0.35),
+      2px 0 0 rgba(0, 255, 255, 0.35);
+  }
+  50% {
+    color: rgba(64, 232, 224, 0.8);
+    text-shadow:
+      0 0 5px rgba(64, 232, 224, 0.45),
+      0 0 10px rgba(0, 255, 255, 0.25),
+      1px 0 0 rgba(255, 0, 128, 0.25),
+      -1px 0 0 rgba(0, 255, 255, 0.25);
+  }
+  75% {
+    color: rgba(128, 255, 255, 0.88);
+    text-shadow:
+      0 0 7px rgba(128, 255, 255, 0.55),
+      0 0 14px rgba(64, 232, 224, 0.3),
+      -2px 0 0 rgba(255, 0, 128, 0.3),
+      2px 0 0 rgba(0, 255, 255, 0.3);
+  }
+  100% {
+    color: rgba(64, 232, 224, 0.9);
+    text-shadow:
+      0 0 6px rgba(64, 232, 224, 0.5),
+      0 0 12px rgba(0, 255, 255, 0.3),
+      2px 0 0 rgba(255, 0, 128, 0.3),
+      -2px 0 0 rgba(0, 255, 255, 0.3);
+  }
 }
 
 /* Vaal Info Link - Troll link */
