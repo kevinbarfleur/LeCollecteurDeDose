@@ -28,7 +28,7 @@ export type ValidationStatus = 'ok' | 'warning' | 'error'
 
 export type DataMode = 'api' | 'test'
 
-export type VaalOutcomeType = 'nothing' | 'foil' | 'duplicate' | 'destroyed' | 'transform'
+export type VaalOutcomeType = 'nothing' | 'foil' | 'duplicate' | 'destroyed' | 'transform' | 'synthesised' | 'lose_foil'
 
 // State structures for altar diagnostics
 export interface AltarState {
