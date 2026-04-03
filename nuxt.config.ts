@@ -82,7 +82,8 @@ export default defineNuxtConfig({
     '~/assets/css/foil.css',
     '~/assets/css/foil-effects.css',
     '~/assets/css/synthesised.css',
-    '~/assets/css/altar.css'
+    '~/assets/css/altar.css',
+    '~/assets/css/pit.css'
   ],
 
   tailwindcss: {

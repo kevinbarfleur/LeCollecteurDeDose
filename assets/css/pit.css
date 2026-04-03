@@ -1,0 +1,584 @@
+/* ==========================================
+   THE PIT V1 — Stitch-inspired UI
+   "The Corrupted Artifact" aesthetic
+   ========================================== */
+
+/* ---- GRAIN OVERLAY (subtle texture) ---- */
+.pit-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* ---- STONE GRADIENT (panel backgrounds) ---- */
+.pit-stone {
+  background: radial-gradient(ellipse at 30% 20%, #1c1c20 0%, #0c0c0e 70%);
+}
+
+/* ---- GOLD GRADIENT TEXT ---- */
+.pit-gold-text {
+  background: linear-gradient(135deg, #c9a227, #af6025);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- TAB NAVIGATION ---- */
+.pit-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: linear-gradient(180deg, rgba(8, 8, 10, 0.9) 0%, rgba(14, 14, 16, 0.85) 100%);
+  border-radius: 4px;
+  border: 1px solid rgba(35, 32, 28, 0.7);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+.pit-tab {
+  flex: 1;
+  padding: 8px 16px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(100, 95, 90, 0.6);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid transparent;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.pit-tab:hover { color: rgba(140, 130, 120, 0.8); }
+.pit-tab--active {
+  color: #c97a3a;
+  background: linear-gradient(180deg, rgba(45, 40, 35, 0.9) 0%, rgba(28, 24, 20, 0.9) 100%);
+  border-color: rgba(80, 65, 50, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(100, 85, 65, 0.2);
+  text-shadow: 0 0 10px rgba(175, 96, 37, 0.3);
+}
+
+/* ---- BOSS BANNER ---- */
+.pit-boss-banner {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(20, 15, 12, 0.95), rgba(12, 10, 8, 0.98));
+  border: 1px solid rgba(200, 50, 50, 0.15);
+  border-radius: 6px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.pit-boss-banner__name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #c83232;
+  text-shadow: 0 0 12px rgba(200, 50, 50, 0.2);
+}
+.pit-boss-banner__title {
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  color: rgba(200, 160, 130, 0.6);
+  font-size: 0.85rem;
+}
+
+/* ---- MODIFIER BADGE ---- */
+.pit-mod {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'Crimson Text', serif;
+  font-size: 0.78rem;
+}
+.pit-mod--positive {
+  background: rgba(46, 204, 113, 0.06);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.1);
+}
+.pit-mod--negative {
+  background: rgba(231, 76, 60, 0.06);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.1);
+}
+
+/* ---- CARD GRID (uses real GameCard components) ---- */
+.pit-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  justify-items: center;
+}
+@media (min-width: 480px) { .pit-card-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.25rem; } }
+@media (min-width: 640px) { .pit-card-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem; } }
+
+.pit-card-slot {
+  position: relative;
+  transition: opacity 0.25s, filter 0.25s;
+}
+.pit-card-slot--used {
+  opacity: 0.3;
+  filter: grayscale(0.5);
+}
+
+/* Equip button overlay (shows on hover of available cards) */
+.pit-card-equip {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 70%, transparent 100%);
+  border-radius: 0 0 var(--card-border-radius, 8px) var(--card-border-radius, 8px);
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 6;
+}
+.pit-card-slot:hover .pit-card-equip { opacity: 1; }
+
+.pit-card-equip__label {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.7rem;
+  color: rgba(175, 96, 37, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.pit-card-equip__btn {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #c9a227;
+  background: rgba(201, 162, 39, 0.1);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-radius: 3px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pit-card-equip__btn:hover {
+  background: rgba(201, 162, 39, 0.2);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.pit-card-equipped-badge {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #27ae60;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(39, 174, 96, 0.3);
+  letter-spacing: 1px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* ---- EQUIPMENT SLOT (right panel) ---- */
+.pit-equip-slot-header {
+  display: flex; align-items: center; gap: 4px; margin-bottom: 3px;
+}
+.pit-equip-slot-header__icon { font-size: 0.8rem; color: rgba(175, 96, 37, 0.35); }
+.pit-equip-slot-header__label {
+  font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 600;
+  color: rgba(200, 196, 183, 0.5); text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.pit-equip-slot {
+  background: rgba(10, 10, 12, 0.5);
+  border: 1px dashed rgba(42, 42, 53, 0.35);
+  border-radius: 4px; padding: 10px 8px;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 44px; transition: border-color 0.2s;
+}
+.pit-equip-slot:hover { border-color: rgba(175, 96, 37, 0.25); }
+.pit-equip-slot--disabled { opacity: 0.25; pointer-events: none; }
+.pit-equip-slot--filled {
+  border-style: solid; border-color: rgba(42, 42, 53, 0.5);
+  cursor: pointer; padding: 6px 8px;
+}
+.pit-equip-slot--filled:hover { border-color: rgba(200, 50, 50, 0.3); }
+
+.pit-equip-card {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+}
+.pit-equip-card__tier {
+  font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 700;
+  padding: 1px 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+.pit-equip-card__tier--t0 { color: #c9a227; border: 1px solid rgba(201, 162, 39, 0.3); }
+.pit-equip-card__tier--t1 { color: #7a6a8a; border: 1px solid rgba(122, 106, 138, 0.3); }
+.pit-equip-card__tier--t2 { color: #5a7080; border: 1px solid rgba(90, 112, 128, 0.3); }
+.pit-equip-card__tier--t3 { color: #5a5a5d; border: 1px solid rgba(90, 90, 93, 0.3); }
+.pit-equip-card__name {
+  font-family: 'Crimson Text', serif; font-size: 0.75rem;
+  color: rgba(232, 230, 227, 0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---- STATS ROW ---- */
+.pit-stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.pit-stat-cell {
+  text-align: center; padding: 6px 2px;
+  background: rgba(0, 0, 0, 0.2); border-radius: 4px; border: 1px solid rgba(42, 42, 53, 0.2);
+}
+.pit-stat-cell__label { font-family: 'Cinzel', serif; font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.5; }
+.pit-stat-cell__value { font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700; }
+
+/* ---- KEYWORD BADGE ---- */
+.pit-kw {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-family: 'Crimson Text', serif; font-size: 0.6rem;
+  padding: 2px 5px; border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ---- SYNERGY LINE ---- */
+.pit-syn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; border-radius: 4px;
+  background: rgba(175, 96, 37, 0.06); border: 1px solid rgba(175, 96, 37, 0.12);
+}
+.pit-syn__name { font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 600; color: #af6025; }
+.pit-syn__bonus { font-family: 'Crimson Text', serif; font-size: 0.6rem; color: #2ecc71; }
+
+/* ============================================
+   COMBAT
+   ============================================ */
+
+.pit-clock {
+  font-family: 'Cinzel', serif; font-size: 1.4rem; font-weight: 700;
+  color: #af6025; text-shadow: 0 0 8px rgba(175, 96, 37, 0.2);
+  letter-spacing: 2px; font-variant-numeric: tabular-nums;
+}
+
+/* ---- BATTLEFIELD ---- */
+.pit-battlefield {
+  display: flex; align-items: flex-start; justify-content: center;
+  gap: 40px; padding: 24px 0; min-height: 240px;
+}
+@media (min-width: 1024px) { .pit-battlefield { gap: 80px; padding: 32px 0; } }
+.pit-bf-side { flex: 0 1 320px; min-width: 0; }
+.pit-bf-side:first-child { align-self: center; } /* Player centered vertically */
+
+/* Animation layer — non-reactive wrapper for GSAP transforms */
+.pit-anim-layer { will-change: transform, filter; position: relative; }
+.pit-bf-vs {
+  flex-shrink: 0; width: 1px; align-self: stretch; min-height: 200px;
+  background: linear-gradient(to bottom, transparent 5%, rgba(175, 96, 37, 0.12) 50%, transparent 95%);
+  transition: width 0.1s, background 0.1s, box-shadow 0.1s;
+}
+
+/* ---- COMBATANT PANEL ---- */
+.pit-panel {
+  padding: 12px; border-radius: 6px;
+  background: linear-gradient(135deg, rgba(14, 14, 16, 0.98) 0%, rgba(10, 10, 12, 0.96) 100%);
+  border: 1px solid rgba(42, 42, 53, 0.4);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4), 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+.pit-panel--player { border-color: rgba(175, 96, 37, 0.2); }
+.pit-panel--enemy { border-color: rgba(200, 50, 50, 0.12); }
+.pit-panel--dead { opacity: 0.2; filter: grayscale(0.7); transform: scale(0.97); transition: all 0.5s; }
+
+.pit-panel__name {
+  font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.8rem; margin-bottom: 6px;
+}
+.pit-panel__hp {
+  font-family: 'Crimson Text', serif; font-size: 0.7rem;
+  color: rgba(200, 200, 200, 0.45); text-align: center; margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.pit-panel__stats { display: flex; gap: 5px; margin-top: 6px; }
+.pit-panel__stat {
+  font-family: 'Crimson Text', serif; font-size: 0.6rem;
+  padding: 1px 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.2);
+}
+.pit-panel__effects { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
+.pit-panel__effect {
+  font-family: 'Crimson Text', serif; font-size: 0.5rem;
+  padding: 1px 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ---- TELEGRAPH WARNING ---- */
+.pit-telegraph {
+  margin-top: 6px; padding: 4px 8px; border-radius: 3px;
+  background: rgba(200, 50, 50, 0.08); border: 1px solid rgba(200, 50, 50, 0.15);
+  font-family: 'Crimson Text', serif; font-size: 0.6rem; color: #e74c3c;
+  animation: pitTelegraphPulse 1s ease-in-out infinite;
+}
+@keyframes pitTelegraphPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ---- MINI COOLDOWNS (enemy) ---- */
+.pit-mini-cd { display: flex; align-items: center; gap: 3px; }
+.pit-mini-cd__bar {
+  width: 4px; height: 16px; background: rgba(255, 255, 255, 0.04);
+  border-radius: 2px; overflow: hidden; display: flex; flex-direction: column-reverse;
+}
+.pit-mini-cd__fill { width: 100%; border-radius: 2px; transition: height 0.15s linear; }
+.pit-mini-cd__label { font-family: 'Crimson Text', serif; font-size: 0.45rem; color: rgba(127, 127, 127, 0.4); }
+
+/* ---- COMBAT LOG ---- */
+.pit-log {
+  max-height: 140px; overflow-y: auto; scroll-behavior: smooth;
+  padding: 6px 8px; border-radius: 4px;
+  background: rgba(6, 6, 8, 0.5); border: 1px solid rgba(42, 42, 53, 0.25);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 100%);
+}
+.pit-log::-webkit-scrollbar { width: 3px; }
+.pit-log::-webkit-scrollbar-track { background: transparent; }
+.pit-log::-webkit-scrollbar-thumb { background: rgba(42, 42, 53, 0.3); border-radius: 2px; }
+
+.pit-log__entry {
+  font-family: 'Crimson Text', serif; font-size: 0.65rem;
+  padding: 2px 4px; color: rgba(200, 196, 183, 0.5);
+  animation: pitLogIn 0.15s ease-out;
+}
+@keyframes pitLogIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+.pit-log__time { font-size: 0.5rem; color: rgba(200, 196, 183, 0.2); margin-right: 3px; font-variant-numeric: tabular-nums; }
+.pit-log__entry--hit { color: #d44; }
+.pit-log__entry--damage { color: #e67e22; }
+.pit-log__entry--heal { color: #2ecc71; }
+.pit-log__entry--status_add { color: #e67e22; }
+.pit-log__entry--status_remove { color: rgba(200, 196, 183, 0.35); }
+.pit-log__entry--dodge { color: #1abc9c; font-style: italic; }
+.pit-log__entry--block { color: #5a7080; }
+.pit-log__entry--special_telegraph {
+  color: #ff9800; font-weight: 600; background: rgba(255, 152, 0, 0.04);
+  border-left: 2px solid rgba(255, 152, 0, 0.25); padding-left: 6px; margin: 2px 0;
+}
+.pit-log__entry--special_fire {
+  color: #c83232; font-weight: 700; background: rgba(200, 50, 50, 0.06);
+  border-left: 2px solid rgba(200, 50, 50, 0.3); padding-left: 6px; margin: 2px 0;
+}
+.pit-log__entry--death {
+  color: #c83232; font-weight: 700; text-align: center;
+  padding: 5px; background: rgba(200, 50, 50, 0.05);
+  border: 1px solid rgba(200, 50, 50, 0.08); border-radius: 3px; margin: 3px 0;
+}
+.pit-log__entry--wave_transition {
+  text-align: center; font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.7rem;
+  color: #af6025; padding: 5px; margin: 3px 0;
+  border-top: 1px solid rgba(175, 96, 37, 0.1); border-bottom: 1px solid rgba(175, 96, 37, 0.1);
+}
+.pit-log__entry--info { color: rgba(200, 196, 183, 0.35); font-style: italic; }
+.pit-log__entry--hidden_proc { color: #9b59b6; font-style: italic; }
+
+/* ---- ABILITY BAR ---- */
+.pit-abilities {
+  display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(12, 12, 14, 0.95) 0%, rgba(8, 8, 10, 0.98) 100%);
+  border: 1px solid rgba(42, 42, 53, 0.35); border-radius: 6px;
+}
+.pit-ab {
+  position: relative; display: flex; align-items: center; gap: 6px;
+  padding: 7px 10px; background: rgba(16, 16, 22, 0.8);
+  border: 1px solid rgba(42, 42, 53, 0.3); border-radius: 4px;
+  min-width: 120px; overflow: hidden; transition: border-color 0.25s, box-shadow 0.25s;
+}
+.pit-ab--ready {
+  border-color: rgba(175, 96, 37, 0.35);
+  animation: pitAbGlow 1.5s ease-in-out infinite;
+}
+@keyframes pitAbGlow {
+  0%, 100% { box-shadow: 0 0 3px rgba(175, 96, 37, 0.08); }
+  50% { box-shadow: 0 0 8px rgba(175, 96, 37, 0.16); }
+}
+.pit-ab__icon { font-size: 1rem; flex-shrink: 0; z-index: 1; }
+.pit-ab--cd .pit-ab__icon { filter: brightness(0.4) saturate(0.3); }
+.pit-ab__body { flex: 1; z-index: 1; min-width: 0; }
+.pit-ab__name { font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 600; color: rgba(232, 230, 227, 0.8); display: block; margin-bottom: 2px; }
+.pit-ab__track { height: 3px; background: rgba(255, 255, 255, 0.03); border-radius: 2px; overflow: hidden; }
+.pit-ab__fill { height: 100%; border-radius: 2px; transition: width 0.1s linear; }
+.pit-ab__cd { font-family: 'Crimson Text', serif; font-size: 0.5rem; display: block; margin-top: 1px; font-variant-numeric: tabular-nums; }
+.pit-ab__cd--ready { color: #2ecc71; font-weight: 600; }
+.pit-ab__cd--wait { color: rgba(90, 90, 96, 0.4); }
+.pit-ab__overlay { position: absolute; inset: 0; background: rgba(6, 6, 8, 0.5); pointer-events: none; z-index: 0; transition: opacity 0.15s; }
+
+/* ---- LOW HP VIGNETTE ---- */
+.pit-low-hp { box-shadow: inset 0 0 50px rgba(200, 50, 50, 0.08); animation: pitLowHp 2s ease-in-out infinite; }
+@keyframes pitLowHp {
+  0%, 100% { box-shadow: inset 0 0 50px rgba(200, 50, 50, 0.06); }
+  50% { box-shadow: inset 0 0 70px rgba(200, 50, 50, 0.12); }
+}
+
+/* ---- PAUSE OVERLAY ---- */
+.pit-paused {
+  position: absolute; inset: 0; z-index: 5; border-radius: 6px;
+  background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(1.5px);
+  display: flex; align-items: center; justify-content: center;
+}
+.pit-paused__text {
+  font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 700;
+  color: #af6025; text-shadow: 0 0 10px rgba(175, 96, 37, 0.2); letter-spacing: 4px;
+}
+
+/* ============================================
+   RESULTS
+   ============================================ */
+.pit-score {
+  font-family: 'Cinzel', serif; font-size: 2.5rem; font-weight: 700; text-align: center;
+  background: linear-gradient(135deg, #c9a227, #af6025);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.pit-badge {
+  display: inline-block; padding: 4px 12px; border-radius: 3px;
+  font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.5px;
+}
+.pit-badge--perfect { background: rgba(201, 162, 39, 0.08); color: #c9a227; border: 1px solid rgba(201, 162, 39, 0.15); }
+.pit-badge--overkill { background: rgba(200, 50, 50, 0.08); color: #ff6b6b; border: 1px solid rgba(200, 50, 50, 0.15); }
+.pit-badge--underdog { background: rgba(175, 96, 37, 0.08); color: #af6025; border: 1px solid rgba(175, 96, 37, 0.15); }
+
+/* ---- FLAVOR TEXT ---- */
+.pit-flavor {
+  font-family: 'Crimson Text', serif; font-style: italic;
+  color: rgba(127, 127, 127, 0.6); border-left: 2px solid rgba(42, 42, 53, 0.3);
+  padding-left: 10px;
+}
+
+/* ============================================
+   NEW: Slot filter buttons (draft)
+   ============================================ */
+.pit-slot-filter {
+  padding: 4px 10px; border-radius: 3px;
+  font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 600;
+  color: rgba(100, 95, 90, 0.5); background: transparent;
+  border: 1px solid rgba(42, 42, 53, 0.3);
+  cursor: pointer; transition: all 0.2s;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.pit-slot-filter:hover { color: rgba(140, 130, 120, 0.7); border-color: rgba(60, 55, 50, 0.4); }
+.pit-slot-filter--active {
+  color: #c97a3a; border-color: rgba(175, 96, 37, 0.35);
+  background: rgba(175, 96, 37, 0.06);
+}
+.pit-slot-filter__count {
+  font-family: 'Crimson Text', serif; font-size: 0.55rem;
+  color: rgba(127, 127, 127, 0.4); margin-left: 2px;
+}
+
+/* ---- Slot family badge on draft cards ---- */
+.pit-item__slot-badge {
+  position: absolute; bottom: 3px; right: 4px; z-index: 3;
+  font-family: 'Crimson Text', serif; font-size: 0.42rem;
+  color: rgba(175, 96, 37, 0.5); text-transform: uppercase; letter-spacing: 0.3px;
+}
+
+/* ---- Selected overlay on used cards ---- */
+.pit-item__selected {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.6); border-radius: 5px;
+  font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 700;
+  color: #2ecc71; letter-spacing: 1px;
+}
+
+/* ---- Slot header (loadout) ---- */
+.pit-slot-header {
+  display: flex; align-items: center; gap: 5px;
+  margin-bottom: 4px; padding: 0 2px;
+}
+.pit-slot-header__icon { font-size: 0.75rem; color: rgba(175, 96, 37, 0.4); }
+.pit-slot-header__label {
+  font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 600;
+  color: rgba(200, 196, 183, 0.5); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.pit-slot-header__status { font-size: 0.65rem; margin-left: auto; }
+.pit-slot-header__status--filled { color: #2ecc71; }
+.pit-slot-header__status--disabled { color: rgba(200, 50, 50, 0.4); }
+
+/* ============================================
+   NEW: Action meter (combat)
+   ============================================ */
+.pit-action-meter {
+  display: flex; align-items: center; gap: 5px;
+}
+.pit-action-meter__label {
+  font-family: 'Crimson Text', serif; font-size: 0.5rem;
+  color: rgba(200, 196, 183, 0.3); text-transform: uppercase; letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+.pit-action-meter__track {
+  flex: 1; height: 4px; background: rgba(255, 255, 255, 0.04);
+  border-radius: 2px; overflow: hidden;
+}
+.pit-action-meter__fill {
+  height: 100%; border-radius: 2px;
+  transition: width 0.1s linear;
+}
+.pit-action-meter__fill--player {
+  background: linear-gradient(90deg, rgba(175, 96, 37, 0.4), rgba(175, 96, 37, 0.8));
+}
+.pit-action-meter__fill--enemy {
+  background: linear-gradient(90deg, rgba(200, 50, 50, 0.3), rgba(200, 50, 50, 0.6));
+}
+.pit-action-meter__pct {
+  font-family: 'Crimson Text', serif; font-size: 0.5rem;
+  color: rgba(200, 196, 183, 0.3); font-variant-numeric: tabular-nums;
+  min-width: 24px; text-align: right;
+}
+
+/* ============================================
+   NEW: Attack/hit animations
+   ============================================ */
+.pit-panel--attacking {
+  animation: pitAttackPulse 0.35s ease-out;
+}
+@keyframes pitAttackPulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.03); filter: brightness(1.3); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+.pit-panel--hit {
+  animation: pitHitShake 0.3s ease-in-out;
+}
+@keyframes pitHitShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-4px); }
+  35% { transform: translateX(4px); }
+  55% { transform: translateX(-3px); }
+  75% { transform: translateX(2px); }
+}
+
+/* ============================================
+   FLOATING DAMAGE / HEAL NUMBERS
+   ============================================ */
+.pit-floats {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 10;
+}
+.pit-float {
+  position: absolute; pointer-events: none;
+  font-family: 'Cinzel', serif; font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.5);
+  animation: pitFloatUp 1.1s ease-out forwards;
+  white-space: nowrap;
+}
+@keyframes pitFloatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  15% { transform: translateY(-6px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-45px) scale(0.75); }
+}
+
+/* Variants */
+.pit-float--dmg { color: #e74c3c; font-size: 1rem; }
+.pit-float--crit { color: #ff4444; font-size: 1.3rem; text-shadow: 0 0 8px rgba(255, 68, 68, 0.4); }
+.pit-float--heal { color: #2ecc71; font-size: 0.9rem; }
+.pit-float--poison { color: #2ecc71; font-size: 0.8rem; font-style: italic; }
+.pit-float--burn { color: #e67e22; font-size: 0.8rem; font-style: italic; }
+.pit-float--block { color: #5a7080; font-size: 0.8rem; }
+.pit-float--dodge { color: #1abc9c; font-size: 0.85rem; font-style: italic; }

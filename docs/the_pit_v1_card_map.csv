@@ -1,0 +1,507 @@
+uid,id,name,item_class,normalized_class,tier,allowed_slots,profile_id,motif,atk,def,hp,spd,pwr,primary_keyword,secondary_keyword,effect_tier,archetype_tags,is_marquee,override_effect_id,wiki_url,relevance_score
+1,the_pandemonius,The Pandemonius,Amulet,amulet,T0,charm,support_charm,frost,5,4,4,3,10,Foresight,Regen,legendary,support|sustain|control,1,pandemonius_whiteout,https://www.poewiki.net/wiki/The_Pandemonius,1060
+2,the_retch,The Retch,Belt,belt,T0,charm,sustain_charm,blood,1,9,14,0,4,Strength,Regen,legendary,sustain|bastion,1,retch_glut,https://www.poewiki.net/wiki/The_Retch,1060
+3,the_brass_dome,The Brass Dome,Body Armour,body,T0,body,bastion_shell,bastion,0,23,17,0,3,Plating,Regen,legendary,bastion|sustain,1,brass_dome_unbroken,https://www.poewiki.net/wiki/The_Brass_Dome,1052
+4,the_covenant,The Covenant,Body Armour,body,T0,body,bastion_shell,frost,0,23,17,0,3,Plating,Regen,legendary,bastion|sustain|control,1,covenant_bloodprice,https://www.poewiki.net/wiki/The_Covenant,1052
+5,mark_of_the_shaper,Mark of the Shaper,Ring,ring,T0,charm,volatile_charm,void,8,1,0,4,9,Poison,Burn,legendary,wildcard|support|arcane,1,mark_shaper_union,https://www.poewiki.net/wiki/Mark_of_the_Shaper,1045
+6,presence_of_chayula,Presence of Chayula,Amulet,amulet,T0,charm,support_charm,insight,5,4,4,3,10,Foresight,Regen,legendary,support|sustain|focus,1,presence_void_ward,https://www.poewiki.net/wiki/Presence_of_Chayula,1045
+7,mark_of_the_elder,Mark of the Elder,Ring,ring,T0,charm,volatile_charm,void,8,1,0,4,9,Poison,Burn,legendary,wildcard|support|arcane,1,mark_elder_lone,https://www.poewiki.net/wiki/Mark_of_the_Elder,1045
+8,the_squire,The Squire,Shield,shield,T0,offhand,bastion_guard,neutral,0,22,9,0,6,Block,Plating,legendary,bastion|control|support,1,squire_echo,https://www.poewiki.net/wiki/The_Squire,1040
+9,kaoms_heart,Kaom's Heart,Body Armour,body,T0,body,bastion_shell,blood,0,23,17,0,3,Regen,Plating,legendary,bastion|sustain,1,kaom_heart_overmax,https://www.poewiki.net/wiki/Kaom%27s_Heart,1037
+10,atziris_step,Atziri's Step,Boots,boots,T0,minor,tempo_stride,tempo,0,5,3,21,3,Dodge,Foresight,legendary,tempo|hunter,1,atziri_step_phase,https://www.poewiki.net/wiki/Atziri%27s_Step,1035
+11,crystallised_omniscience,Crystallised Omniscience,Amulet,amulet,T0,charm,support_charm,frost,5,4,4,3,10,Foresight,Regen,legendary,support|sustain|control,1,omniscience_harmonic,https://www.poewiki.net/wiki/Crystallised_Omniscience,1032
+12,bereks_respite,Berek's Respite,Ring,ring,T0,charm,volatile_charm,ember,8,1,0,4,9,Burn,Poison,legendary,wildcard|support|ember,1,berek_respite_chain,https://www.poewiki.net/wiki/Berek%27s_Respite,1032
+13,solstice_vigil,Solstice Vigil,Amulet,amulet,T0,charm,support_charm,storm,5,4,4,3,10,Foresight,Regen,legendary,support|sustain|tempo,1,solstice_stasis,https://www.poewiki.net/wiki/Solstice_Vigil,1032
+14,headhunter,Headhunter,Belt,belt,T0,charm,sustain_charm,blood,1,9,14,0,4,Strength,Regen,legendary,sustain|bastion,1,headhunter_trophy,https://www.poewiki.net/wiki/Headhunter,1030
+15,watchers_eye,Watcher's Eye,Jewel,jewel,T0,focus,focus_engine,insight,0,0,0,0,23,Foresight,Burn,legendary,focus|support,1,watchers_eye_prophecy,https://www.poewiki.net/wiki/Watcher%27s_Eye,1030
+16,badge_of_the_brotherhood,Badge of the Brotherhood,Amulet,amulet,T0,charm,support_charm,neutral,5,4,4,3,10,Regen,Lifesteal,legendary,support|sustain,1,badge_escalation,https://www.poewiki.net/wiki/Badge_of_the_Brotherhood,1030
+17,ashes_of_the_stars,Ashes of the Stars,Amulet,amulet,T0,charm,support_charm,ember,5,4,4,3,10,Regen,Lifesteal,legendary,support|sustain|ember,1,ashes_starfall,https://www.poewiki.net/wiki/Ashes_of_the_Stars,1030
+18,impossible_escape,Impossible Escape,Jewel,jewel,T0,focus,focus_engine,neutral,0,0,0,0,23,Foresight,Burn,legendary,focus|support,1,impossible_escape_reposition,https://www.poewiki.net/wiki/Impossible_Escape,1030
+19,ventors_gamble,Ventor's Gamble,Ring,ring,T0,charm,volatile_charm,beast,8,1,0,4,9,Strength,Poison,legendary,wildcard|support|assault,1,ventor_gamble_variance,https://www.poewiki.net/wiki/Ventor%27s_Gamble,1030
+20,glorious_vanity,Glorious Vanity,Jewel,jewel,T0,focus,focus_engine,void,0,0,0,0,23,Poison,Foresight,legendary,focus|support|arcane,1,glorious_vanity_corrupt,https://www.poewiki.net/wiki/Glorious_Vanity,1028
+21,mageblood,Mageblood,Belt,belt,T0,charm,sustain_charm,blood,1,9,14,0,4,Strength,Regen,legendary,sustain|bastion,1,mageblood_autotonic,https://www.poewiki.net/wiki/Mageblood,1028
+22,lethal_pride,Lethal Pride,Jewel,jewel,T0,focus,focus_engine,neutral,0,0,0,0,23,Foresight,Burn,legendary,focus|support,1,lethal_pride_warcry,https://www.poewiki.net/wiki/Lethal_Pride,1028
+23,megalomaniac,Megalomaniac,Jewel,jewel,T1,focus,focus_engine,neutral,0,0,0,0,18,Foresight,Burn,elite,focus|support,1,megalomaniac_random,https://www.poewiki.net/wiki/Megalomaniac,1028
+24,perseverance,Perseverance,Belt,belt,T1,charm,sustain_charm,neutral,1,7,11,0,3,Regen,Plating,elite,sustain|bastion|support,1,perseverance_gain,https://www.poewiki.net/wiki/Perseverance,1028
+25,militant_faith,Militant Faith,Jewel,jewel,T0,focus,focus_engine,bastion,0,0,0,0,23,Foresight,Burn,legendary,focus|support|bastion,1,militant_faith_ordo,https://www.poewiki.net/wiki/Militant_Faith,1028
+26,brutal_restraint,Brutal Restraint,Jewel,jewel,T0,focus,focus_engine,bastion,0,0,0,0,23,Foresight,Burn,legendary,focus|support|bastion,1,brutal_restraint_momentum,https://www.poewiki.net/wiki/Brutal_Restraint,1028
+27,thread_of_hope,Thread of Hope,Jewel,jewel,T0,focus,focus_engine,insight,0,0,0,0,23,Foresight,Burn,legendary,focus|support,1,thread_of_hope_weave,https://www.poewiki.net/wiki/Thread_of_Hope,1028
+28,unnatural_instinct,Unnatural Instinct,Jewel,jewel,T0,focus,focus_engine,neutral,0,0,0,0,23,Foresight,Burn,legendary,focus|support,1,unnatural_instinct_snap,https://www.poewiki.net/wiki/Unnatural_Instinct,1028
+29,split_personality,Split Personality,Jewel,jewel,T0,focus,focus_engine,neutral,0,0,0,0,23,Foresight,Burn,legendary,focus|support,1,split_personality_duality,https://www.poewiki.net/wiki/Split_Personality,1028
+30,auls_uprising,Aul's Uprising,Amulet,amulet,T1,charm,support_charm,void,4,3,3,2,8,Foresight,Regen,elite,support|sustain|arcane,1,aul_uprising,https://www.poewiki.net/wiki/Aul%27s_Uprising,1025
+31,carcass_jack,Carcass Jack,Body Armour,body,T1,body,bastion_shell,ember,0,18,13,0,2,Plating,Regen,elite,bastion|sustain|ember,1,carcass_splinter,https://www.poewiki.net/wiki/Carcass_Jack,1024
+32,shavronnes_wrappings,Shavronne's Wrappings,Body Armour,body,T0,body,bastion_shell,neutral,0,23,17,0,3,Plating,Regen,legendary,bastion|sustain|support,1,shavronne_lastveil,https://www.poewiki.net/wiki/Shavronne%27s_Wrappings,1022
+33,darkray_vectors,Darkray Vectors,Boots,boots,T1,minor,tempo_stride,storm,0,4,2,16,2,Dodge,Foresight,elite,tempo|hunter,1,darkray_loop,https://www.poewiki.net/wiki/Darkray_Vectors,1022
+34,belly_of_the_beast,Belly of the Beast,Body Armour,body,T1,body,bastion_shell,beast,0,18,13,0,2,Regen,Plating,elite,bastion|sustain|assault,1,belly_beast_overheal,https://www.poewiki.net/wiki/Belly_of_the_Beast,1022
+35,inpulsas_broken_heart,Inpulsa's Broken Heart,Body Armour,body,T1,body,bastion_shell,blood,0,18,13,0,2,Regen,Plating,elite,bastion|sustain,1,inpulsa_chainburst,https://www.poewiki.net/wiki/Inpulsa%27s_Broken_Heart,1022
+36,rats_nest,Rat's Nest,Helmet,helmet,T1,minor,seer_helm,tempo,0,10,6,2,6,Foresight,Plating,elite,insight|bastion|tempo,1,rats_nest_opener,https://www.poewiki.net/wiki/Rat%27s_Nest,1022
+37,starkonjas_head,Starkonja's Head,Helmet,helmet,T1,minor,seer_helm,neutral,0,10,6,2,6,Foresight,Plating,elite,insight|bastion|support,1,starkonja_laststand,https://www.poewiki.net/wiki/Starkonja%27s_Head,1020
+38,devotos_devotion,Devoto's Devotion,Helmet,helmet,T1,minor,seer_helm,insight,0,10,6,2,6,Foresight,Plating,elite,insight|bastion|focus,1,devoto_rush,https://www.poewiki.net/wiki/Devoto%27s_Devotion,1020
+39,heatshiver,Heatshiver,Helmet,helmet,T1,minor,seer_helm,ember,0,10,6,2,6,Burn,Foresight,elite,insight|bastion|ember,1,heatshiver_flip,https://www.poewiki.net/wiki/Heatshiver,1020
+40,hrimsorrow,Hrimsorrow,Gloves,gloves,T1,minor,tempo_grip,tempo,7,3,0,8,4,Dodge,Strength,elite,tempo|sustain,1,hrimsorrow_dualburn,https://www.poewiki.net/wiki/Hrimsorrow,1020
+41,abyssus,Abyssus,Helmet,helmet,T1,minor,seer_helm,void,0,10,6,2,6,Burn,Foresight,elite,insight|bastion|arcane,1,abyssus_reckless,https://www.poewiki.net/wiki/Abyssus,1020
+42,voidforge,Voidforge,Two-Handed Sword,sword_2h,T0,mainhand,heavy_execution,ember,29,0,3,0,3,Foresight,,legendary,assault|burst|ember,1,voidforge_entropy,https://www.poewiki.net/wiki/Voidforge,1010
+43,nebulis,Nebulis,Sceptre,sceptre,T1,mainhand|offhand,ember_battlemage,bastion,9,2,1,2,10,Burn,Strength,elite,ember|arcane|bastion,1,nebulis_flux,https://www.poewiki.net/wiki/Nebulis,1010
+44,starforge,Starforge,Two-Handed Sword,sword_2h,T0,mainhand,heavy_execution,ember,29,0,3,0,3,Foresight,,legendary,assault|burst|ember,1,starforge_celestial,https://www.poewiki.net/wiki/Starforge,1010
+45,cospris_malice,Cospri's Malice,Thrusting One-Handed Sword,rapier_1h,T1,mainhand|offhand,tempo_duelist,frost,12,0,0,11,2,Dodge,Vulnerable,elite,tempo|assault|control,1,cospri_echo,https://www.poewiki.net/wiki/Cospri%27s_Malice,1010
+46,hand_of_wisdom_and_action,Hand of Wisdom and Action,Claw,claw,T1,mainhand|offhand,venom_leech,ember,13,0,0,8,5,Poison,Lifesteal,elite,venom|sustain|ember,1,hand_wisdom_action,https://www.poewiki.net/wiki/Hand_of_Wisdom_and_Action,1010
+47,soul_taker,Soul Taker,One-Handed Axe,axe_1h,T1,mainhand|offhand,assault_rend,blood,17,1,2,2,2,Strength,Vulnerable,elite,assault|control|sustain,1,soul_taker_freecast,https://www.poewiki.net/wiki/Soul_Taker,1010
+48,the_unseen_hue,The Unseen Hue,Ring,ring,T1,charm,volatile_charm,neutral,6,1,0,3,7,Poison,Burn,elite,wildcard|support,0,,https://www.poewiki.net/wiki/The_Unseen_Hue,62
+49,the_taming,The Taming,Ring,ring,T1,charm,volatile_charm,frost,6,1,0,3,7,Dodge,Poison,elite,wildcard|support|control,1,taming_triune,https://www.poewiki.net/wiki/The_Taming,62
+50,the_will_of_xoph,The Will of Xoph,Ring,ring,T1,charm,volatile_charm,ember,6,1,0,3,7,Burn,Poison,elite,wildcard|support|ember,0,,https://www.poewiki.net/wiki/The_Will_of_Xoph,60
+51,the_primordial_chain,The Primordial Chain,Amulet,amulet,T1,charm,support_charm,ember,4,3,3,2,8,Regen,Lifesteal,elite,support|sustain|ember,0,,https://www.poewiki.net/wiki/The_Primordial_Chain,60
+52,the_sundered_will,The Sundered Will,Ring,ring,T1,charm,volatile_charm,ember,6,1,0,3,7,Burn,Poison,elite,wildcard|support|ember,0,,https://www.poewiki.net/wiki/The_Sundered_Will,60
+53,the_balance_of_terror,The Balance of Terror,Jewel,jewel,T1,focus,focus_engine,void,0,0,0,0,18,Poison,Foresight,elite,focus|support|arcane,0,,https://www.poewiki.net/wiki/The_Balance_of_Terror,60
+54,the_eternal_struggle,The Eternal Struggle,Amulet,amulet,T1,charm,support_charm,neutral,4,3,3,2,8,Regen,Lifesteal,elite,support|sustain,0,,https://www.poewiki.net/wiki/The_Eternal_Struggle,60
+55,the_selfish_shepherd,The Selfish Shepherd,Ring,ring,T1,charm,volatile_charm,gamble,6,1,0,3,7,Vulnerable,Poison,elite,wildcard|support,0,,https://www.poewiki.net/wiki/The_Selfish_Shepherd,60
+56,the_anvil,The Anvil,Amulet,amulet,T1,charm,support_charm,ember,4,3,3,2,8,Regen,Lifesteal,elite,support|sustain|ember,0,,https://www.poewiki.net/wiki/The_Anvil,60
+57,the_ephemeral_bond,The Ephemeral Bond,Amulet,amulet,T1,charm,support_charm,tempo,4,3,3,2,8,Strength,Regen,elite,support|sustain|tempo,0,,https://www.poewiki.net/wiki/The_Ephemeral_Bond,60
+58,the_queller_of_minds,The Queller of Minds,Ring,ring,T1,charm,volatile_charm,insight,6,1,0,3,7,Poison,Burn,elite,wildcard|support|focus,0,,https://www.poewiki.net/wiki/The_Queller_of_Minds,60
+59,the_anima_stone,The Anima Stone,Jewel,jewel,T1,focus,focus_engine,insight,0,0,0,0,18,Foresight,Burn,elite,focus|support,0,,https://www.poewiki.net/wiki/The_Anima_Stone,60
+60,the_pariah,The Pariah,Ring,ring,T1,charm,volatile_charm,gamble,6,1,0,3,7,Vulnerable,Poison,elite,wildcard|support,0,,https://www.poewiki.net/wiki/The_Pariah,60
+61,the_hungry_loop,The Hungry Loop,Ring,ring,T1,charm,volatile_charm,blood,6,1,0,3,7,Strength,Poison,elite,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/The_Hungry_Loop,60
+62,the_highwayman,The Highwayman,Ring,ring,T1,charm,volatile_charm,gamble,6,1,0,3,7,Vulnerable,Poison,elite,wildcard|support,0,,https://www.poewiki.net/wiki/The_Highwayman,60
+63,the_will_of_uul_netol,The Will of Uul-Netol,Ring,ring,T1,charm,volatile_charm,insight,6,1,0,3,7,Poison,Burn,elite,wildcard|support|focus,0,,https://www.poewiki.net/wiki/The_Will_of_Uul-Netol,60
+64,the_ignomon,The Ignomon,Amulet,amulet,T1,charm,support_charm,storm,4,3,3,2,8,Foresight,Regen,elite,support|sustain|tempo,0,,https://www.poewiki.net/wiki/The_Ignomon,60
+65,the_will_of_tul,The Will of Tul,Ring,ring,T1,charm,volatile_charm,frost,6,1,0,3,7,Dodge,Poison,elite,wildcard|support|control,0,,https://www.poewiki.net/wiki/The_Will_of_Tul,60
+66,the_halcyon,The Halcyon,Amulet,amulet,T1,charm,support_charm,frost,4,3,3,2,8,Foresight,Regen,elite,support|sustain|control,0,,https://www.poewiki.net/wiki/The_Halcyon,60
+67,the_hateful_accuser,The Hateful Accuser,Ring,ring,T1,charm,volatile_charm,insight,6,1,0,3,7,Poison,Burn,elite,wildcard|support|focus,0,,https://www.poewiki.net/wiki/The_Hateful_Accuser,60
+68,the_will_of_esh,The Will of Esh,Ring,ring,T1,charm,volatile_charm,bastion,6,1,0,3,7,Poison,Burn,elite,wildcard|support|bastion,0,,https://www.poewiki.net/wiki/The_Will_of_Esh,60
+69,the_felbog_fang,The Felbog Fang,Amulet,amulet,T1,charm,support_charm,blood,4,3,3,2,8,Strength,Regen,elite,support|sustain,0,,https://www.poewiki.net/wiki/The_Felbog_Fang,60
+70,the_aylardex,The Aylardex,Amulet,amulet,T1,charm,support_charm,ember,4,3,3,2,8,Regen,Lifesteal,elite,support|sustain|ember,0,,https://www.poewiki.net/wiki/The_Aylardex,60
+71,the_untouched_soul,The Untouched Soul,Amulet,amulet,T1,charm,support_charm,neutral,4,3,3,2,8,Regen,Lifesteal,elite,support|sustain,0,,https://www.poewiki.net/wiki/The_Untouched_Soul,60
+72,the_adorned,The Adorned,Jewel,jewel,T1,focus,focus_engine,ember,0,0,0,0,18,Burn,Foresight,elite,focus|support|ember,0,,https://www.poewiki.net/wiki/The_Adorned,60
+73,the_jinxed_juju,The Jinxed Juju,Amulet,amulet,T1,charm,support_charm,ember,4,3,3,2,8,Regen,Lifesteal,elite,support|sustain|ember,0,,https://www.poewiki.net/wiki/The_Jinxed_Juju,60
+74,the_wardens_brand,The Warden's Brand,Ring,ring,T1,charm,volatile_charm,ember,6,1,0,3,7,Burn,Poison,elite,wildcard|support|ember,0,,https://www.poewiki.net/wiki/The_Warden%27s_Brand,60
+75,the_utmost,The Utmost,Amulet,amulet,T1,charm,support_charm,neutral,4,3,3,2,8,Regen,Lifesteal,elite,support|sustain,0,,https://www.poewiki.net/wiki/The_Utmost,60
+76,the_arkhons_tools,The Arkhon's Tools,Belt,belt,T1,charm,sustain_charm,insight,1,7,11,0,3,Regen,Plating,elite,sustain|bastion|focus,0,,https://www.poewiki.net/wiki/The_Arkhon%27s_Tools,60
+77,the_blue_nightmare,The Blue Nightmare,Jewel,jewel,T1,focus,focus_engine,insight,0,0,0,0,18,Foresight,Burn,elite,focus|support,0,,https://www.poewiki.net/wiki/The_Blue_Nightmare,58
+78,the_tides_of_time,The Tides of Time,Belt,belt,T1,charm,sustain_charm,insight,1,7,11,0,3,Regen,Plating,elite,sustain|bastion|focus,0,,https://www.poewiki.net/wiki/The_Tides_of_Time,58
+79,the_blue_dream,The Blue Dream,Jewel,jewel,T1,focus,focus_engine,ember,0,0,0,0,18,Burn,Foresight,elite,focus|support|ember,0,,https://www.poewiki.net/wiki/The_Blue_Dream,58
+80,the_burden_of_truth,The Burden of Truth,Belt,belt,T1,charm,sustain_charm,insight,1,7,11,0,3,Regen,Plating,elite,sustain|bastion|focus,0,,https://www.poewiki.net/wiki/The_Burden_of_Truth,58
+81,the_interrogation,The Interrogation,Jewel,jewel,T2,focus,focus_engine,insight,0,0,0,0,13,Foresight,,major,focus|support,0,,https://www.poewiki.net/wiki/The_Interrogation,58
+82,the_magnate,The Magnate,Belt,belt,T2,charm,sustain_charm,void,1,5,8,0,2,Regen,,major,sustain|bastion|arcane,0,,https://www.poewiki.net/wiki/The_Magnate,58
+83,the_light_of_meaning,The Light of Meaning,Jewel,jewel,T2,focus,focus_engine,storm,0,0,0,0,13,Burn,,major,focus|support|tempo,0,,https://www.poewiki.net/wiki/The_Light_of_Meaning,58
+84,the_red_dream,The Red Dream,Jewel,jewel,T1,focus,focus_engine,blood,0,0,0,0,18,Strength,Foresight,elite,focus|support|sustain,0,,https://www.poewiki.net/wiki/The_Red_Dream,58
+85,the_red_nightmare,The Red Nightmare,Jewel,jewel,T1,focus,focus_engine,bastion,0,0,0,0,18,Foresight,Burn,elite,focus|support|bastion,0,,https://www.poewiki.net/wiki/The_Red_Nightmare,58
+86,the_druggery,The Druggery,Belt,belt,T1,charm,sustain_charm,neutral,1,7,11,0,3,Regen,Plating,elite,sustain|bastion|support,0,,https://www.poewiki.net/wiki/The_Druggery,58
+87,the_golden_rule,The Golden Rule,Jewel,jewel,T1,focus,focus_engine,neutral,0,0,0,0,18,Foresight,Burn,elite,focus|support,0,,https://www.poewiki.net/wiki/The_Golden_Rule,58
+88,the_front_line,The Front Line,Jewel,jewel,T1,focus,focus_engine,ember,0,0,0,0,18,Burn,Foresight,elite,focus|support|ember,0,,https://www.poewiki.net/wiki/The_Front_Line,58
+89,the_green_nightmare,The Green Nightmare,Jewel,jewel,T1,focus,focus_engine,insight,0,0,0,0,18,Foresight,Burn,elite,focus|support,0,,https://www.poewiki.net/wiki/The_Green_Nightmare,58
+90,the_green_dream,The Green Dream,Jewel,jewel,T1,focus,focus_engine,insight,0,0,0,0,18,Foresight,Burn,elite,focus|support,0,,https://www.poewiki.net/wiki/The_Green_Dream,58
+91,the_siege,The Siege,Jewel,jewel,T1,focus,focus_engine,void,0,0,0,0,18,Poison,Foresight,elite,focus|support|arcane,0,,https://www.poewiki.net/wiki/The_Siege,58
+92,the_queens_hunger,The Queen's Hunger,Body Armour,body,T2,body,bastion_shell,blood,0,13,9,0,1,Regen,,major,bastion|sustain,0,,https://www.poewiki.net/wiki/The_Queen%27s_Hunger,54
+93,the_coming_calamity,The Coming Calamity,Body Armour,body,T2,body,bastion_shell,ember,0,13,9,0,1,Plating,,major,bastion|sustain|ember,0,,https://www.poewiki.net/wiki/The_Coming_Calamity,54
+94,the_flow_untethered,The Flow Untethered,Belt,belt,T2,charm,sustain_charm,tempo,1,5,8,0,2,Strength,,major,sustain|bastion|tempo,0,,https://www.poewiki.net/wiki/The_Flow_Untethered,53
+95,the_torrents_reclamation,The Torrent's Reclamation,Belt,belt,T2,charm,sustain_charm,neutral,1,5,8,0,2,Regen,,major,sustain|bastion|support,0,,https://www.poewiki.net/wiki/The_Torrent%27s_Reclamation,53
+96,the_dark_monarch,The Dark Monarch,Helmet,helmet,T2,minor,seer_helm,blood,0,7,4,1,4,Foresight,,major,insight|bastion|sustain,0,,https://www.poewiki.net/wiki/The_Dark_Monarch,52
+97,the_caged_mammoth,The Caged Mammoth,Gloves,gloves,T2,minor,tempo_grip,tempo,5,2,0,6,3,Dodge,,major,tempo|sustain,0,,https://www.poewiki.net/wiki/The_Caged_Mammoth,52
+98,the_gull,The Gull,Helmet,helmet,T2,minor,seer_helm,blood,0,7,4,1,4,Foresight,,major,insight|bastion|sustain,0,,https://www.poewiki.net/wiki/The_Gull,52
+99,the_embalmer,The Embalmer,Gloves,gloves,T2,minor,tempo_grip,venom,5,2,0,6,3,Lifesteal,,major,tempo|sustain|venom,0,,https://www.poewiki.net/wiki/The_Embalmer,52
+100,the_snowblind_grace,The Snowblind Grace,Body Armour,body,T2,body,bastion_shell,frost,0,13,9,0,1,Plating,,major,bastion|sustain|control,0,,https://www.poewiki.net/wiki/The_Snowblind_Grace,52
+101,the_beast_fur_shawl,The Beast Fur Shawl,Body Armour,body,T2,body,bastion_shell,tempo,0,13,9,0,1,Plating,,major,bastion|sustain|tempo,0,,https://www.poewiki.net/wiki/The_Beast_Fur_Shawl,52
+102,the_perfect_form,The Perfect Form,Body Armour,body,T2,body,bastion_shell,frost,0,13,9,0,1,Plating,,major,bastion|sustain|control,0,,https://www.poewiki.net/wiki/The_Perfect_Form,52
+103,the_blood_dance,The Blood Dance,Boots,boots,T2,minor,tempo_stride,ember,0,3,1,11,1,Dodge,,major,tempo|hunter|ember,0,,https://www.poewiki.net/wiki/The_Blood_Dance,52
+104,the_fourth_vow,The Fourth Vow,Body Armour,body,T2,body,bastion_shell,insight,0,13,9,0,1,Regen,,major,bastion|sustain|focus,0,,https://www.poewiki.net/wiki/The_Fourth_Vow,52
+105,the_eternity_shroud,The Eternity Shroud,Body Armour,body,T2,body,bastion_shell,tempo,0,13,9,0,1,Plating,,major,bastion|sustain|tempo,0,,https://www.poewiki.net/wiki/The_Eternity_Shroud,52
+106,the_three_dragons,The Three Dragons,Helmet,helmet,T2,minor,seer_helm,ember,0,7,4,1,4,Burn,,major,insight|bastion|ember,0,,https://www.poewiki.net/wiki/The_Three_Dragons,52
+107,the_rat_cage,The Rat Cage,Body Armour,body,T2,body,bastion_shell,insight,0,13,9,0,1,Regen,,major,bastion|sustain|focus,0,,https://www.poewiki.net/wiki/The_Rat_Cage,52
+108,the_apostate,The Apostate,Body Armour,body,T2,body,bastion_shell,blood,0,13,9,0,1,Regen,,major,bastion|sustain,0,,https://www.poewiki.net/wiki/The_Apostate,52
+109,the_ivory_tower,The Ivory Tower,Body Armour,body,T2,body,bastion_shell,bastion,0,13,9,0,1,Plating,,major,bastion|sustain,0,,https://www.poewiki.net/wiki/The_Ivory_Tower,52
+110,the_admiral,The Admiral,Body Armour,body,T2,body,bastion_shell,neutral,0,13,9,0,1,Plating,,major,bastion|sustain|support,0,,https://www.poewiki.net/wiki/The_Admiral,52
+111,the_hallowed_monarch,The Hallowed Monarch,Helmet,helmet,T2,minor,seer_helm,beast,0,7,4,1,4,Foresight,,major,insight|bastion|assault,0,,https://www.poewiki.net/wiki/The_Hallowed_Monarch,52
+112,the_iron_fortress,The Iron Fortress,Body Armour,body,T2,body,bastion_shell,blood,0,13,9,0,1,Regen,,major,bastion|sustain,0,,https://www.poewiki.net/wiki/The_Iron_Fortress,52
+113,the_restless_ward,The Restless Ward,Body Armour,body,T2,body,bastion_shell,neutral,0,13,9,0,1,Plating,,major,bastion|sustain|support,0,,https://www.poewiki.net/wiki/The_Restless_Ward,52
+114,the_hand_of_phrecia,The Hand of Phrecia,Gloves,gloves,T2,minor,tempo_grip,void,5,2,0,6,3,Strength,,major,tempo|sustain|arcane,0,,https://www.poewiki.net/wiki/The_Hand_of_Phrecia,50
+115,the_tricksters_smile,The Trickster's Smile,Helmet,helmet,T2,minor,seer_helm,ember,0,7,4,1,4,Burn,,major,insight|bastion|ember,0,,https://www.poewiki.net/wiki/The_Trickster%27s_Smile,50
+116,the_vertex,The Vertex,Helmet,helmet,T2,minor,seer_helm,neutral,0,7,4,1,4,Foresight,,major,insight|bastion|support,0,,https://www.poewiki.net/wiki/The_Vertex,50
+117,the_brine_crown,The Brine Crown,Helmet,helmet,T2,minor,seer_helm,neutral,0,7,4,1,4,Foresight,,major,insight|bastion|support,0,,https://www.poewiki.net/wiki/The_Brine_Crown,50
+118,the_bringer_of_rain,The Bringer of Rain,Helmet,helmet,T2,minor,seer_helm,blood,0,7,4,1,4,Foresight,,major,insight|bastion|sustain,0,,https://www.poewiki.net/wiki/The_Bringer_of_Rain,50
+119,the_broken_crown,The Broken Crown,Helmet,helmet,T2,minor,seer_helm,neutral,0,7,4,1,4,Foresight,,major,insight|bastion|support,0,,https://www.poewiki.net/wiki/The_Broken_Crown,50
+120,the_fledgling,The Fledgling,Helmet,helmet,T2,minor,seer_helm,frost,0,7,4,1,4,Foresight,,major,insight|bastion|control,0,,https://www.poewiki.net/wiki/The_Fledgling,50
+121,the_devouring_diadem,The Devouring Diadem,Helmet,helmet,T2,minor,seer_helm,blood,0,7,4,1,4,Foresight,,major,insight|bastion|sustain,0,,https://www.poewiki.net/wiki/The_Devouring_Diadem,50
+122,the_devourer_of_minds,The Devourer of Minds,Helmet,helmet,T2,minor,seer_helm,blood,0,7,4,1,4,Foresight,,major,insight|bastion|sustain,0,,https://www.poewiki.net/wiki/The_Devourer_of_Minds,50
+123,the_celestial_brace,The Celestial Brace,Gloves,gloves,T2,minor,tempo_grip,ember,5,2,0,6,3,Strength,,major,tempo|sustain|ember,0,,https://www.poewiki.net/wiki/The_Celestial_Brace,50
+124,the_formless_inferno,The Formless Inferno,Helmet,helmet,T2,minor,seer_helm,ember,0,7,4,1,4,Burn,,major,insight|bastion|ember,0,,https://www.poewiki.net/wiki/The_Formless_Inferno,50
+125,the_formless_flame,The Formless Flame,Helmet,helmet,T2,minor,seer_helm,ember,0,7,4,1,4,Burn,,major,insight|bastion|ember,0,,https://www.poewiki.net/wiki/The_Formless_Flame,50
+126,the_stampede,The Stampede,Boots,boots,T2,minor,tempo_stride,tempo,0,3,1,11,1,Dodge,,major,tempo|hunter,0,,https://www.poewiki.net/wiki/The_Stampede,50
+127,the_baron,The Baron,Helmet,helmet,T2,minor,seer_helm,frost,0,7,4,1,4,Foresight,,major,insight|bastion|control,0,,https://www.poewiki.net/wiki/The_Baron,50
+128,the_infinite_pursuit,The Infinite Pursuit,Boots,boots,T2,minor,tempo_stride,tempo,0,3,1,11,1,Dodge,,major,tempo|hunter,0,,https://www.poewiki.net/wiki/The_Infinite_Pursuit,50
+129,the_red_trail,The Red Trail,Boots,boots,T2,minor,tempo_stride,tempo,0,3,1,11,1,Dodge,,major,tempo|hunter,0,,https://www.poewiki.net/wiki/The_Red_Trail,50
+130,the_tempest_rising,The Tempest Rising,Boots,boots,T2,minor,tempo_stride,storm,0,3,1,11,1,Dodge,,major,tempo|hunter,0,,https://www.poewiki.net/wiki/The_Tempest_Rising,50
+131,replica_atziris_foible,Replica Atziri's Foible,Amulet,amulet,T2,charm,support_charm,venom,3,2,2,1,6,Lifesteal,,major,support|sustain|venom,0,,https://www.poewiki.net/wiki/Replica_Atziri%27s_Foible,47
+132,atziris_foible,Atziri's Foible,Amulet,amulet,T2,charm,support_charm,insight,3,2,2,1,6,Foresight,,major,support|sustain|focus,0,,https://www.poewiki.net/wiki/Atziri%27s_Foible,47
+133,kaoms_sign,Kaom's Sign,Ring,ring,T2,charm,volatile_charm,beast,4,1,0,2,5,Strength,,major,wildcard|support|assault,0,,https://www.poewiki.net/wiki/Kaom%27s_Sign,45
+134,the_tempests_liberation,The Tempest's Liberation,Helmet,helmet,T2,minor,seer_helm,storm,0,7,4,1,4,Burn,,major,insight|bastion|tempo,0,,https://www.poewiki.net/wiki/The_Tempest%27s_Liberation,45
+135,shapers_seed,Shaper's Seed,Amulet,amulet,T2,charm,support_charm,storm,3,2,2,1,6,Foresight,,major,support|sustain|tempo,0,,https://www.poewiki.net/wiki/Shaper%27s_Seed,45
+136,the_tempests_binding,The Tempest's Binding,Helmet,helmet,T2,minor,seer_helm,storm,0,7,4,1,4,Burn,,major,insight|bastion|tempo,0,,https://www.poewiki.net/wiki/The_Tempest%27s_Binding,45
+137,eye_of_chayula,Eye of Chayula,Amulet,amulet,T2,charm,support_charm,insight,3,2,2,1,6,Foresight,,major,support|sustain|focus,0,,https://www.poewiki.net/wiki/Eye_of_Chayula,45
+138,atziris_reign,Atziri's Reign,Jewel,jewel,T2,focus,focus_engine,neutral,0,0,0,0,13,Foresight,,major,focus|support,0,,https://www.poewiki.net/wiki/Atziri%27s_Reign,43
+139,kaoms_binding,Kaom's Binding,Belt,belt,T2,charm,sustain_charm,ember,1,5,8,0,2,Regen,,major,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Kaom%27s_Binding,43
+140,the_hour_of_divinity,The Hour of Divinity,Relic,relic,T2,focus,relic_engine,blood,0,1,1,0,10,Regen,,major,focus|wildcard|sustain,0,,https://www.poewiki.net/wiki/The_Hour_of_Divinity,42
+141,the_power_and_the_promise,The Power and the Promise,Relic,relic,T2,focus,relic_engine,ember,0,1,1,0,10,Vulnerable,,major,focus|wildcard|ember,0,,https://www.poewiki.net/wiki/The_Power_and_the_Promise,42
+142,the_first_crest,The First Crest,Relic,relic,T2,focus,relic_engine,insight,0,1,1,0,10,Foresight,,major,focus|wildcard,0,,https://www.poewiki.net/wiki/The_First_Crest,42
+143,the_writhing_jar,The Writhing Jar,Hybrid Flask,flask,T2,tactical,flask_tactical,blood,0,0,0,0,6,Tactical,,major,tactical|sustain,0,,https://www.poewiki.net/wiki/The_Writhing_Jar,42
+144,the_wise_oak,The Wise Oak,Utility Flask,flask,T2,tactical,flask_tactical,ember,0,0,0,0,6,Tactical,,major,tactical|ember,0,,https://www.poewiki.net/wiki/The_Wise_Oak,42
+145,the_eternal_apple,The Eternal Apple,Shield,shield,T2,offhand,bastion_guard,bastion,0,12,5,0,4,Block,,major,bastion|control,0,,https://www.poewiki.net/wiki/The_Eternal_Apple,42
+146,the_goddess_scorned,The Goddess Scorned,One-Handed Sword,sword_1h,T2,mainhand|offhand,assault_balanced,ember,11,1,0,4,1,Vulnerable,,major,assault|tempo|ember,0,,https://www.poewiki.net/wiki/The_Goddess_Scorned,42
+147,the_grey_wind,The Grey Wind,One-Handed Axe,axe_1h,T2,mainhand|offhand,assault_rend,ember,12,1,1,1,1,Vulnerable,,major,assault|control|ember,0,,https://www.poewiki.net/wiki/The_Grey_Wind,42
+148,the_original_scripture,The Original Scripture,Relic,relic,T2,focus,relic_engine,ember,0,1,1,0,10,Vulnerable,,major,focus|wildcard|ember,0,,https://www.poewiki.net/wiki/The_Original_Scripture,42
+149,the_monastery_bell,The Monastery Bell,One-Handed Mace,mace_1h,T2,mainhand|offhand,control_crusher,frost,10,3,1,1,3,Stagger,,major,control|bastion,0,,https://www.poewiki.net/wiki/The_Monastery_Bell,42
+150,the_night_lamp,The Night Lamp,Relic,relic,T2,focus,relic_engine,ember,0,1,1,0,10,Vulnerable,,major,focus|wildcard|ember,0,,https://www.poewiki.net/wiki/The_Night_Lamp,42
+151,the_vinktar_square,The Vinktar Square,Map,map,T2,tactical,map_tactical,ember,0,0,0,0,7,MapMod,,major,tactical|ember,0,,https://www.poewiki.net/wiki/The_Vinktar_Square,42
+152,the_gilded_chalice,The Gilded Chalice,Relic,relic,T2,focus,relic_engine,frost,0,1,1,0,10,Foresight,,major,focus|wildcard|control,0,,https://www.poewiki.net/wiki/The_Gilded_Chalice,42
+153,the_second_sacrament,The Second Sacrament,Relic,relic,T2,focus,relic_engine,neutral,0,1,1,0,10,Foresight,,major,focus|wildcard|support,0,,https://www.poewiki.net/wiki/The_Second_Sacrament,42
+154,the_goddess_bound,The Goddess Bound,Thrusting One-Handed Sword,rapier_1h,T2,mainhand|offhand,tempo_duelist,venom,8,0,0,8,1,Dodge,,major,tempo|assault|venom,0,,https://www.poewiki.net/wiki/The_Goddess_Bound,42
+155,the_gluttonous_tide,The Gluttonous Tide,Bow,bow,T2,mainhand,hunter_ranged,ember,10,0,0,5,2,Vulnerable,,major,hunter|tempo|ember,0,,https://www.poewiki.net/wiki/The_Gluttonous_Tide,42
+156,the_chains_of_castigation,The Chains of Castigation,Relic,relic,T2,focus,relic_engine,bastion,0,1,1,0,10,Plating,,major,focus|wildcard|bastion,0,,https://www.poewiki.net/wiki/The_Chains_of_Castigation,42
+157,the_living_blade,The Living Blade,Two-Handed Sword,sword_2h,T2,mainhand,heavy_execution,neutral,15,0,1,0,1,Foresight,,major,assault|burst|support,0,,https://www.poewiki.net/wiki/The_Living_Blade,42
+158,the_cowards_trial,The Coward's Trial,Map,map,T2,tactical,map_tactical,insight,0,0,0,0,7,MapMod,,major,tactical|focus,0,,https://www.poewiki.net/wiki/The_Coward%27s_Trial,42
+159,the_blood_of_innocence,The Blood of Innocence,Relic,relic,T2,focus,relic_engine,storm,0,1,1,0,10,Foresight,,major,focus|wildcard|tempo,0,,https://www.poewiki.net/wiki/The_Blood_of_Innocence,42
+160,the_broken_censer,The Broken Censer,Relic,relic,T2,focus,relic_engine,storm,0,1,1,0,10,Foresight,,major,focus|wildcard|tempo,0,,https://www.poewiki.net/wiki/The_Broken_Censer,42
+161,the_saviour,The Saviour,One-Handed Sword,sword_1h,T2,mainhand|offhand,assault_balanced,storm,11,1,0,4,1,Strength,,major,assault|tempo,0,,https://www.poewiki.net/wiki/The_Saviour,40
+162,the_tempestuous_steel,The Tempestuous Steel,One-Handed Sword,sword_1h,T2,mainhand|offhand,assault_balanced,storm,11,1,0,4,1,Strength,,major,assault|tempo,0,,https://www.poewiki.net/wiki/The_Tempestuous_Steel,40
+163,the_oppressor,The Oppressor,Shield,shield,T2,offhand,bastion_guard,ember,0,12,5,0,4,Block,,major,bastion|control|ember,0,,https://www.poewiki.net/wiki/The_Oppressor,40
+164,the_anticipation,The Anticipation,Shield,shield,T2,offhand,bastion_guard,tempo,0,12,5,0,4,Block,,major,bastion|control|tempo,0,,https://www.poewiki.net/wiki/The_Anticipation,40
+165,the_poets_pen,The Poet's Pen,Wand,wand,T2,mainhand|offhand,ember_caster,storm,5,0,0,4,9,Dodge,,major,ember|arcane|tempo,0,,https://www.poewiki.net/wiki/The_Poet%27s_Pen,40
+166,the_poised_prism,The Poised Prism,Quiver,quiver,T2,offhand,hunter_support,void,5,0,0,3,4,Vulnerable,,major,hunter|tempo|arcane,0,,https://www.poewiki.net/wiki/The_Poised_Prism,40
+167,the_twilight_temple,The Twilight Temple,Map,map,T2,tactical,map_tactical,storm,0,0,0,0,7,MapMod,,major,tactical|tempo,0,,https://www.poewiki.net/wiki/The_Twilight_Temple,40
+168,the_hidden_blade,The Hidden Blade,Dagger,dagger,T2,mainhand|offhand,venom_burst,void,8,0,0,7,4,Poison,,major,venom|tempo|arcane,0,,https://www.poewiki.net/wiki/The_Hidden_Blade,40
+169,the_harvest,The Harvest,Two-Handed Axe,axe_2h,T2,mainhand,heavy_execution,neutral,16,0,2,0,1,Vulnerable,,major,assault|burst|support,0,,https://www.poewiki.net/wiki/The_Harvest,40
+170,the_burden_of_shadows,The Burden of Shadows,Staff,staff,T2,mainhand,channel_guard,void,7,4,4,0,6,Burn,,major,ember|bastion|arcane,0,,https://www.poewiki.net/wiki/The_Burden_of_Shadows,40
+171,the_searing_touch,The Searing Touch,Staff,staff,T2,mainhand,channel_guard,ember,7,4,4,0,6,Burn,,major,ember|bastion,0,,https://www.poewiki.net/wiki/The_Searing_Touch,40
+172,the_sorrow_of_the_divine,The Sorrow of the Divine,Utility Flask,flask,T2,tactical,flask_tactical,void,0,0,0,0,6,Tactical,,major,tactical|arcane,0,,https://www.poewiki.net/wiki/The_Sorrow_of_the_Divine,40
+173,the_iron_mass,The Iron Mass,One-Handed Sword,sword_1h,T2,mainhand|offhand,assault_balanced,neutral,11,1,0,4,1,Strength,,major,assault|tempo|support,0,,https://www.poewiki.net/wiki/The_Iron_Mass,40
+174,the_blood_reaper,The Blood Reaper,Two-Handed Axe,axe_2h,T2,mainhand,heavy_execution,blood,16,0,2,0,1,Strength,,major,assault|burst|sustain,0,,https://www.poewiki.net/wiki/The_Blood_Reaper,40
+175,the_battle_within,The Battle Within,Tincture,tincture,T2,tactical,tincture_tactical,neutral,1,0,0,2,6,Tactical,,major,tactical|support,0,,https://www.poewiki.net/wiki/The_Battle_Within,40
+176,the_overflowing_chalice,The Overflowing Chalice,Utility Flask,flask,T2,tactical,flask_tactical,frost,0,0,0,0,6,Tactical,,major,tactical|control,0,,https://www.poewiki.net/wiki/The_Overflowing_Chalice,40
+177,the_screaming_eagle,The Screaming Eagle,One-Handed Axe,axe_1h,T2,mainhand|offhand,assault_rend,neutral,12,1,1,1,1,Strength,,major,assault|control|support,0,,https://www.poewiki.net/wiki/The_Screaming_Eagle,40
+178,the_surrender,The Surrender,Shield,shield,T2,offhand,bastion_guard,blood,0,12,5,0,4,Block,,major,bastion|control|sustain,0,,https://www.poewiki.net/wiki/The_Surrender,40
+179,the_scourge,The Scourge,Claw,claw,T2,mainhand|offhand,venom_leech,venom,9,0,0,6,4,Poison,,major,venom|sustain,0,,https://www.poewiki.net/wiki/The_Scourge,40
+180,the_scales_of_justice,The Scales of Justice,Shield,shield,T2,offhand,bastion_guard,frost,0,12,5,0,4,Plating,,major,bastion|control,0,,https://www.poewiki.net/wiki/The_Scales_of_Justice,40
+181,the_blood_thorn,The Blood Thorn,Staff,staff,T2,mainhand,channel_guard,venom,7,4,4,0,6,Burn,,major,ember|bastion|venom,0,,https://www.poewiki.net/wiki/The_Blood_Thorn,40
+182,the_stormheart,The Stormheart,Staff,staff,T2,mainhand,channel_guard,storm,7,4,4,0,6,Burn,,major,ember|bastion|tempo,0,,https://www.poewiki.net/wiki/The_Stormheart,40
+183,the_supreme_truth,The Supreme Truth,Sceptre,sceptre,T2,mainhand|offhand,ember_battlemage,insight,6,1,1,1,7,Foresight,,major,ember|arcane|focus,0,,https://www.poewiki.net/wiki/The_Supreme_Truth,40
+184,the_grey_spire,The Grey Spire,Warstaff,warstaff,T2,mainhand,channel_control,tempo,8,4,3,0,6,Stagger,,major,control|arcane|tempo,0,,https://www.poewiki.net/wiki/The_Grey_Spire,40
+185,the_ghastly_theatre,The Ghastly Theatre,Shield,shield,T2,offhand,bastion_guard,ember,0,12,5,0,4,Block,,major,bastion|control|ember,0,,https://www.poewiki.net/wiki/The_Ghastly_Theatre,40
+186,the_winds_of_fate,The Winds of Fate,Warstaff,warstaff,T2,mainhand,channel_control,neutral,8,4,3,0,6,Stagger,,major,control|arcane|support,0,,https://www.poewiki.net/wiki/The_Winds_of_Fate,40
+187,the_whispering_ice,The Whispering Ice,Warstaff,warstaff,T2,mainhand,channel_control,frost,8,4,3,0,6,Stagger,,major,control|arcane,0,,https://www.poewiki.net/wiki/The_Whispering_Ice,40
+188,the_consuming_dark,The Consuming Dark,Rune Dagger,rune_dagger,T2,mainhand|offhand,occult_venom,ember,7,0,0,6,6,Burn,,major,venom|arcane|ember,0,,https://www.poewiki.net/wiki/The_Consuming_Dark,40
+189,the_deep_ones_hide,The Deep One's Hide,Shield,shield,T2,offhand,bastion_guard,bastion,0,12,5,0,4,Block,,major,bastion|control,0,,https://www.poewiki.net/wiki/The_Deep_One%27s_Hide,40
+190,the_dancing_dervish,The Dancing Dervish,Two-Handed Sword,sword_2h,T2,mainhand,heavy_execution,tempo,15,0,1,0,1,Foresight,,major,assault|burst|tempo,0,,https://www.poewiki.net/wiki/The_Dancing_Dervish,40
+191,the_flawed_refuge,The Flawed Refuge,Shield,shield,T2,offhand,bastion_guard,frost,0,12,5,0,4,Plating,,major,bastion|control,0,,https://www.poewiki.net/wiki/The_Flawed_Refuge,40
+192,the_black_cane,The Black Cane,Sceptre,sceptre,T2,mainhand|offhand,ember_battlemage,void,6,1,1,1,7,Burn,,major,ember|arcane,0,,https://www.poewiki.net/wiki/The_Black_Cane,40
+193,the_crimson_storm,The Crimson Storm,Bow,bow,T2,mainhand,hunter_ranged,ember,10,0,0,5,2,Vulnerable,,major,hunter|tempo|ember,0,,https://www.poewiki.net/wiki/The_Crimson_Storm,40
+194,the_golden_charlatan,The Golden Charlatan,Two-Handed Sword,sword_2h,T2,mainhand,heavy_execution,ember,15,0,1,0,1,Foresight,,major,assault|burst|ember,0,,https://www.poewiki.net/wiki/The_Golden_Charlatan,40
+195,the_putrid_cloister,The Putrid Cloister,Map,map,T2,tactical,map_tactical,neutral,0,0,0,0,7,MapMod,,major,tactical|support,0,,https://www.poewiki.net/wiki/The_Putrid_Cloister,40
+196,the_fulcrum,The Fulcrum,Warstaff,warstaff,T2,mainhand,channel_control,neutral,8,4,3,0,6,Stagger,,major,control|arcane|support,0,,https://www.poewiki.net/wiki/The_Fulcrum,40
+197,the_princess,The Princess,One-Handed Sword,sword_1h,T2,mainhand|offhand,assault_balanced,neutral,11,1,0,4,1,Strength,,major,assault|tempo|support,0,,https://www.poewiki.net/wiki/The_Princess,40
+198,the_wasp_nest,The Wasp Nest,Claw,claw,T2,mainhand|offhand,venom_leech,venom,9,0,0,6,4,Poison,,major,venom|sustain,0,,https://www.poewiki.net/wiki/The_Wasp_Nest,40
+199,the_annihilating_light,The Annihilating Light,Staff,staff,T2,mainhand,channel_guard,storm,7,4,4,0,6,Burn,,major,ember|bastion|tempo,0,,https://www.poewiki.net/wiki/The_Annihilating_Light,40
+200,shapers_touch,Shaper's Touch,Gloves,gloves,T2,minor,tempo_grip,void,5,2,0,6,3,Strength,,major,tempo|sustain|arcane,0,,https://www.poewiki.net/wiki/Shaper%27s_Touch,37
+201,replica_kaoms_heart,Replica Kaom's Heart,Body Armour,body,T2,body,bastion_shell,blood,0,13,9,0,1,Regen,,major,bastion|sustain,0,,https://www.poewiki.net/wiki/Replica_Kaom%27s_Heart,37
+202,the_dark_seer,The Dark Seer,Sceptre,sceptre,T2,mainhand|offhand,ember_battlemage,void,6,1,1,1,7,Burn,,major,ember|arcane,0,,https://www.poewiki.net/wiki/The_Dark_Seer,35
+203,the_beachhead,The Beachhead,Map,map,T2,tactical,map_tactical,neutral,0,0,0,0,7,MapMod,,major,tactical|support,0,,https://www.poewiki.net/wiki/The_Beachhead,35
+204,the_immortal_will,The Immortal Will,Shield,shield,T2,offhand,bastion_guard,neutral,0,12,5,0,4,Block,,major,bastion|control|support,0,,https://www.poewiki.net/wiki/The_Immortal_Will,35
+205,the_enmity_divine,The Enmity Divine,Staff,staff,T2,mainhand,channel_guard,neutral,7,4,4,0,6,Burn,,major,ember|bastion|support,0,,https://www.poewiki.net/wiki/The_Enmity_Divine,35
+206,the_yielding_mortality,The Yielding Mortality,Staff,staff,T2,mainhand,channel_guard,neutral,7,4,4,0,6,Burn,,major,ember|bastion|support,0,,https://www.poewiki.net/wiki/The_Yielding_Mortality,35
+207,kaoms_spirit,Kaom's Spirit,Gloves,gloves,T2,minor,tempo_grip,beast,5,2,0,6,3,Strength,,major,tempo|sustain|assault,0,,https://www.poewiki.net/wiki/Kaom%27s_Spirit,35
+208,kaoms_roots,Kaom's Roots,Boots,boots,T2,minor,tempo_stride,tempo,0,3,1,11,1,Dodge,,major,tempo|hunter,0,,https://www.poewiki.net/wiki/Kaom%27s_Roots,35
+209,replica_atziris_acuity,Replica Atziri's Acuity,Gloves,gloves,T2,minor,tempo_grip,neutral,5,2,0,6,3,Strength,,major,tempo|sustain|support,0,,https://www.poewiki.net/wiki/Replica_Atziri%27s_Acuity,35
+210,the_unshattered_will,The Unshattered Will,Shield,shield,T2,offhand,bastion_guard,neutral,0,12,5,0,4,Block,,major,bastion|control|support,0,,https://www.poewiki.net/wiki/The_Unshattered_Will,35
+211,kaoms_command,Kaom's Command,Helmet,helmet,T2,minor,seer_helm,beast,0,7,4,1,4,Foresight,,major,insight|bastion|assault,0,,https://www.poewiki.net/wiki/Kaom%27s_Command,35
+212,the_shattered_divinity,The Shattered Divinity,Quiver,quiver,T2,offhand,hunter_support,insight,5,0,0,3,4,Vulnerable,,major,hunter|tempo|focus,0,,https://www.poewiki.net/wiki/The_Shattered_Divinity,35
+213,the_rippling_thoughts,The Rippling Thoughts,One-Handed Sword,sword_1h,T2,mainhand|offhand,assault_balanced,insight,11,1,0,4,1,Strength,,major,assault|tempo|focus,0,,https://www.poewiki.net/wiki/The_Rippling_Thoughts,35
+214,the_surging_thoughts,The Surging Thoughts,One-Handed Sword,sword_1h,T2,mainhand|offhand,assault_balanced,insight,11,1,0,4,1,Strength,,major,assault|tempo|focus,0,,https://www.poewiki.net/wiki/The_Surging_Thoughts,35
+215,the_fracturing_spinner,The Fracturing Spinner,Quiver,quiver,T2,offhand,hunter_support,neutral,5,0,0,3,4,Vulnerable,,major,hunter|tempo|support,0,,https://www.poewiki.net/wiki/The_Fracturing_Spinner,35
+216,atziris_acuity,Atziri's Acuity,Gloves,gloves,T2,minor,tempo_grip,blood,5,2,0,6,3,Strength,,major,tempo|sustain,0,,https://www.poewiki.net/wiki/Atziri%27s_Acuity,35
+217,prosperos_protection,Prospero's Protection,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Prospero%27s_Protection,32
+218,replica_dragonfangs_flight,Replica Dragonfang's Flight,Amulet,amulet,T3,charm,support_charm,storm,2,1,1,1,3,Foresight,,simple,support|sustain|tempo,0,,https://www.poewiki.net/wiki/Replica_Dragonfang%27s_Flight,32
+219,putembos_meadow,Putembo's Meadow,Ring,ring,T3,charm,volatile_charm,insight,2,0,0,1,3,Poison,,simple,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Putembo%27s_Meadow,32
+220,atziris_splendour,Atziri's Splendour,Body Armour,body,T3,body,bastion_shell,neutral,0,7,5,0,1,Plating,,simple,bastion|sustain|support,0,,https://www.poewiki.net/wiki/Atziri%27s_Splendour,32
+221,vivinsect,Vivinsect,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Vivinsect,32
+222,putembos_mountain,Putembo's Mountain,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Putembo%27s_Mountain,32
+223,tasalios_sign,Tasalio's Sign,Ring,ring,T3,charm,volatile_charm,beast,2,0,0,1,3,Strength,,simple,wildcard|support|assault,0,,https://www.poewiki.net/wiki/Tasalio%27s_Sign,32
+224,heartbound_loop,Heartbound Loop,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Heartbound_Loop,32
+225,leaderships_price,Leadership's Price,Amulet,amulet,T3,charm,support_charm,frost,2,1,1,1,3,Foresight,,simple,support|sustain|control,0,,https://www.poewiki.net/wiki/Leadership%27s_Price,32
+226,tainted_pact,Tainted Pact,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Tainted_Pact,32
+227,ahkelis_valley,Ahkeli's Valley,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Ahkeli%27s_Valley,32
+228,tavukai,Tavukai,Amulet,amulet,T3,charm,support_charm,frost,2,1,1,1,3,Foresight,,simple,support|sustain|control,0,,https://www.poewiki.net/wiki/Tavukai,32
+229,warped_timepiece,Warped Timepiece,Amulet,amulet,T3,charm,support_charm,blood,2,1,1,1,3,Strength,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Warped_Timepiece,32
+230,replica_hyrris_truth,Replica Hyrri's Truth,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Replica_Hyrri%27s_Truth,32
+231,tear_of_purity,Tear of Purity,Amulet,amulet,T3,charm,support_charm,blood,2,1,1,1,3,Strength,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Tear_of_Purity,32
+232,replica_malachais_artifice,Replica Malachai's Artifice,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Replica_Malachai%27s_Artifice,32
+233,replica_hinekoras_sight,Replica Hinekora's Sight,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Replica_Hinekora%27s_Sight,32
+234,eyes_of_the_greatwolf,Eyes of the Greatwolf,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Eyes_of_the_Greatwolf,32
+235,putembos_valley,Putembo's Valley,Ring,ring,T3,charm,volatile_charm,storm,2,0,0,1,3,Dodge,,simple,wildcard|support|tempo,0,,https://www.poewiki.net/wiki/Putembo%27s_Valley,32
+236,loris_lantern,Lori's Lantern,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Lori%27s_Lantern,32
+237,astramentis,Astramentis,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Astramentis,32
+238,replica_emberwake,Replica Emberwake,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Replica_Emberwake,32
+239,replica_doedres_damning,Replica Doedre's Damning,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Replica_Doedre%27s_Damning,32
+240,icefang_orbit,Icefang Orbit,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Icefang_Orbit,32
+241,ahkelis_meadow,Ahkeli's Meadow,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Ahkeli%27s_Meadow,32
+242,eye_of_innocence,Eye of Innocence,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Eye_of_Innocence,32
+243,replica_badge_of_the_brotherhood,Replica Badge of the Brotherhood,Amulet,amulet,T3,charm,support_charm,bastion,2,1,1,1,3,Regen,,simple,support|sustain|bastion,0,,https://www.poewiki.net/wiki/Replica_Badge_of_the_Brotherhood,32
+244,essence_worm,Essence Worm,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Essence_Worm,32
+245,volls_devotion,Voll's Devotion,Amulet,amulet,T3,charm,support_charm,tempo,2,1,1,1,3,Strength,,simple,support|sustain|tempo,0,,https://www.poewiki.net/wiki/Voll%27s_Devotion,32
+246,mutewind_seal,Mutewind Seal,Ring,ring,T2,charm,volatile_charm,neutral,4,1,0,2,5,Poison,,major,wildcard|support,0,,https://www.poewiki.net/wiki/Mutewind_Seal,32
+247,bereks_pass,Berek's Pass,Ring,ring,T2,charm,volatile_charm,ember,4,1,0,2,5,Burn,,major,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Berek%27s_Pass,32
+248,betrayals_sting,Betrayal's Sting,Ring,ring,T2,charm,volatile_charm,frost,4,1,0,2,5,Dodge,,major,wildcard|support|control,0,,https://www.poewiki.net/wiki/Betrayal%27s_Sting,32
+249,venarius_astrolabe,Venarius' Astrolabe,Amulet,amulet,T2,charm,support_charm,insight,3,2,2,1,6,Foresight,,major,support|sustain|focus,0,,https://www.poewiki.net/wiki/Venarius%27_Astrolabe,32
+250,replica_tasalios_sign,Replica Tasalio's Sign,Ring,ring,T2,charm,volatile_charm,venom,4,1,0,2,5,Poison,,major,wildcard|support|venom,0,,https://www.poewiki.net/wiki/Replica_Tasalio%27s_Sign,32
+251,bereks_grip,Berek's Grip,Ring,ring,T2,charm,volatile_charm,storm,4,1,0,2,5,Dodge,,major,wildcard|support|tempo,0,,https://www.poewiki.net/wiki/Berek%27s_Grip,32
+252,ngamahus_sign,Ngamahu's Sign,Ring,ring,T2,charm,volatile_charm,ember,4,1,0,2,5,Burn,,major,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Ngamahu%27s_Sign,32
+253,nights_hold,Night's Hold,Amulet,amulet,T2,charm,support_charm,storm,3,2,2,1,6,Foresight,,major,support|sustain|tempo,0,,https://www.poewiki.net/wiki/Night%27s_Hold,32
+254,soulbound,Soulbound,Ring,ring,T2,charm,volatile_charm,frost,4,1,0,2,5,Dodge,,major,wildcard|support|control,0,,https://www.poewiki.net/wiki/Soulbound,32
+255,natural_hierarchy,Natural Hierarchy,Amulet,amulet,T2,charm,support_charm,neutral,3,2,2,1,6,Regen,,major,support|sustain,0,,https://www.poewiki.net/wiki/Natural_Hierarchy,32
+256,bonemeld,Bonemeld,Amulet,amulet,T2,charm,support_charm,insight,3,2,2,1,6,Foresight,,major,support|sustain|focus,0,,https://www.poewiki.net/wiki/Bonemeld,32
+257,shavronnes_revelation,Shavronne's Revelation,Ring,ring,T2,charm,volatile_charm,neutral,4,1,0,2,5,Poison,,major,wildcard|support,0,,https://www.poewiki.net/wiki/Shavronne%27s_Revelation,32
+258,blood_of_corruption,Blood of Corruption,Amulet,amulet,T2,charm,support_charm,frost,3,2,2,1,6,Foresight,,major,support|sustain|control,0,,https://www.poewiki.net/wiki/Blood_of_Corruption,32
+259,blightwell,Blightwell,Amulet,amulet,T2,charm,support_charm,ember,3,2,2,1,6,Regen,,major,support|sustain|ember,0,,https://www.poewiki.net/wiki/Blightwell,32
+260,uzazas_valley,Uzaza's Valley,Ring,ring,T2,charm,volatile_charm,frost,4,1,0,2,5,Dodge,,major,wildcard|support|control,0,,https://www.poewiki.net/wiki/Uzaza%27s_Valley,32
+261,uzazas_mountain,Uzaza's Mountain,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Uzaza%27s_Mountain,32
+262,replica_winterheart,Replica Winterheart,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Replica_Winterheart,32
+263,circle_of_guilt,Circle of Guilt,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Circle_of_Guilt,32
+264,perandus_signet,Perandus Signet,Ring,ring,T3,charm,volatile_charm,venom,2,0,0,1,3,Poison,,simple,wildcard|support|venom,0,,https://www.poewiki.net/wiki/Perandus_Signet,32
+265,bloodsoaked_medallion,Bloodsoaked Medallion,Amulet,amulet,T3,charm,support_charm,blood,2,1,1,1,3,Strength,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Bloodsoaked_Medallion,32
+266,uzazas_meadow,Uzaza's Meadow,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Uzaza%27s_Meadow,32
+267,circle_of_anguish,Circle of Anguish,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Circle_of_Anguish,32
+268,thiefs_torment,Thief's Torment,Ring,ring,T2,charm,volatile_charm,insight,4,1,0,2,5,Poison,,major,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Thief%27s_Torment,32
+269,defiance_of_destiny,Defiance of Destiny,Amulet,amulet,T2,charm,support_charm,neutral,3,2,2,1,6,Regen,,major,support|sustain,0,,https://www.poewiki.net/wiki/Defiance_of_Destiny,32
+270,rigwalds_curse,Rigwald's Curse,Amulet,amulet,T2,charm,support_charm,insight,3,2,2,1,6,Foresight,,major,support|sustain|focus,0,,https://www.poewiki.net/wiki/Rigwald%27s_Curse,32
+271,praxis,Praxis,Ring,ring,T2,charm,volatile_charm,neutral,4,1,0,2,5,Poison,,major,wildcard|support,0,,https://www.poewiki.net/wiki/Praxis,32
+272,maligaros_cruelty,Maligaro's Cruelty,Amulet,amulet,T2,charm,support_charm,neutral,3,2,2,1,6,Regen,,major,support|sustain,0,,https://www.poewiki.net/wiki/Maligaro%27s_Cruelty,32
+273,star_of_wraeclast,Star of Wraeclast,Amulet,amulet,T2,charm,support_charm,blood,3,2,2,1,6,Strength,,major,support|sustain,0,,https://www.poewiki.net/wiki/Star_of_Wraeclast,32
+274,brinerot_mark,Brinerot Mark,Ring,ring,T2,charm,volatile_charm,ember,4,1,0,2,5,Burn,,major,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Brinerot_Mark,32
+275,gloomfang,Gloomfang,Amulet,amulet,T3,charm,support_charm,void,2,1,1,1,3,Foresight,,simple,support|sustain|arcane,0,,https://www.poewiki.net/wiki/Gloomfang,30
+276,replica_karui_ward,Replica Karui Ward,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Replica_Karui_Ward,30
+277,karui_ward,Karui Ward,Amulet,amulet,T3,charm,support_charm,beast,2,1,1,1,3,Strength,,simple,support|sustain|assault,0,,https://www.poewiki.net/wiki/Karui_Ward,30
+278,rotblood_promise,Rotblood Promise,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Rotblood_Promise,30
+279,rational_doctrine,Rational Doctrine,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Rational_Doctrine,30
+280,grattus_signet,Grattus Signet,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Grattus_Signet,30
+281,choir_of_the_storm,Choir of the Storm,Amulet,amulet,T3,charm,support_charm,storm,2,1,1,1,3,Foresight,,simple,support|sustain|tempo,0,,https://www.poewiki.net/wiki/Choir_of_the_Storm,30
+282,yoke_of_suffering,Yoke of Suffering,Amulet,amulet,T3,charm,support_charm,void,2,1,1,1,3,Foresight,,simple,support|sustain|arcane,0,,https://www.poewiki.net/wiki/Yoke_of_Suffering,30
+283,sibyls_lament,Sibyl's Lament,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Sibyl%27s_Lament,30
+284,circle_of_ambition,Circle of Ambition,Ring,ring,T3,charm,volatile_charm,bastion,2,0,0,1,3,Poison,,simple,wildcard|support|bastion,0,,https://www.poewiki.net/wiki/Circle_of_Ambition,30
+285,circle_of_fear,Circle of Fear,Ring,ring,T3,charm,volatile_charm,storm,2,0,0,1,3,Dodge,,simple,wildcard|support|tempo,0,,https://www.poewiki.net/wiki/Circle_of_Fear,30
+286,willowgift,Willowgift,Amulet,amulet,T3,charm,support_charm,storm,2,1,1,1,3,Foresight,,simple,support|sustain|tempo,0,,https://www.poewiki.net/wiki/Willowgift,30
+287,mings_heart,Ming's Heart,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Ming%27s_Heart,30
+288,gifts_from_above,Gifts from Above,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Gifts_from_Above,30
+289,zerphis_heart,Zerphi's Heart,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Zerphi%27s_Heart,30
+290,anglers_plait,Angler's Plait,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Angler%27s_Plait,30
+291,romiras_banquet,Romira's Banquet,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Romira%27s_Banquet,30
+292,circle_of_regret,Circle of Regret,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Circle_of_Regret,30
+293,warriors_legacy,Warrior's Legacy,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Warrior%27s_Legacy,30
+294,original_sin,Original Sin,Ring,ring,T1,charm,volatile_charm,void,6,1,0,3,7,Poison,Burn,elite,wildcard|support|arcane,1,original_sin_corrupt,https://www.poewiki.net/wiki/Original_Sin,30
+295,sidhebreath,Sidhebreath,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Sidhebreath,30
+296,fury_valve,Fury Valve,Amulet,amulet,T3,charm,support_charm,void,2,1,1,1,3,Foresight,,simple,support|sustain|arcane,0,,https://www.poewiki.net/wiki/Fury_Valve,30
+297,kikazaru,Kikazaru,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Kikazaru,30
+298,ancestral_vision,Ancestral Vision,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Ancestral_Vision,30
+299,whispers_of_infinity,Whispers of Infinity,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Whispers_of_Infinity,30
+300,anathema,Anathema,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Anathema,30
+301,rigwalds_crest,Rigwald's Crest,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Rigwald%27s_Crest,30
+302,andvarius,Andvarius,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Andvarius,30
+303,ungils_harmony,Ungil's Harmony,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Ungil%27s_Harmony,30
+304,circle_of_nostalgia,Circle of Nostalgia,Ring,ring,T3,charm,volatile_charm,insight,2,0,0,1,3,Poison,,simple,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Circle_of_Nostalgia,30
+305,immortal_flesh,Immortal Flesh,Belt,belt,T3,charm,sustain_charm,blood,0,3,4,0,1,Strength,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Immortal_Flesh,30
+306,call_of_the_void,Call of the Void,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Call_of_the_Void,30
+307,kalandras_touch,Kalandra's Touch,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Kalandra%27s_Touch,30
+308,ahkelis_mountain,Ahkeli's Mountain,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Ahkeli%27s_Mountain,30
+309,call_of_the_brotherhood,Call of the Brotherhood,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Call_of_the_Brotherhood,30
+310,xophs_heart,Xoph's Heart,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Xoph%27s_Heart,30
+311,woespike,Woespike,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Woespike,30
+312,replica_headhunter,Replica Headhunter,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Replica_Headhunter,30
+313,haunting_memories,Haunting Memories,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Haunting_Memories,30
+314,nimis,Nimis,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Nimis,30
+315,hinekoras_sight,Hinekora's Sight,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Hinekora%27s_Sight,30
+316,uul_netols_vow,Uul-Netol's Vow,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Uul-Netol%27s_Vow,30
+317,seething_fury,Seething Fury,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Seething_Fury,30
+318,xophs_blood,Xoph's Blood,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Xoph%27s_Blood,30
+319,calamitous_visions,Calamitous Visions,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Calamitous_Visions,30
+320,transcendent_mind,Transcendent Mind,Jewel,jewel,T3,focus,focus_engine,insight,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Transcendent_Mind,30
+321,nevalius_inheritance,Nevalius Inheritance,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Nevalius_Inheritance,30
+322,redblade_band,Redblade Band,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Redblade_Band,30
+323,mokous_embrace,Mokou's Embrace,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Mokou%27s_Embrace,30
+324,carnage_heart,Carnage Heart,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Carnage_Heart,30
+325,chain_of_endurance,Chain of Endurance,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Chain_of_Endurance,30
+326,replica_fragility,Replica Fragility,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Replica_Fragility,30
+327,ikiahos_promise,Ikiaho's Promise,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Ikiaho%27s_Promise,30
+328,sacrificial_heart,Sacrificial Heart,Amulet,amulet,T3,charm,support_charm,blood,2,1,1,1,3,Strength,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Sacrificial_Heart,30
+329,ixchels_temptation,Ixchel's Temptation,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Ixchel%27s_Temptation,30
+330,winterweave,Winterweave,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Winterweave,30
+331,replica_bated_breath,Replica Bated Breath,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Replica_Bated_Breath,30
+332,timeclasp,Timeclasp,Ring,ring,T3,charm,volatile_charm,tempo,2,0,0,1,3,Dodge,,simple,wildcard|support|tempo,0,,https://www.poewiki.net/wiki/Timeclasp,30
+333,witchbane,Witchbane,Jewel,jewel,T3,focus,focus_engine,void,0,0,0,0,7,Poison,,simple,focus|support|arcane,0,,https://www.poewiki.net/wiki/Witchbane,30
+334,retaliation_charm,Retaliation Charm,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Retaliation_Charm,30
+335,careful_planning,Careful Planning,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Careful_Planning,30
+336,hyrris_truth,Hyrri's Truth,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Hyrri%27s_Truth,30
+337,winterheart,Winterheart,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Winterheart,30
+338,extractor_mentis,Extractor Mentis,Amulet,amulet,T3,charm,support_charm,blood,2,1,1,1,3,Strength,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Extractor_Mentis,30
+339,mark_of_submission,Mark of Submission,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Mark_of_Submission,30
+340,biscos_leash,Bisco's Leash,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Bisco%27s_Leash,30
+341,squirming_terror,Squirming Terror,Ring,ring,T3,charm,volatile_charm,venom,2,0,0,1,3,Poison,,simple,wildcard|support|venom,0,,https://www.poewiki.net/wiki/Squirming_Terror,30
+342,pyre,Pyre,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Pyre,30
+343,enmitys_embrace,Enmity's Embrace,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Enmity%27s_Embrace,30
+344,eternal_damnation,Eternal Damnation,Amulet,amulet,T3,charm,support_charm,frost,2,1,1,1,3,Foresight,,simple,support|sustain|control,0,,https://www.poewiki.net/wiki/Eternal_Damnation,30
+345,dream_fragments,Dream Fragments,Ring,ring,T3,charm,volatile_charm,insight,2,0,0,1,3,Poison,,simple,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Dream_Fragments,30
+346,stone_of_lazhwar,Stone of Lazhwar,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Stone_of_Lazhwar,30
+347,marylenes_fallacy,Marylene's Fallacy,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Marylene%27s_Fallacy,30
+348,replica_powerlessness,Replica Powerlessness,Jewel,jewel,T3,focus,focus_engine,ember,0,0,0,0,7,Burn,,simple,focus|support|ember,0,,https://www.poewiki.net/wiki/Replica_Powerlessness,30
+349,dissolution_of_the_flesh,Dissolution of the Flesh,Jewel,jewel,T3,focus,focus_engine,ember,0,0,0,0,7,Burn,,simple,focus|support|ember,0,,https://www.poewiki.net/wiki/Dissolution_of_the_Flesh,30
+350,replica_prismweave,Replica Prismweave,Belt,belt,T3,charm,sustain_charm,bastion,0,3,4,0,1,Plating,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Replica_Prismweave,30
+351,venopuncture,Venopuncture,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Venopuncture,30
+352,replica_primordial_might,Replica Primordial Might,Jewel,jewel,T3,focus,focus_engine,bastion,0,0,0,0,7,Foresight,,simple,focus|support|bastion,0,,https://www.poewiki.net/wiki/Replica_Primordial_Might,30
+353,perquils_toe,Perquil's Toe,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Perquil%27s_Toe,30
+354,lost_unity,Lost Unity,Ring,ring,T3,charm,volatile_charm,insight,2,0,0,1,3,Poison,,simple,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Lost_Unity,30
+355,storm_secret,Storm Secret,Ring,ring,T3,charm,volatile_charm,storm,2,0,0,1,3,Dodge,,simple,wildcard|support|tempo,0,,https://www.poewiki.net/wiki/Storm_Secret,30
+356,replica_siegebreaker,Replica Siegebreaker,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Replica_Siegebreaker,30
+357,astral_projector,Astral Projector,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Astral_Projector,30
+358,polaric_devastation,Polaric Devastation,Ring,ring,T3,charm,volatile_charm,storm,2,0,0,1,3,Dodge,,simple,wildcard|support|tempo,0,,https://www.poewiki.net/wiki/Polaric_Devastation,30
+359,soulthirst,Soulthirst,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Soulthirst,30
+360,dead_reckoning,Dead Reckoning,Jewel,jewel,T3,focus,focus_engine,ember,0,0,0,0,7,Burn,,simple,focus|support|ember,0,,https://www.poewiki.net/wiki/Dead_Reckoning,30
+361,daressos_salute,Daresso's Salute,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Daresso%27s_Salute,30
+362,death_rush,Death Rush,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Death_Rush,30
+363,replica_soul_tether,Replica Soul Tether,Belt,belt,T3,charm,sustain_charm,blood,0,3,4,0,1,Strength,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Replica_Soul_Tether,30
+364,stranglegasp,Stranglegasp,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Stranglegasp,30
+365,voideye,Voideye,Ring,ring,T3,charm,volatile_charm,insight,2,0,0,1,3,Poison,,simple,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Voideye,30
+366,soul_tether,Soul Tether,Belt,belt,T3,charm,sustain_charm,blood,0,3,4,0,1,Strength,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Soul_Tether,30
+367,emberwake,Emberwake,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Emberwake,30
+368,victarios_acuity,Victario's Acuity,Amulet,amulet,T3,charm,support_charm,insight,2,1,1,1,3,Foresight,,simple,support|sustain|focus,0,,https://www.poewiki.net/wiki/Victario%27s_Acuity,30
+369,stormfire,Stormfire,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Stormfire,30
+370,coiling_whisper,Coiling Whisper,Ring,ring,T3,charm,volatile_charm,insight,2,0,0,1,3,Poison,,simple,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Coiling_Whisper,30
+371,firesong,Firesong,Jewel,jewel,T3,focus,focus_engine,ember,0,0,0,0,7,Burn,,simple,focus|support|ember,0,,https://www.poewiki.net/wiki/Firesong,30
+372,voice_of_the_storm,Voice of the Storm,Amulet,amulet,T3,charm,support_charm,storm,2,1,1,1,3,Foresight,,simple,support|sustain|tempo,0,,https://www.poewiki.net/wiki/Voice_of_the_Storm,30
+373,fertile_mind,Fertile Mind,Jewel,jewel,T3,focus,focus_engine,bastion,0,0,0,0,7,Foresight,,simple,focus|support|bastion,0,,https://www.poewiki.net/wiki/Fertile_Mind,30
+374,blackheart,Blackheart,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Blackheart,30
+375,valakos_sign,Valako's Sign,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Valako%27s_Sign,30
+376,bloodgrip,Bloodgrip,Amulet,amulet,T3,charm,support_charm,blood,2,1,1,1,3,Strength,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Bloodgrip,30
+377,tawhanukus_timing,Tawhanuku's Timing,Ring,ring,T3,charm,volatile_charm,blood,2,0,0,1,3,Strength,,simple,wildcard|support|sustain,0,,https://www.poewiki.net/wiki/Tawhanuku%27s_Timing,30
+378,melding_of_the_flesh,Melding of the Flesh,Jewel,jewel,T1,focus,focus_engine,blood,0,0,0,0,18,Strength,Foresight,elite,focus|support|sustain,0,,https://www.poewiki.net/wiki/Melding_of_the_Flesh,30
+379,replica_pacifism,Replica Pacifism,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Replica_Pacifism,30
+380,rashkaldors_patience,Rashkaldor's Patience,Amulet,amulet,T3,charm,support_charm,ember,2,1,1,1,3,Regen,,simple,support|sustain|ember,0,,https://www.poewiki.net/wiki/Rashkaldor%27s_Patience,30
+381,replica_voideye,Replica Voideye,Ring,ring,T3,charm,volatile_charm,insight,2,0,0,1,3,Poison,,simple,wildcard|support|focus,0,,https://www.poewiki.net/wiki/Replica_Voideye,30
+382,snakepit,Snakepit,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Snakepit,30
+383,fated_end,Fated End,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Fated_End,30
+384,feastbind,Feastbind,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Feastbind,30
+385,araku_tiki,Araku Tiki,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Araku_Tiki,30
+386,malachais_artifice,Malachai's Artifice,Ring,ring,T3,charm,volatile_charm,frost,2,0,0,1,3,Dodge,,simple,wildcard|support|control,0,,https://www.poewiki.net/wiki/Malachai%27s_Artifice,30
+387,blackflame,Blackflame,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Blackflame,30
+388,faminebind,Faminebind,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Faminebind,30
+389,doedres_tongue,Doedre's Tongue,Amulet,amulet,T3,charm,support_charm,void,2,1,1,1,3,Foresight,,simple,support|sustain|arcane,0,,https://www.poewiki.net/wiki/Doedre%27s_Tongue,30
+390,valyrium,Valyrium,Ring,ring,T3,charm,volatile_charm,ember,2,0,0,1,3,Burn,,simple,wildcard|support|ember,0,,https://www.poewiki.net/wiki/Valyrium,30
+391,le_heup_of_all,Le Heup of All,Ring,ring,T3,charm,volatile_charm,void,2,0,0,1,3,Poison,,simple,wildcard|support|arcane,0,,https://www.poewiki.net/wiki/Le_Heup_of_All,30
+392,profane_proxy,Profane Proxy,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Profane_Proxy,30
+393,doedres_damning,Doedre's Damning,Ring,ring,T3,charm,volatile_charm,void,2,0,0,1,3,Poison,,simple,wildcard|support|arcane,0,,https://www.poewiki.net/wiki/Doedre%27s_Damning,30
+394,inspired_learning,Inspired Learning,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Inspired_Learning,28
+395,tecrods_gaze,Tecrod's Gaze,Abyss Jewel,abyss_jewel,T3,focus,focus_engine,neutral,1,0,0,1,5,Poison,,simple,focus|support,0,,https://www.poewiki.net/wiki/Tecrod%27s_Gaze,28
+396,one_with_nothing,One With Nothing,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/One_With_Nothing,28
+397,intuitive_leap,Intuitive Leap,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Intuitive_Leap,28
+398,primordial_might,Primordial Might,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Primordial_Might,28
+399,primordial_eminence,Primordial Eminence,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Primordial_Eminence,28
+400,primordial_harmony,Primordial Harmony,Jewel,jewel,T3,focus,focus_engine,bastion,0,0,0,0,7,Foresight,,simple,focus|support|bastion,0,,https://www.poewiki.net/wiki/Primordial_Harmony,28
+401,ryslathas_coil,Ryslatha's Coil,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Ryslatha%27s_Coil,28
+402,prismweave,Prismweave,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Prismweave,28
+403,maligaros_restraint,Maligaro's Restraint,Belt,belt,T3,charm,sustain_charm,bastion,0,3,4,0,1,Plating,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Maligaro%27s_Restraint,28
+404,replica_reckless_defence,Replica Reckless Defence,Jewel,jewel,T3,focus,focus_engine,tempo,0,0,0,0,7,Strength,,simple,focus|support|tempo,0,,https://www.poewiki.net/wiki/Replica_Reckless_Defence,28
+405,pure_talent,Pure Talent,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Pure_Talent,28
+406,olesyas_delight,Olesya's Delight,Belt,belt,T3,charm,sustain_charm,storm,0,3,4,0,1,Regen,,simple,sustain|bastion|tempo,0,,https://www.poewiki.net/wiki/Olesya%27s_Delight,28
+407,meginords_girdle,Meginord's Girdle,Belt,belt,T3,charm,sustain_charm,beast,0,3,4,0,1,Strength,,simple,sustain|bastion|assault,0,,https://www.poewiki.net/wiki/Meginord%27s_Girdle,28
+408,pacifism,Pacifism,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Pacifism,28
+409,tempered_spirit,Tempered Spirit,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Tempered_Spirit,28
+410,quickening_covenant,Quickening Covenant,Jewel,jewel,T3,focus,focus_engine,tempo,0,0,0,0,7,Strength,,simple,focus|support|tempo,0,,https://www.poewiki.net/wiki/Quickening_Covenant,28
+411,rain_of_splinters,Rain of Splinters,Jewel,jewel,T3,focus,focus_engine,beast,0,0,0,0,7,Strength,,simple,focus|support|assault,0,,https://www.poewiki.net/wiki/Rain_of_Splinters,28
+412,leash_of_oblation,Leash of Oblation,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Leash_of_Oblation,28
+413,siegebreaker,Siegebreaker,Belt,belt,T3,charm,sustain_charm,venom,0,3,4,0,1,Regen,,simple,sustain|bastion|venom,0,,https://www.poewiki.net/wiki/Siegebreaker,28
+414,might_of_the_meek,Might of the Meek,Jewel,jewel,T3,focus,focus_engine,frost,0,0,0,0,7,Foresight,,simple,focus|support|control,0,,https://www.poewiki.net/wiki/Might_of_the_Meek,28
+415,kurgals_gaze,Kurgal's Gaze,Abyss Jewel,abyss_jewel,T3,focus,focus_engine,blood,1,0,0,1,5,Poison,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Kurgal%27s_Gaze,28
+416,kitavas_teachings,Kitava's Teachings,Jewel,jewel,T3,focus,focus_engine,gamble,0,0,0,0,7,Burn,,simple,focus|support|wildcard,0,,https://www.poewiki.net/wiki/Kitava%27s_Teachings,28
+417,tempered_mind,Tempered Mind,Jewel,jewel,T3,focus,focus_engine,insight,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Tempered_Mind,28
+418,tempered_flesh,Tempered Flesh,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Tempered_Flesh,28
+419,reckless_defence,Reckless Defence,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Reckless_Defence,28
+420,lioneyes_fall,Lioneye's Fall,Jewel,jewel,T3,focus,focus_engine,bastion,0,0,0,0,7,Foresight,,simple,focus|support|bastion,0,,https://www.poewiki.net/wiki/Lioneye%27s_Fall,28
+421,natural_affinity,Natural Affinity,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Natural_Affinity,28
+422,string_of_servitude,String of Servitude,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/String_of_Servitude,28
+423,powerlessness,Powerlessness,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Powerlessness,28
+424,self_flagellation,Self-Flagellation,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Self-Flagellation,28
+425,stormshroud,Stormshroud,Jewel,jewel,T3,focus,focus_engine,storm,0,0,0,0,7,Burn,,simple,focus|support|tempo,0,,https://www.poewiki.net/wiki/Stormshroud,28
+426,mothers_embrace,Mother's Embrace,Belt,belt,T3,charm,sustain_charm,bastion,0,3,4,0,1,Plating,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Mother%27s_Embrace,28
+427,sunblast,Sunblast,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Sunblast,28
+428,survivors_guilt,Survivor's Guilt,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Survivor%27s_Guilt,28
+429,nadir_mode,Nadir Mode,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Nadir_Mode,28
+430,pyroshock_clasp,Pyroshock Clasp,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Pyroshock_Clasp,28
+431,sublime_vision,Sublime Vision,Jewel,jewel,T3,focus,focus_engine,tempo,0,0,0,0,7,Strength,,simple,focus|support|tempo,0,,https://www.poewiki.net/wiki/Sublime_Vision,28
+432,fevered_mind,Fevered Mind,Jewel,jewel,T3,focus,focus_engine,insight,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Fevered_Mind,28
+433,cyclopean_coil,Cyclopean Coil,Belt,belt,T3,charm,sustain_charm,insight,0,3,4,0,1,Regen,,simple,sustain|bastion|focus,0,,https://www.poewiki.net/wiki/Cyclopean_Coil,28
+434,fluid_motion,Fluid Motion,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Fluid_Motion,28
+435,auxium,Auxium,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Auxium,28
+436,bated_breath,Bated Breath,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Bated_Breath,28
+437,darkness_enthroned,Darkness Enthroned,Belt,belt,T3,charm,sustain_charm,storm,0,3,4,0,1,Regen,,simple,sustain|bastion|tempo,0,,https://www.poewiki.net/wiki/Darkness_Enthroned,28
+438,forbidden_flame,Forbidden Flame,Jewel,jewel,T3,focus,focus_engine,ember,0,0,0,0,7,Burn,,simple,focus|support|ember,0,,https://www.poewiki.net/wiki/Forbidden_Flame,28
+439,belt_of_the_deceiver,Belt of the Deceiver,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Belt_of_the_Deceiver,28
+440,binds_of_bloody_vengeance,Binds of Bloody Vengeance,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Binds_of_Bloody_Vengeance,28
+441,fragility,Fragility,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Fragility,28
+442,forbidden_flesh,Forbidden Flesh,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Forbidden_Flesh,28
+443,fortress_covenant,Fortress Covenant,Jewel,jewel,T3,focus,focus_engine,bastion,0,0,0,0,7,Foresight,,simple,focus|support|bastion,0,,https://www.poewiki.net/wiki/Fortress_Covenant,28
+444,bears_girdle,Bear's Girdle,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Bear%27s_Girdle,28
+445,amanamus_gaze,Amanamu's Gaze,Abyss Jewel,abyss_jewel,T3,focus,focus_engine,storm,1,0,0,1,5,Dodge,,simple,focus|support|tempo,0,,https://www.poewiki.net/wiki/Amanamu%27s_Gaze,28
+446,emperors_might,Emperor's Might,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Emperor%27s_Might,28
+447,emperors_wit,Emperor's Wit,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Emperor%27s_Wit,28
+448,energised_armour,Energised Armour,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Energised_Armour,28
+449,emperors_cunning,Emperor's Cunning,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Emperor%27s_Cunning,28
+450,emperors_mastery,Emperor's Mastery,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Emperor%27s_Mastery,28
+451,ascent_from_flesh,Ascent From Flesh,Belt,belt,T3,charm,sustain_charm,blood,0,3,4,0,1,Strength,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Ascent_From_Flesh,28
+452,energy_from_within,Energy From Within,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Energy_From_Within,28
+453,apex_mode,Apex Mode,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Apex_Mode,28
+454,dyadian_dawn,Dyadian Dawn,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Dyadian_Dawn,28
+455,voices,Voices,Jewel,jewel,T3,focus,focus_engine,frost,0,0,0,0,7,Foresight,,simple,focus|support|control,0,,https://www.poewiki.net/wiki/Voices,28
+456,arns_anguish,Arn's Anguish,Belt,belt,T3,charm,sustain_charm,blood,0,3,4,0,1,Strength,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Arn%27s_Anguish,28
+457,elegant_hubris,Elegant Hubris,Jewel,jewel,T3,focus,focus_engine,insight,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Elegant_Hubris,28
+458,efficient_training,Efficient Training,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Efficient_Training,28
+459,cowards_legacy,Coward's Legacy,Belt,belt,T3,charm,sustain_charm,blood,0,3,4,0,1,Strength,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Coward%27s_Legacy,28
+460,inertia,Inertia,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Inertia,28
+461,healthy_mind,Healthy Mind,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Healthy_Mind,28
+462,transcendent_flesh,Transcendent Flesh,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Transcendent_Flesh,28
+463,transcendent_spirit,Transcendent Spirit,Jewel,jewel,T3,focus,focus_engine,bastion,0,0,0,0,7,Foresight,,simple,focus|support|bastion,0,,https://www.poewiki.net/wiki/Transcendent_Spirit,28
+464,ceinture_of_benevolence,Ceinture of Benevolence,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Ceinture_of_Benevolence,28
+465,ulamans_gaze,Ulaman's Gaze,Abyss Jewel,abyss_jewel,T3,focus,focus_engine,storm,1,0,0,1,5,Dodge,,simple,focus|support|tempo,0,,https://www.poewiki.net/wiki/Ulaman%27s_Gaze,28
+466,perandus_blazon,Perandus Blazon,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Perandus_Blazon,28
+467,yndas_stand,Ynda's Stand,Belt,belt,T3,charm,sustain_charm,ember,0,3,4,0,1,Regen,,simple,sustain|bastion|ember,0,,https://www.poewiki.net/wiki/Ynda%27s_Stand,28
+468,hyperboreus,Hyperboreus,Belt,belt,T3,charm,sustain_charm,frost,0,3,4,0,1,Plating,,simple,sustain|bastion|control,0,,https://www.poewiki.net/wiki/Hyperboreus,28
+469,brute_force_solution,Brute Force Solution,Jewel,jewel,T3,focus,focus_engine,frost,0,0,0,0,7,Foresight,,simple,focus|support|control,0,,https://www.poewiki.net/wiki/Brute_Force_Solution,28
+470,immutable_force,Immutable Force,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Immutable_Force,28
+471,hidden_potential,Hidden Potential,Jewel,jewel,T3,focus,focus_engine,frost,0,0,0,0,7,Foresight,,simple,focus|support|control,0,,https://www.poewiki.net/wiki/Hidden_Potential,28
+472,to_dust,To Dust,Jewel,jewel,T3,focus,focus_engine,tempo,0,0,0,0,7,Strength,,simple,focus|support|tempo,0,,https://www.poewiki.net/wiki/To_Dust,28
+473,bound_by_destiny,Bound By Destiny,Jewel,jewel,T3,focus,focus_engine,venom,0,0,0,0,7,Poison,,simple,focus|support|venom,0,,https://www.poewiki.net/wiki/Bound_By_Destiny,28
+474,bound_fate,Bound Fate,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Bound_Fate,28
+475,gluttony,Gluttony,Belt,belt,T3,charm,sustain_charm,beast,0,3,4,0,1,Strength,,simple,sustain|bastion|assault,0,,https://www.poewiki.net/wiki/Gluttony,28
+476,wurms_molt,Wurm's Molt,Belt,belt,T3,charm,sustain_charm,tempo,0,3,4,0,1,Strength,,simple,sustain|bastion|tempo,0,,https://www.poewiki.net/wiki/Wurm%27s_Molt,28
+477,cowards_chains,Coward's Chains,Belt,belt,T3,charm,sustain_charm,blood,0,3,4,0,1,Strength,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Coward%27s_Chains,28
+478,bloodnotch,Bloodnotch,Jewel,jewel,T3,focus,focus_engine,ember,0,0,0,0,7,Burn,,simple,focus|support|ember,0,,https://www.poewiki.net/wiki/Bloodnotch,28
+479,umbilicus_immortalis,Umbilicus Immortalis,Belt,belt,T3,charm,sustain_charm,neutral,0,3,4,0,1,Regen,,simple,sustain|bastion|support,0,,https://www.poewiki.net/wiki/Umbilicus_Immortalis,28
+480,unending_hunger,Unending Hunger,Jewel,jewel,T3,focus,focus_engine,blood,0,0,0,0,7,Strength,,simple,focus|support|sustain,0,,https://www.poewiki.net/wiki/Unending_Hunger,28
+481,chill_of_corruption,Chill of Corruption,Jewel,jewel,T3,focus,focus_engine,neutral,0,0,0,0,7,Foresight,,simple,focus|support,0,,https://www.poewiki.net/wiki/Chill_of_Corruption,28
+482,chains_of_emancipation,Chains of Emancipation,Belt,belt,T3,charm,sustain_charm,bastion,0,3,4,0,1,Plating,,simple,sustain|bastion,0,,https://www.poewiki.net/wiki/Chains_of_Emancipation,28
+483,gravens_secret,Graven's Secret,Belt,belt,T3,charm,sustain_charm,gamble,0,3,4,0,1,Regen,,simple,sustain|bastion|wildcard,0,,https://www.poewiki.net/wiki/Graven%27s_Secret,28
+484,realmshaper,Realmshaper,Warstaff,warstaff,T3,mainhand,channel_control,ember,5,2,2,0,3,Burn,,simple,control|arcane|ember,0,,https://www.poewiki.net/wiki/Realmshaper,27
+485,atziris_disfavour,Atziri's Disfavour,Two-Handed Axe,axe_2h,T3,mainhand,heavy_execution,void,9,0,1,0,1,Vulnerable,,simple,assault|burst|arcane,0,,https://www.poewiki.net/wiki/Atziri%27s_Disfavour,25
+486,vaults_of_atziri,Vaults of Atziri,Map,map,T3,tactical,map_tactical,neutral,0,0,0,0,4,MapMod,,simple,tactical|support,0,,https://www.poewiki.net/wiki/Vaults_of_Atziri,25
+487,precursors_emblem,Precursor's Emblem,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Precursor%27s_Emblem,25
+488,clayshaper,Clayshaper,One-Handed Mace,mace_1h,T3,mainhand|offhand,control_crusher,blood,6,2,0,0,2,Strength,,simple,control|bastion|sustain,0,,https://www.poewiki.net/wiki/Clayshaper,25
+489,atziris_rule,Atziri's Rule,Warstaff,warstaff,T3,mainhand,channel_control,neutral,5,2,2,0,3,Stagger,,simple,control|arcane|support,0,,https://www.poewiki.net/wiki/Atziri%27s_Rule,25
+490,atziris_promise,Atziri's Promise,Utility Flask,flask,T3,tactical,flask_tactical,insight,0,0,0,0,3,Tactical,,simple,tactical|focus,0,,https://www.poewiki.net/wiki/Atziri%27s_Promise,25
+491,atziris_reflection,Atziri's Reflection,Shield,shield,T3,offhand,bastion_guard,neutral,0,7,3,0,2,Block,,simple,bastion|control|support,0,,https://www.poewiki.net/wiki/Atziri%27s_Reflection,25
+492,triumvirate_authority,Triumvirate Authority,Ring,ring,T3,charm,volatile_charm,neutral,2,0,0,1,3,Poison,,simple,wildcard|support,0,,https://www.poewiki.net/wiki/Triumvirate_Authority,25
+493,impresence,Impresence,Amulet,amulet,T3,charm,support_charm,neutral,2,1,1,1,3,Regen,,simple,support|sustain,0,,https://www.poewiki.net/wiki/Impresence,25
+494,kaoms_primacy,Kaom's Primacy,Two-Handed Axe,axe_2h,T3,mainhand,heavy_execution,beast,9,0,1,0,1,Strength,,simple,assault|burst,0,,https://www.poewiki.net/wiki/Kaom%27s_Primacy,25
+495,cloak_of_defiance,Cloak of Defiance,Body Armour,body,T3,body,bastion_shell,blood,0,7,5,0,1,Regen,,simple,bastion|sustain,0,,https://www.poewiki.net/wiki/Cloak_of_Defiance,24
+496,daressos_defiance,Daresso's Defiance,Body Armour,body,T3,body,bastion_shell,bastion,0,7,5,0,1,Plating,,simple,bastion|sustain,0,,https://www.poewiki.net/wiki/Daresso%27s_Defiance,24
+497,saqawals_nest,Saqawal's Nest,Body Armour,body,T3,body,bastion_shell,tempo,0,7,5,0,1,Plating,,simple,bastion|sustain|tempo,0,,https://www.poewiki.net/wiki/Saqawal%27s_Nest,24
+498,thousand_ribbons,Thousand Ribbons,Body Armour,body,T3,body,bastion_shell,ember,0,7,5,0,1,Plating,,simple,bastion|sustain|ember,0,,https://www.poewiki.net/wiki/Thousand_Ribbons,24
+499,victarios_influence,Victario's Influence,Body Armour,body,T3,body,bastion_shell,neutral,0,7,5,0,1,Plating,,simple,bastion|sustain|support,0,,https://www.poewiki.net/wiki/Victario%27s_Influence,24
+500,rigwalds_hunt,Rigwald's Hunt,Body Armour,body,T3,body,bastion_shell,beast,0,7,5,0,1,Regen,,simple,bastion|sustain|assault,0,,https://www.poewiki.net/wiki/Rigwald%27s_Hunt,24
+900001,montoya_por_favor,Montoya,Dose relic,relic,T0,focus,relic_engine,neutral,0,3,3,0,20,Foresight,Regen,legendary,focus|wildcard|support,1,montoya_charge,,0
+900002,alklfg,AlkLFG,Dose Relic,relic,T0,focus,relic_engine,neutral,0,3,3,0,20,Foresight,Regen,legendary,focus|wildcard|support,1,alk_rally,,0
+900003,nobitchesherald,NoBitches Herald,Golden Mask,relic,T0,focus,relic_engine,neutral,0,3,3,0,20,Foresight,Regen,legendary,focus|wildcard|support,1,herald_dispute,,0
+900004,yami,Yami,Despot's Axe,axe_2h,T0,mainhand,heavy_execution,neutral,30,0,4,0,3,Vulnerable,Strength,legendary,assault|burst|support,1,yami_high_decree,,0
+900005,ursarion,Ursarion,Golden Mask,relic,T0,focus,relic_engine,neutral,0,3,3,0,20,Foresight,Regen,legendary,focus|wildcard|support,1,ursarion_benediction,,0
+900006,8_6_original,8 morts 6 blessés,Dose relic,relic,T0,focus,relic_engine,neutral,0,3,3,0,20,Foresight,Regen,legendary,focus|wildcard|support,1,huit_morts_surge,,0

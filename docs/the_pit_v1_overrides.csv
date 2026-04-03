@@ -1,0 +1,56 @@
+effect_id,item_name,tier,slot_scope,clarity,trigger,effect_summary,mechanical_notes,boss_counter,build_roles
+ashes_starfall,Ashes of the Stars,T0,focus|charm,explicit,onBossStart,"Secondary keywords on all equipped cards gain +1 potency. At boss start, gain Prophecy for 6s.",Primary enabler for hybrid/support builds.,Sirus,focus|support|hybrid
+badge_escalation,Badge of the Brotherhood,T0,charm,explicit,onBuffGain,Each new buff type this wave grants +2 SPD and +1 PWR (max 5).,Snowballs on layered buff builds.,Kitava,tempo|support
+omniscience_harmonic,Crystallised Omniscience,T0,charm,explicit,onCombatStart,"Gain bonus ATK/DEF/SPD/PWR equal to 25% of your highest non-HP derived stat, distributed to the other three.",Stat-balancing amulet; smooths awkward drafts.,Malachai,hybrid|support
+presence_void_ward,Presence of Chayula,T0,charm,explicit,onWaveStart,Start each wave with Plating 12. First fatal hit each run leaves you at 1 HP and grants Regen 5 for 6s.,Safety anchor for slow/control builds.,Sirus,bastion|sustain
+solstice_stasis,Solstice Vigil,T0,charm,explicit,passive,Enemy special skills charge 20% slower. Foresight reveals specials 2s earlier.,Anti-boss timing tech.,Sirus,control|insight
+pandemonius_whiteout,The Pandemonius,T0,charm,explicit,onFirstHitPerTarget,First hit on each enemy applies Whiteout: Vulnerable 2 and -20% SPD for 4s.,Opener tool for execution builds.,Kitava,control|burst
+headhunter_trophy,Headhunter,T0,charm,explicit,onEliteKill|onBossThreshold,"On elite kill, steal its highest stat bonus until end of run. Boss thresholds at 70/40/10% HP grant +2 all non-HP stats.",Wave snowball and boss scaling.,Kitava,wildcard|assault
+mageblood_autotonic,Mageblood,T0,charm,explicit,passive|tactical,Tactical item becomes passive at 35% power if it is a buff or map. Burst tacticals auto-trigger at wave start and boss start.,Consistency engine for tactical-centric builds.,All,support|tactical
+retch_glut,The Retch,T0,charm,explicit,onOverheal,50% of overheal from Lifesteal/Regen is dealt as corruption damage to current target.,Turns sustain into offense.,Malachai,sustain|venom
+kaom_heart_overmax,Kaom's Heart,T0,body,explicit,passive,"+35 max HP. Overhealing converts to Strength (1 per 10 overheal, max 8 per wave).",Body anchor for sustain/assault.,Kitava,sustain|assault
+shavronne_lastveil,Shavronne's Wrappings,T0,body,explicit,onFatalHit,"First time each wave you would take fatal damage, prevent it and gain Veil: self-Burn deals 50% less for 6s.",Anti-spike tech with ritual flavor.,Sirus,control|sustain
+brass_dome_unbroken,The Brass Dome,T0,body,explicit,onWaveStart,Start each wave with Plating 10. Enemy specials cannot deal more than 25% of your max HP.,Best anti-boss armor.,Sirus,bastion
+covenant_bloodprice,The Covenant,T0,body,explicit,onWaveStart,"At wave start, lose 10% max HP; attacks gain Burn equal to lost HP / 10 for the wave.",High-risk burn engine.,Malachai,ember|sustain
+atziri_step_phase,Atziri's Step,T0,minor,explicit,onWaveStart|onDodge,First incoming hit each wave is always dodged. Successful dodge grants +1 PWR.,Tempo boot anchor.,Sirus,tempo|hunter
+yami_high_decree,Yami,T0,mainhand,explicit,onNthHit,"Every 4th direct hit is an Execution hit for +60% damage. If target is below 35% HP, repeat it at 50% power.",Custom finisher axe.,Kitava,burst|assault
+alk_rally,AlkLFG,T0,focus,explicit,onFatalHit,"Once per run on reaching 0 HP, set HP to 25%, gain +10 SPD and +5 Strength for 8s.",Comeback relic.,All,wildcard|sustain
+huit_morts_surge,8 morts 6 blessés,T0,focus,explicit,onFirstKillPerWave,First kill each wave detonates remaining enemies for Burn 3 and Poison 3.,Wave clear relic.,Kitava,ember|venom
+montoya_charge,Montoya,T0,focus,explicit,onWaveStart|onAction,"Gain Charge at wave start. Every 3 actions, consume Charge to strike all enemies for 60% ATK; kills refresh Charge.",Aggro relic for fast builds.,Kitava,tempo|assault
+herald_dispute,NoBitches Herald,T0,focus,implied,onDebuffTaken,"When an enemy debuffs you, reflect 1 stack of its last non-unique debuff and gain Block 4.",Counter-debuff mask; exact reflected stack order discovered in logs.,Malachai,control|bastion
+ursarion_benediction,Ursarion,T0,focus,implied,onBuffGain,Every third buff gained refreshes all your buff durations and grants Plating 2.,Buff extension engine.,Sirus,support|bastion
+brutal_restraint_momentum,Brutal Restraint,T0,focus,explicit,onActFirst,"Whenever you act before the current target, gain Strength 1 (max 8 per wave).",Tempo-to-damage conversion.,Kitava,tempo|assault
+glorious_vanity_corrupt,Glorious Vanity,T0,focus,hidden,onDebuffTaken,Every third harmful effect applied to you also applies Corruption to the enemy: Burn 2 + Poison 2.,Corruption counterplay; hidden proc cadence unlocks in codex after 3 triggers.,Malachai,void|venom
+impossible_escape_reposition,Impossible Escape,T0,focus,implied,onLowHP,"Once per wave at 30% HP or less, immediately fill action meter to 100 and gain Dodge 20% for 2s.",Emergency tempo jewel.,Sirus,tempo|survival
+lethal_pride_warcry,Lethal Pride,T0,focus,explicit,onNthHit,"Every 3 direct hits, your next hit gains +50% direct damage and Stagger 1.",Core assault jewel.,Kitava,assault|control
+militant_faith_ordo,Militant Faith,T0,focus,explicit,passive,"While above 70% HP, gain Regen 2 and +4 PWR. While below 40%, gain Block 6 on action.",Stable hybrid jewel.,All,support|sustain
+split_personality_duality,Split Personality,T0,focus,explicit,onCombatStart|onBossStart,Copy 35% of the higher of ATK or DEF into the lower. Repeat once when entering boss wave.,Smooths uneven builds.,All,hybrid|bastion
+thread_of_hope_weave,Thread of Hope,T0,focus,implied,passive,Your secondary keyword on all equipped cards counts as active at 50% value.,Hybrid enabler; true value emerges in loadout analyzer and logs.,All,hybrid|focus
+unnatural_instinct_snap,Unnatural Instinct,T0,focus,explicit,onFirstTriggerPerCardPerWave,The first trigger from each equipped non-Tactical card each wave repeats at 50% power.,Complex proc multiplier.,All,focus|wildcard
+watchers_eye_prophecy,Watcher's Eye,T0,focus,implied,onWaveStart|onReveal,"Reveal the boss special pattern at wave start. After each reveal, your next hit deals +15% and gains +1 of its primary keyword.",Info + payoff jewel.,Sirus,insight|support
+berek_respite_chain,Berek's Respite,T0,charm,explicit,onEnemyDeath,"On enemy death, spread half its Burn and Poison to all other enemies.",Ailment propagation ring.,Kitava,ember|venom
+mark_elder_lone,Mark of the Elder,T0,charm,explicit,passive,"If Charm B is not a Ring, gain +20% ATK and +10 max HP. If paired with Mark of the Shaper, unlock Elder/Shaper Union.",Solo ring or combo half.,All,assault|focus
+mark_shaper_union,Mark of the Shaper,T0,charm,explicit,passive|onNthHit,"If Charm B is not a Ring, Focus triggers deal +25% more. If paired with Mark of the Elder, every 4th hit echoes a Focus bolt.",Solo ring or combo half.,All,focus|assault
+ventor_gamble_variance,Ventor's Gamble,T0,charm,hidden,onWaveStart,"At wave start, roll Fortune: Greed (+25% ATK, -10 DEF), Shelter (+20 HP, -10 SPD), or Grace (+15 SPD, -10 ATK).",Odds are hidden in logs and codex; score bonus if boss dies with this equipped.,All,wildcard|tempo
+squire_echo,The Squire,T0,offhand,explicit,onNthHit,Every 3rd mainhand hit immediately triggers your offhand effect or Focus passive at 50% power.,Signature shield for proc builds.,All,focus|control
+starforge_celestial,Starforge,T0,mainhand,explicit,onHit|onKill,"Heavy hits gain Overwhelm 35% (ignore 35% DEF). On kill, gain Strength 2.",Premier 2H finisher.,Kitava,burst|assault
+voidforge_entropy,Voidforge,T0,mainhand,explicit,onHit,"Each attack randomly empowers itself with one extra package: Burn 3, Poison 3, or Vulnerable 2.",Variance-based 2H weapon.,All,wildcard|burst
+aul_uprising,Aul's Uprising,T1,charm,explicit,onBossStart,"At boss start, your highest-value Charm keyword gains +2 for 8s.",Boss burst amulet.,Kitava,support|burst
+perseverance_gain,Perseverance,T1,charm,explicit,onBlockGain|onDodge,"Whenever you gain Block or Dodge, gain Strength 1.",Glue belt for tempo-bastion hybrids.,All,bastion|tempo
+carcass_splinter,Carcass Jack,T1,body,explicit,onKill,"On kill, splash 30% of the hit to adjacent enemies.",Wave clear body.,Kitava,ember|burst
+belly_beast_overheal,Belly of the Beast,T1,body,explicit,onOverheal,"Whenever you heal above 80% HP, gain Plating 1.",Sustain armor.,Malachai,sustain|bastion
+inpulsa_chainburst,Inpulsa's Broken Heart,T1,body,explicit,onBurnKill,"When Burn kills an enemy, explode remaining enemies for Burn 2.",Burn clear armor.,Kitava,ember
+darkray_loop,Darkray Vectors,T1,minor,explicit,onDodge,Each successful dodge grants +2 SPD for the wave (max 10).,Tempo boots.,Sirus,tempo
+hand_wisdom_action,Hand of Wisdom and Action,T1,mainhand|offhand,explicit,onFastHit,"Gain +1 PWR each time you hit while above 25 SPD (max 6); at 6, next hit gains Lifesteal +6%.",Fast claw engine.,Sirus,tempo|venom
+hrimsorrow_dualburn,Hrimsorrow,T1,minor,explicit,onHit,Direct hits apply Burn 2 if target is already Vulnerable.,Pairs with execution builds.,Kitava,ember|burst
+rats_nest_opener,Rat's Nest,T1,minor,explicit,onWaveStart,Your first two hits each wave gain +20% direct damage.,Opener helmet.,Kitava,tempo|assault
+starkonja_laststand,Starkonja's Head,T1,minor,explicit,onLowHP,"Below 50% HP, gain Dodge 10% and Strength 2.",Fallback helmet.,Sirus,tempo|survival
+devoto_rush,Devoto's Devotion,T1,minor,explicit,passive,"After 3 seconds without being hit, gain +15 action meter instantly.",High-tempo helmet.,Sirus,tempo
+heatshiver_flip,Heatshiver,T1,minor,explicit,onHit,Burning targets also become Vulnerable 1.,Burn finisher helmet.,Kitava,ember|burst
+abyssus_reckless,Abyssus,T1,minor,explicit,passive,"+25% ATK, but you take +15% direct damage.",Greedy damage helm.,All,assault|wildcard
+megalomaniac_random,Megalomaniac,T1,focus,hidden,onWaveStart,"At wave start, gain one random minor synergy for that wave.",Actual rolled synergy only visible in combat log until codex unlock.,All,wildcard|focus
+soul_taker_freecast,Soul Taker,T1,mainhand|offhand,explicit,onWaveStart,Your first support or tactical trigger each wave is immediate and costs no setup time.,Tempo axe.,Sirus,control|tempo
+nebulis_flux,Nebulis,T1,mainhand|offhand,explicit,onEnemyTelegraph,"Whenever the enemy telegraphs a special, gain +4 PWR for 4s.",Punishes boss specials.,Sirus,insight|ember
+cospri_echo,Cospri's Malice,T1,mainhand|offhand,explicit,onNthHit,Every 3rd rapier hit fires a free spell bolt for 50% ATK and Burn 1.,Rapier-caster hybrid.,Sirus,tempo|ember
+taming_triune,The Taming,T1,charm,explicit,onDamageCalc,Deal +25% direct damage to targets suffering two or more different ailments/debuffs.,Ailment payoff ring.,Malachai,ember|venom
+original_sin_corrupt,Original Sin,T1,charm,explicit,onPoisonApply,Poison from your hits also gains Overwhelm 20% (ignores 20% DEF).,High-end poison ring.,Kitava,venom|burst
