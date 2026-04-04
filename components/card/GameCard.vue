@@ -823,6 +823,7 @@ const cardClasses = computed(() => [
     "game-card--hovering": isHovering.value,
     "game-card--foil": isFoil.value,
     "game-card--synthesised": isSynthesised.value,
+    "game-card--pit": !!props.pitStats,
   },
 ]);
 

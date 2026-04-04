@@ -183,6 +183,47 @@
   pointer-events: none;
 }
 
+/* ---- BODY SILHOUETTE LAYOUT ---- */
+.pit-body-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.pit-body-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: start;
+}
+
+/* Head: single centered slot */
+.pit-body-row--head {
+  justify-content: center;
+  max-width: 120px;
+  margin: 0 auto;
+}
+.pit-body-row--head > * { flex: 1; }
+
+/* Torso: 3 columns (weapon | body | offhand) */
+.pit-body-row--torso > * { flex: 1; min-width: 0; }
+
+/* Waist: 2 columns centered */
+.pit-body-row--waist {
+  max-width: 220px;
+  margin: 0 auto;
+}
+.pit-body-row--waist > * { flex: 1; min-width: 0; }
+
+/* Feet: 2 columns centered */
+.pit-body-row--feet {
+  max-width: 220px;
+  margin: 0 auto;
+}
+.pit-body-row--feet > * { flex: 1; min-width: 0; }
+
 /* ---- EQUIPMENT SLOT (right panel) ---- */
 .pit-equip-slot-header {
   display: flex; align-items: center; gap: 4px; margin-bottom: 3px;

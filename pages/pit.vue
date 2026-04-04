@@ -147,12 +147,7 @@ const filledCount = computed(() => PIT_ALL_SLOTS.filter(s => game.slots.value[s]
 
 // (Attack animations handled by usePitAttackAnimations composable via event watcher above)
 
-const SLOT_LAYOUT: { id: PitSlotId; row: number; col: number }[] = [
-  { id: 'mainhand', row: 0, col: 0 }, { id: 'offhand', row: 0, col: 1 },
-  { id: 'body', row: 1, col: 0 }, { id: 'minor', row: 1, col: 1 },
-  { id: 'charm1', row: 2, col: 0 }, { id: 'charm2', row: 2, col: 1 },
-  { id: 'focus', row: 3, col: 0 }, { id: 'tactical', row: 3, col: 1 },
-]
+// (SLOT_LAYOUT removed — using body silhouette layout in template)
 </script>
 
 <template>
@@ -219,26 +214,27 @@ const SLOT_LAYOUT: { id: PitSlotId; row: number; col: number }[] = [
             <RunicBox padding="md">
               <h3 class="font-display text-sm font-semibold text-poe-text mb-4"><span class="text-accent">&#9670;</span> Equipement</h3>
 
-              <!-- 8 slots in a 2-column grid -->
-              <div class="grid grid-cols-2 gap-3 mb-5">
-                <div v-for="sl in SLOT_LAYOUT" :key="sl.id">
-                  <div class="pit-equip-slot-header">
-                    <span class="pit-equip-slot-header__icon" v-html="game.slots.value[sl.id].icon" />
-                    <span class="pit-equip-slot-header__label">{{ game.slots.value[sl.id].label }}</span>
-                    <span v-if="game.slots.value[sl.id].card" class="text-[#27ae60] text-xs ml-auto">&#10003;</span>
-                  </div>
-                  <!-- Empty slot -->
-                  <div v-if="!game.slots.value[sl.id].card" class="pit-equip-slot" :class="{ 'pit-equip-slot--disabled': game.slots.value[sl.id].isDisabled }">
-                    <span v-if="game.slots.value[sl.id].disabledReason" class="text-xs text-poe-text-muted">{{ game.slots.value[sl.id].disabledReason }}</span>
-                    <span v-else class="text-xs text-poe-text-muted opacity-40">Vide</span>
-                  </div>
-                  <!-- Filled slot: mini card info -->
-                  <div v-else class="pit-equip-slot pit-equip-slot--filled" @click="game.removeFromSlot(sl.id)" title="Retirer">
-                    <div class="pit-equip-card">
-                      <span class="pit-equip-card__tier" :class="`pit-equip-card__tier--${game.slots.value[sl.id].card!.tier.toLowerCase()}`">{{ game.slots.value[sl.id].card!.tier }}</span>
-                      <span class="pit-equip-card__name">{{ game.slots.value[sl.id].card!.name }}</span>
-                    </div>
-                  </div>
+              <!-- Slots in body silhouette layout -->
+              <div class="pit-body-layout mb-5">
+                <!-- Row 1: Head (minor) centered -->
+                <div class="pit-body-row pit-body-row--head">
+                  <PitEquipSlot :slot-data="game.slots.value.minor" @remove="game.removeFromSlot('minor')" />
+                </div>
+                <!-- Row 2: Left arm (mainhand) | Body | Right arm (offhand) -->
+                <div class="pit-body-row pit-body-row--torso">
+                  <PitEquipSlot :slot-data="game.slots.value.mainhand" @remove="game.removeFromSlot('mainhand')" />
+                  <PitEquipSlot :slot-data="game.slots.value.body" @remove="game.removeFromSlot('body')" />
+                  <PitEquipSlot :slot-data="game.slots.value.offhand" @remove="game.removeFromSlot('offhand')" />
+                </div>
+                <!-- Row 3: Charms (jewelry) -->
+                <div class="pit-body-row pit-body-row--waist">
+                  <PitEquipSlot :slot-data="game.slots.value.charm1" @remove="game.removeFromSlot('charm1')" />
+                  <PitEquipSlot :slot-data="game.slots.value.charm2" @remove="game.removeFromSlot('charm2')" />
+                </div>
+                <!-- Row 4: Focus + Tactical -->
+                <div class="pit-body-row pit-body-row--feet">
+                  <PitEquipSlot :slot-data="game.slots.value.focus" @remove="game.removeFromSlot('focus')" />
+                  <PitEquipSlot :slot-data="game.slots.value.tactical" @remove="game.removeFromSlot('tactical')" />
                 </div>
               </div>
 

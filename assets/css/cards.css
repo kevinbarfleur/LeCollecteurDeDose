@@ -641,6 +641,27 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Pit mode: give more room for stats by shrinking image area */
+.game-card--pit .game-card__image-wrapper {
+  bottom: 130px; /* was 80px — gives 130px to info+stats */
+}
+.game-card--pit .game-card__info {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+@media (min-width: 640px) {
+  .game-card--pit .game-card__image-wrapper { bottom: 145px; }
+  .game-card--pit .game-card__info { min-height: 135px; }
+}
+
+@media (min-width: 1024px) {
+  .game-card--pit .game-card__image-wrapper { bottom: 155px; }
+  .game-card--pit .game-card__info { min-height: 145px; }
+}
+
 @media (min-width: 640px) {
   .game-card__pit-stat { font-size: 12px; }
   .game-card__pit-stat small { font-size: 9px; }
