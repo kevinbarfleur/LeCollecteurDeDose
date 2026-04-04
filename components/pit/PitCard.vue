@@ -90,31 +90,32 @@ function closeDetail() { isExpanded.value = false }
       } as any"
       @click="openDetail"
     >
-      <!-- Runic corners (absolute, decorative) -->
+      <!-- Runic corners -->
       <div class="pitcard__corner pitcard__corner--tl" />
       <div class="pitcard__corner pitcard__corner--tr" />
       <div class="pitcard__corner pitcard__corner--bl" />
       <div class="pitcard__corner pitcard__corner--br" />
 
-      <!-- Tier + slot badges (absolute) -->
-      <span class="pitcard__tier">{{ card.tier }}</span>
-      <span class="pitcard__slot">{{ slotLabel }}</span>
-      <div v-if="card.isMarquee" class="pitcard__marquee">&#9670;</div>
-
-      <!-- IMAGE AREA — takes all remaining vertical space -->
-      <div class="pitcard__artwork">
-        <img v-if="imgUrl" :src="imgUrl" :alt="card.name" loading="lazy" @error="($event.target as HTMLImageElement).style.display='none'" />
+      <!-- TOP: Image zone (65%) with tier badge + slot label -->
+      <div class="pitcard__top">
+        <span class="pitcard__tier">{{ card.tier }}</span>
+        <span class="pitcard__slot">{{ slotLabel }}</span>
+        <div class="pitcard__artwork">
+          <img v-if="imgUrl" :src="imgUrl" :alt="card.name" loading="lazy" @error="($event.target as HTMLImageElement).style.display='none'" />
+        </div>
+        <!-- Name anchored at bottom of image zone -->
+        <div class="pitcard__nameplate">
+          <h3 class="pitcard__name">{{ card.name }}</h3>
+          <p class="pitcard__class">{{ card.rawItemClass }}</p>
+        </div>
       </div>
 
-      <!-- BOTTOM SECTION — fixed height, holds all text/stats -->
+      <!-- BOTTOM: Stats zone (35%) — dark panel, stats as rows -->
       <div class="pitcard__bottom">
-        <div class="pitcard__sep" />
-        <h3 class="pitcard__name">{{ card.name }}</h3>
-        <p class="pitcard__class">{{ card.rawItemClass }}</p>
-        <div class="pitcard__stats">
-          <div v-for="s in visibleStats" :key="s.key" class="pitcard__stat" :style="{ '--stat-bg': s.bg, '--stat-border': s.border } as any">
-            <span class="pitcard__stat-val">{{ s.val }}</span>
-            <span class="pitcard__stat-label">{{ s.label }}</span>
+        <div class="pitcard__statrows">
+          <div v-for="s in visibleStats" :key="s.key" class="pitcard__statrow" :style="{ '--stat-bg': s.bg, '--stat-border': s.border } as any">
+            <span class="pitcard__statrow-val">{{ s.val }}</span>
+            <span class="pitcard__statrow-label">{{ s.label }}</span>
           </div>
         </div>
         <div v-if="primaryKw" class="pitcard__kws">
@@ -122,6 +123,9 @@ function closeDetail() { isExpanded.value = false }
           <span v-if="secondaryKw" class="pitcard__kw">{{ secondaryKw.name }}</span>
         </div>
       </div>
+
+      <!-- Marquee diamond -->
+      <div v-if="card.isMarquee" class="pitcard__marquee">&#9670;</div>
 
       <!-- Used overlay -->
       <div v-if="used" class="pitcard__used-overlay">EQUIPE</div>
@@ -253,134 +257,151 @@ function closeDetail() { isExpanded.value = false }
 
 .pitcard-wrapper--used { opacity: 0.25; filter: grayscale(0.5); pointer-events: none; }
 
-/* ---- PREVIEW CARD ---- */
+/* ---- PREVIEW CARD (TCG-style: image top ~62%, stats bottom ~38%) ---- */
 .pitcard {
   position: relative;
   width: 100%;
-  aspect-ratio: 2.5 / 4;  /* taller than GameCard's 2.5/3.5 to fit stats */
-  border-radius: 8px;
+  aspect-ratio: 3 / 4.5;
+  border-radius: 6px;
   cursor: pointer;
   user-select: none;
   overflow: hidden;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.5);
-  /* Flex column: artwork grows, bottom is fixed */
   display: flex;
   flex-direction: column;
-  /* Frame as background */
-  background: linear-gradient(180deg, rgba(14, 14, 16, 0.98) 0%, rgba(10, 10, 12, 0.96) 50%, rgba(8, 8, 10, 0.99) 100%);
-  border: 1px solid var(--pc-color, #2a2a30);
+  border: 2px solid var(--pc-color, #2a2a30);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .pitcard:hover {
   transform: translateY(-3px);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6), 0 0 8px var(--pc-glow, rgba(90, 90, 93, 0.15));
-  border-color: color-mix(in srgb, var(--pc-color) 70%, white);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 12px var(--pc-glow, rgba(90, 90, 93, 0.15));
 }
 
 /* Runic corners */
 .pitcard__corner { position: absolute; pointer-events: none; z-index: 3; }
 .pitcard__corner::before, .pitcard__corner::after { content: ''; position: absolute; }
-.pitcard__corner::before { height: 1px; background: linear-gradient(to right, rgba(var(--pc-rgb), 0.35), transparent); }
-.pitcard__corner::after { width: 1px; background: linear-gradient(to bottom, rgba(var(--pc-rgb), 0.35), transparent); }
-.pitcard__corner--tl { top: 8px; left: 8px; }
+.pitcard__corner::before { height: 1px; background: linear-gradient(to right, rgba(var(--pc-rgb), 0.3), transparent); }
+.pitcard__corner::after { width: 1px; background: linear-gradient(to bottom, rgba(var(--pc-rgb), 0.3), transparent); }
+.pitcard__corner--tl { top: 7px; left: 7px; }
 .pitcard__corner--tl::before { width: 14px; } .pitcard__corner--tl::after { height: 14px; }
-.pitcard__corner--tr { top: 8px; right: 8px; }
-.pitcard__corner--tr::before { width: 10px; right: 0; background: linear-gradient(to left, rgba(var(--pc-rgb), 0.35), transparent); }
+.pitcard__corner--tr { top: 7px; right: 7px; }
+.pitcard__corner--tr::before { width: 10px; right: 0; background: linear-gradient(to left, rgba(var(--pc-rgb), 0.3), transparent); }
 .pitcard__corner--tr::after { height: 10px; right: 0; }
-.pitcard__corner--bl { bottom: 8px; left: 8px; }
-.pitcard__corner--bl::before { width: 10px; } .pitcard__corner--bl::after { height: 10px; bottom: 0; background: linear-gradient(to top, rgba(var(--pc-rgb), 0.35), transparent); }
-.pitcard__corner--br { bottom: 8px; right: 8px; }
-.pitcard__corner--br::before { width: 8px; right: 0; background: linear-gradient(to left, rgba(var(--pc-rgb), 0.3), transparent); }
-.pitcard__corner--br::after { height: 8px; right: 0; bottom: 0; background: linear-gradient(to top, rgba(var(--pc-rgb), 0.3), transparent); }
+.pitcard__corner--bl { bottom: 7px; left: 7px; }
+.pitcard__corner--bl::before { width: 10px; } .pitcard__corner--bl::after { height: 10px; bottom: 0; background: linear-gradient(to top, rgba(var(--pc-rgb), 0.3), transparent); }
+.pitcard__corner--br { bottom: 7px; right: 7px; }
+.pitcard__corner--br::before { width: 8px; right: 0; background: linear-gradient(to left, rgba(var(--pc-rgb), 0.25), transparent); }
+.pitcard__corner--br::after { height: 8px; right: 0; bottom: 0; background: linear-gradient(to top, rgba(var(--pc-rgb), 0.25), transparent); }
 
-/* Badges (absolute over artwork) */
+/* TOP ZONE — image area with nameplate at bottom */
+.pitcard__top {
+  position: relative;
+  flex: 1.6;
+  min-height: 0;
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.95) 0%, rgba(10, 10, 12, 0.98) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 .pitcard__tier {
-  position: absolute; top: 6px; left: 6px; z-index: 4;
+  position: absolute; top: 8px; left: 8px; z-index: 3;
   font-family: 'Cinzel', serif; font-size: 9px; font-weight: 700;
-  padding: 1px 6px; border-radius: 3px;
-  background: rgba(0, 0, 0, 0.7); color: var(--pc-color);
-  border: 1px solid rgba(var(--pc-rgb), 0.3);
+  padding: 2px 7px; border-radius: 3px;
+  background: rgba(0, 0, 0, 0.75); color: var(--pc-color);
+  border: 1px solid rgba(var(--pc-rgb), 0.35);
 }
 .pitcard__slot {
-  position: absolute; top: 7px; right: 6px; z-index: 4;
-  font-family: 'Crimson Text', serif; font-size: 7px;
-  color: rgba(200, 196, 183, 0.25); text-transform: uppercase;
-}
-.pitcard__marquee {
-  position: absolute; bottom: 6px; right: 8px; z-index: 4;
-  font-size: 8px; color: var(--pc-color); opacity: 0.5;
+  position: absolute; top: 9px; right: 8px; z-index: 3;
+  font-family: 'Crimson Text', serif; font-size: 8px;
+  color: rgba(200, 196, 183, 0.3); text-transform: uppercase; letter-spacing: 0.3px;
 }
 
-/* ARTWORK — flex: 1, takes all remaining space */
 .pitcard__artwork {
-  flex: 1;
   display: flex; align-items: center; justify-content: center;
-  padding: 20px 12px 4px;
-  min-height: 0; /* important for flex shrink */
+  padding: 16px 12px 28px;
+  width: 100%; height: 100%;
 }
 .pitcard__artwork img {
-  max-width: 75%; max-height: 100%; object-fit: contain;
-  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.6));
+  max-width: 70%; max-height: 90%; object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
   pointer-events: none;
 }
 
-/* BOTTOM — fixed, no shrink */
-.pitcard__bottom {
-  flex-shrink: 0;
-  padding: 0 8px 6px;
-}
-.pitcard__sep {
-  height: 1px; margin: 0 2px 4px;
-  background: linear-gradient(90deg, transparent, rgba(var(--pc-rgb), 0.2), transparent);
+.pitcard__nameplate {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
+  padding: 18px 10px 8px;
+  background: linear-gradient(to top, rgba(8, 8, 10, 1) 0%, rgba(8, 8, 10, 0.85) 50%, transparent 100%);
 }
 .pitcard__name {
-  font-family: 'Cinzel', serif; font-size: 11px; font-weight: 600;
+  font-family: 'Cinzel', serif; font-size: 12px; font-weight: 600;
   color: var(--pc-color); margin: 0; line-height: 1.2;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-@media (min-width: 640px) { .pitcard__name { font-size: 12px; } }
+@media (min-width: 640px) { .pitcard__name { font-size: 13px; } }
 .pitcard__class {
-  font-family: 'Crimson Text', serif; font-size: 8px;
-  color: rgba(127, 127, 127, 0.5); text-transform: uppercase; letter-spacing: 0.5px;
-  margin: 0 0 3px; line-height: 1.2;
+  font-family: 'Crimson Text', serif; font-size: 9px;
+  color: rgba(200, 196, 183, 0.4); text-transform: uppercase; letter-spacing: 0.8px;
+  margin: 1px 0 0;
 }
 
-/* Stats grid — compact subtle pills */
-.pitcard__stats {
-  display: grid; grid-template-columns: 1fr 1fr;
+/* BOTTOM ZONE — dark stats panel */
+.pitcard__bottom {
+  flex: 1;
+  min-height: 0;
+  background: linear-gradient(180deg, rgba(8, 8, 10, 1) 0%, rgba(12, 12, 14, 0.98) 100%);
+  padding: 6px 8px 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   gap: 2px;
 }
-.pitcard__stat {
-  display: flex; align-items: baseline; gap: 3px;
-  padding: 2px 5px; border-radius: 2px;
-  background: var(--stat-bg, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--stat-border, rgba(255, 255, 255, 0.04));
+
+/* Stats as vertical rows */
+.pitcard__statrows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-.pitcard__stat:last-child:nth-child(odd) { grid-column: span 2; justify-content: center; }
-.pitcard__stat-val {
-  font-family: 'Cinzel', serif; font-size: 10px; font-weight: 700; color: #e8e6e3;
+.pitcard__statrow {
+  display: flex; align-items: baseline;
+  padding: 2px 7px; border-radius: 2px;
+  background: var(--stat-bg, rgba(255, 255, 255, 0.025));
+  border: 1px solid var(--stat-border, rgba(255, 255, 255, 0.035));
 }
-@media (min-width: 640px) { .pitcard__stat-val { font-size: 11px; } }
-.pitcard__stat-label {
-  font-family: 'Crimson Text', serif; font-size: 7px;
-  color: rgba(200, 196, 183, 0.35); text-transform: uppercase;
+.pitcard__statrow-val {
+  font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700;
+  color: #e8e6e3; min-width: 18px;
+}
+@media (min-width: 640px) { .pitcard__statrow-val { font-size: 12px; } }
+.pitcard__statrow-label {
+  font-family: 'Crimson Text', serif; font-size: 9px;
+  color: rgba(200, 196, 183, 0.3); text-transform: uppercase; letter-spacing: 0.5px;
+  margin-left: 3px;
 }
 
-/* Keywords — neutral, compact */
+/* Keywords */
 .pitcard__kws {
-  display: flex; gap: 2px; justify-content: center; margin-top: 3px;
+  display: flex; gap: 3px; justify-content: center;
+  padding-top: 2px;
 }
 .pitcard__kw {
-  font-family: 'Crimson Text', serif; font-size: 8px;
-  padding: 1px 5px; border-radius: 2px;
-  color: rgba(200, 196, 183, 0.55);
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-family: 'Crimson Text', serif; font-size: 9px;
+  padding: 1px 6px; border-radius: 2px;
+  color: rgba(200, 196, 183, 0.45);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pitcard__marquee {
+  position: absolute; bottom: 8px; right: 8px; z-index: 4;
+  font-size: 9px; color: var(--pc-color); opacity: 0.4;
 }
 
 .pitcard__used-overlay {
-  position: absolute; inset: 0; z-index: 10; border-radius: 8px;
+  position: absolute; inset: 0; z-index: 10; border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   background: rgba(0, 0, 0, 0.6);
   font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700;
