@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { PitSlotId, PitCardDef, PitSlotFamily } from '~/types/pit'
-import type { PitStatsOverlay } from '~/components/card/GameCard.vue'
+// PitCard is auto-imported from components/pit/
 import { PIT_ALL_SLOTS } from '~/types/pit'
 import { PIT_ENCOUNTERS } from '~/game/pit/content/bosses'
 import { PIT_MODIFIERS } from '~/game/pit/content/modifiers'
-import { pitCardToGameCard } from '~/game/pit/content/cardMap'
+// pitCardToGameCard no longer needed — PitCard takes PitCardDef directly
 import { canPlaceCard } from '~/game/pit/core/loadout'
 import { getKeywordDef } from '~/game/pit/content/keywords'
 import { usePitFloatingNumbers } from '~/composables/usePitFloatingNumbers'
@@ -94,26 +94,7 @@ const filteredDraft = computed(() => {
 
 function isUsed(c: PitCardDef) { return game.loadoutCards.value.some(x => x.uid === c.uid) }
 
-// ---- Convert PitCardDef to GameCard props ----
-function toGameCard(c: PitCardDef) { return pitCardToGameCard(c) }
-
-function toPitStats(c: PitCardDef): PitStatsOverlay {
-  const pk = c.primaryKeyword !== 'MapMod' && c.primaryKeyword !== 'Tactical' ? getKeywordDef(c.primaryKeyword) : undefined
-  const sk = c.secondaryKeyword ? getKeywordDef(c.secondaryKeyword) : undefined
-  return {
-    ...c.stats,
-    primaryKeyword: pk?.name,
-    primaryKeywordColor: pk?.color,
-    secondaryKeyword: sk?.name,
-    secondaryKeywordColor: sk?.color,
-  }
-}
-
-// ---- D&D: click to equip (simplified — drag will come later with proper lib integration) ----
-function onCardClick(card: PitCardDef) {
-  // Don't equip on click — let GameCard handle it (zoom)
-  // We equip via the "Equiper" button or a secondary action
-}
+// ---- Equip card (called from PitCard tooltip or click) ----
 
 function equipCard(card: PitCardDef) {
   const slot = game.getBestSlot(card)
@@ -195,17 +176,15 @@ const filledCount = computed(() => PIT_ALL_SLOTS.filter(s => game.slots.value[s]
               </button>
             </div>
 
-            <!-- Card grid with real GameCards -->
+            <!-- Card grid with PitCards -->
             <div class="pit-card-grid">
-              <div v-for="card in filteredDraft" :key="card.uid" class="pit-card-slot" :class="{ 'pit-card-slot--used': isUsed(card) }">
-                <GameCard :card="toGameCard(card)" :owned="true" :pit-stats="toPitStats(card)" />
-                <!-- Equip button overlay -->
-                <div v-if="!isUsed(card)" class="pit-card-equip" @click.stop="equipCard(card)">
-                  <span class="pit-card-equip__label">{{ slotLabel(card.allowedSlots) }}</span>
-                  <button class="pit-card-equip__btn">Equiper</button>
-                </div>
-                <div v-else class="pit-card-equipped-badge">EQUIPE</div>
-              </div>
+              <PitCard
+                v-for="card in filteredDraft"
+                :key="card.uid"
+                :card="card"
+                :used="isUsed(card)"
+                @equip="equipCard"
+              />
             </div>
           </div>
 

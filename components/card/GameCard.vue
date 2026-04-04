@@ -16,18 +16,6 @@ interface VariationOption {
   color?: string;
 }
 
-export interface PitStatsOverlay {
-  atk: number;
-  def: number;
-  hp: number;
-  spd: number;
-  pwr: number;
-  primaryKeyword?: string;
-  primaryKeywordColor?: string;
-  secondaryKeyword?: string;
-  secondaryKeywordColor?: string;
-}
-
 const props = defineProps<{
   card: Card;
   showFlavour?: boolean;
@@ -38,8 +26,6 @@ const props = defineProps<{
   selectedVariation?: string;
   // Right panel offset for centering in admin view (optional)
   centerOffset?: number;
-  // The Pit: display combat stats instead of description
-  pitStats?: PitStatsOverlay;
 }>();
 
 const emit = defineEmits<{
@@ -823,7 +809,6 @@ const cardClasses = computed(() => [
     "game-card--hovering": isHovering.value,
     "game-card--foil": isFoil.value,
     "game-card--synthesised": isSynthesised.value,
-    "game-card--pit": !!props.pitStats,
   },
 ]);
 
@@ -944,18 +929,6 @@ defineExpose({
                   <span class="game-card__name-text">{{ card.name }}</span>
                 </h3>
                 <p class="game-card__class">{{ card.itemClass }}</p>
-                <!-- Pit stats overlay (when in The Pit mode) -->
-                <div v-if="pitStats" class="game-card__pit-stats">
-                  <span v-if="pitStats.atk" class="game-card__pit-stat game-card__pit-stat--atk">{{ pitStats.atk }} <small>ATK</small></span>
-                  <span v-if="pitStats.def" class="game-card__pit-stat game-card__pit-stat--def">{{ pitStats.def }} <small>DEF</small></span>
-                  <span v-if="pitStats.hp" class="game-card__pit-stat game-card__pit-stat--hp">{{ pitStats.hp }} <small>HP</small></span>
-                  <span v-if="pitStats.spd" class="game-card__pit-stat game-card__pit-stat--spd">{{ pitStats.spd }} <small>SPD</small></span>
-                  <span v-if="pitStats.pwr" class="game-card__pit-stat game-card__pit-stat--pwr">{{ pitStats.pwr }} <small>PWR</small></span>
-                  <div v-if="pitStats.primaryKeyword" class="game-card__pit-kws">
-                    <span class="game-card__pit-kw" :style="{ color: pitStats.primaryKeywordColor }">{{ pitStats.primaryKeyword }}</span>
-                    <span v-if="pitStats.secondaryKeyword" class="game-card__pit-kw" :style="{ color: pitStats.secondaryKeywordColor }">{{ pitStats.secondaryKeyword }}</span>
-                  </div>
-                </div>
               </div>
             </div>
 
