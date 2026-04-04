@@ -127,10 +127,10 @@ function closeDetail() { isExpanded.value = false }
         </div>
       </div>
 
-      <!-- Keywords -->
+      <!-- Keywords (neutral text, no color) -->
       <div v-if="primaryKw" class="pitcard__kws">
-        <span class="pitcard__kw" :style="{ color: primaryKw.color }">{{ primaryKw.name }}</span>
-        <span v-if="secondaryKw" class="pitcard__kw" :style="{ color: secondaryKw.color }">{{ secondaryKw.name }}</span>
+        <span class="pitcard__kw">{{ primaryKw.name }}</span>
+        <span v-if="secondaryKw" class="pitcard__kw">{{ secondaryKw.name }}</span>
       </div>
 
       <!-- Marquee indicator -->
@@ -266,11 +266,11 @@ function closeDetail() { isExpanded.value = false }
 
 .pitcard-wrapper--used { opacity: 0.25; filter: grayscale(0.5); pointer-events: none; }
 
-/* ---- PREVIEW CARD (fixed height for uniform grid) ---- */
+/* ---- PREVIEW CARD (FIXED height for uniform grid) ---- */
 .pitcard {
   position: relative;
   width: 100%;
-  min-height: 240px;
+  height: 270px;
   border-radius: 8px;
   cursor: pointer;
   user-select: none;
@@ -278,9 +278,10 @@ function closeDetail() { isExpanded.value = false }
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
-@media (min-width: 640px) { .pitcard { min-height: 265px; } }
-@media (min-width: 1024px) { .pitcard { min-height: 280px; } }
+@media (min-width: 640px) { .pitcard { height: 290px; } }
+@media (min-width: 1024px) { .pitcard { height: 305px; } }
 .pitcard:hover {
   transform: translateY(-4px);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 10px var(--pc-glow, rgba(90, 90, 93, 0.2));
@@ -320,8 +321,8 @@ function closeDetail() { isExpanded.value = false }
 
 .pitcard__slot {
   position: absolute; top: 6px; right: 6px; z-index: 4;
-  font-family: 'Crimson Text', serif; font-size: 8px;
-  color: rgba(175, 96, 37, 0.5); text-transform: uppercase; letter-spacing: 0.3px;
+  font-family: 'Crimson Text', serif; font-size: 7px;
+  color: rgba(200, 196, 183, 0.25); text-transform: uppercase; letter-spacing: 0.3px;
 }
 
 .pitcard__image {
@@ -354,38 +355,39 @@ function closeDetail() { isExpanded.value = false }
   margin: 0; line-height: 1.2;
 }
 
-/* Stats — always visible, "subtle pill" style */
+/* Stats — always visible, compact "subtle pill" style */
 .pitcard__stats {
   position: relative; z-index: 1;
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: 3px; padding: 5px 8px 3px;
+  gap: 2px; padding: 3px 8px 2px;
 }
 .pitcard__stat {
   display: flex; align-items: baseline; gap: 3px;
-  padding: 3px 6px; border-radius: 3px;
-  /* Subtle colored background — color set via inline style */
+  padding: 2px 5px; border-radius: 2px;
   background: var(--stat-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--stat-border, rgba(255, 255, 255, 0.04));
 }
 .pitcard__stat:last-child:nth-child(odd) { grid-column: span 2; justify-content: center; }
 .pitcard__stat-val {
-  font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700;
-  color: #e8e6e3; /* Always neutral white — color is in the pill background */
+  font-family: 'Cinzel', serif; font-size: 10px; font-weight: 700;
+  color: #e8e6e3;
 }
-@media (min-width: 640px) { .pitcard__stat-val { font-size: 12px; } }
+@media (min-width: 640px) { .pitcard__stat-val { font-size: 11px; } }
 .pitcard__stat-label {
-  font-family: 'Crimson Text', serif; font-size: 8px;
-  color: rgba(200, 196, 183, 0.4); text-transform: uppercase; letter-spacing: 0.3px;
+  font-family: 'Crimson Text', serif; font-size: 7px;
+  color: rgba(200, 196, 183, 0.35); text-transform: uppercase; letter-spacing: 0.3px;
 }
 
 .pitcard__kws {
   position: relative; z-index: 1;
-  display: flex; gap: 3px; justify-content: center; padding: 2px 8px 6px;
+  display: flex; gap: 2px; justify-content: center; padding: 1px 8px 5px;
 }
 .pitcard__kw {
-  font-family: 'Crimson Text', serif; font-size: 9px;
+  font-family: 'Crimson Text', serif; font-size: 8px;
   padding: 1px 5px; border-radius: 2px;
-  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(200, 196, 183, 0.6); /* neutral text, not colored */
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .pitcard__marquee {
