@@ -21,14 +21,23 @@ const imgUrl = computed(() => {
   return `https://www.poewiki.net/wiki/Special:FilePath/${encodeURIComponent(props.card.name.replace(/ /g, '_'))}_inventory_icon.png`
 })
 
+// Stat pill colors: subtle bg (6% opacity) + subtle border (12% opacity)
+const STAT_COLORS: Record<string, { bg: string; border: string }> = {
+  atk: { bg: 'rgba(200, 50, 50, 0.06)', border: 'rgba(200, 50, 50, 0.12)' },
+  def: { bg: 'rgba(90, 112, 128, 0.06)', border: 'rgba(90, 112, 128, 0.12)' },
+  hp:  { bg: 'rgba(39, 174, 96, 0.06)', border: 'rgba(39, 174, 96, 0.12)' },
+  spd: { bg: 'rgba(201, 162, 39, 0.06)', border: 'rgba(201, 162, 39, 0.12)' },
+  pwr: { bg: 'rgba(122, 106, 138, 0.06)', border: 'rgba(122, 106, 138, 0.12)' },
+}
+
 const visibleStats = computed(() => {
   const s = props.card.stats
-  const list: { key: string; label: string; val: number; color: string }[] = []
-  if (s.atk) list.push({ key: 'atk', label: 'ATK', val: s.atk, color: '#c83232' })
-  if (s.def) list.push({ key: 'def', label: 'DEF', val: s.def, color: '#5a7080' })
-  if (s.hp) list.push({ key: 'hp', label: 'HP', val: s.hp, color: '#27ae60' })
-  if (s.spd) list.push({ key: 'spd', label: 'SPD', val: s.spd, color: '#c9a227' })
-  if (s.pwr) list.push({ key: 'pwr', label: 'PWR', val: s.pwr, color: '#7a6a8a' })
+  const list: { key: string; label: string; val: number; bg: string; border: string }[] = []
+  if (s.atk) list.push({ key: 'atk', label: 'ATK', val: s.atk, ...STAT_COLORS.atk })
+  if (s.def) list.push({ key: 'def', label: 'DEF', val: s.def, ...STAT_COLORS.def })
+  if (s.hp) list.push({ key: 'hp', label: 'HP', val: s.hp, ...STAT_COLORS.hp })
+  if (s.spd) list.push({ key: 'spd', label: 'SPD', val: s.spd, ...STAT_COLORS.spd })
+  if (s.pwr) list.push({ key: 'pwr', label: 'PWR', val: s.pwr, ...STAT_COLORS.pwr })
   return list
 })
 
@@ -110,10 +119,10 @@ function closeDetail() { isExpanded.value = false }
         <p class="pitcard__class">{{ card.rawItemClass }}</p>
       </div>
 
-      <!-- Stats grid (ALWAYS VISIBLE) -->
+      <!-- Stats grid (ALWAYS VISIBLE) — subtle pills -->
       <div class="pitcard__stats">
-        <div v-for="s in visibleStats" :key="s.key" class="pitcard__stat">
-          <span class="pitcard__stat-val" :style="{ color: s.color }">{{ s.val }}</span>
+        <div v-for="s in visibleStats" :key="s.key" class="pitcard__stat" :style="{ '--stat-bg': s.bg, '--stat-border': s.border } as any">
+          <span class="pitcard__stat-val">{{ s.val }}</span>
           <span class="pitcard__stat-label">{{ s.label }}</span>
         </div>
       </div>
@@ -147,10 +156,10 @@ function closeDetail() { isExpanded.value = false }
           </h4>
           <p class="pitcard-tooltip__class">{{ card.rawItemClass }} — {{ slotLabel }}</p>
 
-          <!-- All stats (including zeros) -->
+          <!-- All stats (including zeros) — subtle pills -->
           <div class="pitcard-tooltip__stats">
-            <div v-for="[key, label, color] in [['atk','ATK','#c83232'],['def','DEF','#5a7080'],['hp','HP','#27ae60'],['spd','SPD','#c9a227'],['pwr','PWR','#7a6a8a']]" :key="key" class="pitcard-tooltip__stat">
-              <span class="pitcard-tooltip__stat-label" :style="{ color: color as string }">{{ label }}</span>
+            <div v-for="[key, label] in [['atk','ATK'],['def','DEF'],['hp','HP'],['spd','SPD'],['pwr','PWR']]" :key="key" class="pitcard-tooltip__stat" :style="{ '--stat-bg': STAT_COLORS[key as string]?.bg, '--stat-border': STAT_COLORS[key as string]?.border } as any">
+              <span class="pitcard-tooltip__stat-label">{{ label }}</span>
               <span class="pitcard-tooltip__stat-val">{{ (card.stats as any)[key] }}</span>
             </div>
           </div>
@@ -202,10 +211,10 @@ function closeDetail() { isExpanded.value = false }
               <img v-if="imgUrl" :src="imgUrl" :alt="card.name" />
             </div>
 
-            <!-- Stats -->
+            <!-- Stats — subtle pills -->
             <div class="pitcard-detail__stats">
-              <div v-for="[key, label, color] in [['atk','ATK','#c83232'],['def','DEF','#5a7080'],['hp','HP','#27ae60'],['spd','SPD','#c9a227'],['pwr','PWR','#7a6a8a']]" :key="key" class="pitcard-detail__stat">
-                <span class="pitcard-detail__stat-val" :style="{ color: color as string }">{{ (card.stats as any)[key] }}</span>
+              <div v-for="[key, label] in [['atk','ATK'],['def','DEF'],['hp','HP'],['spd','SPD'],['pwr','PWR']]" :key="key" class="pitcard-detail__stat" :style="{ '--stat-bg': STAT_COLORS[key as string]?.bg, '--stat-border': STAT_COLORS[key as string]?.border } as any">
+                <span class="pitcard-detail__stat-val">{{ (card.stats as any)[key] }}</span>
                 <span class="pitcard-detail__stat-label">{{ label }}</span>
               </div>
             </div>
@@ -257,16 +266,21 @@ function closeDetail() { isExpanded.value = false }
 
 .pitcard-wrapper--used { opacity: 0.25; filter: grayscale(0.5); pointer-events: none; }
 
-/* ---- PREVIEW CARD ---- */
+/* ---- PREVIEW CARD (fixed height for uniform grid) ---- */
 .pitcard {
   position: relative;
   width: 100%;
+  min-height: 240px;
   border-radius: 8px;
   cursor: pointer;
   user-select: none;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
 }
+@media (min-width: 640px) { .pitcard { min-height: 265px; } }
+@media (min-width: 1024px) { .pitcard { min-height: 280px; } }
 .pitcard:hover {
   transform: translateY(-4px);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 10px var(--pc-glow, rgba(90, 90, 93, 0.2));
@@ -340,21 +354,28 @@ function closeDetail() { isExpanded.value = false }
   margin: 0; line-height: 1.2;
 }
 
-/* Stats — always visible */
+/* Stats — always visible, "subtle pill" style */
 .pitcard__stats {
   position: relative; z-index: 1;
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: 2px 6px; padding: 4px 8px 2px;
+  gap: 3px; padding: 5px 8px 3px;
 }
 .pitcard__stat {
-  display: flex; align-items: baseline; gap: 3px; padding: 1px 3px;
+  display: flex; align-items: baseline; gap: 3px;
+  padding: 3px 6px; border-radius: 3px;
+  /* Subtle colored background — color set via inline style */
+  background: var(--stat-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--stat-border, rgba(255, 255, 255, 0.04));
 }
 .pitcard__stat:last-child:nth-child(odd) { grid-column: span 2; justify-content: center; }
-.pitcard__stat-val { font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700; }
+.pitcard__stat-val {
+  font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700;
+  color: #e8e6e3; /* Always neutral white — color is in the pill background */
+}
 @media (min-width: 640px) { .pitcard__stat-val { font-size: 12px; } }
 .pitcard__stat-label {
   font-family: 'Crimson Text', serif; font-size: 8px;
-  color: rgba(127, 127, 127, 0.4); text-transform: uppercase; letter-spacing: 0.3px;
+  color: rgba(200, 196, 183, 0.4); text-transform: uppercase; letter-spacing: 0.3px;
 }
 
 .pitcard__kws {
@@ -423,11 +444,16 @@ function closeDetail() { isExpanded.value = false }
 }
 
 .pitcard-tooltip__stats {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-bottom: 10px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px;
 }
-.pitcard-tooltip__stat { display: flex; justify-content: space-between; align-items: baseline; }
-.pitcard-tooltip__stat-label { font-family: 'Cinzel', serif; font-size: 10px; font-weight: 600; }
-.pitcard-tooltip__stat-val { font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; color: #e8e6e3; }
+.pitcard-tooltip__stat {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 4px 8px; border-radius: 3px;
+  background: var(--stat-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--stat-border, rgba(255, 255, 255, 0.04));
+}
+.pitcard-tooltip__stat-label { font-family: 'Cinzel', serif; font-size: 10px; font-weight: 600; color: rgba(200, 196, 183, 0.5); }
+.pitcard-tooltip__stat-val { font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #e8e6e3; }
 
 .pitcard-tooltip__kws { margin-bottom: 8px; }
 .pitcard-tooltip__kw-item { margin-bottom: 4px; }
@@ -520,9 +546,13 @@ function closeDetail() { isExpanded.value = false }
 .pitcard-detail__stats {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px;
 }
-.pitcard-detail__stat { text-align: center; }
-.pitcard-detail__stat-val { display: block; font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700; }
-.pitcard-detail__stat-label { font-family: 'Crimson Text', serif; font-size: 10px; color: rgba(127, 127, 127, 0.5); text-transform: uppercase; }
+.pitcard-detail__stat {
+  text-align: center; padding: 8px 4px; border-radius: 4px;
+  background: var(--stat-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--stat-border, rgba(255, 255, 255, 0.04));
+}
+.pitcard-detail__stat-val { display: block; font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; color: #e8e6e3; }
+.pitcard-detail__stat-label { font-family: 'Crimson Text', serif; font-size: 10px; color: rgba(200, 196, 183, 0.45); text-transform: uppercase; }
 
 .pitcard-detail__keywords { margin-bottom: 14px; }
 .pitcard-detail__kw { margin-bottom: 8px; }
